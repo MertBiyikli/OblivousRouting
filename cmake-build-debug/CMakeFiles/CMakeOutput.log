@@ -258,3 +258,31 @@ Parsed CXX implicit link information from above output:
   implicit fwks: [/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk/System/Library/Frameworks]
 
 
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD succeeded with the following output:
+Change Dir: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/7CBE20F5-7F4B-40D6-B372-4F837590059D/d/CLion.app/Contents/bin/ninja/mac/x64/ninja cmTC_8cf01 && [1/2] Building C object CMakeFiles/cmTC_8cf01.dir/src.c.o
+[2/2] Linking C executable cmTC_8cf01
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+

@@ -1,19 +1,23 @@
-name: CMake Build
+name: CMake Build and Test
 
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake g++
-      - name: Configure CMake
-        run: cmake -B build -S .
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ ninja-build
+
+      - name: Configure with CMake
+        run: cmake -B build -S . -G Ninja
+
       - name: Build
         run: cmake --build build
+
       - name: Run tests
-        run: cd build && ctest
+        run: cd build && ctest --output-on-failure
