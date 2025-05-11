@@ -33,7 +33,8 @@ public:
             int v = distNode(gen);
             if (u == v) continue;
 
-            auto edge = std::minmax(u, v);
+            auto edge = std::make_pair(std::min(u, v), std::max(u, v));
+
             if (existing.count(edge)) continue;
 
             double cap = distCap(gen);
