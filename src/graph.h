@@ -6,7 +6,6 @@
 #define OBLIVOUSROUTING_GRAPH_H
 
 #include <vector>
-#include <stdexcept>
 
 struct Edge{
     int target;
@@ -26,6 +25,7 @@ public:
     int numNodes() const;
     int numEdges() const;
 
+    void print() const;
 private:
     std::vector<std::vector<Edge> > m_adj;
 

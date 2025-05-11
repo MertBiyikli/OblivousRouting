@@ -156,7 +156,7 @@ rule CXX_EXECUTABLE_LINKER__smoke_test_Debug
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  command = /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   description = Re-running CMake...
   generator = 1
 

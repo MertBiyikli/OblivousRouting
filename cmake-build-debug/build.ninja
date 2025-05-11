@@ -39,7 +39,7 @@ include CMakeFiles/rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/
+cmake_ninja_workdir = /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/
 # =============================================================================
 # Object build statements for EXECUTABLE target OblivousRouting
 
@@ -49,17 +49,21 @@ cmake_ninja_workdir = /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-b
 
 build cmake_object_order_depends_target_OblivousRouting: phony || CMakeFiles/OblivousRouting.dir
 
-build CMakeFiles/OblivousRouting.dir/main.cpp.o: CXX_COMPILER__OblivousRouting_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/main.cpp || cmake_object_order_depends_target_OblivousRouting
+build CMakeFiles/OblivousRouting.dir/main.cpp.o: CXX_COMPILER__OblivousRouting_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/main.cpp || cmake_object_order_depends_target_OblivousRouting
   DEP_FILE = CMakeFiles/OblivousRouting.dir/main.cpp.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -std=gnu++20
   OBJECT_DIR = CMakeFiles/OblivousRouting.dir
   OBJECT_FILE_DIR = CMakeFiles/OblivousRouting.dir
+  TARGET_COMPILE_PDB = CMakeFiles/OblivousRouting.dir/
+  TARGET_PDB = OblivousRouting.pdb
 
-build CMakeFiles/OblivousRouting.dir/src/graph.cpp.o: CXX_COMPILER__OblivousRouting_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/src/graph.cpp || cmake_object_order_depends_target_OblivousRouting
+build CMakeFiles/OblivousRouting.dir/src/graph.cpp.o: CXX_COMPILER__OblivousRouting_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/graph.cpp || cmake_object_order_depends_target_OblivousRouting
   DEP_FILE = CMakeFiles/OblivousRouting.dir/src/graph.cpp.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -std=gnu++20
   OBJECT_DIR = CMakeFiles/OblivousRouting.dir
   OBJECT_FILE_DIR = CMakeFiles/OblivousRouting.dir/src
+  TARGET_COMPILE_PDB = CMakeFiles/OblivousRouting.dir/
+  TARGET_PDB = OblivousRouting.pdb
 
 
 # =============================================================================
@@ -74,15 +78,16 @@ build OblivousRouting: CXX_EXECUTABLE_LINKER__OblivousRouting_Debug CMakeFiles/O
   OBJECT_DIR = CMakeFiles/OblivousRouting.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = CMakeFiles/OblivousRouting.dir/
   TARGET_FILE = OblivousRouting
-  TARGET_PDB = OblivousRouting.dbg
+  TARGET_PDB = OblivousRouting.pdb
 
 
 #############################################
 # Utility command for test
 
 build CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -94,7 +99,7 @@ build test: phony CMakeFiles/test.util
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -106,7 +111,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -124,7 +129,7 @@ build list_install_components: phony
 # Utility command for install
 
 build CMakeFiles/install.util: CUSTOM_COMMAND all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -136,7 +141,7 @@ build install: phony CMakeFiles/install.util
 # Utility command for install/local
 
 build CMakeFiles/install/local.util: CUSTOM_COMMAND all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -148,7 +153,7 @@ build install/local: phony CMakeFiles/install/local.util
 # Utility command for install/strip
 
 build CMakeFiles/install/strip.util: CUSTOM_COMMAND all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -157,7 +162,7 @@ build install/strip: phony CMakeFiles/install/strip.util
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
-# /Users/halilibrahim/Desktop/Thesis/OblivousRouting/CMakeLists.txt
+# /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/CMakeLists.txt
 # =============================================================================
 
 # =============================================================================
@@ -169,12 +174,14 @@ build install/strip: phony CMakeFiles/install/strip.util
 
 build cmake_object_order_depends_target_core: phony || src/CMakeFiles/core.dir
 
-build src/CMakeFiles/core.dir/graph.cpp.o: CXX_COMPILER__core_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/src/graph.cpp || cmake_object_order_depends_target_core
+build src/CMakeFiles/core.dir/graph.cpp.o: CXX_COMPILER__core_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/graph.cpp || cmake_object_order_depends_target_core
   DEP_FILE = src/CMakeFiles/core.dir/graph.cpp.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -std=gnu++20
-  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/src
+  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src
   OBJECT_DIR = src/CMakeFiles/core.dir
   OBJECT_FILE_DIR = src/CMakeFiles/core.dir
+  TARGET_COMPILE_PDB = src/CMakeFiles/core.dir/core.pdb
+  TARGET_PDB = src/libcore.pdb
 
 
 # =============================================================================
@@ -190,15 +197,16 @@ build src/libcore.a: CXX_STATIC_LIBRARY_LINKER__core_Debug src/CMakeFiles/core.d
   OBJECT_DIR = src/CMakeFiles/core.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = src/CMakeFiles/core.dir/core.pdb
   TARGET_FILE = src/libcore.a
-  TARGET_PDB = core.a.dbg
+  TARGET_PDB = src/libcore.pdb
 
 
 #############################################
 # Utility command for test
 
 build src/CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -210,7 +218,7 @@ build src/test: phony src/CMakeFiles/test.util
 # Utility command for edit_cache
 
 build src/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -222,7 +230,7 @@ build src/edit_cache: phony src/CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build src/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -240,7 +248,7 @@ build src/list_install_components: phony
 # Utility command for install
 
 build src/CMakeFiles/install.util: CUSTOM_COMMAND src/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -252,7 +260,7 @@ build src/install: phony src/CMakeFiles/install.util
 # Utility command for install/local
 
 build src/CMakeFiles/install/local.util: CUSTOM_COMMAND src/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -264,7 +272,7 @@ build src/install/local: phony src/CMakeFiles/install/local.util
 # Utility command for install/strip
 
 build src/CMakeFiles/install/strip.util: CUSTOM_COMMAND src/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -273,7 +281,7 @@ build src/install/strip: phony src/CMakeFiles/install/strip.util
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
-# /Users/halilibrahim/Desktop/Thesis/OblivousRouting/CMakeLists.txt
+# /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/CMakeLists.txt
 # =============================================================================
 
 
@@ -281,7 +289,7 @@ build src/install/strip: phony src/CMakeFiles/install/strip.util
 # Utility command for test
 
 build extern/googletest/CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -293,7 +301,7 @@ build extern/googletest/test: phony extern/googletest/CMakeFiles/test.util
 # Utility command for edit_cache
 
 build extern/googletest/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -305,7 +313,7 @@ build extern/googletest/edit_cache: phony extern/googletest/CMakeFiles/edit_cach
 # Utility command for rebuild_cache
 
 build extern/googletest/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -323,7 +331,7 @@ build extern/googletest/list_install_components: phony
 # Utility command for install
 
 build extern/googletest/CMakeFiles/install.util: CUSTOM_COMMAND extern/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -335,7 +343,7 @@ build extern/googletest/install: phony extern/googletest/CMakeFiles/install.util
 # Utility command for install/local
 
 build extern/googletest/CMakeFiles/install/local.util: CUSTOM_COMMAND extern/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -347,7 +355,7 @@ build extern/googletest/install/local: phony extern/googletest/CMakeFiles/instal
 # Utility command for install/strip
 
 build extern/googletest/CMakeFiles/install/strip.util: CUSTOM_COMMAND extern/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -356,7 +364,7 @@ build extern/googletest/install/strip: phony extern/googletest/CMakeFiles/instal
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
-# /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/CMakeLists.txt
+# /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/CMakeLists.txt
 # =============================================================================
 
 # =============================================================================
@@ -368,12 +376,14 @@ build extern/googletest/install/strip: phony extern/googletest/CMakeFiles/instal
 
 build cmake_object_order_depends_target_gmock: phony || cmake_object_order_depends_target_gtest
 
-build extern/googletest/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o: CXX_COMPILER__gmock_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/src/gmock-all.cc || cmake_object_order_depends_target_gmock
+build extern/googletest/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o: CXX_COMPILER__gmock_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/src/gmock-all.cc || cmake_object_order_depends_target_gmock
   DEP_FILE = extern/googletest/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics  -DGTEST_HAS_PTHREAD=1   -std=c++20
-  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/include -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest
+  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/include -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest
   OBJECT_DIR = extern/googletest/googlemock/CMakeFiles/gmock.dir
   OBJECT_FILE_DIR = extern/googletest/googlemock/CMakeFiles/gmock.dir/src
+  TARGET_COMPILE_PDB = lib/libgmockpdb_debug_postfix-NOTFOUND.pdb
+  TARGET_PDB = bin/libgmockpdb_debug_postfix-NOTFOUND.pdb
 
 
 # =============================================================================
@@ -389,8 +399,9 @@ build lib/libgmock.a: CXX_STATIC_LIBRARY_LINKER__gmock_Debug extern/googletest/g
   OBJECT_DIR = extern/googletest/googlemock/CMakeFiles/gmock.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = lib/libgmockpdb_debug_postfix-NOTFOUND.pdb
   TARGET_FILE = lib/libgmock.a
-  TARGET_PDB = gmock.a.dbg
+  TARGET_PDB = bin/libgmockpdb_debug_postfix-NOTFOUND.pdb
 
 # =============================================================================
 # Object build statements for STATIC_LIBRARY target gmock_main
@@ -401,12 +412,14 @@ build lib/libgmock.a: CXX_STATIC_LIBRARY_LINKER__gmock_Debug extern/googletest/g
 
 build cmake_object_order_depends_target_gmock_main: phony || cmake_object_order_depends_target_gmock cmake_object_order_depends_target_gtest
 
-build extern/googletest/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o: CXX_COMPILER__gmock_main_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/src/gmock_main.cc || cmake_object_order_depends_target_gmock_main
+build extern/googletest/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o: CXX_COMPILER__gmock_main_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/src/gmock_main.cc || cmake_object_order_depends_target_gmock_main
   DEP_FILE = extern/googletest/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics  -DGTEST_HAS_PTHREAD=1   -std=c++20
-  INCLUDES = -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/include -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest
+  INCLUDES = -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/include -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest
   OBJECT_DIR = extern/googletest/googlemock/CMakeFiles/gmock_main.dir
   OBJECT_FILE_DIR = extern/googletest/googlemock/CMakeFiles/gmock_main.dir/src
+  TARGET_COMPILE_PDB = lib/libgmock_mainpdb_debug_postfix-NOTFOUND.pdb
+  TARGET_PDB = bin/libgmock_mainpdb_debug_postfix-NOTFOUND.pdb
 
 
 # =============================================================================
@@ -422,15 +435,16 @@ build lib/libgmock_main.a: CXX_STATIC_LIBRARY_LINKER__gmock_main_Debug extern/go
   OBJECT_DIR = extern/googletest/googlemock/CMakeFiles/gmock_main.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = lib/libgmock_mainpdb_debug_postfix-NOTFOUND.pdb
   TARGET_FILE = lib/libgmock_main.a
-  TARGET_PDB = gmock_main.a.dbg
+  TARGET_PDB = bin/libgmock_mainpdb_debug_postfix-NOTFOUND.pdb
 
 
 #############################################
 # Utility command for test
 
 build extern/googletest/googlemock/CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -442,7 +456,7 @@ build extern/googletest/googlemock/test: phony extern/googletest/googlemock/CMak
 # Utility command for edit_cache
 
 build extern/googletest/googlemock/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -454,7 +468,7 @@ build extern/googletest/googlemock/edit_cache: phony extern/googletest/googlemoc
 # Utility command for rebuild_cache
 
 build extern/googletest/googlemock/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -472,7 +486,7 @@ build extern/googletest/googlemock/list_install_components: phony
 # Utility command for install
 
 build extern/googletest/googlemock/CMakeFiles/install.util: CUSTOM_COMMAND extern/googletest/googlemock/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -484,7 +498,7 @@ build extern/googletest/googlemock/install: phony extern/googletest/googlemock/C
 # Utility command for install/local
 
 build extern/googletest/googlemock/CMakeFiles/install/local.util: CUSTOM_COMMAND extern/googletest/googlemock/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -496,7 +510,7 @@ build extern/googletest/googlemock/install/local: phony extern/googletest/google
 # Utility command for install/strip
 
 build extern/googletest/googlemock/CMakeFiles/install/strip.util: CUSTOM_COMMAND extern/googletest/googlemock/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -505,7 +519,7 @@ build extern/googletest/googlemock/install/strip: phony extern/googletest/google
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
-# /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/CMakeLists.txt
+# /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/CMakeLists.txt
 # =============================================================================
 
 # =============================================================================
@@ -517,12 +531,14 @@ build extern/googletest/googlemock/install/strip: phony extern/googletest/google
 
 build cmake_object_order_depends_target_gtest: phony || extern/googletest/googletest/CMakeFiles/gtest.dir
 
-build extern/googletest/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o: CXX_COMPILER__gtest_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/src/gtest-all.cc || cmake_object_order_depends_target_gtest
+build extern/googletest/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o: CXX_COMPILER__gtest_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/src/gtest-all.cc || cmake_object_order_depends_target_gtest
   DEP_FILE = extern/googletest/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics  -DGTEST_HAS_PTHREAD=1   -std=c++20
-  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/include -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest
+  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/include -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest
   OBJECT_DIR = extern/googletest/googletest/CMakeFiles/gtest.dir
   OBJECT_FILE_DIR = extern/googletest/googletest/CMakeFiles/gtest.dir/src
+  TARGET_COMPILE_PDB = lib/libgtestpdb_debug_postfix-NOTFOUND.pdb
+  TARGET_PDB = bin/libgtestpdb_debug_postfix-NOTFOUND.pdb
 
 
 # =============================================================================
@@ -538,8 +554,9 @@ build lib/libgtest.a: CXX_STATIC_LIBRARY_LINKER__gtest_Debug extern/googletest/g
   OBJECT_DIR = extern/googletest/googletest/CMakeFiles/gtest.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = lib/libgtestpdb_debug_postfix-NOTFOUND.pdb
   TARGET_FILE = lib/libgtest.a
-  TARGET_PDB = gtest.a.dbg
+  TARGET_PDB = bin/libgtestpdb_debug_postfix-NOTFOUND.pdb
 
 # =============================================================================
 # Object build statements for STATIC_LIBRARY target gtest_main
@@ -550,12 +567,14 @@ build lib/libgtest.a: CXX_STATIC_LIBRARY_LINKER__gtest_Debug extern/googletest/g
 
 build cmake_object_order_depends_target_gtest_main: phony || cmake_object_order_depends_target_gtest
 
-build extern/googletest/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o: CXX_COMPILER__gtest_main_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/src/gtest_main.cc || cmake_object_order_depends_target_gtest_main
+build extern/googletest/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o: CXX_COMPILER__gtest_main_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/src/gtest_main.cc || cmake_object_order_depends_target_gtest_main
   DEP_FILE = extern/googletest/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics  -DGTEST_HAS_PTHREAD=1   -std=c++20
-  INCLUDES = -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest
+  INCLUDES = -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest
   OBJECT_DIR = extern/googletest/googletest/CMakeFiles/gtest_main.dir
   OBJECT_FILE_DIR = extern/googletest/googletest/CMakeFiles/gtest_main.dir/src
+  TARGET_COMPILE_PDB = lib/libgtest_mainpdb_debug_postfix-NOTFOUND.pdb
+  TARGET_PDB = bin/libgtest_mainpdb_debug_postfix-NOTFOUND.pdb
 
 
 # =============================================================================
@@ -571,15 +590,16 @@ build lib/libgtest_main.a: CXX_STATIC_LIBRARY_LINKER__gtest_main_Debug extern/go
   OBJECT_DIR = extern/googletest/googletest/CMakeFiles/gtest_main.dir
   POST_BUILD = :
   PRE_LINK = :
+  TARGET_COMPILE_PDB = lib/libgtest_mainpdb_debug_postfix-NOTFOUND.pdb
   TARGET_FILE = lib/libgtest_main.a
-  TARGET_PDB = gtest_main.a.dbg
+  TARGET_PDB = bin/libgtest_mainpdb_debug_postfix-NOTFOUND.pdb
 
 
 #############################################
 # Utility command for test
 
 build extern/googletest/googletest/CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -591,7 +611,7 @@ build extern/googletest/googletest/test: phony extern/googletest/googletest/CMak
 # Utility command for edit_cache
 
 build extern/googletest/googletest/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -603,7 +623,7 @@ build extern/googletest/googletest/edit_cache: phony extern/googletest/googletes
 # Utility command for rebuild_cache
 
 build extern/googletest/googletest/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -621,7 +641,7 @@ build extern/googletest/googletest/list_install_components: phony
 # Utility command for install
 
 build extern/googletest/googletest/CMakeFiles/install.util: CUSTOM_COMMAND extern/googletest/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -633,7 +653,7 @@ build extern/googletest/googletest/install: phony extern/googletest/googletest/C
 # Utility command for install/local
 
 build extern/googletest/googletest/CMakeFiles/install/local.util: CUSTOM_COMMAND extern/googletest/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -645,7 +665,7 @@ build extern/googletest/googletest/install/local: phony extern/googletest/google
 # Utility command for install/strip
 
 build extern/googletest/googletest/CMakeFiles/install/strip.util: CUSTOM_COMMAND extern/googletest/googletest/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -654,7 +674,7 @@ build extern/googletest/googletest/install/strip: phony extern/googletest/google
 
 # =============================================================================
 # Write statements declared in CMakeLists.txt:
-# /Users/halilibrahim/Desktop/Thesis/OblivousRouting/CMakeLists.txt
+# /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/CMakeLists.txt
 # =============================================================================
 
 # =============================================================================
@@ -666,12 +686,14 @@ build extern/googletest/googletest/install/strip: phony extern/googletest/google
 
 build cmake_object_order_depends_target_smoke_test: phony || cmake_object_order_depends_target_core cmake_object_order_depends_target_gtest cmake_object_order_depends_target_gtest_main
 
-build test/CMakeFiles/smoke_test.dir/smoke/graph_toy_construction.cpp.o: CXX_COMPILER__smoke_test_Debug /Users/halilibrahim/Desktop/Thesis/OblivousRouting/test/smoke/graph_toy_construction.cpp || cmake_object_order_depends_target_smoke_test
-  DEP_FILE = test/CMakeFiles/smoke_test.dir/smoke/graph_toy_construction.cpp.o.d
+build test/CMakeFiles/smoke_test.dir/smoke/smoke_test.cpp.o: CXX_COMPILER__smoke_test_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/test/smoke/smoke_test.cpp || cmake_object_order_depends_target_smoke_test
+  DEP_FILE = test/CMakeFiles/smoke_test.dir/smoke/smoke_test.cpp.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -std=gnu++20
-  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/OblivousRouting/src -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest
+  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/include -isystem /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest
   OBJECT_DIR = test/CMakeFiles/smoke_test.dir
   OBJECT_FILE_DIR = test/CMakeFiles/smoke_test.dir/smoke
+  TARGET_COMPILE_PDB = test/CMakeFiles/smoke_test.dir/
+  TARGET_PDB = test/smoke_test.pdb
 
 
 # =============================================================================
@@ -681,22 +703,23 @@ build test/CMakeFiles/smoke_test.dir/smoke/graph_toy_construction.cpp.o: CXX_COM
 #############################################
 # Link the executable test/smoke_test
 
-build test/smoke_test test/smoke_test[1]_tests.cmake | ${cmake_ninja_workdir}test/smoke_test[1]_tests.cmake: CXX_EXECUTABLE_LINKER__smoke_test_Debug test/CMakeFiles/smoke_test.dir/smoke/graph_toy_construction.cpp.o | src/libcore.a lib/libgtest_main.a lib/libgtest.a || lib/libgtest.a lib/libgtest_main.a src/libcore.a
+build test/smoke_test test/smoke_test[1]_tests.cmake | ${cmake_ninja_workdir}test/smoke_test[1]_tests.cmake: CXX_EXECUTABLE_LINKER__smoke_test_Debug test/CMakeFiles/smoke_test.dir/smoke/smoke_test.cpp.o | src/libcore.a lib/libgtest_main.a lib/libgtest.a || lib/libgtest.a lib/libgtest_main.a src/libcore.a
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk
   LINK_LIBRARIES = src/libcore.a  lib/libgtest_main.a  lib/libgtest.a
   OBJECT_DIR = test/CMakeFiles/smoke_test.dir
-  POST_BUILD = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/cmake -D TEST_TARGET=smoke_test -D TEST_EXECUTABLE=/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test/smoke_test -D TEST_EXECUTOR= -D TEST_WORKING_DIR=/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test -D TEST_EXTRA_ARGS= -D TEST_PROPERTIES= -D TEST_PREFIX= -D TEST_SUFFIX= -D TEST_FILTER= -D NO_PRETTY_TYPES=FALSE -D NO_PRETTY_VALUES=FALSE -D TEST_LIST=smoke_test_TESTS -D CTEST_FILE=/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test/smoke_test[1]_tests.cmake -D TEST_DISCOVERY_TIMEOUT=5 -D TEST_XML_OUTPUT_DIR= -P /opt/local/share/cmake-3.24/Modules/GoogleTestAddTests.cmake
+  POST_BUILD = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/cmake -D TEST_TARGET=smoke_test -D TEST_EXECUTABLE=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test/smoke_test -D TEST_EXECUTOR= -D TEST_WORKING_DIR=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test -D TEST_EXTRA_ARGS= -D TEST_PROPERTIES= -D TEST_PREFIX= -D TEST_SUFFIX= -D TEST_FILTER= -D NO_PRETTY_TYPES=FALSE -D NO_PRETTY_VALUES=FALSE -D TEST_LIST=smoke_test_TESTS -D CTEST_FILE=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test/smoke_test[1]_tests.cmake -D TEST_DISCOVERY_TIMEOUT=5 -D TEST_XML_OUTPUT_DIR= -P /opt/local/share/cmake-3.24/Modules/GoogleTestAddTests.cmake
   PRE_LINK = :
   RESTAT = 1
+  TARGET_COMPILE_PDB = test/CMakeFiles/smoke_test.dir/
   TARGET_FILE = test/smoke_test
-  TARGET_PDB = smoke_test.dbg
+  TARGET_PDB = test/smoke_test.pdb
 
 
 #############################################
 # Utility command for test
 
 build test/CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/ctest --force-new-ctest-process
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/ctest --force-new-ctest-process
   DESC = Running tests...
   pool = console
   restat = 1
@@ -708,7 +731,7 @@ build test/test: phony test/CMakeFiles/test.util
 # Utility command for edit_cache
 
 build test/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/ccmake -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -720,7 +743,7 @@ build test/edit_cache: phony test/CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build test/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/OblivousRouting -B/Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/cmake --regenerate-during-build -S/Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -738,7 +761,7 @@ build test/list_install_components: phony
 # Utility command for install
 
 build test/CMakeFiles/install.util: CUSTOM_COMMAND test/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/cmake -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/cmake -P cmake_install.cmake
   DESC = Install the project...
   pool = console
   restat = 1
@@ -750,7 +773,7 @@ build test/install: phony test/CMakeFiles/install.util
 # Utility command for install/local
 
 build test/CMakeFiles/install/local.util: CUSTOM_COMMAND test/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
   DESC = Installing only the local directory...
   pool = console
   restat = 1
@@ -762,7 +785,7 @@ build test/install/local: phony test/CMakeFiles/install/local.util
 # Utility command for install/strip
 
 build test/CMakeFiles/install/strip.util: CUSTOM_COMMAND test/all
-  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+  COMMAND = cd /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test && /opt/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
   DESC = Installing the project stripped...
   pool = console
   restat = 1
@@ -800,42 +823,42 @@ build smoke_test: phony test/smoke_test
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
 
 build all: phony OblivousRouting src/all extern/googletest/all test/all
 
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest
 
 build extern/googletest/all: phony extern/googletest/googlemock/all
 
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googlemock
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock
 
 build extern/googletest/googlemock/all: phony lib/libgmock.a lib/libgmock_main.a extern/googletest/googletest/all
 
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/extern/googletest/googletest
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googletest
 
 build extern/googletest/googletest/all: phony lib/libgtest.a lib/libgtest_main.a
 
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/src
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/src
 
 build src/all: phony src/libcore.a
 
 # =============================================================================
 
 #############################################
-# Folder: /Users/halilibrahim/Desktop/Thesis/OblivousRouting/cmake-build-debug/test
+# Folder: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/test
 
 build test/all: phony test/smoke_test
 
@@ -846,14 +869,14 @@ build test/all: phony test/smoke_test
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /Users/halilibrahim/Desktop/Thesis/OblivousRouting/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/cmake/gmock.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/cmake/gmock_main.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/Config.cmake.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/gtest.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/gtest_main.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/internal_utils.cmake /Users/halilibrahim/Desktop/Thesis/OblivousRouting/src/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/test/CMakeLists.txt /opt/local/share/cmake-3.24/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCXXInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake /opt/local/share/cmake-3.24/Modules/CMakeDependentOption.cmake /opt/local/share/cmake-3.24/Modules/CMakeGenericSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeInitializeConfigs.cmake /opt/local/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakePackageConfigHelpers.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInitialize.cmake /opt/local/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/CheckIncludeFile.cmake /opt/local/share/cmake-3.24/Modules/CheckLibraryExists.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU.cmake /opt/local/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake /opt/local/share/cmake-3.24/Modules/FindPackageMessage.cmake /opt/local/share/cmake-3.24/Modules/FindThreads.cmake /opt/local/share/cmake-3.24/Modules/GNUInstallDirs.cmake /opt/local/share/cmake-3.24/Modules/GoogleTest.cmake /opt/local/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Initialize.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin.cmake /opt/local/share/cmake-3.24/Modules/Platform/UnixPaths.cmake /opt/local/share/cmake-3.24/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/3.24.4/CMakeCCompiler.cmake CMakeFiles/3.24.4/CMakeCXXCompiler.cmake CMakeFiles/3.24.4/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/cmake/gmock.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/cmake/gmock_main.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/Config.cmake.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/gtest.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/gtest_main.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/internal_utils.cmake /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/test/CMakeLists.txt /opt/local/share/cmake-3.24/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCCompiler.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCCompilerABI.c /opt/local/share/cmake-3.24/Modules/CMakeCInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCXXCompiler.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCXXCompilerABI.cpp /opt/local/share/cmake-3.24/Modules/CMakeCXXInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake /opt/local/share/cmake-3.24/Modules/CMakeCompilerIdDetection.cmake /opt/local/share/cmake-3.24/Modules/CMakeDependentOption.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCXXCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompileFeatures.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompilerABI.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompilerId.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeFindBinUtils.cmake /opt/local/share/cmake-3.24/Modules/CMakeGenericSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeInitializeConfigs.cmake /opt/local/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakePackageConfigHelpers.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseImplicitIncludeInfo.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseImplicitLinkInfo.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseLibraryArchitecture.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystem.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInitialize.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCXXCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCompilerCommon.cmake /opt/local/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/CheckIncludeFile.cmake /opt/local/share/cmake-3.24/Modules/CheckLibraryExists.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ADSP-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ARMCC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ARMClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Borland-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Comeau-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Cray-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GHS-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU.cmake /opt/local/share/cmake-3.24/Modules/Compiler/HP-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IAR-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Intel-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/LCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/MSVC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/NVHPC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/PGI-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/PathScale-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SCO-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/TI-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Watcom-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XL-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/zOS-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake /opt/local/share/cmake-3.24/Modules/FindPackageMessage.cmake /opt/local/share/cmake-3.24/Modules/FindThreads.cmake /opt/local/share/cmake-3.24/Modules/GNUInstallDirs.cmake /opt/local/share/cmake-3.24/Modules/GoogleTest.cmake /opt/local/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/Internal/FeatureTesting.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Determine-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Initialize.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin.cmake /opt/local/share/cmake-3.24/Modules/Platform/UnixPaths.cmake /opt/local/share/cmake-3.24/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/3.24.4/CMakeCCompiler.cmake CMakeFiles/3.24.4/CMakeCXXCompiler.cmake CMakeFiles/3.24.4/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /Users/halilibrahim/Desktop/Thesis/OblivousRouting/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/cmake/gmock.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googlemock/cmake/gmock_main.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/Config.cmake.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/gtest.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/gtest_main.pc.in /Users/halilibrahim/Desktop/Thesis/OblivousRouting/extern/googletest/googletest/cmake/internal_utils.cmake /Users/halilibrahim/Desktop/Thesis/OblivousRouting/src/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/OblivousRouting/test/CMakeLists.txt /opt/local/share/cmake-3.24/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCXXInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake /opt/local/share/cmake-3.24/Modules/CMakeDependentOption.cmake /opt/local/share/cmake-3.24/Modules/CMakeGenericSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeInitializeConfigs.cmake /opt/local/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakePackageConfigHelpers.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInitialize.cmake /opt/local/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/CheckIncludeFile.cmake /opt/local/share/cmake-3.24/Modules/CheckLibraryExists.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU.cmake /opt/local/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake /opt/local/share/cmake-3.24/Modules/FindPackageMessage.cmake /opt/local/share/cmake-3.24/Modules/FindThreads.cmake /opt/local/share/cmake-3.24/Modules/GNUInstallDirs.cmake /opt/local/share/cmake-3.24/Modules/GoogleTest.cmake /opt/local/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Initialize.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin.cmake /opt/local/share/cmake-3.24/Modules/Platform/UnixPaths.cmake /opt/local/share/cmake-3.24/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/3.24.4/CMakeCCompiler.cmake CMakeFiles/3.24.4/CMakeCXXCompiler.cmake CMakeFiles/3.24.4/CMakeSystem.cmake: phony
+build /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/cmake/gmock.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googlemock/cmake/gmock_main.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/Config.cmake.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/gtest.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/gtest_main.pc.in /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/extern/googletest/googletest/cmake/internal_utils.cmake /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/CMakeLists.txt /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/test/CMakeLists.txt /opt/local/share/cmake-3.24/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCCompiler.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCCompilerABI.c /opt/local/share/cmake-3.24/Modules/CMakeCInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCXXCompiler.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeCXXCompilerABI.cpp /opt/local/share/cmake-3.24/Modules/CMakeCXXInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeCommonLanguageInclude.cmake /opt/local/share/cmake-3.24/Modules/CMakeCompilerIdDetection.cmake /opt/local/share/cmake-3.24/Modules/CMakeDependentOption.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCXXCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompileFeatures.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompilerABI.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineCompilerId.cmake /opt/local/share/cmake-3.24/Modules/CMakeDetermineSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeFindBinUtils.cmake /opt/local/share/cmake-3.24/Modules/CMakeGenericSystem.cmake /opt/local/share/cmake-3.24/Modules/CMakeInitializeConfigs.cmake /opt/local/share/cmake-3.24/Modules/CMakeLanguageInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakePackageConfigHelpers.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseImplicitIncludeInfo.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseImplicitLinkInfo.cmake /opt/local/share/cmake-3.24/Modules/CMakeParseLibraryArchitecture.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystem.cmake.in /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInformation.cmake /opt/local/share/cmake-3.24/Modules/CMakeSystemSpecificInitialize.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCXXCompiler.cmake /opt/local/share/cmake-3.24/Modules/CMakeTestCompilerCommon.cmake /opt/local/share/cmake-3.24/Modules/CheckCSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/CheckIncludeFile.cmake /opt/local/share/cmake-3.24/Modules/CheckLibraryExists.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ADSP-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ARMCC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/ARMClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Compiler/AppleClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Borland-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Bruce-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/CMakeCommonCompilerMacros.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang-DetermineCompilerInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Clang.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Comeau-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Compaq-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Cray-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Embarcadero-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Fujitsu-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GHS-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/GNU.cmake /opt/local/share/cmake-3.24/Modules/Compiler/HP-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/HP-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IAR-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Intel-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/LCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/MSVC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/NVHPC-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/NVIDIA-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/PGI-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/PathScale-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SCO-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SDCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SunPro-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/TI-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/Watcom-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XL-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XL-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XLClang-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/zOS-C-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake /opt/local/share/cmake-3.24/Modules/FindPackageHandleStandardArgs.cmake /opt/local/share/cmake-3.24/Modules/FindPackageMessage.cmake /opt/local/share/cmake-3.24/Modules/FindThreads.cmake /opt/local/share/cmake-3.24/Modules/GNUInstallDirs.cmake /opt/local/share/cmake-3.24/Modules/GoogleTest.cmake /opt/local/share/cmake-3.24/Modules/Internal/CheckSourceCompiles.cmake /opt/local/share/cmake-3.24/Modules/Internal/FeatureTesting.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-AppleClang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-C.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Apple-Clang.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Determine-CXX.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin-Initialize.cmake /opt/local/share/cmake-3.24/Modules/Platform/Darwin.cmake /opt/local/share/cmake-3.24/Modules/Platform/UnixPaths.cmake /opt/local/share/cmake-3.24/Modules/WriteBasicConfigVersionFile.cmake CMakeCache.txt CMakeFiles/3.24.4/CMakeCCompiler.cmake CMakeFiles/3.24.4/CMakeCXXCompiler.cmake CMakeFiles/3.24.4/CMakeSystem.cmake: phony
 
 
 #############################################
