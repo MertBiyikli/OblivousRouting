@@ -36,3 +36,12 @@ TEST(GraphTest, InvalidEdgeThrows) {
     EXPECT_THROW(g.addEdge(0, 5, 3.0), std::out_of_range);  // node 5 doesn't exist
     EXPECT_THROW(g.addEdge(-1, 0, 1.0), std::out_of_range); // invalid index
 }
+
+TEST(GraphTest, ReadGraph) {
+    Graph g;
+
+    g.readGraph("../test/randomgraphs/small/graph_10_6.dimacs");
+
+    EXPECT_EQ(g.numNodes(), 6);
+    EXPECT_EQ(g.numEdges(), 10);
+}

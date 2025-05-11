@@ -14,9 +14,10 @@ struct Edge{
 
 class Graph{
 public:
-    Graph() = delete;
+    Graph() : m_iNumNodes(0), m_iNumEdges(0) {};
     Graph(int n): m_iNumNodes(n), m_iNumEdges(0), m_adj(n) {}
 
+    void InitNodes(int nodes);
     void addEdge(int source, int target, double capacity);
 
     const std::vector<Edge>& neighbors(int node) const {
@@ -26,6 +27,7 @@ public:
     int numNodes() const;
     int numEdges() const;
 
+    void readGraph(const std::string& filename);
     void print() const;
 private:
     std::vector<std::vector<Edge> > m_adj;
