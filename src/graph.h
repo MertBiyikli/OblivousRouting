@@ -6,6 +6,7 @@
 #define OBLIVOUSROUTING_GRAPH_H
 
 #include <vector>
+#include <string>
 
 struct Edge{
     int target;
