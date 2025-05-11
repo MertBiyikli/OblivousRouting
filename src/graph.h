@@ -15,7 +15,7 @@ struct Edge{
 
 class Graph{
 public:
-
+    Graph() : m_iNumNodes(0), m_iNumEdges(0) {}
     void addNode();
     void addEdge(int source, int target, double capacity);
 
