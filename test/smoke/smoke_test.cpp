@@ -2,7 +2,7 @@
 // Created by Mert Biyikli on 11.05.25.
 //
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include "../../src/graph.h"
 #include <stdexcept>
 
