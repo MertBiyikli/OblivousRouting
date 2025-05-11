@@ -176,13 +176,6 @@ build src/CMakeFiles/core.dir/graph.cpp.o: CXX_COMPILER__core_Debug /Users/halil
   OBJECT_DIR = src/CMakeFiles/core.dir
   OBJECT_FILE_DIR = src/CMakeFiles/core.dir
 
-build src/CMakeFiles/core.dir/solver/solver.cpp.o: CXX_COMPILER__core_Debug /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/solver/solver.cpp || cmake_object_order_depends_target_core
-  DEP_FILE = src/CMakeFiles/core.dir/solver/solver.cpp.o.d
-  FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk -fcolor-diagnostics -std=gnu++20
-  INCLUDES = -I/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src
-  OBJECT_DIR = src/CMakeFiles/core.dir
-  OBJECT_FILE_DIR = src/CMakeFiles/core.dir/solver
-
 
 # =============================================================================
 # Link build statements for STATIC_LIBRARY target core
@@ -191,7 +184,7 @@ build src/CMakeFiles/core.dir/solver/solver.cpp.o: CXX_COMPILER__core_Debug /Use
 #############################################
 # Link the static library src/libcore.a
 
-build src/libcore.a: CXX_STATIC_LIBRARY_LINKER__core_Debug src/CMakeFiles/core.dir/graph.cpp.o src/CMakeFiles/core.dir/solver/solver.cpp.o
+build src/libcore.a: CXX_STATIC_LIBRARY_LINKER__core_Debug src/CMakeFiles/core.dir/graph.cpp.o
   ARCH_FLAGS = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk
   LANGUAGE_COMPILE_FLAGS = -g
   OBJECT_DIR = src/CMakeFiles/core.dir
