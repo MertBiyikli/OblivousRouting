@@ -4,6 +4,8 @@
 
 #include <gtest/gtest.h>
 #include "../../src/graph.h"
+#include <stdexcept>
+
 
 TEST(GraphTest, AddAndReorderEdges) {
     Graph g;
