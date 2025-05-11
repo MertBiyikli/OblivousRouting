@@ -45,5 +45,9 @@ jobs:
           name: build
           path: build
 
+
+      - name: Make test binaries executable
+        run: chmod +x build/test/smoke_test
+
       - name: Run tests
         run: cd build && ctest --output-on-failure
