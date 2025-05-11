@@ -12,6 +12,7 @@ TEST(GraphTest, AddAndReorderEdges) {
     g.addNode();
     g.addNode();
     g.addNode();
+    g.addNode();
 
     g.addEdge(0, 1, 10.0);
     g.addEdge(0, 2, 5.0);
