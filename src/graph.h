@@ -14,8 +14,9 @@ struct Edge{
 
 class Graph{
 public:
-    Graph() : m_iNumNodes(0), m_iNumEdges(0) {}
-    void addNode();
+    Graph() = delete;
+    Graph(int n): m_iNumNodes(n), m_iNumEdges(0), m_adj(n) {}
+
     void addEdge(int source, int target, double capacity);
 
     const std::vector<Edge>& neighbors(int node) const {

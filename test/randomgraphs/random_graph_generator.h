@@ -17,10 +17,7 @@ public:
             throw std::invalid_argument("Too many edges for undirected graph");
         }
 
-        Graph g;
-        for (int i = 0; i < numNodes; ++i) {
-            g.addNode();
-        }
+        Graph g(numNodes);
 
         std::set<std::pair<int, int>> existing;
         std::random_device rd;
@@ -38,7 +35,6 @@ public:
             if (existing.count(edge)) continue;
 
             double cap = distCap(gen);
-            g.addEdge(u, v, cap);
             g.addEdge(v, u, cap); // undirected
 
             existing.insert(edge);
