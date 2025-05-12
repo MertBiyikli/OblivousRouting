@@ -148,7 +148,7 @@ CMAKE_INSTALL_SYSCONFDIR:PATH=etc
 CMAKE_LINKER:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 
 //No help, variable specified on the command line.
-CMAKE_MAKE_PROGRAM:UNINITIALIZED=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/7CBE20F5-7F4B-40D6-B372-4F837590059D/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
+CMAKE_MAKE_PROGRAM:UNINITIALIZED=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/34DE832C-2B53-47A8-AAE1-883E417556EF/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
 
 //Flags used by the linker during the creation of modules during
 // all build types.
@@ -197,7 +197,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=OblivousRouting
+CMAKE_PROJECT_NAME:STATIC=ObliviousRouting
 
 //Value Computed by CMake
 CMAKE_PROJECT_VERSION:STATIC=1.16.0
@@ -276,6 +276,34 @@ CMAKE_STRIP:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/Xcode
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//The directory containing a CMake configuration file for Cbc.
+Cbc_DIR:PATH=/usr/local/lib/cmake/Cbc
+
+//The directory containing a CMake configuration file for Cgl.
+Cgl_DIR:PATH=/usr/local/lib/cmake/Cgl
+
+//The directory containing a CMake configuration file for Clp.
+Clp_DIR:PATH=/usr/local/lib/cmake/Clp
+
+//The directory containing a CMake configuration file for CoinUtils.
+CoinUtils_DIR:PATH=/usr/local/lib/cmake/CoinUtils
+
+//The directory containing a CMake configuration file for Eigen3.
+Eigen3_DIR:PATH=/usr/local/share/eigen3/cmake
+
+//Directory under which to collect all populated content
+FETCHCONTENT_BASE_DIR:PATH=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/_deps
+
+//Disables all attempts to download or update content and assumes
+// source dirs already exist
+FETCHCONTENT_FULLY_DISCONNECTED:BOOL=OFF
+
+//Enables QUIET option for all content population
+FETCHCONTENT_QUIET:BOOL=ON
+
+//Enables UPDATE_DISCONNECTED behavior for all content population
+FETCHCONTENT_UPDATES_DISCONNECTED:BOOL=OFF
+
 //Use Abseil and RE2. Requires Abseil and RE2 to be separately
 // added to the build.
 GTEST_HAS_ABSL:BOOL=OFF
@@ -285,6 +313,15 @@ GTEST_HAS_ABSL:BOOL=OFF
 INSTALL_GTEST:BOOL=ON
 
 //Value Computed by CMake
+ObliviousRouting_BINARY_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
+
+//Value Computed by CMake
+ObliviousRouting_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+ObliviousRouting_SOURCE_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting
+
+//Value Computed by CMake
 OblivousRouting_BINARY_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
 
 //Value Computed by CMake
@@ -292,6 +329,48 @@ OblivousRouting_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 OblivousRouting_SOURCE_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting
+
+//The directory containing a CMake configuration file for Osi.
+Osi_DIR:PATH=/usr/local/lib/cmake/Osi
+
+//Path to a file.
+Protobuf_INCLUDE_DIR:PATH=/usr/local/include
+
+//Path to a library.
+Protobuf_LIBRARY_DEBUG:FILEPATH=/usr/local/lib/libprotobuf.dylib
+
+//Path to a library.
+Protobuf_LIBRARY_RELEASE:FILEPATH=/usr/local/lib/libprotobuf.dylib
+
+//Path to a library.
+Protobuf_LITE_LIBRARY_DEBUG:FILEPATH=/usr/local/lib/libprotobuf-lite.dylib
+
+//Path to a library.
+Protobuf_LITE_LIBRARY_RELEASE:FILEPATH=/usr/local/lib/libprotobuf-lite.dylib
+
+//The Google Protocol Buffers Compiler
+Protobuf_PROTOC_EXECUTABLE:FILEPATH=/usr/local/bin/protoc
+
+//Path to a library.
+Protobuf_PROTOC_LIBRARY_DEBUG:FILEPATH=/usr/local/lib/libprotoc.dylib
+
+//Path to a library.
+Protobuf_PROTOC_LIBRARY_RELEASE:FILEPATH=/usr/local/lib/libprotoc.dylib
+
+//The directory containing a CMake configuration file for SCIP.
+SCIP_DIR:PATH=/usr/local/lib/cmake/scip
+
+//Path to a file.
+ZLIB_INCLUDE_DIR:PATH=/opt/local/include
+
+//Path to a library.
+ZLIB_LIBRARY_DEBUG:FILEPATH=ZLIB_LIBRARY_DEBUG-NOTFOUND
+
+//Path to a library.
+ZLIB_LIBRARY_RELEASE:FILEPATH=/opt/local/lib/libz.dylib
+
+//The directory containing a CMake configuration file for absl.
+absl_DIR:PATH=/usr/local/lib/cmake/absl
 
 //Value Computed by CMake
 gmock_BINARY_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug/extern/googletest/googlemock
@@ -338,6 +417,15 @@ gtest_force_shared_crt:BOOL=OFF
 
 //Build gtest with internal symbols hidden in shared libraries.
 gtest_hide_internal_symbols:BOOL=OFF
+
+//The directory containing a CMake configuration file for highs.
+highs_DIR:PATH=/usr/local/lib/cmake/highs
+
+//The directory containing a CMake configuration file for ortools.
+ortools_DIR:PATH=/usr/local/lib/cmake/ortools
+
+//The directory containing a CMake configuration file for re2.
+re2_DIR:PATH=/usr/local/lib/cmake/re2
 
 
 ########################
@@ -513,6 +601,28 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
+//ADVANCED property for variable: Protobuf_INCLUDE_DIR
+Protobuf_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_LIBRARY_DEBUG
+Protobuf_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_LIBRARY_RELEASE
+Protobuf_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_LITE_LIBRARY_DEBUG
+Protobuf_LITE_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_LITE_LIBRARY_RELEASE
+Protobuf_LITE_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_PROTOC_EXECUTABLE
+Protobuf_PROTOC_EXECUTABLE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_PROTOC_LIBRARY_DEBUG
+Protobuf_PROTOC_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: Protobuf_PROTOC_LIBRARY_RELEASE
+Protobuf_PROTOC_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ZLIB_INCLUDE_DIR
+ZLIB_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ZLIB_LIBRARY_DEBUG
+ZLIB_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: ZLIB_LIBRARY_RELEASE
+ZLIB_LIBRARY_RELEASE-ADVANCED:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
 cmake_package_name:INTERNAL=GTest

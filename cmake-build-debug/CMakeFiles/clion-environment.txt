@@ -1,4 +1,4 @@
-ToolSet: 1.0 (local)Ninja: 1.12.1@/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/7CBE20F5-7F4B-40D6-B372-4F837590059D/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
+ToolSet: 1.0 (local)Ninja: 1.12.1@/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/34DE832C-2B53-47A8-AAE1-883E417556EF/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
 Options: 
 
-Options:-DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/7CBE20F5-7F4B-40D6-B372-4F837590059D/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
+Options:-DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/34DE832C-2B53-47A8-AAE1-883E417556EF/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
