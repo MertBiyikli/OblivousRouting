@@ -148,7 +148,7 @@ CMAKE_INSTALL_SYSCONFDIR:PATH=etc
 CMAKE_LINKER:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 
 //No help, variable specified on the command line.
-CMAKE_MAKE_PROGRAM:UNINITIALIZED=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/34DE832C-2B53-47A8-AAE1-883E417556EF/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
+CMAKE_MAKE_PROGRAM:UNINITIALIZED=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/3B6F07A2-6CBD-48DF-9B55-C502842FDBB1/d/CLion.app/Contents/bin/ninja/mac/x64/ninja
 
 //Flags used by the linker during the creation of modules during
 // all build types.
@@ -312,6 +312,9 @@ GTEST_HAS_ABSL:BOOL=OFF
 // may want to turn this OFF.)
 INSTALL_GTEST:BOOL=ON
 
+//Path to the directory containing julia.h and julia_version.h
+JULIA_INCLUDE_DIR:PATH=/usr/local/opt/julia/include/julia
+
 //Value Computed by CMake
 ObliviousRouting_BINARY_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
 
@@ -320,15 +323,6 @@ ObliviousRouting_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 ObliviousRouting_SOURCE_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting
-
-//Value Computed by CMake
-OblivousRouting_BINARY_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
-
-//Value Computed by CMake
-OblivousRouting_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-OblivousRouting_SOURCE_DIR:STATIC=/Users/halilibrahim/Desktop/Thesis/ObliviousRouting
 
 //The directory containing a CMake configuration file for Osi.
 Osi_DIR:PATH=/usr/local/lib/cmake/Osi

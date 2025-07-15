@@ -8,7 +8,7 @@
 #include <vector>
 #include "../graph.h"
 
-class OblviviousRoutingSolver {
+class OblviviousRoutingSolver { // TODO: rename the class name
 public:
     std::vector<std::vector<double>> m_routingTable;
     OblviviousRoutingSolver() = default;

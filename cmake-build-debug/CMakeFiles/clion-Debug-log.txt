@@ -1,4 +1,4 @@
-/opt/local/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/34DE832C-2B53-47A8-AAE1-883E417556EF/d/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
+/opt/local/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/3B6F07A2-6CBD-48DF-9B55-C502842FDBB1/d/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
 -- The C compiler identification is AppleClang 15.0.0.15000309
 -- The CXX compiler identification is AppleClang 15.0.0.15000309
 -- Detecting C compiler ABI info
@@ -11,8 +11,15 @@
 -- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ - skipped
 -- Detecting CXX compile features
 -- Detecting CXX compile features - done
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Using Julia in /usr/local/opt/julia
+CMake Warning at /opt/local/share/cmake-3.24/Modules/FindProtobuf.cmake:524 (message):
+  Protobuf compiler version 27.1 doesn't match library version 5.27.1
+Call Stack (most recent call first):
+  /opt/local/share/cmake-3.24/Modules/CMakeFindDependencyMacro.cmake:47 (find_package)
+  /usr/local/lib/cmake/ortools/ortoolsConfig.cmake:43 (find_dependency)
+  CMakeLists.txt:51 (find_package)
+
+
 -- Found Threads: TRUE  
 -- Configuring done
 -- Generating done

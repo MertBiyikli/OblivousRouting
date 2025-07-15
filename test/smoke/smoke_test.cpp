@@ -21,12 +21,12 @@ TEST(GraphTest, Neighbours) {
     EXPECT_EQ(g.numEdges(), 1);
 
     ASSERT_EQ(g.neighbors(0).size(), 1);
-    EXPECT_EQ(g.neighbors(0)[0].target, 1);
-    EXPECT_DOUBLE_EQ(g.neighbors(0)[0].capacity, 2.5);
+    EXPECT_EQ(g.neighbors(0)[0]->target, 1);
+    EXPECT_DOUBLE_EQ(g.neighbors(0)[0]->capacity, 2.5);
 
     ASSERT_EQ(g.neighbors(1).size(), 1);
-    EXPECT_EQ(g.neighbors(1)[0].target, 0);
-    EXPECT_DOUBLE_EQ(g.neighbors(1)[0].capacity, 2.5);
+    EXPECT_EQ(g.neighbors(1)[0]->target, 0);
+    EXPECT_DOUBLE_EQ(g.neighbors(1)[0]->capacity, 2.5);
 }
 
 TEST(GraphTest, InvalidEdgeThrows) {

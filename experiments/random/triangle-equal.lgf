@@ -1,0 +1,13 @@
+@nodes
+label	num	name	
+0	0	Adelaide	
+1	1	Canberra	
+2	2	Darwin	
+@edges
+label	name	cost
+0	1	0	Adelaide_Melbourne	1	
+1	0	1	Melbourne_Adelaide	1	
+0	2	2	Adelaide_Darwin	1	
+2	0	3	Darwin_Adelaide	1	
+1	2	4	Adelaide_Perth	1	
+2	1	5	Perth_Adelaide	1	

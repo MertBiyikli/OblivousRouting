@@ -1,0 +1,7 @@
+# Project.toml
+name = "LaplacianSolver"
+uuid = "123e4567-e89b-12d3-a456-426614174000"  # generate your own
+version = "0.1.0"
+
+[deps]
+Laplacians = "7f904dfe-1f1e-11e9-1e19-2cf05b3f8743"
