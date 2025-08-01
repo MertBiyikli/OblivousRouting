@@ -22,8 +22,7 @@ jobs:
           version: '1.10'  # or the version you use locally
 
       - name: Install Julia dependencies
-        run: |
-          julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/danspielman/Laplacians.jl.git"); Pkg.instantiate(); Pkg.precompile()'
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 
       - name: Configure with CMake
         env:
