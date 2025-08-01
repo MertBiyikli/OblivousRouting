@@ -18,6 +18,7 @@
 #include "../solver/solver.h"
 
 class RaeckeFRT {
+    bool debug = false;
     MCCT_Solver m_mcct;
     RaeckeGraph m_graph;
     double m_lambdaSum;
@@ -70,6 +71,8 @@ using EdgeWeights = std::unordered_map<std::shared_ptr<Edge>, double>;
  * This class implements Räcke’s oblivious‐routing solver
  * as in his STOC 2008 paper using the FRT algorithm.
  */
+
+/*
 class RackeObliviousRoutingSolver : public OblviviousRoutingSolver {
 public:
     RackeObliviousRoutingSolver()
@@ -92,11 +95,7 @@ public:
     std::shared_ptr<Tree>                       getTree(std::shared_ptr<Graph>& g);
 
 
-    /**
-     * Print the final oblivious routing table:
-     * for each directed arc e and commodity (s -> t),
-     * prints the expected flow on e under the random-tree scheme.
-     */
+
     void printObliviousRoutingTable() const;
 
 
@@ -111,9 +110,6 @@ private:
     double getMaxRLoad(int treeIndex,
                            const std::shared_ptr<Tree>& t);
 
-    /*double computeMaxRLoad(int treeIndex,
-                           const std::shared_ptr<Tree>& t,
-                           const std::shared_ptr<Graph>& copyGraph);*/
 
     EdgeWeights computeNewDistances(std::shared_ptr<Graph>& g);
 
@@ -132,7 +128,7 @@ private:
     std::vector<EdgeWeights>         idTree2arc2rLoad_; // todo: change to Arc Ids instead of pointers
     std::unique_ptr<MCCTDerandomizedWeightedSolver>      mcct_;
 };
-
+*/
 
 
 

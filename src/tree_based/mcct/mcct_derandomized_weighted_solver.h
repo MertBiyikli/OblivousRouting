@@ -18,6 +18,7 @@
 
 
 class MCCT_Solver {
+    bool debug = false;
     FRT_Tree tree;
     std::shared_ptr<RaeckeGraph> graph;
     std::set<double> betas;
@@ -28,7 +29,7 @@ class MCCT_Solver {
     public:
 
 
-    FRT_Tree getBestTree();
+    FRT_Tree getBestTree(bool debug = false);
     void computeBestTree(bool debug = false);
 
     void computeBestBetaAndPermutation();
@@ -108,7 +109,7 @@ class MCCT_Solver {
 
 
 
-
+/*
 class MCCTDerandomizedWeightedSolver {
 public: // TODO: change this to private
     Tree tree;
@@ -187,7 +188,7 @@ public:
     // Reset solver state
     void reset();
 };
-
+*/
 
 
 #endif //OBLIVIOUSROUTING_MCCT_DERANDOMIZED_WEIGHTED_SOLVER_H

@@ -17,46 +17,44 @@ function laplacian_solve(
     colptr::Vector{Int32},
     rowval::Vector{Int32},
     nzval::Vector{Float64},
-    bvec::Vector{Float64}
+    bvec::Vector{Float64},
+    debug::Bool = false,
 )
 
-    @show typeof(n)
-    @show typeof(m)
-    @show typeof(colptr)
-    @show typeof(rowval)
-    @show typeof(nzval)
-    @show typeof(bvec)
+    if debug
+        @show typeof(n)
+        @show typeof(m)
+        @show typeof(colptr)
+        @show typeof(rowval)
+        @show typeof(nzval)
+        @show typeof(bvec)
 
-    println("length(bvec) = ", length(bvec))
-    println("eltype(bvec) = ", eltype(bvec))
+        println("JULIA: colptr length = ", length(colptr))
+        println("JULIA: rowval length = ", length(rowval))
+        println("JULIA: nzval length = ", length(nzval))
+        println("JULIA: first few rowval = ", rowval[1:min(end, 10)])
+        println("JULIA: first few nzval = ", nzval[1:min(end, 10)])
 
+        println("length(bvec) = ", length(bvec))
+        println("eltype(bvec) = ", eltype(bvec))
+        println("sum(bvec) = ", sum(bvec))
 
-    println("sum(bvec) = ", sum(bvec))
+        @assert length(rowval) == length(nzval) "rowval and nzval must be the same length"
+        @assert colptr[end] - 1 == length(rowval) "colptr mismatch: total nnz ≠ rowval/nzval length"
+    end
 
     bvec = bvec .- mean(bvec)
-    println("sum(bvec) = ", sum(bvec))
-#=
-
-    U = zeros(Float64, n)
-    L = SparseMatrixCSC(n, m, colptr, rowval, nzval)
-    solver = approxchol_sddm(L, verbose=false)
-    U = solver(Vector(bvec), verbose=false)
-=#
-    # Example where we output the adjacaency matrix
-    a = ring_graph(50)
-    @show typeof(a)
-    @show size(a)
-    @show eltype(a)
-    @show a[1:5, 1:5]
 
     # Create a sparse matrix from the provided data
-    A = SparseMatrixCSC(n, m, colptr, rowval, nzval)
-    @show typeof(A)
-    @show size(A)
-    @show eltype(A)
-    @show A[1:5, 1:5]
+    A = SparseMatrixCSC(n, n, colptr, rowval, nzval)
+    if debug
+        @show size(A)
+        @show nnz(A)
+        @show typeof(A)
+    end
+
     sol = approxchol_lap(A)
-    x = sol(bvec, tol=1e-1, verbose=true)
+    x = sol(bvec, tol=1e-10, verbose=false)
     return x
 end
 

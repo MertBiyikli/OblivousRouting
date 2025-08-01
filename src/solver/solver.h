@@ -15,7 +15,7 @@ public:
     virtual ~OblviviousRoutingSolver() = default;
 
     // ToDo: Think of an efficient way of storing the routing table
-    virtual void solve(const Graph& graph) = 0;
+    virtual void solve(const RaeckeGraph& graph) = 0;
 };
 
 #endif //OBLIVOUSROUTING_SOLVER_H

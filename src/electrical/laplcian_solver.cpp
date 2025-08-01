@@ -17,16 +17,17 @@ LaplacianSolver::LaplacianSolver():
 
 
 
-void LaplacianSolver::init(const RaeckeGraph &_g, const std::unordered_map<std::pair<int, int>, double> &_w_edges2weights, bool debug) {
+void LaplacianSolver::init(const RaeckeGraph &_g, const std::unordered_map<std::pair<int, int>, double> &_w_edges2weights) {
     if(initted)
         return;
 
     m_graph = _g;
+    m = _g.getNumEdges();
+    n = _g.getNumNodes();
+
     for(const auto& [edge, weight] : _w_edges2weights) {
         w_edges2weights[edge] = weight;
     }
-    m = m_graph.getNumEdges();
-    n = m_graph.getNumNodes();
 
     if(debug) {
         if (jl_exception_occurred()) {
@@ -38,19 +39,27 @@ void LaplacianSolver::init(const RaeckeGraph &_g, const std::unordered_map<std::
             throw std::runtime_error("Julia load failure.");
         }
     }
+
     initted = true;
 
     // init bvec
     bvec.resize(n);
     bvec.setZero();
-    bvec[0]=1;
-    bvec[n-1]=-1;
 
-    std::cout << "bvec to send to Julia:\n" << bvec.transpose() << std::endl;
+    if(debug) {
+        std::cout << "Initializing LaplacianSolver with " << n << " nodes and " << m << " edges." << std::endl;
+        std::cout << "Edge weights:\n";
+        for (const auto &[edge, weight] : _w_edges2weights) {
+            std::cout << "(" << edge.first << ", " << edge.second << ") : " << weight << std::endl;
+        }
+    }
+
+    buildCSC();
 
 
-    buildCSC(_w_edges2weights);
-
+    std::cout << "BEFORE memcpy: colptr.size() = " << colptr.size()
+              << ", rowval.size() = " << rowval.size()
+              << ", nzval.size() = " << nzval.size() << std::endl;
 
 
     // Prepare args
@@ -85,78 +94,14 @@ void LaplacianSolver::init(const RaeckeGraph &_g, const std::unordered_map<std::
 }
 
 
-Eigen::VectorXd LaplacianSolver::solve(const Eigen::VectorXd &b, bool debug) {
 
-    if(!initted) {
-        throw std::runtime_error("LaplacianSolver not initialized. Call init() first.");
-    }
-    if(b.size() != n) {
-        throw std::runtime_error("Input vector size does not match the number of nodes in the graph.");
-    }
-
-    // init the bvec if the dimensions are matching
-    if(b.size() == m_graph.getNumNodes()) {
-        bvec = b;
-        // Copy bvec to Julia array
-        memcpy(jl_array_data(bvec_julia), bvec.data(), bvec.size() * sizeof(double));
-    } else {
-        throw std::runtime_error("Input vector size does not match the number of nodes in the graph.");
-    }
-    jl_function_t* func = jl_get_function(jl_main_module, "laplacian_solve");
-    if (func == nullptr) {
-        throw std::runtime_error("Function not found.");
-    }
-
-
-    jl_value_t* args[6] = {
-            arg1,
-            arg2,
-            (jl_value_t *) colptr_julia,
-            (jl_value_t *) rowval_julia,
-            (jl_value_t *) nzval_julia,
-            (jl_value_t *) bvec_julia
-    };
-
-    jl_array_t* result = (jl_array_t *)jl_call(func, args, 6);
-
-    if(debug) {
-        if (jl_exception_occurred()) {
-            jl_value_t *e = jl_exception_occurred();
-            jl_function_t *sprint_func = jl_get_function(jl_base_module, "sprint");
-            jl_function_t *showerror_func = jl_get_function(jl_base_module, "showerror");
-            jl_value_t *err_str = jl_call2(sprint_func, showerror_func, e);
-            if (err_str && !jl_exception_occurred()) {
-                std::cerr << "Julia Exception: " << jl_string_ptr(err_str) << std::endl;
-            }
-            throw std::runtime_error("Julia call failed.");
-        }
-    }
-    // Convert the result to Eigen::VectorXd
-    double* data_ptr = (double*)jl_array_data(result);
-    size_t len = jl_array_len(result);
-
-    Eigen::VectorXd x(len);
-    for (size_t i = 0; i < len; ++i) {
-        x[i] = data_ptr[i];
-    }
-
-    return x;
-
-}
-
-
-
-void LaplacianSolver::buildCSC(const std::unordered_map<std::pair<int, int>, double> &edges) {
+void LaplacianSolver::buildCSC() {
     // Prepare edge list
     std::vector<std::tuple<int, int, double>> edgeList;
-    edgeList.reserve(edges.size() * 2);
+    edgeList.reserve(w_edges2weights.size() * 2);
 
-    for (const auto &[edge, weight] : edges) {
-        if (edge.first == edge.second) continue; // skip self-loops
-
-        // add both directions to ensure symmetry
+    for (const auto &[edge, weight] : w_edges2weights) {
         edgeList.emplace_back(edge.first, edge.second, weight);
-        edgeList.emplace_back(edge.second, edge.first, weight);
     }
 
     // Sort edge list by column, then by row
@@ -195,19 +140,117 @@ void LaplacianSolver::buildCSC(const std::unordered_map<std::pair<int, int>, dou
     for (auto &x : rowval) x += 1;
     for (auto &x : colptr) x += 1;
 
-    // Debug prints
-    std::cout << "colptr:";
-    for (auto v : colptr) std::cout << " " << v;
-    std::cout << std::endl;
+    if(debug) {
+        std::cout << "LaplacianSolver: CSC representation built with " << colptr.size() << " columns, "
+                  << rowval.size() << " rows, and " << nzval.size() << " non-zero values." << std::endl;
 
-    std::cout << "rowval:";
-    for (auto v : rowval) std::cout << " " << v;
-    std::cout << std::endl;
+        // Debug prints
+        std::cout << "colptr:";
+        for (auto v: colptr) std::cout << " " << v;
+        std::cout << std::endl;
 
-    std::cout << "nzval:";
-    for (auto v : nzval) std::cout << " " << v;
-    std::cout << std::endl;
+        std::cout << "rowval:";
+        for (auto v: rowval) std::cout << " " << v;
+        std::cout << std::endl;
+
+        std::cout << "nzval:";
+        for (auto v: nzval) std::cout << " " << v;
+        std::cout << std::endl;
+    }
 }
+
+
+
+Eigen::VectorXd LaplacianSolver::solve(const Eigen::VectorXd &b) {
+
+    if(!initted) {
+        throw std::runtime_error("LaplacianSolver not initialized. Call init() first.");
+    }
+    if(b.size() != n) {
+        throw std::runtime_error("Input vector size does not match the number of nodes in the graph.");
+    }
+
+    // init the bvec if the dimensions are matching
+    // TODO: try to identify this differently
+    if(b.size() == m_graph.getNumNodes()) {
+        bvec = b;
+        // Copy bvec to Julia array
+        memcpy(jl_array_data(bvec_julia), bvec.data(), bvec.size() * sizeof(double));
+    } else {
+        throw std::runtime_error("Input vector size does not match the number of nodes in the graph.");
+    }
+    jl_function_t* func = jl_get_function(jl_main_module, "laplacian_solve");
+    if (func == nullptr) {
+        throw std::runtime_error("Function not found.");
+    }
+
+
+    if (colptr.size() != static_cast<typeof(colptr.size())>(n + 1))
+        throw std::runtime_error("colptr size must be n+1");
+
+    if (rowval.size() != nzval.size())
+        throw std::runtime_error("rowval and nzval sizes must match");
+
+    if (!std::is_sorted(colptr.begin(), colptr.end()))
+        throw std::runtime_error("colptr must be non-decreasing");
+
+
+    // pass the debug flag as a Julia boolean
+    jl_value_t* debug_julia = jl_box_bool(debug);
+
+    jl_value_t* args[7] = {
+            arg1,
+            arg2,
+            (jl_value_t *) colptr_julia,
+            (jl_value_t *) rowval_julia,
+            (jl_value_t *) nzval_julia,
+            (jl_value_t *) bvec_julia,
+            debug_julia
+    };
+
+    jl_array_t* result = (jl_array_t *)jl_call(func, args, 6);
+
+    if(debug) {
+        if (jl_exception_occurred()) {
+            jl_value_t *e = jl_exception_occurred();
+            if (e) {
+                jl_function_t *sprint = jl_get_function(jl_base_module, "sprint");
+                jl_function_t *showerror = jl_get_function(jl_base_module, "showerror");
+                jl_value_t *str = jl_call2(sprint, showerror, e);
+                std::cerr << "Julia error: " << jl_string_ptr(str) << std::endl;
+            }
+            throw std::runtime_error("Julia call failed.");
+        }
+    }
+    // Convert the result to Eigen::VectorXd
+    if(result) {
+        double* data_ptr = (double*)jl_array_data(result);
+        size_t len = jl_array_len(result);
+
+        Eigen::VectorXd x(len);
+        for (size_t i = 0; i < len; ++i) {
+            x[i] = data_ptr[i];
+        }
+
+        return x;
+    }else{
+        if(debug) {
+            jl_value_t *e = jl_exception_occurred();
+            if (e) {
+                jl_function_t *sprint_func = jl_get_function(jl_base_module, "sprint");
+                jl_function_t *showerror_func = jl_get_function(jl_base_module, "showerror");
+                jl_value_t *err_str = jl_call2(sprint_func, showerror_func, e);
+                if (err_str && !jl_exception_occurred()) {
+                    std::cerr << "Julia Exception: " << jl_string_ptr(err_str) << std::endl;
+                }
+            }
+        }
+        std::cerr << "Julia function returned nullptr." << std::endl;
+        throw std::runtime_error("Julia function returned nullptr.");
+    }
+}
+
+
 
 void LaplacianSolver::updateEdgeWeights(std::pair<int, int> edge, double weight) {
     // update the CSC graph storage
@@ -222,7 +265,7 @@ void LaplacianSolver::updateEdgeWeights(std::pair<int, int> edge, double weight)
     // Update edge u → v
     for (int k = colptr[v1 - 1] - 1; k < colptr[v1] - 1; ++k) {
         if (rowval[k] == u1) {
-            std::cout << "Updating edge (" << edge.first << ", " << edge.second << ") with weight " << weight << std::endl;
+            //std::cout << "Updating edge (" << edge.first << ", " << edge.second << ") with weight " << weight << std::endl;
             nzval[k] = weight;
             updated_uv = true;
             break;
@@ -243,11 +286,51 @@ void LaplacianSolver::updateEdgeWeights(std::pair<int, int> edge, double weight)
         // reset the julia arrays to reflect the changes
         memcpy(jl_array_data(nzval_julia), nzval.data(), nzval.size() * sizeof(double));
     }
-    std::cout << "Updated nzval:";
-    for (auto v : nzval) std::cout << " " << v;
-    std::cout << std::endl;
+
 
     if (!updated_uv || !updated_vu) {
         std::cerr << "Warning: Edge (" << edge.first << ", " << edge.second << ") not found in CSC matrix." << std::endl;
+    }
+}
+
+void LaplacianSolver::NonSyncUpdateEdgeWeights(std::pair<int, int> edge, double weight) {
+    // update the CSC graph storage
+    w_edges2weights[edge] = weight;
+    // Julia uses 1-based indices → stored arrays already shifted
+    int u1 = edge.first + 1;
+    int v1 = edge.second + 1;
+
+    bool updated_uv = false;
+    bool updated_vu = false;
+
+    // Update edge u → v
+    for (int k = colptr[v1 - 1] - 1; k < colptr[v1] - 1; ++k) {
+        if (rowval[k] == u1) {
+            //std::cout << "Updating edge (" << edge.first << ", " << edge.second << ") with weight " << weight << std::endl;
+            nzval[k] = weight;
+            updated_uv = true;
+            break;
+        }
+    }
+
+
+    // Update edge v → u (if undirected graph)
+    for (int k = colptr[u1 - 1] - 1; k < colptr[u1] - 1; ++k) {
+        if (rowval[k] == v1) {
+            nzval[k] = weight;
+            updated_vu = true;
+            break;
+        }
+    }
+
+    if (!updated_uv || !updated_vu) {
+        std::cerr << "Warning: Edge (" << edge.first << ", " << edge.second << ") not found in CSC matrix." << std::endl;
+    }
+}
+
+void LaplacianSolver::SyncEdgeWeights() {
+    if(nzval_julia) {
+        // reset the julia arrays to reflect the changes
+        memcpy(jl_array_data(nzval_julia), nzval.data(), nzval.size() * sizeof(double));
     }
 }

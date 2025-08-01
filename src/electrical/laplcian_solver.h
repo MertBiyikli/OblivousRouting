@@ -28,8 +28,12 @@ JULIA_DEFINE_FAST_TLS // only define this once, in an executable (not in a share
  *   - dynamically adjust the weights of the adjacency matrix instead of creating a new one each time
  */
 class LaplacianSolver {
+    bool debug = false; // Debug flag for printing debug information
     RaeckeGraph m_graph;
     std::unordered_map<std::pair<int, int>, double> w_edges2weights; // Edge weights
+
+    bool initted;
+    int n, m;
 
     // storing the adjacency matrix
     std::vector<int32_t> colptr, rowval;
@@ -48,22 +52,22 @@ class LaplacianSolver {
 
     jl_value_t* arg1;
     jl_value_t* arg2;
+
+    // initialize the Julia arrays and setting the adjacency matrix
+    void buildCSC();
 public:
     LaplacianSolver();
+    Eigen::VectorXd solve(const Eigen::VectorXd &b);
 
-    void init(const RaeckeGraph &g, const std::unordered_map<std::pair<int, int>, double> &_w_edges2weights, bool debug = false);
+    void init(const RaeckeGraph &g, const std::unordered_map<std::pair<int, int>, double> &_w_edges2weights);
 
-
-    Eigen::VectorXd solve(const Eigen::VectorXd &b, bool debug = false);
-
-
-    void buildCSC(const std::unordered_map<std::pair<int, int>, double>& edges);
-
-    // TODO: this is not used yet, but will be used to update the edge weights dynamically
     void updateEdgeWeights(std::pair<int, int> edge, double weight);
 
-    bool initted;
-    int n, m;
+    void NonSyncUpdateEdgeWeights(std::pair<int, int> edge, double weight);
+    void SyncEdgeWeights();
+    void setDebug(bool d) {
+        debug = d;
+    }
 };
 
 #endif //OBLIVIOUSROUTING_LAPLCIAN_SOLVER_H

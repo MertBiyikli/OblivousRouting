@@ -12,80 +12,53 @@
 #include <limits>
 
 
-
-int Graph::numNodes() const {
-    return m_iNumNodes;
-}
-
-int Graph::numEdges() const {
-    return m_iNumEdges;
-}
-
-const std::vector<int>& Graph::GetVertices() const{
-    return m_vertices;
-}
-
-std::vector<int>& Graph::GetVertices() {
-    return m_vertices;
-}
-
-
-void Graph::addEdge(int source, int target, double capacity) {
-    if (source < 0 || source >= m_iNumNodes || target < 0 || target >= m_iNumNodes) {
-        throw std::out_of_range("Invalid node index");
+void RaeckeGraph::readGraph(const std::string &filename) {
+    std::ifstream infile(filename);
+    if (!infile) {
+        throw std::runtime_error("Could not open file: " + filename);
     }
 
-    auto edge = std::make_shared<Edge>();
-    edge->source = source;
-    edge->target = target;
-    edge->capacity = capacity;
+    std::string line;
+    int n = 0, m = 0;
 
-    auto rev_edge = std::make_shared<Edge>();
-    rev_edge->source = target;
-    rev_edge->target = source;
-    rev_edge->capacity = capacity;
-    m_adj[source].push_back(edge);
-    m_adj[target].push_back(rev_edge);
-    m_iNumEdges++;
+    while (std::getline(infile, line)) {
+        if (line.empty() || line[0] == 'c') continue;
+
+        std::istringstream iss(line);
+        if (line[0] == 'p') {
+            std::string tmp;
+            iss >> tmp >> tmp >> n >> m;
+            break;
+        }
+    }
+
+    if (n == 0) {
+        throw std::runtime_error("Invalid or missing problem line in DIMACS file");
+    }
+
+
+    this->m_adj.resize(n);
+    this->m_adj_capacities.resize(n);
+    this->m_adj_distances.resize(n);
+
+    do {
+        if (line.empty() || line[0] == 'c') continue;
+
+        std::istringstream iss(line);
+        if (line[0] == 'a') {
+            char dummy;
+            int u, v;
+            double cap = 1.0;
+            iss >> dummy >> u >> v;
+            if (!(iss >> cap)) cap = 1.0;
+            this->addEdge(u - 1, v - 1, cap);  // convert to 0-based
+        }
+    } while (std::getline(infile, line));
+
+
 }
 
-
-
-
-
-// … existing methods (numNodes, numEdges, addEdge, print, readGraph, GetDiGraph, etc.) …
-
-
-// TODO: make the lgf reader more robust against variying column orderings
-//       as well as more flexible with respect to the header lines.(it should accept @edges and @arcs interchangeably)
-
-/**
- * Reads a graph in “.lgf” format.
- *
- * We expect the file to look roughly like:
- *
- * @nodes
- *    label    node_id
- *    foo      1
- *    bar      2
- *    baz      3
- * @arcs
- *        label    cost    capacity
- *    1    2       A1      5.0     10.0
- *    1    3       A2      2.5     8.0
- *    2    3       A3      7.0     12.0
- *
- * In other words:
- *  - “@nodes” section: each line has at least “<label><TAB><node_id>”. We ignore <label>, but track the largest node_id.
- *  - “@arcs” section: the first non‐empty, non‐comment line after “@arcs” is a header. We detect which column index is “cost” and which is “capacity”.
- *    Then each subsequent line has at least “<u><TAB><v>…”. We parse u,v (1‐based in typical LGF) → convert to 0‐based.
- *    If (u > v), we skip that line (because we only want each undirected edge once).
- *    If capacity column is present, we parse capacity. Otherwise if withDistances==true and cost column present, we do capacity = 1.0/cost.
- *    Otherwise default capacity = 1.0.
- *
- * Finally we call pruneDegreeOne(...) (if you have that).
- */
-void Graph::readLFGFile(const std::string &filename, bool withDistances) {
+void RaeckeGraph::readLFGFile(const std::string &filename, bool withDistances) {
     std::ifstream infile(filename);
     if (!infile) {
         throw std::runtime_error("Could not open LGF file: " + filename);
@@ -164,11 +137,13 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
     }
 
     // 2) Initialize our graph with (maxNodeIdSeen+1) nodes
-    this->m_iNumNodes = maxNodeIdSeen + 1;
-    this->m_iNumEdges = 0;
+    int n = maxNodeIdSeen + 1;
+    int m = 0;
     m_adj.clear();
-    m_adj.resize(this->m_iNumNodes);
-    m_vertices.resize(this->m_iNumNodes);
+    m_adj.resize(n);
+    m_adj_distances.resize(n);
+    m_adj_capacities.resize(n);
+    m_vertices.resize(n);
     std::iota(m_vertices.begin(), m_vertices.end(), 0); // fill vertices with 0, 1, ..., maxNodeIdSeen
 
     // 3) Second pass: scan for "@arcs", find header, then parse each arc line:
@@ -246,7 +221,7 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
         } catch (...) {
             continue; // malformed
         }
-        if (u < 0 || v < 0 || u >= m_iNumNodes || v >= m_iNumNodes) {
+        if (u < 0 || v < 0 || u >= n || v >= n) {
             // invalid node Id ⇒ skip
             continue;
         }
@@ -292,6 +267,84 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
     //
     // If you do not have PruneGraph or you don’t want to prune, simply comment out the line above.
 }
+
+
+/*
+int Graph::numNodes() const {
+    return m_iNumNodes;
+}
+
+int Graph::numEdges() const {
+    return m_iNumEdges;
+}
+
+const std::vector<int>& Graph::GetVertices() const{
+    return m_vertices;
+}
+
+std::vector<int>& Graph::GetVertices() {
+    return m_vertices;
+}
+
+
+void Graph::addEdge(int source, int target, double capacity) {
+    if (source < 0 || source >= m_iNumNodes || target < 0 || target >= m_iNumNodes) {
+        throw std::out_of_range("Invalid node index");
+    }
+
+    auto edge = std::make_shared<Edge>();
+    edge->source = source;
+    edge->target = target;
+    edge->capacity = capacity;
+
+    auto rev_edge = std::make_shared<Edge>();
+    rev_edge->source = target;
+    rev_edge->target = source;
+    rev_edge->capacity = capacity;
+    m_adj[source].push_back(edge);
+    m_adj[target].push_back(rev_edge);
+    m_iNumEdges++;
+}
+
+*/
+
+
+
+// … existing methods (numNodes, numEdges, addEdge, print, readGraph, GetDiGraph, etc.) …
+
+
+// TODO: make the lgf reader more robust against variying column orderings
+//       as well as more flexible with respect to the header lines.(it should accept @edges and @arcs interchangeably)
+
+/**
+ * Reads a graph in “.lgf” format.
+ *
+ * We expect the file to look roughly like:
+ *
+ * @nodes
+ *    label    node_id
+ *    foo      1
+ *    bar      2
+ *    baz      3
+ * @arcs
+ *        label    cost    capacity
+ *    1    2       A1      5.0     10.0
+ *    1    3       A2      2.5     8.0
+ *    2    3       A3      7.0     12.0
+ *
+ * In other words:
+ *  - “@nodes” section: each line has at least “<label><TAB><node_id>”. We ignore <label>, but track the largest node_id.
+ *  - “@arcs” section: the first non‐empty, non‐comment line after “@arcs” is a header. We detect which column index is “cost” and which is “capacity”.
+ *    Then each subsequent line has at least “<u><TAB><v>…”. We parse u,v (1‐based in typical LGF) → convert to 0‐based.
+ *    If (u > v), we skip that line (because we only want each undirected edge once).
+ *    If capacity column is present, we parse capacity. Otherwise if withDistances==true and cost column present, we do capacity = 1.0/cost.
+ *    Otherwise default capacity = 1.0.
+ *
+ * Finally we call pruneDegreeOne(...) (if you have that).
+ */
+
+/*
+
 
 
 
@@ -637,3 +690,5 @@ void DiGraph::readDiGraph(const std::string &filename) {
 
 
 }
+
+ */

@@ -79,7 +79,7 @@ public:
     }
 
 
-    void addAdd(int u , int v, double capacity, double distance = 1.0) {
+    void addEdge(int u , int v, double capacity, double distance = 1.0) {
         if(u >= m_adj.size() || v >= m_adj.size()) {
             throw std::out_of_range("Node index out of range");
         }
@@ -258,8 +258,17 @@ public:
         return path;
     }
 
+    void readGraph(const std::string &filename);
+    void readLFGFile(const std::string& filename, bool withDistances);
 };
 
+struct Edge{
+    int source;
+    int target;
+    double capacity;
+    double distance = 0.0; // optional distance, used in some algorithms
+};
+/*
 struct Arc{
     int source;
     int target;
@@ -275,12 +284,6 @@ struct Arc{
     bool operator!=(const Arc& arc){return (this->GetId() == arc.GetId());};
 };
 
-struct Edge{
-    int source;
-    int target;
-    double capacity;
-    double distance = 0.0; // optional distance, used in some algorithms
-};
 
 class DiGraph;
 
@@ -380,7 +383,7 @@ private:
 class DiGraph{
 public:
     DiGraph() : m_iNumNodes(0), m_iNumArcs(0) {};
-    DiGraph(int n): m_iNumNodes(n), m_iNumArcs(0)/** TODO ***/ {}
+    DiGraph(int n): m_iNumNodes(n), m_iNumArcs(0){}
 
 
     void addUndirectedArc(int source, int target, double capacity);
@@ -410,6 +413,6 @@ private:
     int m_iNumNodes;
     int m_iNumArcs;
 };
-
+*/
 
 #endif //OBLIVOUSROUTING_GRAPH_H

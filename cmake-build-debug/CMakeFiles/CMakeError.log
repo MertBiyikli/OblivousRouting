@@ -6,7 +6,7 @@ Id flags:
 The output was:
 1
 ld: library 'System' not found
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
+cc: error: linker command failed with exit code 1 (use -v to see invocation)
 
 
 Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
@@ -17,6 +17,6 @@ Id flags:
 The output was:
 1
 ld: library 'c++' not found
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
+c++: error: linker command failed with exit code 1 (use -v to see invocation)
 
 

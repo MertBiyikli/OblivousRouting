@@ -8,7 +8,7 @@
 #include <cmath>
 #include <iostream>
 
-
+/*
 void RackeObliviousRoutingSolver::createTreesAndLambda() {
     // If the solver object doesn’t exist yet, build it and give it our graph_
     if (!mcct_) {
@@ -107,15 +107,8 @@ void RackeObliviousRoutingSolver::computeRLoads(int treeIndex,
                 }
                 continue;
             }
-            /*
-            // If this node has the same center as its parent, skip the cut. Enqueue grandchildren:
-            if (nodePtr->GetCenter() == parentPtr->GetCenter()) {
-                for (auto &gc: nodePtr->GetChildren()) {
-                    bfsQueue.push(gc);
-                }
-                continue;
-            }
-             */
+
+
 
             std::vector<int> clusterVerts = nodePtr->GetVertices();
             std::unordered_set<int> remaining(copyGraph->GetVertices().begin(), copyGraph->GetVertices().end());
@@ -186,17 +179,6 @@ void RackeObliviousRoutingSolver::computeRLoads(int treeIndex,
                  std::cout << "Edge (" << (edge->source) << " →  " << edge->target << ") has r-load: " << rLoad << ", ";
             }
 
-            /*
-            auto path = copyGraph->getShortestPath(
-                    parentPtr->GetCenter(),
-                    nodePtr->GetCenter()
-            );
-            for (auto &edge: path) {
-                // Normalize the edge distance based on the cutSum
-                double rload = arc2rLoad[edge];
-                rload += cutSum / edge->capacity;
-                arc2rLoad[edge] = rload;
-            }*/
 
 
             // Enqueue grandchildren:
@@ -399,7 +381,7 @@ void RackeObliviousRoutingSolver::printObliviousRoutingTable() const {
         }
     }
 }
-
+*/
 
 
 
@@ -420,7 +402,8 @@ void RaeckeFRT::run() {
     int treeIndex = 0;
 
     while(m_lambdaSum < 1) {
-        std::cout << "Computing tree " << treeIndex << std::endl;
+        if(debug)
+            std::cout << "Computing tree " << treeIndex << std::endl;
         m_lambdaSum += iterate(treeIndex);
         treeIndex++;
     }

@@ -12,12 +12,12 @@
 
 class RandomGraphGenerator {
 public:
-    static Graph generate(int numNodes, int numEdges, double minCap = 1.0, double maxCap = 10.0) {
+    static RaeckeGraph generate(int numNodes, int numEdges, double minCap = 1.0, double maxCap = 10.0) {
         if (numEdges > numNodes * (numNodes - 1) / 2) {
             throw std::invalid_argument("Too many edges for undirected graph");
         }
 
-        Graph g(numNodes);
+        RaeckeGraph g(numNodes);
 
         std::set<std::pair<int, int>> existing;
         std::random_device rd;
@@ -25,7 +25,7 @@ public:
         std::uniform_int_distribution<> distNode(0, numNodes - 1);
         std::uniform_real_distribution<> distCap(minCap, maxCap);
 
-        while (g.numEdges() < numEdges) {
+        while (g.getNumEdges() < numEdges) {
             int u = distNode(gen);
             int v = distNode(gen);
             if (u == v) continue;
@@ -35,7 +35,7 @@ public:
             if (existing.count(edge)) continue;
 
             double cap = distCap(gen);
-            g.addEdge(v, u, cap); // undirected
+            g.addEdge(edge.first, edge.second, cap); // undirected
 
             existing.insert(edge);
         }

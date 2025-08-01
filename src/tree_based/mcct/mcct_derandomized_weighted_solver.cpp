@@ -7,7 +7,7 @@
 #include <list>
 #include "../../utils/hash.h"
 
-FRT_Tree MCCT_Solver::getBestTree() {
+FRT_Tree MCCT_Solver::getBestTree(bool debug) {
     computeBestBetaAndPermutation();
     computeBestTree();
     return this->tree;
@@ -84,14 +84,14 @@ void MCCT_Solver::computeBestTree(bool debug) {
 
 void MCCT_Solver::computeBestBetaAndPermutation() {
     this->graph->createDistanceMatrix();
-    this->computeBetas(true);
+    this->computeBetas(debug);
 
 
     double minExpectation = std::numeric_limits<double>::max();
     std::set<int> unsettledVertices(graph->getVertices().begin(), graph->getVertices().end());
 
     for(double beta : betas) {
-        double expectedCost = computeExpectation(beta, verticesPermutation, unsettledVertices, true);
+        double expectedCost = computeExpectation(beta, verticesPermutation, unsettledVertices, debug);
         if (expectedCost < minExpectation) {
             bestBeta = beta;
             minExpectation = expectedCost;
@@ -109,7 +109,7 @@ void MCCT_Solver::computeBestBetaAndPermutation() {
             }
 
             candidates.push_back(v);
-            double expectation = computeExpectation(bestBeta, candidates, unsettledVertices, true);
+            double expectation = computeExpectation(bestBeta, candidates, unsettledVertices, debug);
 
             if(expectation < minExpectation) {
                 minExpectation = expectation;
@@ -164,7 +164,8 @@ void MCCT_Solver::computeBetas(bool debug) {
             betas.insert(beta);
 
             // Add the beta value to the set
-            std::cout << "Beta for vertices " << v << " and " << u << ": " << beta << std::endl;
+            if(debug)
+                std::cout << "Beta for vertices " << v << " and " << u << ": " << beta << std::endl;
             // Add the beta value to the set
 
         }
@@ -334,7 +335,7 @@ void MCCT_Solver::removeDemands(double beta, int _v) {
 
 
 
-
+/*
 
 MCCTDerandomizedWeightedSolver::MCCTDerandomizedWeightedSolver() {
     this->betas = std::set<double>();
@@ -560,10 +561,7 @@ void MCCTDerandomizedWeightedSolver::removeDemands(double beta, int bestV) {
     }
 }
 
-/*
- * Computes the expected cost based on the current beta, vertices permutation, and unsettled vertices.
- * It simulates one level/layer of the tree and calculates the expected cost of the decomposition tree.
- */
+
 double MCCTDerandomizedWeightedSolver::computeExpectation(double beta, std::vector<int>& verticesPermutation, std::set<int>& unsettledVertices, bool debug) {
     double result = 0.0;
     std::unordered_set< std::pair<int, int> > cutAndSettled;
@@ -664,10 +662,6 @@ double MCCTDerandomizedWeightedSolver::computeExpectation(double beta, std::vect
 }
 
 
-/*
- * Computes the betas based on the distances between vertices in the graph.
- * Using the formula: beta = distance / 2^floor(log2(distance)).
- */
 void MCCTDerandomizedWeightedSolver::computeBetas() {
     const auto& vertices = graph->GetVertices();
     const auto& distanceMatrix = graph->GetDistanceMatrix();
@@ -701,3 +695,5 @@ void MCCTDerandomizedWeightedSolver::reset() {
     tree.clear();
     graph = nullptr;
 }
+
+*/

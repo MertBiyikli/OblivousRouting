@@ -13,14 +13,14 @@
 #include "../utils/hash.h"
 #include "LP_Base.h"
 /*
- * This is an attempt of implementation of an LP solver for the oblivious routing problem.
+ * This is an attempt of implementing the LP solver for the oblivious routing problem.
  * Using the paper "Making Intra-Domain Routing Robust to Changing and
  * Uncertain Traffic Demands:
  * Understanding Fundamental Tradeoffs" from Applegate & Cohen
  */
 
 
-class LPSolver : public OblviviousRoutingSolver, public LP {
+class LPSolver : public LP {
 private:
     std::unordered_map<std::tuple<int, int, int>, MPVariable*> p_e_ij;
     std::unordered_map< std::pair<int, int>, MPVariable*> π_e_f;
@@ -28,20 +28,23 @@ private:
 
     double max_cong = 0;
 
-    virtual void CreateVariables(const DiGraph& graph) override;
-    virtual void CreateConstraints(const DiGraph& graph) override;
+    virtual void CreateVariables(const RaeckeGraph& graph) override;
+    virtual void CreateConstraints(const RaeckeGraph& graph) override;
+    virtual void SetObjective() override;
 
     std::vector<int> sourceVertices;
 
 public:
-    LPSolver():OblviviousRoutingSolver(){};
-    void solve(const Graph& graph) override;
+    LPSolver(){};
 
 
-    bool SolveOptimalObliviousRouting(const DiGraph& graph, bool AGGREGATE_CONGESTION = true);
+    double getMaximumCongestion(const RaeckeGraph& graph) const;
+    bool SolveOptimalObliviousRouting(const RaeckeGraph& graph, bool AGGREGATE_CONGESTION = true);
 
-    void PrintObliviousRoutingSolution(const DiGraph& graph);
-    void GetRoutingTable(const DiGraph& graph);
+    void PrintSolution(const RaeckeGraph& graph) override;
+    void GetRoutingTable(const RaeckeGraph& graph);
+
+    void PrintCommoditiesPerEdge(const RaeckeGraph& graph);
 };
 
 #endif //OBLIVOUSROUTING_LPSOLVER_H

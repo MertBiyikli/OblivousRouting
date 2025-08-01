@@ -5,36 +5,15 @@
 #include "MCCF_lp_solver.h"
 #include "../utils/hash.h"
 
-void CMMF_Solver::solve(const Graph &graph) {
-    this->Run(graph);
-    this->PrintSolution(graph.GetDiGraph());
-}
-
-void CMMF_Solver::CreateVariables(const DiGraph &graph) {
-    if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
-    if (!solver) throw std::runtime_error("GLOP solver unavailable.");
-
-    // CREATE Alpha variable
-    alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
 
 
-    for(int s = 0; s < graph.numNodes(); s++) {
-        for (const auto &[id, e]: graph.GetArcs()) {
-
-            if (e.source == s) continue;
-
-            map_vertex2edge[s][id] = solver->MakeNumVar(0.0, solver->infinity(),
-                                                        "map_" + std::to_string(s) + "_" + std::to_string(id));
-        }
-    }
-
-}
 
 void CMMF_Solver::AddDemands(const Demand& d, double demand) {
     int u = d.source;
     int v = d.target;
-    if (u < 0 || v < 0) {
-        throw std::invalid_argument("Vertex IDs must be non-negative.");
+    if (u < 0 || v < 0
+        || u >= n || v >= n) {
+        throw std::invalid_argument("Vertex IDs out of range.");
     }
     if (u == v) {
         throw std::invalid_argument("Cannot add demand from a vertex to itself.");
@@ -43,81 +22,100 @@ void CMMF_Solver::AddDemands(const Demand& d, double demand) {
     if(m_demands.find(d) != m_demands.end()) {
         throw std::invalid_argument("Demand between these vertices already exists.");
     }
+
+
     m_demands[d] = demand;
 }
 
-void CMMF_Solver::CreateConstraints(const DiGraph &graph) {
+
+void CMMF_Solver::CreateVariables(const RaeckeGraph &graph) {
 
 
-    // Build quick access to incoming arcs
-    // incoming[v] = list of arc‐ids whose head is v
-    std::vector<std::vector<int>> incoming(graph.numNodes());
-    for (auto const& [id, e] : graph.GetArcs()) {
-        incoming[e.target].push_back(id);
+    // CREATE Alpha variable
+    alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
+
+    for(int v = 0; v<n; v++) {
+        this->map_vertex2edge[v] = std::unordered_map<int, MPVariable*>();
+        for(int edge_id = 0;  edge_id<edges.size(); edge_id++) {
+            if(edges[edge_id].first == v) continue;
+
+            this->map_vertex2edge[v][edge_id] =solver->MakeNumVar(0.0, solver->infinity(),
+                                                                  "f_" + std::to_string(edge_id) + "_" + std::to_string(v));
+        }
     }
+}
 
-    // Define flow conservation constraints
-    for(int t = 0; t < graph.numNodes(); t++) {
-        for(int v = 0; v < graph.numNodes(); v++) {
+void CMMF_Solver::CreateConstraints(const RaeckeGraph &graph) {
 
-            if(v == t) continue; // Skip if source and target are the same
+    for (int dest = 0; dest < n; ++dest) {
+        for (int v = 0; v < n; ++v) {
+            if (v == dest) continue;
 
-            double demand_value = 0.0;
-            auto it = m_demands.find({v, t});
-            if(it != m_demands.end()) {
-                demand_value = it->second;
-            }
+            double rhs = 0.0;
+            auto demand_it = m_demands.find({v, dest});
+            if(demand_it != m_demands.end()) rhs = demand_it->second;
 
-            MPConstraint* constraint = solver->MakeRowConstraint(demand_value, solver->infinity());
+            MPConstraint* constraint = solver->MakeRowConstraint(rhs, solver->infinity());
 
 
-            // outgoing neighbors
-            for(const auto& [id, arc] : graph.GetArcs()) {
-                if(arc.source != v) continue; // Only consider outgoing arcs from v
+            for(int edge_id = 0; edge_id<edges.size(); edge_id++) {
 
-                constraint->SetCoefficient(map_vertex2edge[t][arc.GetId()], 1.0);
+                if(edges[edge_id].first == v) {
+                    constraint->SetCoefficient(map_vertex2edge[dest][edge_id], 1.0);
 
-                auto rev_arc = (arc.GetReverseArcId());
-
-                if(arc.target != t) {
-                    constraint->SetCoefficient(map_vertex2edge[t][rev_arc], -1.0);
+                    // get reverse edge
+                    auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(edges[edge_id].second, edges[edge_id].first));
+                    if(rev_it != edges.end()
+                    && ((*rev_it).first != dest)
+                    ) {
+                        int rev_edge_id = std::distance(edges.begin(),rev_it);
+                        constraint->SetCoefficient( map_vertex2edge[dest][rev_edge_id], -1.0);
+                    }
                 }
             }
+
+            // add constraint greater or equal
 
         }
     }
 
-    for (auto const& [arcId, e] : graph.GetArcs()) {
-        if(arcId % 2 == 1) continue; // Skip odd arc IDs, as per the original code logic
 
-        // LHS: α·C_uv  − ∑_t g_t(u→v)  ≥  0
-        MPConstraint* c = solver->MakeRowConstraint(0.0, solver->infinity(),
-                                                    "cap_" + std::to_string(arcId));
+    for(int edge_id = 0; edge_id<edges.size(); edge_id++) {
+        int u = edges[edge_id].first, v = edges[edge_id].second;
+        if(u > v) continue;
 
-        c->SetCoefficient(alpha, e.capacity);
+        MPConstraint* constraint = solver->MakeRowConstraint(0.0, solver->infinity());
 
-        for(int v(0); v<graph.numNodes(); v++) {
+        constraint->SetCoefficient(alpha,  graph.getEdgeCapacity(u, v));
 
-            if(e.source == v) continue;
+        for(int dest = 0; dest < n; dest++) {
+            if(u == dest) continue;
+            constraint->SetCoefficient(map_vertex2edge[dest][edge_id], -1.0);
+            if(v == dest) continue;
 
-            c->SetCoefficient(map_vertex2edge[v][arcId], -1.0); // Coefficient for the edge variable
-
-
-            if(e.target == v) continue; // Skip if the vertex is the target
-
-            c->SetCoefficient(map_vertex2edge[v][e.GetReverseArcId()], -1.0); // Coefficient for the reverse edge variable
-
+            auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(v,v));
+            int rev_edge_id = -1;
+            if(rev_it != edges.end()) {
+                rev_edge_id = std::distance(edges.begin(), rev_it);
+                constraint->SetCoefficient(map_vertex2edge[dest][rev_edge_id], -1.0);
+            }
         }
     }
 
 }
 
-void CMMF_Solver::PrintSolution(const DiGraph &graph) {
+void CMMF_Solver::SetObjective() {
+    // === OBJECTIVE ===
+    solver->MutableObjective()->SetCoefficient(alpha, 1.0);
+    solver->MutableObjective()->SetMinimization();
+}
+
+void CMMF_Solver::PrintSolution(const RaeckeGraph &graph) {
     // 1) Print the congestion factor
     std::cout << "α = " << alpha->solution_value() << "\n\n";
 
     // 2) For each commodity (i.e. each destination “t”) print all non-zero arc flows
-    for (int t = 0; t < graph.numNodes(); ++t) {
+    for (int t = 0; t < graph.getNumNodes(); ++t) {
         std::cout << "Flows for commodity dest=" << t << ":\n";
         auto &edge2var = map_vertex2edge[t];
         bool any = false;
@@ -127,10 +125,9 @@ void CMMF_Solver::PrintSolution(const DiGraph &graph) {
             double f     = v->solution_value();
             if (f > 1e-8) {
                 any = true;
-                const auto &e = graph.GetArcById(arcId);
+                const auto &e = edges[arcId];
                 std::cout
-                        << "  arc " << arcId
-                        << " (" << e.source << "→" << e.target << "): "
+                        << "  edge (" << e.first << " / " << e.second << "): "
                         << f << "\n";
             }
         }
@@ -144,14 +141,14 @@ void CMMF_Solver::PrintSolution(const DiGraph &graph) {
     //    sum over both directions
     std::cout << "Total load per undirected edge:\n";
     std::map<std::pair<int,int>, double> und_load;
-    for (int t = 0; t < graph.numNodes(); ++t) {
+    for (int t = 0; t < graph.getNumNodes(); ++t) {
         for (auto &kv : map_vertex2edge[t]) {
             int arcId = kv.first;
             double f  = kv.second->solution_value();
             if (f <= 1e-8) continue;
-            const auto &e = graph.GetArcById(arcId);
+            const auto &e = edges[arcId];
             // key = sorted pair of endpoints
-            auto key = std::minmax(e.source, e.target);
+            auto key = std::minmax(e.first, e.second);
             und_load[key] += f;
         }
     }
@@ -162,4 +159,3 @@ void CMMF_Solver::PrintSolution(const DiGraph &graph) {
                 << kv.second << "\n";
     }
 }
-
