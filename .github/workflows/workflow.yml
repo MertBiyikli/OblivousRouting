@@ -23,9 +23,7 @@ jobs:
 
       - name: Install Julia dependencies
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          # optional: precompile packages
-          julia --project=. -e 'using Pkg; Pkg.precompile()'
+          julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/danspielman/Laplacians.jl.git"); Pkg.instantiate(); Pkg.precompile()'
 
       - name: Configure with CMake
         env:
