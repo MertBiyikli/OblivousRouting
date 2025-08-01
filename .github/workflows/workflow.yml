@@ -16,8 +16,21 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake g++ ninja-build
 
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'  # or the version you use locally
+
+      - name: Install Julia dependencies
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          # optional: precompile packages
+          julia --project=. -e 'using Pkg; Pkg.precompile()'
+
       - name: Configure with CMake
-        run: cmake -B build -S . -G Ninja
+        env:
+          JULIA_BINDIR: $(julia -e 'println(Sys.BINDIR)')
+        run: cmake -B build -S . -G Ninja -DJULIA_BINDIR=$JULIA_BINDIR
 
       - name: Build
         run: cmake --build build
@@ -45,6 +58,14 @@ jobs:
           name: build
           path: build
 
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - name: Install Julia dependencies (for runtime)
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
       - name: Make test binaries executable
         run: chmod +x build/test/smoke_test
