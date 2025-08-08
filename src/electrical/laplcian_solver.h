@@ -68,6 +68,10 @@ public:
     void setDebug(bool d) {
         debug = d;
     }
+
+    Eigen::SparseMatrix<double> GetLaplacianMatrix() const {
+        return L;
+    }
 };
 
 #endif //OBLIVIOUSROUTING_LAPLCIAN_SOLVER_H

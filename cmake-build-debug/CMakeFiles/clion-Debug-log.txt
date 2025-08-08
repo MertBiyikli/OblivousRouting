@@ -1,26 +1,13 @@
-/opt/local/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
--- The C compiler identification is AppleClang 17.0.0.17000013
--- The CXX compiler identification is AppleClang 17.0.0.17000013
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working C compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc - skipped
--- Detecting C compile features
--- Detecting C compile features - done
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ - skipped
--- Detecting CXX compile features
--- Detecting CXX compile features - done
+/opt/local/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/B82211BB-A7C9-471F-AF33-B438A6D4F391/d/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
 -- Using Julia in /usr/local/opt/julia
 CMake Warning at /opt/local/share/cmake-3.24/Modules/FindProtobuf.cmake:524 (message):
   Protobuf compiler version 27.1 doesn't match library version 5.27.1
 Call Stack (most recent call first):
   /opt/local/share/cmake-3.24/Modules/CMakeFindDependencyMacro.cmake:47 (find_package)
   /usr/local/lib/cmake/ortools/ortoolsConfig.cmake:43 (find_dependency)
-  CMakeLists.txt:51 (find_package)
+  CMakeLists.txt:61 (find_package)
 
 
--- Found Threads: TRUE  
 -- Configuring done
 -- Generating done
 -- Build files have been written to: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug

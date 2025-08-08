@@ -2,8 +2,82 @@
 // Created by Mert Biyikli on 09.07.25.
 //
 
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <iomanip>
+
+// Checks for issues in a CSR Laplacian matrix representation
+void diagnose_csr_laplacian(
+        const std::vector<int>& row_ptr,
+        const std::vector<int>& col_ind,
+        const std::vector<double>& values,
+        double tolerance = 1e-6
+) {
+    int n = static_cast<int>(row_ptr.size()) - 1;
+
+    std::vector<double> row_sums(n, 0.0);
+    std::vector<bool> nonzero_diag(n, false);
+    std::vector<bool> nonzero_row(n, false);
+    std::vector<bool> nonzero_col(n, false);
+
+    for (int i = 0; i < n; ++i) {
+        for (int idx = row_ptr[i]; idx < row_ptr[i + 1]; ++idx) {
+            int j = col_ind[idx];
+            double v = values[idx];
+
+            row_sums[i] += v;
+
+            if (i == j && std::abs(v) > tolerance)
+                nonzero_diag[i] = true;
+
+            if (std::abs(v) > tolerance) {
+                nonzero_row[i] = true;
+                nonzero_col[j] = true;
+            }
+        }
+    }
+
+    bool issues = false;
+    for (int i = 0; i < n; ++i) {
+        if (!nonzero_diag[i]) {
+            std::cerr << "⚠️  Zero or missing diagonal at row " << i << std::endl;
+            issues = true;
+        }
+        if (!nonzero_row[i]) {
+            std::cerr << "⚠️  Entire zero row at " << i << std::endl;
+            issues = true;
+        }
+        if (!nonzero_col[i]) {
+            std::cerr << "⚠️  Entire zero column at " << i << std::endl;
+            issues = true;
+        }
+        if (std::abs(row_sums[i]) > tolerance) {
+            std::cerr << "⚠️  Row " << i << " has non-zero sum: " << row_sums[i] << std::endl;
+            issues = true;
+        }
+    }
+
+    if (!issues) {
+        std::cout << "✅ Matrix passed all CSR diagnostics. Looks valid." << std::endl;
+    }
+}
+
+
+
 #include "electrical_flow_naive.h"
 #include <random>
+
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/adapter/eigen.hpp>
+#include <amgcl/make_solver.hpp>
+#include <amgcl/solver/cg.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/relaxation/spai0.hpp>
+#include <amgcl/adapter/crs_tuple.hpp>
+
+
 
 void ElectricalFlowNaive::init(const RaeckeGraph &g, bool debug) {
     m_graph = g;
@@ -12,19 +86,29 @@ void ElectricalFlowNaive::init(const RaeckeGraph &g, bool debug) {
     m = m_graph.getNumEdges();
 
     // set algorithm parameters
-    roh = std::sqrt(2.0*static_cast<double>(m_graph.getNumEdges())); // Initialize roh based on the number of nodes
-    alpha_local = std::log2(m_graph.getNumNodes())*std::log2(m_graph.getNumNodes()); // Initialize alpha_local based on the number of nodes
-    this->cap_X = m_graph.getNumEdges();
-    this->number_of_iterations = 8.0*roh*std::log(m_graph.getNumEdges())/alpha_local;
+    roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
+    alpha_local = std::log2(n)*std::log2(n); // Initialize alpha_local based on the number of nodes
+    this->cap_X = m;
+    this->number_of_iterations = 8.0*roh*std::log(m)/alpha_local;
+    this->inv_m = 1.0 / static_cast<double>(m);
+
+
+    // fix a node x
+    this->x_fixed = rand()%n; // Randomly select a fixed node x from the graph
 
     // initialize distance, weights, probabilities
     initEdgeDistances();
     extract_edge_list();
 
     // initialize the Laplacian Solver
-    solver.init(m_graph, w_edges2weights); // Initialize the Laplacian solver with the current weights
-    solver.setDebug(debug);
+    amg.init(w_edges2weights, n, debug);
     this->debug = debug;
+
+    // compute diagonal matrix consisting of only the capacities
+    U = Eigen::SparseMatrix<double>(m, m);
+    for(int i = 0; i < m; ++i) {
+        U.insert(i, i) = c_edges2capacities[edges[i]]; // Insert the capacities into the diagonal matrix
+    }
 }
 
 void ElectricalFlowNaive::extract_edge_list() {
@@ -48,9 +132,8 @@ void ElectricalFlowNaive::extract_edge_list() {
 
 
 void ElectricalFlowNaive::initEdgeDistances() {
-
     // Initialize the edge distances and probabilities
-    for(int u = 0; u < m_graph.getNumNodes(); ++u) {
+    for(int u = 0; u < n; ++u) {
         for(int v : m_graph.neighbors(u)) {
             double distance = 1.0;
             x_edge2distance[{u, v}] = distance; // Initialize distances to 1.0
@@ -69,12 +152,44 @@ void ElectricalFlowNaive::initEdgeDistances() {
 
 
 void ElectricalFlowNaive::run() {
-    inv_m = 1.0 / static_cast<double>(m_graph.getNumEdges());
 
-    for(int t = 0; t < number_of_iterations; ++t) {
+    Eigen::VectorXd demand_u_x = Eigen::VectorXd::Zero(m_graph.getNumNodes()); // Initialize the demand vector for the fixed node x
 
-        // 3) Build M = W B (Bᵀ W B)^{-1} via m solves
+    for(int t = 0; t < std::min(number_of_iterations, std::numeric_limits<int>::max()); ++t) {
+
+        // 3) Build M = W B (Bᵀ W B)^{-1} via m computations
         Eigen::SparseMatrix<double> M = getRoutingMatrix();
+
+        // update the flow values based on new routing matrix
+        for(int u = 0; u < n; ++u) {
+            if(u == x_fixed) continue; // Skip the fixed node x
+
+            demand_u_x[u] = 1.0;
+            demand_u_x[x_fixed] = -1.0;
+            Eigen::VectorXd flow = M*demand_u_x; // Get the flow for the edge
+
+/*
+            // --- Normalize the flow vector so its ℓ₁ norm is 1 ---
+            double total_flow = flow.cwiseAbs().sum();
+            if (total_flow > 1e-12) {
+                flow /= total_flow;
+            }*/
+
+            for(int flow_edge_id = 0; flow_edge_id < flow.size(); ++flow_edge_id) {
+                double flow_value = flow[flow_edge_id];
+                if(std::abs(flow_value) > 1e-16) { // Only update if the flow is significant
+                    f_e_u[{flow_edge_id, u}] += flow_value; // Update the flow for the edge u→x
+                }
+            }
+            demand_u_x[u]=0.0;
+        }
+
+        // print the flow values for debugging
+        if(debug) {
+            for(auto& [edge, flow] : f_e_u) {
+                std::cout << "Flow for edge (" << edges[edge.first].first << ", " << edges[edge.first].second << ") commodity ( " << edge.second << " -> " << x_fixed << " ):" << flow << "\n";
+            }
+        }
 
         Ms.push_back(M); // Store the M matrix for later use
 
@@ -108,13 +223,23 @@ void ElectricalFlowNaive::run() {
 
             if(load <= 0.0 || std::isnan(load)) continue; // Skip invalid loads
 
+            if(debug) {
+                std::cout << "Updating edge (" << edge.first << ", " << edge.second << ") with load = " << load << "\n";
+                std::cout << "Current distance: " << x_edge2distance[edge] << "\n";
+            }
             x_edge2distance[edge] *= (1+(1/(2*roh))*load); // Update the distance with the approximate load
             cap_X += x_edge2distance[edge]; // Update the total capacity
+            if(debug) {
+                std::cout << "New distance: " << x_edge2distance[edge] << "\n";
+            }
+        }
+        if(debug) {
+            std::cout << "Total capacity X: " << cap_X << "\n";
         }
 
         updateEdgeDistances();
 
-        //reak;
+        // break;
     }
 
 
@@ -126,21 +251,86 @@ void ElectricalFlowNaive::run() {
     M_avg /= static_cast<double>(Ms.size());
 
 
-    // print the average M matrix
-    std::cout << "Average M matrix (first 5 rows and columns):\n";
-    int n = M_avg.rows(), m = M_avg.cols();
-    for (int i = 0; i < std::min(5, n); ++i) {
-        for (int j = 0; j < std::min(5, m); ++j) {
+    //take the average of the flows
+    for(auto& [edge, flow] : f_e_u) {
+        flow /= static_cast<double>(number_of_iterations); // Average the flow values
+    }
 
-            // only print out non-zero values, or values that are not too close to zero
-            // to avoid printing too many zeros
-            if(std::abs(M_avg.coeff(i, j))-1e-16<0) {
-                std::cout << "0 ";
-            }else {
-                std::cout << M_avg.coeff(i, j) << " ";
+
+
+
+
+    if(debug) {
+        // print the average M matrix
+        std::cout << "Average M matrix (first 5 rows and columns):\n";
+        int n = M_avg.rows(), m = M_avg.cols();
+        for (int i = 0; i < std::min(5, n); ++i) {
+            for (int j = 0; j < std::min(5, m); ++j) {
+
+                // only print out non-zero values, or values that are not too close to zero
+                // to avoid printing too many zeros
+                if(std::abs(M_avg.coeff(i, j))-1e-16<0) {
+                    std::cout << "0 ";
+                }else {
+                    std::cout << M_avg.coeff(i, j) << " ";
+                }
+            }
+            std::cout << "\n";
+        }
+        // print the average flow values
+        std::cout << "Average flow values (first 5 edges):\n";
+        for (auto &[e_u, flow]: f_e_u) {
+            if (flow != 0.0) { // Only print significant flows
+                std::cout << "Edge (" << edges[e_u.first].first << ", " << edges[e_u.first].second << ") commodity ( "
+                          << e_u.second << " -> " << x_fixed << " ): Flow = " << flow << "\n";
             }
         }
-        std::cout << "\n";
+    }
+
+
+    // scale the flow values to meet one unit of flow per commodity
+    // for this sum up the outgoing for each source s of each commodity pair (s, t)
+    // and multiply \forall e \in E f_st(e) by 1/sum_{s} f_st(e)
+    for (int s = 0; s<n; ++s) {
+        if(s == x_fixed) continue; // Skip the fixed node x
+        int source = s; // Get the source node of the commodity
+
+        double outgoing_flow = 0.0; // Get the outgoing flow for the edge
+        for(auto& neig : m_graph.neighbors(source)) {
+            // if(source > neig) continue; // Ensure we only consider one direction of the edge
+
+            auto edge = std::find(edges.begin(), edges.end(), (source < neig ?
+            std::make_pair(source, neig) :
+            std::make_pair(neig, source)));
+
+            // Find the edge in the edges vector
+            if(edge != edges.end()) {
+                int edge_id = std::distance(edges.begin(), edge);
+                outgoing_flow += std::abs(f_e_u[{edge_id, source}]); // Sum the flow for the edge
+            }
+        }
+
+        // scale for each edge the flow by 1/outgoing_flow
+        if (std::abs(outgoing_flow) > 1e-16) { //
+            for(auto& [edge, flow] : f_e_u) {
+                if(edge.second == source) { // Only scale the flow for the edges outgoing from the source
+                    flow /= outgoing_flow; // Scale the flow by the outgoing flow
+                }
+            }
+        } else {
+            std::cerr << "Warning: No outgoing flow for source " << source << ". Skipping scaling.\n";
+        }
+    }
+
+    // print the scaled flow values
+    if(debug) {
+        std::cout << "Scaled flow values (first 5 edges):\n";
+        for (auto &[e_u, flow]: f_e_u) {
+            if (flow != 0.0) { // Only print significant flows
+                std::cout << "Edge (" << edges[e_u.first].first << ", " << edges[e_u.first].second << ") commodity ( "
+                          << e_u.second << " -> " << x_fixed << " ): Flow = " << flow << "\n";
+            }
+        }
     }
 }
 
@@ -158,23 +348,32 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
 
     // Get the Laplacian matrix L from the solver
     // todo
+    if (debug)
+        std::cout << "Running sketch matrix generation...\n";
     auto C = getSketchMatrix(m, n, 0.5);
 
-    auto X = B.transpose() * C.transpose();
 
-    Eigen::MatrixXd U(n, X.cols() );
+    auto X = B.transpose() * U * C.transpose();
+
+    Eigen::MatrixXd V(n, X.cols() );
     // for each column of X, solve the linear system with the Laplacian of the graph itself
     for(int i = 0; i<X.cols(); ++i) {
         Eigen::VectorXd x = X.col(i);
-        Eigen::VectorXd u = solver.solve(x);
-        U.col(i) = u;
+
+        // TODO remove here the solver
+        Eigen::VectorXd u = amg.solve(x);
+        V.col(i) = u;
+        if(debug) {
+            std::cout << "rhs: \n" << x.transpose() << "\n";
+            std::cout << "Column " << i << " of U:\n" << u.transpose() << "\n";
+        }
     }
 
     // for each edge (u,v), compute the approximate load
     for(int i = 0; i < edges.size(); ++i) {
         auto b = B.row(i);
 
-        double norm = recoverNorm(U.transpose(), b.transpose());
+        double norm = recoverNorm(V.transpose(), b);
 
         approx_load[edges[i]] = w_edges2weights[edges[i]] * norm*(1/c_edges2capacities[edges[i]]); // Approximate load is the weight times the norm divided by the capacity
 
@@ -185,8 +384,6 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
                       << "Norm = " << norm << ", "
                       << "Capacity = " << c_edges2capacities[edges[i]] << "\n";
         }
-
-
     }
 
 
@@ -194,7 +391,15 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
     // get the approxi load from the recover norm
 }
 
-
+double NegativeExponent(double base, int exp) {
+    if (base == 0.0) {
+        throw std::invalid_argument("Base cannot be zero for negative exponent.");
+    }
+    if (exp < 0) {
+        throw std::invalid_argument("Exponent must be non-negative.");
+    }
+    return 1.0 / std::pow(base, exp);
+}
 
 
 /*
@@ -202,19 +407,35 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
  * To reach full performance potential, replace the linear system
  * solver with the one frmo Spielamn to reach O(E log V) time.
  */
-Eigen::MatrixXd ElectricalFlowNaive::getSketchMatrix(int m, int n, double epsilon) {
+Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n, double _epsilon) {
     // ℓ = O(ε⁻² log(1/δ))
-    double delta = 1/log(n);
-    int l = int(std::ceil( (2.0/(epsilon*epsilon)) * std::log(1.0/delta) ));
-    Eigen::MatrixXd C(l, m);
+    double c = 1.1;
+    double delta = NegativeExponent(_n, 10); // Set delta to a small value or a default value
+    double epsilon = _epsilon; // Set epsilon to the provided value or a default value
+    if(debug) {
+        std::cout << "Generating sketch matrix with parameters:\n"
+                  << "c = " << c << ", delta = " << delta << ", epsilon = " << epsilon
+                  << ", m = " << _m << ", n = " << _n << "\n";
+    }
+
+    int l = ((c/(epsilon*epsilon) * std::log(1.0/delta) ));
+
+    if(debug) {
+        std::cout << "Generating sketch matrix with l = " << l << ", m = " << _m << ", n = " << _n << ", epsilon = " << epsilon << "\n";
+    }
+    Eigen::SparseMatrix<double> C(l, _m);
 
     std::random_device rd;
     std::mt19937_64 gen(rd());
     std::cauchy_distribution<double> dist(0.0, 1.0);
 
-    for(int i = 0; i < l; ++i)
-        for(int j = 0; j < m; ++j)
-            C(i,j) = dist(gen);
+    for(int i = 0; i < l; ++i) {
+        for (int j = 0; j < _m; ++j) {
+            double rand_value = dist(gen);
+            // assign sparse matrix C with random values from the Cauchy distribution
+            C.insert(i, j) = rand_value;
+        }
+    }
 
     // print sketch matrix for debugging
     if(debug) {
@@ -222,7 +443,7 @@ Eigen::MatrixXd ElectricalFlowNaive::getSketchMatrix(int m, int n, double epsilo
         int rows = C.rows(), cols = C.cols();
         for (int i = 0; i < std::min(5, rows); ++i) {
             for (int j = 0; j < std::min(5, cols); ++j) {
-                std::cout << C(i, j) << " ";
+                std::cout << C.coeff(i, j) << " ";
             }
             std::cout << "\n";
         }
@@ -246,28 +467,52 @@ double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::V
 
 void ElectricalFlowNaive::updateEdgeDistances() {
     // Update the edge distances and probabilities
-    for(int v = 0; v < m_graph.getNumNodes(); ++v) {
-        for(int u : m_graph.neighbors(v)) {
-            double distance = x_edge2distance[{v, u}];
+    for(auto& edge : edges) {
+        int v = edge.first;
+        int u = edge.second;
+
+            double distance = x_edge2distance[edge];
             if(distance <= 0.0 || std::isnan(distance)) continue;
 
             // Update the probability based on the new distance
             double p = distance/cap_X;
-            p_edge2probability[{v, u}] = p;
+            p_edge2probability[edge] = p;
 
-            double w = std::pow(c_edges2capacities[{v, u}], 2) * 1.0/(p + inv_m); // Calculate the weight based on the probability and inverse of the number of edges
-            w_edges2weights[{v, u}] = w;
+            double w = std::pow(c_edges2capacities[edge], 2) * 1.0/(p + inv_m); // Calculate the weight based on the probability and inverse of the number of edges
+            w_edges2weights[edge] = w;
 
-            solver.NonSyncUpdateEdgeWeights({v, u}, w); // Update the weights in the Laplacian solver
-        }
+            w_edges2weights[{u, v}] = w; // Update the weight for the edge in the same order as edges vector
+
+            //amg.updateEdge(v, u, w);
+            //solver.NonSyncUpdateEdgeWeights({v, u}, w); // Update the weights in the Laplacian solver
+
     }
-    solver.SyncEdgeWeights(); // Synchronize the weights in the Laplacian solver
+    //solver.SyncEdgeWeights(); // Synchronize the weights in the Laplacian solver
+
+    // TODO: change this by only changing the numeric values of the matrix solver
+    amg.init(w_edges2weights, n);
+    // amg.updateSolver();
 
     // Refresh our weights[] array in the same edge‐order
-    refreshWeightMatrix();
     for(int i = 0; i < edges.size(); ++i) {
         auto e = edges[i];
         weights[i] = w_edges2weights[e];
+    }
+    refreshWeightMatrix();
+
+
+    if(debug) {
+        std::cout << "Updated edge distances and weights.\n";
+        std::cout << "Total capacity cap_X: " << cap_X << "\n";
+        std::cout << "Number of edges: " << edges.size() << "\n";
+        for(int i = 0; i < edges.size(); ++i) {
+            auto e = edges[i];
+            std::cout << "Edge (" << e.first << ", " << e.second << "): "
+                      << "Distance = " << x_edge2distance[e] << ", "
+                      << "Weight = " << w_edges2weights[e] << ", "
+                      << "Probability = " << p_edge2probability[e] << ", "
+                      << "Capacity = " << c_edges2capacities[e] << "\n";
+        }
     }
 }
 
@@ -293,132 +538,88 @@ void ElectricalFlowNaive::refreshWeightMatrix() {
 
 
 
-Eigen::SparseMatrix<double>  ElectricalFlowNaive::getRoutingMatrix() {
-
+Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
     buildIncidence();
     buildWeightDiag();
 
+    auto bw = W*B;
+    auto bw_T = bw.transpose();
 
-    // 2. Compute Laplacian L = B * W * Bᵗ
-    Eigen::SparseMatrix<double> WB = W*B;          // (n × m) * (m × m) = n × m
-/*
-    Eigen::MatrixXd M(m, n);
-
-    for (int j = 0; j < n; ++j) {
-        Eigen::VectorXd ej = Eigen::VectorXd::Zero(n);
-        ej[j] = 1.0;
-
-        // Solve using Julia-based Laplacian solver
-        Eigen::VectorXd u = solver.solve(ej);
-
-        // Multiply by WB → column j of M
-        M.col(j) = WB * u;
-    }
-
-    // Convert to sparse and return
-    return M.sparseView();*/
-
-    if(debug) {
-        std::cout << "Weighted incidence matrix WB (sparse):\n";
-        std::cout << "WB has " << WB.nonZeros() << " nonzeros\n";
-        // print the WB matrix for debugging
-        std::cout << "WB matrix (first 5 rows and columns):\n";
-        int rows = WB.rows(), cols = WB.cols();
-        for (int i = 0; i < std::min(5, rows); ++i) {
-            for (int j = 0; j < std::min(5, cols); ++j) {
-                std::cout << WB.coeff(i, j) << " ";
-            }
-            std::cout << "\n";
-        }
-    }
-
-    Eigen::MatrixXd L = (B.transpose()*WB).toDense(); // (n × m) * (m × n) = n × n
+    Eigen::MatrixXd M(n, m);
+    Eigen::MatrixXd L_inv(n, n);
 
 
-    if(debug) {
-        std::cout << "Laplacian matrix L (dense):\n" << L << "\n";
-    }
+    if(debug)
+        diagnose_csr_laplacian(amg.m_row_ptr, amg.m_col_ind, amg.m_values);
 
-    auto Linv = buildPseudoInverse(L); // Compute the pseudo-inverse of the Laplacian matrix
-
-
-    // 4. Compute M = W * Bᵗ * L†
-    Eigen::MatrixXd M = WB*Linv;//Eigen::MatrixXd(m, n);
-
-    if (debug) {
-        std::cout << "Routing matrix M (dense):\n" << M << "\n";
-    }
-
-    return M.sparseView(); // Convert to sparse matrix for efficiency
-
-
-
-    // (3) Allocate dense M matrix (edges x nodes)
-    Eigen::MatrixXd M_dense(m, n);
-
-    // compute the pseudo inverse of the Laplacian matrix
-
-
-/*
-    // TODO: remove this
-    std::vector<double> abs_u;
-    std::vector<double> abs_Bu;
-    for (int j = 0; j < n; ++j) {
-
-        // Unit vector e_j
-        Eigen::VectorXd ej = Eigen::VectorXd::Zero(n);
-        ej[j] = 1.0;
-
-        // Solve L u = e_j
-        Eigen::VectorXd u = solver.solve(ej);
+    for(int i = 0; i<m; i++) {
 
         if(debug) {
-            // print out the u vector for debugging
-            std::cout << "u vector for column " << j << ":\n";
-            for (int i = 0; i < u.size(); ++i) {
-                std::cout << "Node " << i << ": " << u[i] << "\n";
+            // print out the amg solver
+            for(auto [e, w] : amg.m_edge_weights) {
+                std::cout << "Edge: " << e.first << " " << e.second << " : " << w << std::endl;
             }
 
-            for (int i = 0; i < u.size(); ++i) {
-                abs_u.push_back( u[i] );
+            std::cout << "row_ptr "<< std::endl;
+            for(auto U : amg.m_row_ptr) {
+                std::cout << "" << U << " ";
             }
+            std::cout << std::endl;
+
+            std::cout << "m_col_ind "<< std::endl;
+            for(auto U : amg.m_col_ind) {
+                std::cout << "" << U << " ";
+            }
+            std::cout << std::endl;
+
+            std::cout << "m_values "<< std::endl;
+            for(auto U : amg.m_values) {
+                std::cout << "" << U << " ";
+            }
+            std::cout << std::endl;
+
         }
 
-        // Compute Bu
-        Eigen::VectorXd Bu(m);
-        for (int e = 0; e < m; ++e) {
-            auto [i, k] = edges[e];
-            Bu[e] = u[i] - u[k];
+        Eigen::VectorXd rhs = bw_T.col(i);
+        rhs.array() -= rhs.mean();
+
+        if(debug) {
+            std::cout << "Solving for column " << i << " with rhs: " << rhs.transpose() << std::endl;
         }
 
-        // Multiply by weights
-        for (int e = 0; e < m; ++e) {
-            Bu[e] *= W.coeff(e, e);
-        }
+        auto result = amg.solve(rhs);
+        M.col(i) = result;
 
         if(debug) {
 
-            for (auto& i : Bu) {
-                abs_Bu.push_back(i);
-            }
+            std::cout << "result for iteration: " << i << "\n";
+            for (auto r: result) std::cout << r << " ";
+            std::cout << std::endl;
 
-            // print out the Bu vector for debugging
-            std::cout << "Bu vector for column " << j << ":\n";
-            for (int e = 0; e < Bu.size(); ++e) {
-                std::cout << "Edge (" << edges[e].first << ", " << edges[e].second << "): " << Bu[e] << "\n";
+            // print the Laplacian for debugging
+            Eigen::SparseMatrix<double> Lsp(n, n);
+            std::vector<Eigen::Triplet<double>> triplets;
+            for (int row = 0; row < n; ++row) {
+                for (int idx = amg.m_row_ptr[row]; idx < amg.m_row_ptr[row + 1]; ++idx) {
+                    int col = amg.m_col_ind[idx];
+                    double val = amg.m_values[idx];
+                    triplets.emplace_back(row, col, val);
+                }
             }
-
+            Lsp.setFromTriplets(triplets.begin(), triplets.end());
+            std::cout << "Laplacian matrix L (sparse, first 5 rows and columns):\n";
+            int rows = Lsp.rows(), cols = Lsp.cols();
+            for (int r = 0; r < std::min(5, rows); ++r) {
+                for (int c = 0; c < std::min(5, cols); ++c) {
+                    std::cout << Lsp.coeff(r, c) << " ";
+                }
+                std::cout << "\n";
+            }
         }
-
-        // Store as column j
-        M_dense.col(j) = Bu;
     }
 
-    // Convert dense to sparse if desired
-    Eigen::SparseMatrix<double> M_sparse = M_dense.sparseView();
+    return M.transpose().sparseView();
 
-    return M_sparse;
-*/
 }
 
 
@@ -503,9 +704,9 @@ Eigen::MatrixXd ElectricalFlowNaive::buildPseudoInverse(Eigen::MatrixXd& L) {
         }
     }
 
+
     if(debug) {
         std::cout << "Eigenvalues of L:\n" << evals.transpose() << "\n";
-        std::cout << "Eigenvectors of L (first 5 columns):\n" << evecs.leftCols(5) << "\n";
         std::cout << "Pseudo-inverse of L (dense):\n" << Linv << "\n";
     }
 
@@ -651,12 +852,57 @@ ElectricalFlowNaive::getRoutingPathsForCommodity(const std::vector<std::pair<int
 }
 
 
-double ElectricalFlowNaive::getMaximumCongestion() const {
+double ElectricalFlowNaive::getMaximumCongestion() {
     double max_cong = 0.0;
 
-    std::vector<double> total_edge_flow(edges.size(), 0);
+    std::vector<double> total_edge_congestion(edges.size(), 0);
+
+
+    std::unordered_map<std::tuple<int, int, int>, double> f_e_st;
+    // also add the flow for the fixed vertex x_fixed
+    for(int i = 0; i<n; i++) {
+        for(int j = i+1; j<n; j++) {
+            for(int edge_id = 0; edge_id < edges.size(); edge_id++) {
+
+                double f_e_i = f_e_u.count({edge_id, i}) ? f_e_u[{edge_id, i}] : 0;
+                double f_e_j = f_e_u.count({edge_id, j}) ? f_e_u[{edge_id, j}] : 0;
+
+                double flow = f_e_i - f_e_j; // Get the flow for the edge
+                if (std::abs(flow) > 1e-16) { // Only consider significant flows
+                    f_e_st[{edge_id, i, j}] += flow; // Sum the flow for the commodity pair (i, j)
+                }
+            }
+        }
+    }
+
+    if(debug) {
+        // print out the flows
+        for (auto &[edge_commo, flow]: f_e_st) {
+            int edge_id = std::get<0>(edge_commo);
+            int source = std::get<1>(edge_commo);
+            int target = std::get<2>(edge_commo);
+            std::cout << "Flow for edge (" << edges[edge_id].first << ", " << edges[edge_id].second
+                      << ") commodity (" << source << " -> " << target << "): " << flow << "\n";
+        }
+    }
+
+
     // iterate over every commodity
     // and sum up the total flow per edge
+    for(auto& [edge, flow] : f_e_st) {
+        int edge_id = std::get<0>(edge);
+        total_edge_congestion[edge_id] += std::abs(flow)/c_edges2capacities[edges[edge_id]]; // Sum up the absolute flow values for each edge
+    }
+
+    for(auto& congestion: total_edge_congestion) {
+        if(congestion > max_cong) {
+            max_cong = congestion; // Update the maximum congestion
+        }
+    }
+
+    return max_cong;
+
+    /*
     Eigen::VectorXd demands(n);
     for(int s = 0; s<n; s++) {
         for(int t = s+1; t<n; t++) {
@@ -683,6 +929,6 @@ double ElectricalFlowNaive::getMaximumCongestion() const {
         if(cong_e > max_cong) {
             max_cong = cong_e;
         }
-    }
+    }*/
     return max_cong;
 }

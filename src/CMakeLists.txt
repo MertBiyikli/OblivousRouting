@@ -20,5 +20,7 @@ add_library(core ${SRC_FILES}
         electrical/electrical_flow_naive.h
         electrical/laplcian_solver.cpp
         electrical/laplcian_solver.h
+        electrical/AMGSolver.cpp
+        electrical/AMGSolver.h
 )
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

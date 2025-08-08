@@ -9,6 +9,7 @@
 #include "../graph.h"
 #include "../utils/hash.h"
 #include "laplcian_solver.h"
+#include "AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
@@ -28,10 +29,15 @@ class ElectricalFlowNaive{
 
     Eigen::SparseMatrix<double> W; // weight diagonal matrix
     Eigen::SparseMatrix<double> M_avg;
+
+
     LaplacianSolver solver;
     RaeckeGraph m_graph;
+    AMGSolver amg;
+
     int n, m;
     Eigen::SparseMatrix<double> B;
+    Eigen::SparseMatrix<double> U;
     double roh = 0.0;
     double alpha_local = 0.0;
     double inv_m = 0.0;
@@ -56,10 +62,17 @@ class ElectricalFlowNaive{
     void buildIncidence();
     Eigen::MatrixXd buildPseudoInverse(Eigen::MatrixXd& L);
 
-    Eigen::MatrixXd getSketchMatrix(int m, int n, double epsilon = 0.5);
+    Eigen::SparseMatrix<double> getSketchMatrix(int m, int n, double epsilon = 0.5);
     double recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec);
 
 public:
+    std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x
+    int x_fixed;
+    // store the flow as an weighted adjacency list
+    // the first entry denotes the edge and the second
+    // entry denotes the flow for the commodity u->x, since x is fixed, we only keep it for u
+    // std::vector<std::vector<int>> f_adj_edges;
+    // std::vector<std::vector<double>> f_adj_flow;
     std::vector<std::pair<int,int>> edges; // u<v only
     void run();
 
@@ -79,7 +92,7 @@ public:
 
     std::unordered_map<std::pair<int, int>, std::vector<FlowPath>>
     getRoutingPathsForCommodity(const std::vector<std::pair<int, int>>& _commodity);
-    double getMaximumCongestion() const;
+    double getMaximumCongestion();
 };
 
 #endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_NAIVE_H

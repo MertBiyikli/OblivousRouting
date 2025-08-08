@@ -163,6 +163,26 @@ void LaplacianSolver::buildCSC() {
 
 Eigen::VectorXd LaplacianSolver::solve(const Eigen::VectorXd &b) {
 
+    // Build a dense matrix version for validation
+    Eigen::MatrixXd Ldense = Eigen::MatrixXd::Zero(n, n);
+
+    // Fill diagonals and off-diagonals correctly
+    for (const auto& [edge, w] : w_edges2weights) {
+        int u = edge.first;
+        int v = edge.second;
+
+        if (u == v) continue;  // ignore self-loops
+        Ldense(u,u) += w;
+        Ldense(v,v) += w;
+        Ldense(u,v) -= w;
+        Ldense(v,u) -= w;
+    }
+
+    // Check symmetry
+    std::cout << "Symmetry check: " << ( (Ldense - Ldense.transpose()).norm() ) << std::endl;
+
+
+
     if(!initted) {
         throw std::runtime_error("LaplacianSolver not initialized. Call init() first.");
     }

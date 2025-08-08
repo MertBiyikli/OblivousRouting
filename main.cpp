@@ -12,6 +12,7 @@
 
 int main() {
 
+/*
     // Julia context
     jl_init();
 
@@ -20,9 +21,9 @@ int main() {
     jl_eval_string("include(\"/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/electrical/LaplacianSolver.jl\")");
     jl_eval_string("using .LaplacianSolver");
     // Graph G = RandomGraphGenerator::generate(10, 20, 1.0, 10.0);
-
+*/
     auto g = std::make_shared<RaeckeGraph>();
-    g->readLFGFile("../experiments/random/Deltacom.lgf", true);
+    g->readLFGFile("../experiments/random/NSF_cost.lgf", true);
     int n = g->getNumNodes();
 /*
     double c = 1;
@@ -39,23 +40,29 @@ int main() {
     std::unordered_map<std::pair<int, int>, double> edgeWeights;
     for(int i = 0; i < n; ++i) {
         for (const auto& u : g->neighbors(i)) {
-            if (i < u) { // Avoid double setting weights for undirected edges
-                edgeWeights[{i, u}] = static_cast<double>(rand() % 10 + 1);
-            }
+            //if (i < u) { // Avoid double setting weights for undirected edges
+                edgeWeights[{i, u}] = 1/g->getEdgeCapacity(i,u);
+
         }
     }
 
-    /*
-    sol.init(raeckGraph, edgeWeights, true);
+/*
+    AMGSolver amgSolver;
+
+    Eigen::SparseMatrix<double> M(g->getNumEdges(), n);
+    amgSolver.init(edgeWeights, n);
     Eigen::VectorXd x;
 
-    x = Eigen::VectorXd::Random(raeckGraph.getNumNodes());
-    auto result = sol.solve(x, true);
+    x = Eigen::VectorXd::Zero(g->getNumNodes());
+    x[0]=1;
+    auto result = amgSolver.solve(x);
 
     std::cout << "Result of Laplacian solver:\n" << result << std::endl;
 
-    sol.updateEdgeWeights({0, 1}, 5.0);
-    std::cout << "Result after updating edge :\n " << sol.solve(x, true) << std::endl;
+    amgSolver.updateEdge(0, 1, 5.0);
+
+    std::cout << "Result after updating edge :\n " << amgSolver.solve(x) << "\n";
+
 
 */
 
@@ -66,7 +73,7 @@ int main() {
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end_time - start_time;
     std::cout << "Electrical Flow Naive solver took " << elapsed.count() << " seconds.\n";
-    /*
+
     // get the load for commodity (0, 1), (0, 2)
     std::vector<std::pair<int, int>> commodity;
     for(int i = 0; i < n; ++i) {
@@ -79,20 +86,42 @@ int main() {
 
     for (const auto& [edge, flow] : routing) {
         std::cout << "commodity (" << edge.first << ", " << edge.second << "): Flow = \n";
+        double flow_sum = flow.cwiseAbs().sum();
         for(int edge_id = 0; edge_id < flow.size(); edge_id++) {
             std::cout << " edge (" << efSolver.edges[edge_id].first << " / " << efSolver.edges[edge_id].second << " ) : " << flow.transpose()(edge_id) << std::endl;
         }
+        std::cout << "Total flow for commodity (" << edge.first << ", " << edge.second << ") = " << flow_sum << std::endl;
         std::cout << std::endl;
     }
-    */
+
+    // print the average flow values
+    std::cout << "Average flow values (first 5 edges):\n";
+    for (auto &[e_u, flow]: efSolver.f_e_u) {
+        if (flow != 0.0) { // Only print significant flows
+            std::cout << "Edge (" << efSolver.edges[e_u.first].first << ", " << efSolver.edges[e_u.first].second << ") commodity ( "
+                      << e_u.second << " -> " << efSolver.x_fixed << " ): Flow = " << flow << "\n";
+        }
+    }
+
+    // also sum up the flow for each commodity and list the flow sum
+    std::cout << "Total flow for each commodity:\n";
+    std::unordered_map<std::pair<int, int>, double> flow_sum;
+    for (auto &[e_u, flow]: efSolver.f_e_u) {
+        flow_sum[{e_u.second, efSolver.x_fixed}] += std::abs(flow); // Sum up the flow for each commodity
+    }
+
+    for (const auto& [commodity, total_flow] : flow_sum) {
+        std::cout << "Commodity (" << commodity.first << ", " << commodity.second << "): Total Flow = " << total_flow << "\n";
+    }
+
 
 
     std::cout << "Max congestion electrical flow: " << efSolver.getMaximumCongestion() << std::endl;
 
-
+    /*
     jl_atexit_hook(0);
 
-    /*
+
     // set random edge distances for debugging purposes
     for (int& v : raeckGraph.getVertices()) {
         for (const auto& u : raeckGraph.neighbors(v)) {
@@ -229,8 +258,8 @@ int main() {
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Cohen LP solver took " << std::chrono::duration<double>(end_time-start_time).count() << " seconds. " << std::endl;
     std::cout << "Maximum congestion using Applegate & Cohen: " << LP.getMaximumCongestion(*g) << std::endl;
-
-
+*/
+/*
     std::cout << "Running Raecke solver..." << std::endl;
     start_time = std::chrono::high_resolution_clock::now();
     RaeckeFRT raecke;

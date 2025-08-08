@@ -3,7 +3,12 @@ project(ObliviousRouting)
 
 set(CMAKE_CXX_STANDARD 20)
 
-### FOR Julia
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+
+
 
 
 # Tell CMake where Homebrew put Armadillo
@@ -19,6 +24,12 @@ set(JULIA_LIBRARY "${JULIA_DIR}/lib/libjulia.dylib")
 message(STATUS "Using Julia in ${JULIA_DIR}")
 # make sure our exe can find libjulia at runtime
 link_directories(${JULIA_DIR}/lib)
+
+
+# Add this after your other includes
+# AMG solver
+
+include_directories(/Users/halilibrahim/amgcl)
 
 
 add_executable(oblivious_routing main.cpp
@@ -43,6 +54,8 @@ add_executable(oblivious_routing main.cpp
         src/electrical/electrical_flow_naive.h
         src/electrical/laplcian_solver.cpp
         src/electrical/laplcian_solver.h
+        src/electrical/AMGSolver.cpp
+        src/electrical/AMGSolver.h
 )
 
 include(FetchContent)
@@ -76,6 +89,7 @@ target_link_libraries(oblivious_routing PRIVATE ortools::ortools ${JULIA_LIBRARY
 target_include_directories(oblivious_routing PRIVATE ${ARMADILLO_INCLUDE_DIR})
 target_link_libraries(oblivious_routing PRIVATE ${ARMADILLO_LIBRARY})
 target_link_libraries(oblivious_routing PRIVATE ${JULIA_LIBRARY})
+# target_link_libraries(oblivious_routing PRIVATE amgcl)
 # On macOS you also want to embed the RPATH so it looks in JULIA_DIR/lib
 # now set the RPATH to include both Julia *and* OR-Tools
 set_target_properties(oblivious_routing PROPERTIES
