@@ -1,21 +1,13 @@
 name: CMake Build
 
-on:
-  push:
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
   build:
-    name: ${{ matrix.os }} • Release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-14]  # macOS is Apple Silicon on GitHub
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout (with submodules)
@@ -23,51 +15,26 @@ jobs:
         with:
           submodules: recursive
 
-      # ---------- OS packages ----------
-      - name: Install deps (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Set up ccache (optional but fast)
+        uses: hendrikmuhs/ccache-action@v2
+        with:
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+
+      - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ \
-              libboost-all-dev
-          # Optional: faster rebuilds
-          sudo apt-get install -y ccache
-      - name: Install deps (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install cmake ninja boost or-tools ccache
+          sudo apt-get install -y cmake ninja-build g++ libboost-all-dev
 
-      # ---------- Cache the build dir ----------
-      - name: Cache build
-        uses: actions/cache@v4
-        with:
-          path: build
-          key: ${{ runner.os }}-build-${{ hashFiles('CMakeLists.txt', 'src/**/*.cpp', 'src/**/*.h') }}
-          restore-keys: |
-            ${{ runner.os }}-build-
-
-      # ---------- Configure ----------
-      - name: Configure (CMake)
+      - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTS=OFF
-        env:
-        # On macOS, Homebrew installs a CMake config for or-tools, so CMake will find it.
-        # On Ubuntu, if or-tools is not installed, your CMakeLists falls back to FetchContent.
-        # Nothing else needed here.
+            -DCMAKE_BUILD_TYPE=Release
 
-      # ---------- Build ----------
       - name: Build
-        run: cmake --build build -j
+        run: cmake --build build --config Release -j2
 
-      # ---------- (Optional) run tests ----------
-      # - name: Test
-      #   run: ctest --test-dir build --output-on-failure
-
-      - name: Upload build artifacts
+      - name: Upload build dir
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}
+          name: build
           path: build
