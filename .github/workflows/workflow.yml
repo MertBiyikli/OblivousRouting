@@ -5,20 +5,10 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Set up ccache (optional but fast)
-        uses: hendrikmuhs/ccache-action@v2
-        with:
-          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
 
       - name: Install deps
         run: |
@@ -26,15 +16,17 @@ jobs:
           sudo apt-get install -y cmake ninja-build g++ libboost-all-dev
 
       - name: Configure
-        run: |
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release -j2
 
-      - name: Upload build dir
+      - name: (optional) ctest
+        if: always()
+        run: ctest --test-dir build --output-on-failure || true
+
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: build
+          name: build-ubuntu
           path: build
