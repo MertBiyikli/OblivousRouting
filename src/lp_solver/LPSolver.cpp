@@ -7,7 +7,7 @@
 using namespace operations_research;
 
 
-void LPSolver::CreateVariables(const RaeckeGraph &graph) {
+void LPSolver::CreateVariables(const Graph &graph) {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
     if (!solver) throw std::runtime_error("GLOP solver unavailable.");
 
@@ -66,7 +66,7 @@ void LPSolver::CreateVariables(const RaeckeGraph &graph) {
 
 }
 
-void LPSolver::CreateConstraints(const RaeckeGraph &graph) {
+void LPSolver::CreateConstraints(const Graph &graph) {
     // forall links l: sum_{m \in E} of cap(m)*π(l, m) <= alpha
     for(int id = 0; id<edges.size(); id++) {
         if ( edges[id].first > edges[id].second) continue;
@@ -232,7 +232,7 @@ void LPSolver::SetObjective()
 }
 
 
-double LPSolver::getMaximumCongestion(const RaeckeGraph& graph) const {
+double LPSolver::getMaximumCongestion(const Graph& graph) const {
     double max = 0;
     // === Print the solution ===
     std::unordered_map<int, double> total_flow_per_arc;
@@ -274,7 +274,7 @@ double LPSolver::getMaximumCongestion(const RaeckeGraph& graph) const {
 }
 
 
-void LPSolver::GetRoutingTable(const RaeckeGraph& graph) {
+void LPSolver::GetRoutingTable(const Graph& graph) {
     std::cout << "\n=== Oblivious Routing Table ===\n";
 
     for (const auto& [key, var] : f_e_st) {
@@ -293,7 +293,7 @@ void LPSolver::GetRoutingTable(const RaeckeGraph& graph) {
     }
 }
 
-void LPSolver::PrintSolution(const RaeckeGraph &graph) {
+void LPSolver::PrintSolution(const Graph &graph) {
 
     // === Print the solution ===
     std::unordered_map<int, double> total_flow_per_arc;
@@ -334,7 +334,7 @@ void LPSolver::PrintSolution(const RaeckeGraph &graph) {
     PrintCommoditiesPerEdge(graph);
 }
 
-void LPSolver::PrintCommoditiesPerEdge(const RaeckeGraph& graph) {
+void LPSolver::PrintCommoditiesPerEdge(const Graph& graph) {
     std::cout << "\n=== Commodities per Edge ===\n";
 
     // Iterate over all edges

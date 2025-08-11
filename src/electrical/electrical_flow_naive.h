@@ -8,7 +8,6 @@
 #include <algorithm>
 #include "../graph.h"
 #include "../utils/hash.h"
-#include "laplcian_solver.h"
 #include "AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
@@ -31,8 +30,8 @@ class ElectricalFlowNaive{
     Eigen::SparseMatrix<double> M_avg;
 
 
-    LaplacianSolver solver;
-    RaeckeGraph m_graph;
+    // LaplacianSolver solver;
+    Graph m_graph;
     AMGSolver amg;
 
     int n, m;
@@ -47,6 +46,7 @@ class ElectricalFlowNaive{
 
     // Once‐computed edge list & index mapping
 
+    // TODO: delete this and see if this even influences something...
     std::vector<double>              weights; // same order
 
     // Helpers
@@ -77,7 +77,7 @@ public:
     void run();
 
     std::unordered_map<std::pair<int, int>, double> getApproxLoad();
-    void init(const RaeckeGraph& g, bool debug = false);
+    void init(const Graph& g, bool debug = false);
 
     Eigen::SparseMatrix<double> getFinalRoutingMatrix();
     std::unordered_map<std::pair<int, int>, Eigen::VectorXd> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);

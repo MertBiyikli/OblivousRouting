@@ -1,68 +1,30 @@
-cmake_minimum_required(VERSION 3.24)
-project(ObliviousRouting)
-
+cmake_minimum_required(VERSION 3.20)
+project(ObliviousRouting CXX)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+set(Boost_NO_BOOST_CMAKE ON)  # prefer system/Homebrew Boost over any packaged config
 
+# only require what the main binary needs
+find_package(Boost REQUIRED COMPONENTS program_options serialization)
 
-
-
-# Tell CMake where Homebrew put Armadillo
-set(ARMADILLO_INCLUDE_DIR "/usr/local/opt/armadillo/include")
-set(ARMADILLO_LIBRARY     "/usr/local/opt/armadillo/lib/libarmadillo.dylib")
-
-set(JULIA_DIR "/usr/local/opt/julia")
-set(JULIA_INCLUDE_DIR "${JULIA_DIR}/include/julia"
-        CACHE PATH "Path to the directory containing julia.h and julia_version.h"
-)
-
-set(JULIA_LIBRARY "${JULIA_DIR}/lib/libjulia.dylib")
-message(STATUS "Using Julia in ${JULIA_DIR}")
-# make sure our exe can find libjulia at runtime
-link_directories(${JULIA_DIR}/lib)
+# if you have tests that need unit_test_framework, guard it:
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+    find_package(Boost 1.70 REQUIRED COMPONENTS unit_test_framework)
+endif()
 
 
-# Add this after your other includes
-# AMG solver
 
-include_directories(/Users/halilibrahim/amgcl)
+# ---- amgcl (vendored) ----
+add_subdirectory(extern/amgcl)
 
 
-add_executable(oblivious_routing main.cpp
-        src/graph.h
-        src/graph.cpp
-        src/utils/hash.h
-        src/lp_solver/LPSolver.h
-        src/lp_solver/LPSolver.cpp
-        src/lp_solver/MCCF_lp_solver.cpp
-        src/lp_solver/MCCF_lp_solver.h
-        src/tree_based/mcct/Node.h
-        src/tree_based/mcct/Tree.h
-        src/tree_based/mcct/mcct_derandomized_weighted_solver.h
-        src/tree_based/raecke_tree_decomp.cpp
-        src/tree_based/raecke_tree_decomp.h
-        src/tree_based/mcct/Node.cpp
-        src/tree_based/mcct/mcct_derandomized_weighted_solver.cpp
-        src/tree_based/raecke_transform.cpp
-        src/tree_based/raecke_transform.h
-        src/lp_solver/LP_Base.h
-        src/electrical/electrical_flow_naive.cpp
-        src/electrical/electrical_flow_naive.h
-        src/electrical/laplcian_solver.cpp
-        src/electrical/laplcian_solver.h
-        src/electrical/AMGSolver.cpp
-        src/electrical/AMGSolver.h
-)
+
+find_package(ortools CONFIG QUIET)
+
 
 include(FetchContent)
-
-# Try to find system-installed OR-Tools first
-find_package(ortools QUIET)
-
 if(NOT ortools_FOUND)
     message(STATUS "OR-Tools not found. Fetching from GitHub...")
 
@@ -72,38 +34,47 @@ if(NOT ortools_FOUND)
             GIT_TAG        v9.9 # you can update this to the latest stable release
     )
 
-    set(BUILD_DEPS ON)
+    set(BUILD_DEPS ON)            # OR-Tools builds protobuf/abseil/etc. itself
     set(BUILD_SAMPLES OFF)
+    set(BUILD_EXAMPLES OFF)
     set(BUILD_TESTING OFF)
     set(BUILD_PYTHON OFF)
     set(BUILD_JAVA OFF)
     set(BUILD_CSHARP OFF)
-
+    # Disable heavy/paid solvers you don't need
+    set(BUILD_SCIP OFF)
+    set(USE_GUROBI OFF)
+    set(USE_XPRESS OFF)
+    set(USE_HIGHS OFF)
 
     FetchContent_MakeAvailable(ortools)
 endif()
 
-target_link_libraries(oblivious_routing PRIVATE ortools::ortools ${JULIA_LIBRARY})
 
-# Include Armadillo headers and link against the library
-target_include_directories(oblivious_routing PRIVATE ${ARMADILLO_INCLUDE_DIR})
-target_link_libraries(oblivious_routing PRIVATE ${ARMADILLO_LIBRARY})
-target_link_libraries(oblivious_routing PRIVATE ${JULIA_LIBRARY})
-# target_link_libraries(oblivious_routing PRIVATE amgcl)
-# On macOS you also want to embed the RPATH so it looks in JULIA_DIR/lib
-# now set the RPATH to include both Julia *and* OR-Tools
-set_target_properties(oblivious_routing PROPERTIES
-        BUILD_WITH_INSTALL_RPATH TRUE
-        INSTALL_RPATH
-        "${JULIA_ROOT}/lib;${JULIA_ROOT}/lib/julia;$<TARGET_FILE_DIR:ortools::ortools>"
+
+
+# ---- Your target ----
+add_executable(oblivious_routing
+        main.cpp
+        src/graph.cpp
+        src/lp_solver/LPSolver.cpp
+        src/lp_solver/MCCF_lp_solver.cpp
+        src/tree_based/raecke_tree_decomp.cpp
+        src/tree_based/mcct/Node.cpp
+        src/tree_based/mcct/mcct_derandomized_weighted_solver.cpp
+        src/tree_based/raecke_transform.cpp
+        src/electrical/electrical_flow_naive.cpp
+        src/electrical/AMGSolver.cpp
+        # (add any other .cpp files you have)
 )
 
-add_link_options(-ljulia)
 
-# Add the include directory for Julia
-target_include_directories(oblivious_routing PRIVATE ${JULIA_INCLUDE_DIR})
-
-add_subdirectory(src)
-add_subdirectory(extern/googletest)
-enable_testing()
-add_subdirectory(test)
+# target_link_libraries(oblivious_routing ortools::ortools)
+target_include_directories(oblivious_routing PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
+target_link_libraries(oblivious_routing
+        PRIVATE
+        ortools::ortools
+        Boost::boost
+        Boost::program_options
+        Boost::serialization
+)

@@ -28,8 +28,8 @@ private:
 
     double max_cong = 0;
 
-    virtual void CreateVariables(const RaeckeGraph& graph) override;
-    virtual void CreateConstraints(const RaeckeGraph& graph) override;
+    virtual void CreateVariables(const Graph& graph) override;
+    virtual void CreateConstraints(const Graph& graph) override;
     virtual void SetObjective() override;
 
     std::vector<int> sourceVertices;
@@ -38,13 +38,13 @@ public:
     LPSolver(){};
 
 
-    double getMaximumCongestion(const RaeckeGraph& graph) const;
-    bool SolveOptimalObliviousRouting(const RaeckeGraph& graph, bool AGGREGATE_CONGESTION = true);
+    double getMaximumCongestion(const Graph& graph) const;
+    bool SolveOptimalObliviousRouting(const Graph& graph, bool AGGREGATE_CONGESTION = true);
 
-    void PrintSolution(const RaeckeGraph& graph) override;
-    void GetRoutingTable(const RaeckeGraph& graph);
+    void PrintSolution(const Graph& graph) override;
+    void GetRoutingTable(const Graph& graph);
 
-    void PrintCommoditiesPerEdge(const RaeckeGraph& graph);
+    void PrintCommoditiesPerEdge(const Graph& graph);
 };
 
 #endif //OBLIVOUSROUTING_LPSOLVER_H

@@ -28,7 +28,7 @@ void CMMF_Solver::AddDemands(const Demand& d, double demand) {
 }
 
 
-void CMMF_Solver::CreateVariables(const RaeckeGraph &graph) {
+void CMMF_Solver::CreateVariables(const Graph &graph) {
 
 
     // CREATE Alpha variable
@@ -45,7 +45,7 @@ void CMMF_Solver::CreateVariables(const RaeckeGraph &graph) {
     }
 }
 
-void CMMF_Solver::CreateConstraints(const RaeckeGraph &graph) {
+void CMMF_Solver::CreateConstraints(const Graph &graph) {
 
     for (int dest = 0; dest < n; ++dest) {
         for (int v = 0; v < n; ++v) {
@@ -110,7 +110,7 @@ void CMMF_Solver::SetObjective() {
     solver->MutableObjective()->SetMinimization();
 }
 
-void CMMF_Solver::PrintSolution(const RaeckeGraph &graph) {
+void CMMF_Solver::PrintSolution(const Graph &graph) {
     // 1) Print the congestion factor
     std::cout << "α = " << alpha->solution_value() << "\n\n";
 

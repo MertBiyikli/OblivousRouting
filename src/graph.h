@@ -12,22 +12,22 @@
 #include <numeric>
 #include <iostream>
 
-class RaeckeGraph{
+class Graph{
     int m = 0; // Number of edges
     std::vector<int> m_vertices; // List of vertices
     std::vector<std::vector<int>> m_adj;
     std::vector<std::vector<double>> m_adj_capacities, m_adj_distances;
     std::vector<std::vector<double>> m_distanceMatrix;
 public:
-    RaeckeGraph() = default;
-    RaeckeGraph(int n) : m_adj(n), m_adj_capacities(n), m_adj_distances(n) {
+    Graph() = default;
+    Graph(int n) : m_adj(n), m_adj_capacities(n), m_adj_distances(n) {
         if(m_vertices.empty()) {
             m_vertices.resize(m_adj.size());
             std::iota(m_vertices.begin(), m_vertices.end(), 0); // Fill vertices with 0, 1, ..., maxNodeIdSeen
         }
     };
 
-    RaeckeGraph(const RaeckeGraph& other)
+    Graph(const Graph& other)
         : m_vertices(other.m_vertices),
           m_adj(other.m_adj),
           m_adj_capacities(other.m_adj_capacities),
@@ -35,7 +35,7 @@ public:
           m_distanceMatrix(other.m_distanceMatrix),
           m(other.getNumEdges()){};
 
-    RaeckeGraph& operator=(const RaeckeGraph& other) {
+    Graph& operator=(const Graph& other) {
         if (this != &other) {
             m_vertices = other.m_vertices;
             m_adj = other.m_adj;
@@ -305,8 +305,8 @@ public:
         }
     }
 
-    RaeckeGraph getRaeckeGraph() const {
-        RaeckeGraph rg(this->numNodes());
+    Graph getRaeckeGraph() const {
+        Graph rg(this->numNodes());
         for(int i = 0; i < m_iNumNodes; ++i) {
             for(const auto& edge : m_adj[i]) {
                 if(edge->source >= edge->target) continue; // Avoid adding the same undirected edge twice

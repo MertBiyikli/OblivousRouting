@@ -20,32 +20,32 @@
 class RaeckeFRT {
     bool debug = false;
     MCCT_Solver m_mcct;
-    RaeckeGraph m_graph;
+    Graph m_graph;
     double m_lambdaSum;
     std::vector<double> m_lambdas;
     std::vector<FRT_Tree> m_trees;
-    std::vector<RaeckeGraph> m_graphs;
+    std::vector<Graph> m_graphs;
     std::vector< std::unordered_map<std::pair<int, int>, double> > m_idTree2edge2rload;
 public:
 
     // Getters / Setters
-    RaeckeGraph getGraph() const;
-    void setGraph(const RaeckeGraph& g);
+    Graph getGraph() const;
+    void setGraph(const Graph& g);
 
     void run();
 
     double iterate(int treeIndex);
 
-    FRT_Tree getTree(std::shared_ptr<RaeckeGraph>& g);
+    FRT_Tree getTree(std::shared_ptr<Graph>& g);
     void computeRLoads(int treeIndex,
                        FRT_Tree& _t,
-                       std::shared_ptr<RaeckeGraph>& copyGraph);
+                       std::shared_ptr<Graph>& copyGraph);
     double getMaxRload(int treeIndex,FRT_Tree& _t);
 
-    void setRequirements(const std::shared_ptr<RaeckeGraph>& g);
-    void computeNewDistances(std::shared_ptr<RaeckeGraph>& g);
-    void normalizeDistance(std::shared_ptr<RaeckeGraph>& _g, std::unordered_map<std::pair<int, int>, double>& edge2scaledDist);
-    double getRloadAllEdges(const std::shared_ptr<RaeckeGraph>& g) const;
+    void setRequirements(const std::shared_ptr<Graph>& g);
+    void computeNewDistances(std::shared_ptr<Graph>& g);
+    void normalizeDistance(std::shared_ptr<Graph>& _g, std::unordered_map<std::pair<int, int>, double>& edge2scaledDist);
+    double getRloadAllEdges(const std::shared_ptr<Graph>& g) const;
 
 
     std::vector<FRT_Tree> getTrees() const {
@@ -56,7 +56,7 @@ public:
         return m_lambdas;
     }
 
-    std::vector<RaeckeGraph> getGraphs() const {
+    std::vector<Graph> getGraphs() const {
         return m_graphs;
     }
 

@@ -2,10 +2,19 @@
 // Created by Mert Biyikli on 09.07.25.
 //
 
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <iomanip>
+
+
+#include "electrical_flow_naive.h"
+#include <random>
+
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/adapter/eigen.hpp>
+#include <amgcl/make_solver.hpp>
+#include <amgcl/solver/cg.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/relaxation/spai0.hpp>
+#include <amgcl/adapter/crs_tuple.hpp>
 
 // Checks for issues in a CSR Laplacian matrix representation
 void diagnose_csr_laplacian(
@@ -63,23 +72,20 @@ void diagnose_csr_laplacian(
     }
 }
 
-
-
-#include "electrical_flow_naive.h"
-#include <random>
-
-#include <amgcl/backend/builtin.hpp>
-#include <amgcl/adapter/eigen.hpp>
-#include <amgcl/make_solver.hpp>
-#include <amgcl/solver/cg.hpp>
-#include <amgcl/amg.hpp>
-#include <amgcl/coarsening/smoothed_aggregation.hpp>
-#include <amgcl/relaxation/spai0.hpp>
-#include <amgcl/adapter/crs_tuple.hpp>
+double NegativeExponent(double base, int exp) {
+    if (base == 0.0) {
+        throw std::invalid_argument("Base cannot be zero for negative exponent.");
+    }
+    if (exp < 0) {
+        throw std::invalid_argument("Exponent must be non-negative.");
+    }
+    return 1.0 / std::pow(base, exp);
+}
 
 
 
-void ElectricalFlowNaive::init(const RaeckeGraph &g, bool debug) {
+
+void ElectricalFlowNaive::init(const Graph &g, bool debug) {
     m_graph = g;
 
     n = m_graph.getNumNodes();
@@ -157,9 +163,12 @@ void ElectricalFlowNaive::run() {
 
     for(int t = 0; t < std::min(number_of_iterations, std::numeric_limits<int>::max()); ++t) {
 
+        // TODO: avoid using matrix multiplication for the routing matrix whatsever
+        // since you can avoid this by storing the flow values directly as an map
         // 3) Build M = W B (Bᵀ W B)^{-1} via m computations
         Eigen::SparseMatrix<double> M = getRoutingMatrix();
 
+        // TODO: shift this to an extra function that is called within getRoutingMatrix()
         // update the flow values based on new routing matrix
         for(int u = 0; u < n; ++u) {
             if(u == x_fixed) continue; // Skip the fixed node x
@@ -168,12 +177,6 @@ void ElectricalFlowNaive::run() {
             demand_u_x[x_fixed] = -1.0;
             Eigen::VectorXd flow = M*demand_u_x; // Get the flow for the edge
 
-/*
-            // --- Normalize the flow vector so its ℓ₁ norm is 1 ---
-            double total_flow = flow.cwiseAbs().sum();
-            if (total_flow > 1e-12) {
-                flow /= total_flow;
-            }*/
 
             for(int flow_edge_id = 0; flow_edge_id < flow.size(); ++flow_edge_id) {
                 double flow_value = flow[flow_edge_id];
@@ -288,6 +291,8 @@ void ElectricalFlowNaive::run() {
     }
 
 
+
+    // TODO: move this into an extra function that is called after the run() method
     // scale the flow values to meet one unit of flow per commodity
     // for this sum up the outgoing for each source s of each commodity pair (s, t)
     // and multiply \forall e \in E f_st(e) by 1/sum_{s} f_st(e)
@@ -299,9 +304,10 @@ void ElectricalFlowNaive::run() {
         for(auto& neig : m_graph.neighbors(source)) {
             // if(source > neig) continue; // Ensure we only consider one direction of the edge
 
-            auto edge = std::find(edges.begin(), edges.end(), (source < neig ?
-            std::make_pair(source, neig) :
-            std::make_pair(neig, source)));
+            auto edge = std::find(edges.begin(), edges.end(),
+                                  (source < neig ?
+                                    std::make_pair(source, neig) :
+                                    std::make_pair(neig, source)));
 
             // Find the edge in the edges vector
             if(edge != edges.end()) {
@@ -343,11 +349,7 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
         buildIncidence();
     }
 
-    int m = m_graph.getNumEdges();
-    int n = m_graph.getNumNodes();
 
-    // Get the Laplacian matrix L from the solver
-    // todo
     if (debug)
         std::cout << "Running sketch matrix generation...\n";
     auto C = getSketchMatrix(m, n, 0.5);
@@ -355,7 +357,10 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
 
     auto X = B.transpose() * U * C.transpose();
 
+
+    // TODO: could we store V as a Sparse Matrix instead??
     Eigen::MatrixXd V(n, X.cols() );
+
     // for each column of X, solve the linear system with the Laplacian of the graph itself
     for(int i = 0; i<X.cols(); ++i) {
         Eigen::VectorXd x = X.col(i);
@@ -391,22 +396,7 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
     // get the approxi load from the recover norm
 }
 
-double NegativeExponent(double base, int exp) {
-    if (base == 0.0) {
-        throw std::invalid_argument("Base cannot be zero for negative exponent.");
-    }
-    if (exp < 0) {
-        throw std::invalid_argument("Exponent must be non-negative.");
-    }
-    return 1.0 / std::pow(base, exp);
-}
 
-
-/*
- * This is the unoptimized version.
- * To reach full performance potential, replace the linear system
- * solver with the one frmo Spielamn to reach O(E log V) time.
- */
 Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n, double _epsilon) {
     // ℓ = O(ε⁻² log(1/δ))
     double c = 1.1;
@@ -423,6 +413,7 @@ Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n
     if(debug) {
         std::cout << "Generating sketch matrix with l = " << l << ", m = " << _m << ", n = " << _n << ", epsilon = " << epsilon << "\n";
     }
+
     Eigen::SparseMatrix<double> C(l, _m);
 
     std::random_device rd;
@@ -448,11 +439,13 @@ Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n
             std::cout << "\n";
         }
     }
+
     return C;
 }
 
-double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec) {
 
+// compute the median of the Matrix M vector vec product
+double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec) {
     auto s = M*vec;
 
     std::vector<double> abs_vals(s.size());

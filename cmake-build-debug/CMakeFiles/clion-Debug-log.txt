@@ -1,13 +1,18 @@
-/opt/local/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/private/var/folders/5m/lf5905hj46d0s5x4m72tqgqc0000gn/T/AppTranslocation/B82211BB-A7C9-471F-AF33-B438A6D4F391/d/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
--- Using Julia in /usr/local/opt/julia
-CMake Warning at /opt/local/share/cmake-3.24/Modules/FindProtobuf.cmake:524 (message):
-  Protobuf compiler version 27.1 doesn't match library version 5.27.1
-Call Stack (most recent call first):
-  /opt/local/share/cmake-3.24/Modules/CMakeFindDependencyMacro.cmake:47 (find_package)
-  /usr/local/lib/cmake/ortools/ortoolsConfig.cmake:43 (find_dependency)
-  CMakeLists.txt:61 (find_package)
+/Applications/CLion.app/Contents/bin/cmake/mac/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
+-- The CXX compiler identification is AppleClang 17.0.0.17000013
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+CMake Error at extern/amgcl/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 has been removed from CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+  Or, add -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to try configuring anyway.
 
 
--- Configuring done
--- Generating done
--- Build files have been written to: /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
+-- Configuring incomplete, errors occurred!

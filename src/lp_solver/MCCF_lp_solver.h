@@ -26,10 +26,10 @@ private:
     std::unordered_map<int, std::unordered_map<int,  MPVariable*>> map_vertex2edge;
 public:
 
-    virtual void CreateVariables(const RaeckeGraph& graph) override;
-    virtual void CreateConstraints(const RaeckeGraph& graph) override;
+    virtual void CreateVariables(const Graph& graph) override;
+    virtual void CreateConstraints(const Graph& graph) override;
     virtual void SetObjective() override;
-    void PrintSolution(const RaeckeGraph& graph) override;
+    void PrintSolution(const Graph& graph) override;
 
     void AddDemands(const Demand& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
 };

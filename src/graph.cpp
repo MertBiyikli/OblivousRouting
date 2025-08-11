@@ -12,8 +12,9 @@
 #include <limits>
 
 
-void RaeckeGraph::readGraph(const std::string &filename) {
+void Graph::readGraph(const std::string &filename) {
     std::ifstream infile(filename);
+    std::cout << "Reading graph from file: " << filename << std::endl;
     if (!infile) {
         throw std::runtime_error("Could not open file: " + filename);
     }
@@ -54,11 +55,9 @@ void RaeckeGraph::readGraph(const std::string &filename) {
             this->addEdge(u - 1, v - 1, cap);  // convert to 0-based
         }
     } while (std::getline(infile, line));
-
-
 }
 
-void RaeckeGraph::readLFGFile(const std::string &filename, bool withDistances) {
+void Graph::readLFGFile(const std::string &filename, bool withDistances) {
     std::ifstream infile(filename);
     if (!infile) {
         throw std::runtime_error("Could not open LGF file: " + filename);

@@ -386,16 +386,16 @@ void RackeObliviousRoutingSolver::printObliviousRoutingTable() const {
 
 
 
-RaeckeGraph RaeckeFRT::getGraph() const {
+Graph RaeckeFRT::getGraph() const {
     return m_graph;
 }
 
-void RaeckeFRT::setGraph(const RaeckeGraph &g) {
+void RaeckeFRT::setGraph(const Graph &g) {
     m_graph = g;
 }
 
 void RaeckeFRT::run() {
-    auto p = std::make_shared<RaeckeGraph>(m_graph);
+    auto p = std::make_shared<Graph>(m_graph);
     this->m_mcct.setGraph(p);
 
     m_lambdaSum = 0.0;
@@ -410,7 +410,7 @@ void RaeckeFRT::run() {
 }
 
 double RaeckeFRT::iterate(int treeIndex) {
-    auto copyGraph = std::make_shared<RaeckeGraph>(m_graph);
+    auto copyGraph = std::make_shared<Graph>(m_graph);
 
     FRT_Tree t = getTree(copyGraph);
     m_trees.push_back(t);
@@ -425,7 +425,7 @@ double RaeckeFRT::iterate(int treeIndex) {
     return delta;
 }
 
-FRT_Tree RaeckeFRT::getTree(std::shared_ptr<RaeckeGraph> &g) {
+FRT_Tree RaeckeFRT::getTree(std::shared_ptr<Graph> &g) {
     m_mcct.setGraph(g);
     setRequirements(g);
     computeNewDistances(g);
@@ -433,7 +433,7 @@ FRT_Tree RaeckeFRT::getTree(std::shared_ptr<RaeckeGraph> &g) {
 }
 
 
-void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, std::shared_ptr<RaeckeGraph> &copyGraph) {
+void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, std::shared_ptr<Graph> &copyGraph) {
     std::queue<std::shared_ptr<FRT_Node>> bfsQueue;
     for(auto& node : _t.GetRoot()->getChildren()) {
         bfsQueue.push(node);
@@ -513,7 +513,7 @@ double RaeckeFRT::getMaxRload(int treeIndex, FRT_Tree &_t) {
 
 
 
-void RaeckeFRT::setRequirements(const std::shared_ptr<RaeckeGraph> &g) {
+void RaeckeFRT::setRequirements(const std::shared_ptr<Graph> &g) {
     for (const auto& u : g->getVertices()) {
         for (const auto& v : g->neighbors(u)) {
             double cap = g->getEdgeCapacity(u, v);
@@ -522,7 +522,7 @@ void RaeckeFRT::setRequirements(const std::shared_ptr<RaeckeGraph> &g) {
     }
 }
 
-void RaeckeFRT::computeNewDistances(std::shared_ptr<RaeckeGraph> &g) {
+void RaeckeFRT::computeNewDistances(std::shared_ptr<Graph> &g) {
     double totalRLoadsAllEdges = this->getRloadAllEdges(g);
     std::unordered_map<std::pair<int, int>, double> edge2scaledDist;
 
@@ -554,7 +554,7 @@ void RaeckeFRT::computeNewDistances(std::shared_ptr<RaeckeGraph> &g) {
 }
 
 
-void RaeckeFRT::normalizeDistance(std::shared_ptr<RaeckeGraph> &_g, std::unordered_map<std::pair<int, int>, double> &edge2scaledDist) {
+void RaeckeFRT::normalizeDistance(std::shared_ptr<Graph> &_g, std::unordered_map<std::pair<int, int>, double> &edge2scaledDist) {
     double minDistance = std::numeric_limits<double>::infinity();
     for(int u = 0; u < _g->getNumNodes(); u++) {
         for (const auto& v : _g->neighbors(u)) {
@@ -583,7 +583,7 @@ void RaeckeFRT::normalizeDistance(std::shared_ptr<RaeckeGraph> &_g, std::unorder
 }
 
 
-double RaeckeFRT::getRloadAllEdges(const std::shared_ptr<RaeckeGraph>& g) const{
+double RaeckeFRT::getRloadAllEdges(const std::shared_ptr<Graph>& g) const{
     double totalRLoadAllEdges = 0.0;
     for(int u = 0; u < g->getNumNodes(); u++) {
         for (const auto& v : g->neighbors(u)) {

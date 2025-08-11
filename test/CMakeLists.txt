@@ -59,7 +59,7 @@ add_test(NAME IntegrationSolverTest COMMAND integration_test)
 include(FetchContent)
 
 # Try to find system-installed OR-Tools first
-find_package(ortools QUIET)
+# find_package(ortools QUIET)
 
 if(NOT ortools_FOUND)
     message(STATUS "OR-Tools not found. Fetching from GitHub...")

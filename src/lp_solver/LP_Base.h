@@ -28,11 +28,11 @@ public:
     LP() : solver(nullptr), alpha(nullptr) {}
     virtual ~LP() = default;
 
-    virtual void CreateVariables(const RaeckeGraph& graph) = 0;
-    virtual void CreateConstraints(const RaeckeGraph& graph) = 0;
+    virtual void CreateVariables(const Graph& graph) = 0;
+    virtual void CreateConstraints(const Graph& graph) = 0;
     virtual void SetObjective() = 0;
-    virtual void PrintSolution(const RaeckeGraph& graph) = 0;
-    void init(const RaeckeGraph& graph) {
+    virtual void PrintSolution(const Graph& graph) = 0;
+    void init(const Graph& graph) {
 
         n = graph.getNumNodes();
         m = graph.getNumEdges()*2; // since we store each undirected edge as two anti parallel directed edges
@@ -57,7 +57,7 @@ public:
         });
     }
 
-    void solve(const RaeckeGraph &graph) {
+    void solve(const Graph &graph) {
         if(Run(graph))
         {
             if(debug)
@@ -67,7 +67,7 @@ public:
         }
     }
 
-    bool Run(const RaeckeGraph& graph) {
+    bool Run(const Graph& graph) {
 
         init(graph);
         CreateVariables(graph);

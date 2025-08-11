@@ -74,10 +74,10 @@ public:
     std::unordered_map<std::pair<int, int>, double> m_edge_weights; // Edge weights
     void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false);
     void buildLaplacian();
-    void buildReducedLaplacian();
+    // void buildReducedLaplacian();
     std::vector<double> solve(const std::vector<double> &b);
     Eigen::VectorXd solve(const Eigen::VectorXd &b);
-    Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
+    // Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
 
     void updateSolver();
     bool updateEdge(int u, int v, double new_weight);

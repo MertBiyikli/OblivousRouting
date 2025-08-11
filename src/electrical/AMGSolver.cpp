@@ -195,7 +195,7 @@ bool AMGSolver::updateEdge(int u, int v, double new_weight) {
 // TODO : implement this
 void AMGSolver::updateSolver() {
     // Update hierarchy numeric values (same structure)
-    // solver.precond().update(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    // solver.precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
 
 }
 

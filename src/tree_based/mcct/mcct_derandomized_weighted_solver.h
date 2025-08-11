@@ -20,7 +20,7 @@
 class MCCT_Solver {
     bool debug = false;
     FRT_Tree tree;
-    std::shared_ptr<RaeckeGraph> graph;
+    std::shared_ptr<Graph> graph;
     std::set<double> betas;
     double bestBeta;
     std::vector<int> verticesPermutation;
@@ -63,14 +63,14 @@ class MCCT_Solver {
         tree = t;
     }
 
-    RaeckeGraph& getGraph() const {
+    Graph& getGraph() const {
         if(!graph) {
             throw std::runtime_error("Graph is not set.");
         }
         return *graph;
     }
 
-    void setGraph(std::shared_ptr<RaeckeGraph>& g) {
+    void setGraph(std::shared_ptr<Graph>& g) {
         graph = g;
     }
 

@@ -7,64 +7,20 @@
 #include "src/tree_based/raecke_tree_decomp.h"
 #include "src/tree_based/raecke_transform.h"
 #include "src/electrical/electrical_flow_naive.h"
-
-
+#include <source_location>
+#include <filesystem>
 
 int main() {
 
-/*
-    // Julia context
-    jl_init();
+    std::cout << std::filesystem::current_path() << "\n";
 
-    // Possibly preload modules
-    jl_eval_string("using LapSolve");
-    jl_eval_string("include(\"/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/src/electrical/LaplacianSolver.jl\")");
-    jl_eval_string("using .LaplacianSolver");
-    // Graph G = RandomGraphGenerator::generate(10, 20, 1.0, 10.0);
-*/
-    auto g = std::make_shared<RaeckeGraph>();
-    g->readLFGFile("../experiments/random/NSF_cost.lgf", true);
+    auto g = std::make_shared<Graph>();
+    g->readLFGFile("experiments/random/triangle.lgf", true);
     int n = g->getNumNodes();
-/*
-    double c = 1;
-    for(int i = 0; i < n; ++i) {
-        g->addEdge(i, (i+1)%n, c);
-
-    }*/
-
-
-    //auto raeckGraph = g->getRaeckeGraph();
 
     g->print();
 
-    std::unordered_map<std::pair<int, int>, double> edgeWeights;
-    for(int i = 0; i < n; ++i) {
-        for (const auto& u : g->neighbors(i)) {
-            //if (i < u) { // Avoid double setting weights for undirected edges
-                edgeWeights[{i, u}] = 1/g->getEdgeCapacity(i,u);
 
-        }
-    }
-
-/*
-    AMGSolver amgSolver;
-
-    Eigen::SparseMatrix<double> M(g->getNumEdges(), n);
-    amgSolver.init(edgeWeights, n);
-    Eigen::VectorXd x;
-
-    x = Eigen::VectorXd::Zero(g->getNumNodes());
-    x[0]=1;
-    auto result = amgSolver.solve(x);
-
-    std::cout << "Result of Laplacian solver:\n" << result << std::endl;
-
-    amgSolver.updateEdge(0, 1, 5.0);
-
-    std::cout << "Result after updating edge :\n " << amgSolver.solve(x) << "\n";
-
-
-*/
 
     auto start_time = std::chrono::high_resolution_clock::now();
     ElectricalFlowNaive efSolver;
@@ -118,121 +74,7 @@ int main() {
 
     std::cout << "Max congestion electrical flow: " << efSolver.getMaximumCongestion() << std::endl;
 
-    /*
-    jl_atexit_hook(0);
-
-
-    // set random edge distances for debugging purposes
-    for (int& v : raeckGraph.getVertices()) {
-        for (const auto& u : raeckGraph.neighbors(v)) {
-            if (v < u) { // Avoid double setting distances for undirected edges
-                raeckGraph.updateEdgeDistance(v, u,  static_cast<double>(rand() % 10 + 1));
-            }
-        }
-    }
-    raeckGraph.print();
-    */
-/*
-    RaeckeFRT solver;
-    solver.setGraph(raeckGraph);
-    solver.run();
-
-    for(double& beta : solver.getLambdas()) {
-        std::cout << "Lambda: " << beta << std::endl;
-    }
-
-    RaeckeSolutionTransform transform;
-    double sumOfLambdas = 0.0;
-    for(size_t i = 0; i < solver.getTrees().size(); ++i) {
-        double lambda_i = solver.getLambdas()[i];
-        sumOfLambdas += lambda_i;
-        double normalized_lambda = lambda_i / sumOfLambdas; // Normalize by the last lambda (which should be 1.0)
-        auto t = solver.getTrees()[i];
-        auto copyGraph = solver.getGraphs()[i];
-        transform.addTree(solver.getTrees()[i], normalized_lambda, solver.getGraphs()[i]);
-    }
-
-    auto const& routing = transform.getRoutingTable();
-    std::cout << "Räcke's oblivious routing table:" << std::endl;
-    for (const auto& [edge, demandMap] : routing) {
-        std::cout << "Edge (" << edge.first << ", " << edge.second << "): ";
-        for (const auto& [demand, fraction] : demandMap) {
-            std::cout << "[" << demand.first << " → " << demand.second << "] = "
-                      << fraction << ", ";
-        }
-        std::cout << std::endl;
-    }
-
-    verifyFlowConservation(routing, n);
-*/
-
-
-    // this will enumerate and print every commodity’s flow‐paths:
-
-    /*
-    g->addEdge(0,1, 100);
-    g->addEdge(0,2, 100);
-    g->addEdge(1,2, 100);
-    g->addEdge(0,3, 100);
-     */
-/*
-    for(int i = 0; i < n; ++i) {
-        for (auto& edge : g->neighbors(i)) {
-            edge->distance = 1;
-        }
-    }*/
-    /*
-    // Step 3: Set edge (0, 2) to have higher distance (20)
-    int u = 0, v = 2;
-    auto edge = std::find_if(
-            g->neighbors(u).begin(), g->neighbors(u).end(),
-            [v](const std::shared_ptr<Edge>& e) { return e->target == v; });
-    if (edge != g->neighbors(u).end()) {
-        (*edge)->distance = 20;
-    }
-
-    auto rev_edge = std::find_if(
-            g->neighbors(v).begin(), g->neighbors(v).end(),
-            [u](const std::shared_ptr<Edge>& e) { return e->target == u; });
-    if (rev_edge != g->neighbors(v).end()) {
-        (*rev_edge)->distance = 20;
-    }*/
-    /*
-    MCCTDerandomizedWeightedSolver solver;
-
-    solver.setGraph(g);
-    solver.addDemand(0, 1, 1.0);
-    auto t = solver.getBestTree();
-    t.ExportToDot("DecompositionTree.dot");
-*/
-
-
-    /*
-    RackeObliviousRoutingSolver rackeSolver;
-    rackeSolver.setGraph(g);
-    rackeSolver.createTreesAndLambda();
-
-    rackeSolver.printObliviousRoutingTable();
-    std::cout << "Räcke's oblivious routing table:" << std::endl;
-    RaeckeTransform transform;
-    DemandMap routing;
-
-    double lambda_sum = 0.0;
-    for (size_t i = 0; i < rackeSolver.getTrees().size(); ++i) {
-        double lambda_i = rackeSolver.getLambdas()[i];
-        lambda_sum += lambda_i;
-        double normalized_lambda = lambda_i / lambda_sum;
-
-        routing = transform.addTree(rackeSolver.getTrees()[i], normalized_lambda, rackeSolver.getGraphs()[i]);
-    }
-
-    // Step 4: Done. `routing` contains the oblivious routing table.
-    printRouting(routing);
-     */
-
-
     // uncomment for full view
-/*
     std::cout << "Running CMF Solver..." << std::endl;
     int c = 1.0;
     CMMF_Solver lp_solver;
@@ -258,8 +100,7 @@ int main() {
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Cohen LP solver took " << std::chrono::duration<double>(end_time-start_time).count() << " seconds. " << std::endl;
     std::cout << "Maximum congestion using Applegate & Cohen: " << LP.getMaximumCongestion(*g) << std::endl;
-*/
-/*
+
     std::cout << "Running Raecke solver..." << std::endl;
     start_time = std::chrono::high_resolution_clock::now();
     RaeckeFRT raecke;
@@ -280,9 +121,9 @@ int main() {
         transform.addTree(raecke.getTrees()[i], normalized_lambda, raecke.getGraphs()[i]);
     }
 
-    auto const& routing = transform.getRoutingTable();
+    auto const& routingRaecke = transform.getRoutingTable();
     std::unordered_map<std::pair<int, int>, double> totalFlow;
-    for (const auto& [edge, demandMap] : routing) {
+    for (const auto& [edge, demandMap] : routingRaecke) {
         for (const auto& [demand, fraction] : demandMap) {
             int u = edge.first, v = edge.second;
 
@@ -307,6 +148,6 @@ int main() {
 
 
     std::cout << "Raecke generated: " << max_congestion_raecke << std::endl;
-*/
+
     return 0;
 }

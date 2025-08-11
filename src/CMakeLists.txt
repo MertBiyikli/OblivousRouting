@@ -18,8 +18,6 @@ add_library(core ${SRC_FILES}
         lp_solver/MCCF_lp_solver.h
         electrical/electrical_flow_naive.cpp
         electrical/electrical_flow_naive.h
-        electrical/laplcian_solver.cpp
-        electrical/laplcian_solver.h
         electrical/AMGSolver.cpp
         electrical/AMGSolver.h
 )
