@@ -1,11 +1,5 @@
 /Applications/CLion.app/Contents/bin/cmake/mac/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S /Users/halilibrahim/Desktop/Thesis/ObliviousRouting -B /Users/halilibrahim/Desktop/Thesis/ObliviousRouting/cmake-build-debug
--- The CXX compiler identification is AppleClang 17.0.0.17000013
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Check for working CXX compiler: /usr/bin/c++ - skipped
--- Detecting CXX compile features
--- Detecting CXX compile features - done
-CMake Error at extern/amgcl/CMakeLists.txt:1 (cmake_minimum_required):
+CMake Error at CMakeLists.txt:1 (cmake_minimum_required):
   Compatibility with CMake < 3.5 has been removed from CMake.
 
   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax

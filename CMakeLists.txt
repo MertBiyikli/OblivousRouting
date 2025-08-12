@@ -11,7 +11,7 @@ find_package(Boost REQUIRED COMPONENTS program_options serialization)
 # if you have tests that need unit_test_framework, guard it:
 option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
-    find_package(Boost 1.70 REQUIRED COMPONENTS unit_test_framework)
+    find_package(Boost 1.88.0 REQUIRED COMPONENTS unit_test_framework)
 endif()
 
 

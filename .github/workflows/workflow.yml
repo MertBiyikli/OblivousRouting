@@ -5,27 +5,93 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Pick the exact OR-Tools version you want CI to use
+      ORTOOLS_VERSION: "9.12.4544"
+      # Will hold the unpacked OR-Tools install
+      ORTOOLS_ROOT: "${{ github.workspace }}/.deps/or-tools/${{ github.run_id }}" # temp until cache restores
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install deps
+      - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ libboost-all-dev
+          sudo apt-get install -y cmake ninja-build g++ \
+                                  libboost-all-dev ccache curl
 
+      # ---------- ccache for your own C++ ----------
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake', '**/*.hpp', '**/*.h') }}
+          restore-keys: ${{ runner.os }}-ccache-
+      - name: Enable ccache
+        run: |
+          echo "CC='ccache gcc'"  >> $GITHUB_ENV
+          echo "CXX='ccache g++'" >> $GITHUB_ENV
+          ccache --zero-stats || true
+
+      # ---------- OR-Tools cache ----------
+      - name: Define OR-Tools paths (choose correct tarball for the runner)
+        id: define-urls
+        run: |
+          # ubuntu-latest is currently 24.04. Use the matching archive if available.
+          # If your version only ships 22.04, that usually works too, but prefer exact match.
+          echo "ORTOOLS_ARCHIVE=or-tools_amd64_ubuntu-24.04_cpp_v${ORTOOLS_VERSION}.tar.gz" >> $GITHUB_ENV
+          echo "ORTOOLS_CACHE_DIR=$HOME/.cache/or-tools/${ORTOOLS_VERSION}" >> $GITHUB_ENV
+          echo "ORTOOLS_ROOT=$HOME/.cache/or-tools/${ORTOOLS_VERSION}" >> $GITHUB_ENV
+          # (You can switch to the 22.04 archive by changing the filename above.)
+
+      - name: Cache OR-Tools install
+        id: cache-ortools
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ORTOOLS_CACHE_DIR }}
+          key: ${{ runner.os }}-ortools-${{ env.ORTOOLS_VERSION }}
+
+      - name: Download + unpack OR-Tools (if cache missed)
+        if: steps.cache-ortools.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$ORTOOLS_CACHE_DIR"
+          cd "$ORTOOLS_CACHE_DIR"
+          # Download official prebuilt binary from OR-Tools releases:
+          # NOTE: replace the URL below with the correct one for your version if it changes.
+          curl -L -o "$ORTOOLS_ARCHIVE" \
+            "https://github.com/google/or-tools/releases/download/v${ORTOOLS_VERSION}/${ORTOOLS_ARCHIVE}"
+          tar -xzf "$ORTOOLS_ARCHIVE" --strip-components=1
+          rm -f "$ORTOOLS_ARCHIVE"
+
+      - name: Expose OR-Tools to CMake and runtime
+        run: |
+          echo "CMAKE_PREFIX_PATH=$ORTOOLS_ROOT:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$ORTOOLS_ROOT/lib:${LD_LIBRARY_PATH:-}" >> $GITHUB_ENV
+
+      # ---------- Configure & Build your project ----------
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
+            -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
       - name: Build
-        run: cmake --build build --config Release -j2
+        run: cmake --build build -j2
 
-      - name: (optional) ctest
+      - name: ccache stats
         if: always()
-        run: ctest --test-dir build --output-on-failure || true
+        run: ccache --show-stats || true
 
-      - name: Upload build
+      # Optional: run tests that load OR-Tools shared libs
+      - name: Test
+        run: |
+          # Ensure loader can find OR-Tools shared libs at runtime
+          LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ctest --test-dir build --output-on-failure || true
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-ubuntu
