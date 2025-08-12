@@ -56,6 +56,7 @@ public:
 
         for (auto const& [dest, srcMap] : destination2source2path) {
             for (auto const& [src, arcSet] : srcMap) {
+                if(src > dest) continue; // skip trivial cases
                 TerminalPair demand{src, dest};
                 for (std::pair<int, int> arcId : arcSet) {
                     auto& demand2frac = arc2demand2cumulativeFraction[arcId];

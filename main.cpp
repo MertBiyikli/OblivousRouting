@@ -15,7 +15,7 @@ int main() {
     std::cout << std::filesystem::current_path() << "\n";
 
     auto g = std::make_shared<Graph>();
-    g->readLFGFile("experiments/random/triangle.lgf", true);
+    g->readLFGFile("experiments/random/triangle-equal.lgf", true);
     int n = g->getNumNodes();
 
     g->print();
@@ -127,6 +127,9 @@ int main() {
         for (const auto& [demand, fraction] : demandMap) {
             int u = edge.first, v = edge.second;
 
+            // print out flow
+            std::cout << "Edge (" << u << ", " << v << ") with demand (" << demand.first << ", " << demand.second
+                      << ") has flow fraction: " << fraction << "\n";
             if(u > v) {
 
                 totalFlow[{v, u}] += fraction;
