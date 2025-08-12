@@ -11,6 +11,15 @@ jobs:
       - name: Install toolchain
         run: sudo apt-get update && sudo apt-get install -y ninja-build g++ cmake libopenmpi-dev
 
+      # (optional) Ninja — usually preinstalled, but safe to ensure
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build \
+            libboost-program-options-dev \
+            libboost-serialization-dev \
+            libboost-test-dev
+
       - name: Cache ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
