@@ -541,7 +541,7 @@ void RaeckeFRT::computeNewDistances(std::shared_ptr<Graph> &g) {
                 throw std::runtime_error("Infinity encountered in newDistance or Exponential calculation for edge: " + std::to_string(u) + " → " + std::to_string(v));
             }
 
-            if(isnan(newDistance)) {
+            if(std::isnan(newDistance)) {
                 throw std::runtime_error("NaN encountered in newDistance calculation for edge: " + std::to_string(u) + " → " + std::to_string(v));
             }
 
@@ -570,7 +570,7 @@ void RaeckeFRT::normalizeDistance(std::shared_ptr<Graph> &_g, std::unordered_map
             double arc2scaledDistValue = edge2scaledDist[{u, v}];
             double newDistance = arc2scaledDistValue / minDistance;
 
-            if (isnan(newDistance)) {
+            if (std::isnan(newDistance)) {
                 throw std::runtime_error(
                         "NaN encountered in newDistance for edge: " + std::to_string(u) + " → " + std::to_string(v));
             }
