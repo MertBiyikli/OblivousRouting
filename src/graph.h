@@ -11,6 +11,7 @@
 #include <memory>
 #include <numeric>
 #include <iostream>
+#include <algorithm>
 
 class Graph{
     int m = 0; // Number of edges
