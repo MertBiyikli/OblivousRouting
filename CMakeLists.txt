@@ -62,8 +62,14 @@ add_executable(oblivious_routing
         src/tree_based/mcct/Node.cpp
         src/tree_based/mcct/mcct_derandomized_weighted_solver.cpp
         src/tree_based/raecke_transform.cpp
+        src/tree_based/raecke_transform.h
         src/electrical/electrical_flow_naive.cpp
         src/electrical/AMGSolver.cpp
+        experiments/performance/demands/GravityModel.cpp
+        experiments/performance/demands/GravityModel.h
+        experiments/performance/Performance.cpp
+        experiments/performance/Performance.h
+
         # (add any other .cpp files you have)
 )
 
@@ -76,5 +82,4 @@ target_link_libraries(oblivious_routing
         Boost::boost
         Boost::program_options
         Boost::serialization
-        Boost::unit_test_framework
 )

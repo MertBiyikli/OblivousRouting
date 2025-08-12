@@ -356,3 +356,29 @@ void LPSolver::PrintCommoditiesPerEdge(const Graph& graph) {
     }
 }
 
+double LPSolver::getCongestion(DemandMap& _demands) const{
+    std::vector<double> total_edge_congestion(edges.size(), 0.0);
+    double max_cong = 0.0;
+
+    for(const auto [d, value] : _demands) {
+        int source = d.first, target = d.second;
+
+        for (int id = 0; id < edges.size(); id++) {
+            if (edges[id].first > edges[id].second) continue; // Skip anti-parallel arcs
+
+            auto it = f_e_st.find({id, {source, target}});
+            if (it != f_e_st.end() && it->second != nullptr) {
+                double flow = it->second->solution_value();
+                total_edge_congestion[id] += std::abs(flow)*value; // Sum the absolute flow values for each edge
+            }
+        }
+    }
+
+    for(const auto& congestion : total_edge_congestion) {
+        if (congestion > max_cong) {
+            max_cong = congestion; // Update the maximum congestion
+        }
+    }
+    return max_cong;
+}
+

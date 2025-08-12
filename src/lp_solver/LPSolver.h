@@ -12,6 +12,7 @@
 #include <tuple>
 #include "../utils/hash.h"
 #include "LP_Base.h"
+#include "../tree_based/raecke_transform.h"
 /*
  * This is an attempt of implementing the LP solver for the oblivious routing problem.
  * Using the paper "Making Intra-Domain Routing Robust to Changing and
@@ -43,6 +44,8 @@ public:
 
     void PrintSolution(const Graph& graph) override;
     void GetRoutingTable(const Graph& graph);
+
+    double getCongestion(DemandMap& demands) const;
 
     void PrintCommoditiesPerEdge(const Graph& graph);
 };

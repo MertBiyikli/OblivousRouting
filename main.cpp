@@ -9,16 +9,33 @@
 #include "src/electrical/electrical_flow_naive.h"
 #include <source_location>
 #include <filesystem>
+#include "experiments/performance/demands/GravityModel.h"
 
 int main() {
 
     std::cout << std::filesystem::current_path() << "\n";
 
     auto g = std::make_shared<Graph>();
-    g->readLFGFile("experiments/random/triangle-equal.lgf", true);
+    g->readGraph("test/randomgraphs/small/graph_600_40.dimacs");
     int n = g->getNumNodes();
 
     g->print();
+
+    GravityModel gm;
+    std::vector<std::pair<int, int>> demand_pairs;
+    for(int i = 0; i < n; ++i) {
+        for(int j = i; j < n; ++j) {
+            if(i == j) continue; // Skip self-loops
+            demand_pairs.emplace_back(i, j);
+        }
+    }
+    auto demand = gm.generate(*g, demand_pairs);
+    // Print the generated demand
+    /*
+    std::cout << "Generated demand:\n";
+    for (const auto& [pair, value] : demand) {
+        std::cout << "Demand (" << pair.first << ", " << pair.second << "): " << value << "\n";
+    }*/
 
 
 
@@ -29,16 +46,16 @@ int main() {
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end_time - start_time;
     std::cout << "Electrical Flow Naive solver took " << elapsed.count() << " seconds.\n";
-
+/*
     // get the load for commodity (0, 1), (0, 2)
     std::vector<std::pair<int, int>> commodity;
     for(int i = 0; i < n; ++i) {
         for(int j = i+1; j < n; ++j) {
             commodity.emplace_back(i, j);
         }
-    }
-
-    auto routing = efSolver.getRoutingForCommodity(commodity);
+    }*/
+/*
+    auto routing = efSolver.getRoutingForCommodity(demand_pairs);
 
     for (const auto& [edge, flow] : routing) {
         std::cout << "commodity (" << edge.first << ", " << edge.second << "): Flow = \n";
@@ -70,9 +87,9 @@ int main() {
         std::cout << "Commodity (" << commodity.first << ", " << commodity.second << "): Total Flow = " << total_flow << "\n";
     }
 
+*/
 
-
-    std::cout << "Max congestion electrical flow: " << efSolver.getMaximumCongestion() << std::endl;
+    std::cout << "Max congestion electrical flow: " << efSolver.getCongestion(demand) << std::endl;
 
     // uncomment for full view
     std::cout << "Running CMF Solver..." << std::endl;
@@ -80,12 +97,17 @@ int main() {
     CMMF_Solver lp_solver;
     lp_solver.init(*g);
     lp_solver.setDebug(false);
+
+    for(auto& [d, flow] : demand) {
+        lp_solver.AddDemands({d.first, d.second}, flow); // Set edge capacity for all edges
+    }
+    /*
     for(int i = 0; i<g->getNumNodes(); i++) {
         for(int j = i+1; j<g->getNumNodes(); j++) {
             lp_solver.AddDemands(Demand{i, j},c);
         }
     }
-
+*/
     start_time = std::chrono::high_resolution_clock::now();
     lp_solver.solve(*g);
     end_time = std::chrono::high_resolution_clock::now();
@@ -99,8 +121,8 @@ int main() {
     LP.solve(*g);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Cohen LP solver took " << std::chrono::duration<double>(end_time-start_time).count() << " seconds. " << std::endl;
-    std::cout << "Maximum congestion using Applegate & Cohen: " << LP.getMaximumCongestion(*g) << std::endl;
-
+    std::cout << "Maximum congestion using Applegate & Cohen: " << LP.getCongestion(demand) << std::endl;
+/*
     std::cout << "Running Raecke solver..." << std::endl;
     start_time = std::chrono::high_resolution_clock::now();
     RaeckeFRT raecke;
@@ -121,36 +143,51 @@ int main() {
         transform.addTree(raecke.getTrees()[i], normalized_lambda, raecke.getGraphs()[i]);
     }
 
+
+    // compute the congestion for the Raecke solution
+    // given the demand map
+
+
+    std::unordered_map<std::pair<int, int>, double> raeckeFlow;
     auto const& routingRaecke = transform.getRoutingTable();
     std::unordered_map<std::pair<int, int>, double> totalFlow;
     for (const auto& [edge, demandMap] : routingRaecke) {
-        for (const auto& [demand, fraction] : demandMap) {
+        for (const auto& [d, fraction] : demandMap) {
             int u = edge.first, v = edge.second;
 
             // print out flow
-            std::cout << "Edge (" << u << ", " << v << ") with demand (" << demand.first << ", " << demand.second
-                      << ") has flow fraction: " << fraction << "\n";
+
+            // std::cout << "Edge (" << u << ", " << v << ") with demand (" << d.first << ", " << d.second << ") has flow fraction: " << fraction << "\n";
             if(u > v) {
 
                 totalFlow[{v, u}] += fraction;
-            }else{
+                if(demand[{d.first, d.second}] > 0) {
+                    raeckeFlow[{v, u}] += fraction*demand[{d.first, d.second}]; // Store flow in the forward direction
+                }
 
+            }else{
                 totalFlow[edge] += fraction;
+                if(demand[{d.first, d.second}] > 0) {
+                    raeckeFlow[edge] += fraction*demand[{d.first, d.second}]; // Store flow in the forward direction
+                }
             }
 
         }
     }
-    double max_congestion_raecke = 0;
-
-    for(auto& [edge, value] : totalFlow) {
-        double cong = value/g->getEdgeCapacity(edge.first, edge.second);
-        if(max_congestion_raecke < cong) {
-            max_congestion_raecke = cong;
+    double raeckeCongestion = 0.0;
+    for (const auto& [edge, flow] : raeckeFlow) {
+        int u = edge.first, v = edge.second;
+        double capacity = g->getEdgeCapacity(u, v);
+        if (capacity > 0) {
+            double congestion = flow / capacity;
+            if (congestion > raeckeCongestion) {
+                raeckeCongestion = congestion;
+            }
         }
     }
 
+    std::cout << "Raecke generated: " << raeckeCongestion << std::endl;*/
 
-    std::cout << "Raecke generated: " << max_congestion_raecke << std::endl;
 
     return 0;
 }

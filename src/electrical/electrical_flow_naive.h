@@ -11,6 +11,7 @@
 #include "AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
+#include "../tree_based/raecke_transform.h"
 
 struct FlowPath {
     std::vector<std::pair<int, int>> path;
@@ -22,6 +23,8 @@ struct FlowPath {
 //              anti edges...
 
 class ElectricalFlowNaive{
+
+    std::unordered_map<std::tuple<int, int, int>, double> f_e_st;
 
     bool debug = false;
     std::vector<Eigen::SparseMatrix<double>> Ms;
@@ -93,6 +96,7 @@ public:
     std::unordered_map<std::pair<int, int>, std::vector<FlowPath>>
     getRoutingPathsForCommodity(const std::vector<std::pair<int, int>>& _commodity);
     double getMaximumCongestion();
+    double getCongestion(DemandMap& _demands);
 };
 
 #endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_NAIVE_H

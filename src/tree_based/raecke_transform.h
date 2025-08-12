@@ -20,15 +20,14 @@
 #include <unordered_map>
 #include <utility>
 
-#include "raecke_transform.h"
 // ----------------------------------------------------------------------------
 // C++ reimplementation of Java RackeSolutionTransform (directed demands)
 // ----------------------------------------------------------------------------
 
 // Key types:
 using TerminalPair   = std::pair<int,int>;
-using DemandMap      = std::map<TerminalPair,double>;
-using EdgeDemandMap  = std::map<std::pair<int, int>, DemandMap>;
+using DemandMap      = std::unordered_map<TerminalPair,double>;
+using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap>;
 
 class RaeckeSolutionTransform {
 public:
@@ -54,9 +53,12 @@ public:
     {
         normalizeOldSolutionBasedOnNewLambda(lambda);
 
+        std::cout << "Adding a set of trees with lambda = " << lambda << "\n";
         for (auto const& [dest, srcMap] : destination2source2path) {
             for (auto const& [src, arcSet] : srcMap) {
-                if(src > dest) continue; // skip trivial cases
+                if(dest > src) continue; // skip trivial cases
+                std::cout << "Adding trees for destination " << dest << " from source " << src << "\n";
+
                 TerminalPair demand{src, dest};
                 for (std::pair<int, int> arcId : arcSet) {
                     auto& demand2frac = arc2demand2cumulativeFraction[arcId];
@@ -126,10 +128,10 @@ public:
 
                         // update directed demands
                         auto& fwdMap = arc2demand2cumulativeFraction[{path[i], path[i+1]}];
-                        auto& revMap = arc2demand2cumulativeFraction[{path[i+1], path[i]}];
+                        // auto& revMap = arc2demand2cumulativeFraction[{path[i+1], path[i]}];
 
                         fwdMap[pair]      += lambda;
-                        revMap[revPair]   += lambda;
+                        // revMap[revPair]   += lambda;
                     }
                 }
             }

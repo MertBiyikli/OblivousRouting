@@ -850,8 +850,6 @@ double ElectricalFlowNaive::getMaximumCongestion() {
 
     std::vector<double> total_edge_congestion(edges.size(), 0);
 
-
-    std::unordered_map<std::tuple<int, int, int>, double> f_e_st;
     // also add the flow for the fixed vertex x_fixed
     for(int i = 0; i<n; i++) {
         for(int j = i+1; j<n; j++) {
@@ -895,33 +893,32 @@ double ElectricalFlowNaive::getMaximumCongestion() {
 
     return max_cong;
 
-    /*
-    Eigen::VectorXd demands(n);
-    for(int s = 0; s<n; s++) {
-        for(int t = s+1; t<n; t++) {
-            demands.setZero();
-            demands[s] = 1.0;
-            demands[t] = -1.0;
+}
 
-            auto flow = M_avg*demands;
 
-            for(int e = 0; e<flow.size(); ++e) {
-                total_edge_flow[e] += std::abs(flow[e]);
+double ElectricalFlowNaive::getCongestion(DemandMap& demands) {
+
+    // TODO: remove the call getMaximumCongestion() here
+    // as of now we only compute the congestion after the flow is computed
+    getMaximumCongestion(); // Ensure the flow is computed before calculating congestion
+
+    double max_cong = 0.0;
+
+    std::vector<double> total_edge_congestion(edges.size(), 0);
+    // iterate over every commodity
+    for (auto &[edge_commo, flow]: f_e_st) {
+        int edge_id = std::get<0>(edge_commo);
+        int source = std::get<1>(edge_commo);
+        int target = std::get<2>(edge_commo);
+
+        for(auto& [d, demand_value] : demands) {
+            if(source == d.first && target == d.second) {
+                // If the edge is part of the current commodity
+                total_edge_congestion[edge_id] += std::abs(flow)*demand_value/c_edges2capacities[edges[edge_id]]; // Sum up the absolute flow values for each edge
             }
         }
     }
 
-
-    for(int edge_id = 0; edge_id < total_edge_flow.size(); edge_id++){
-        double flow = total_edge_flow[edge_id];
-        int u = edges[edge_id].first, v = edges[edge_id].second;
-
-        double cap = ((u < v) ? m_graph.getEdgeCapacity(u, v) : m_graph.getEdgeCapacity(v, u));
-
-        double cong_e = std::abs(flow)/cap;
-        if(cong_e > max_cong) {
-            max_cong = cong_e;
-        }
-    }*/
-    return max_cong;
+    double max_cong_edge = *std::max_element(total_edge_congestion.begin(), total_edge_congestion.end());
+    return max_cong_edge; // Return the maximum congestion across all edges
 }
