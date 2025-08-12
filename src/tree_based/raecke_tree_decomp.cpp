@@ -537,7 +537,7 @@ void RaeckeFRT::computeNewDistances(std::shared_ptr<Graph> &g) {
             double num         = std::exp(totalrLoad) / g->getEdgeCapacity(u, v);
             double newDistance = num / totalRLoadsAllEdges;
 
-            if(isinf(newDistance) || isinf(num)) {
+            if(std::isinf(newDistance) || std::isinf(num)) {
                 throw std::runtime_error("Infinity encountered in newDistance or Exponential calculation for edge: " + std::to_string(u) + " → " + std::to_string(v));
             }
 
