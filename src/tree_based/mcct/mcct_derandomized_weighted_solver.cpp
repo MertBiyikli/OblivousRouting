@@ -9,7 +9,7 @@
 
 FRT_Tree MCCT_Solver::getBestTree(bool debug) {
     computeBestBetaAndPermutation();
-    computeBestTree();
+    computeBestTree(debug);
     return this->tree;
 }
 
@@ -56,7 +56,7 @@ void MCCT_Solver::computeBestTree(bool debug) {
 
                     if(graph->getShortestDistance(v, vertexInCluster) < betaI) {
                         if(debug) {
-                            std::cout << "Adding vertex " << v << " to node with center " << node->getCenter() << std::endl;
+                            std::cout << "Adding vertex " << vertexInCluster << " to node with center " << v << std::endl;
                         }
                         child->addVertex(vertexInCluster);
                         assigned.insert(vertexInCluster);

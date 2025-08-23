@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(Boost_NO_BOOST_CMAKE ON)  # prefer system/Homebrew Boost over any packaged config
 
+
 # only require what the main binary needs
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 
@@ -18,36 +19,10 @@ endif()
 # ---- amgcl (vendored) ----
 add_subdirectory(extern/amgcl)
 
+list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
+find_package(ortools REQUIRED CONFIG)
 
 
-find_package(ortools CONFIG QUIET)
-
-
-include(FetchContent)
-if(NOT ortools_FOUND)
-    message(STATUS "OR-Tools not found. Fetching from GitHub...")
-
-    FetchContent_Declare(
-            ortools
-            GIT_REPOSITORY https://github.com/google/or-tools.git
-            GIT_TAG        v9.9 # you can update this to the latest stable release
-    )
-
-    set(BUILD_DEPS ON)            # OR-Tools builds protobuf/abseil/etc. itself
-    set(BUILD_SAMPLES OFF)
-    set(BUILD_EXAMPLES OFF)
-    set(BUILD_TESTING OFF)
-    set(BUILD_PYTHON OFF)
-    set(BUILD_JAVA OFF)
-    set(BUILD_CSHARP OFF)
-    # Disable heavy/paid solvers you don't need
-    set(BUILD_SCIP OFF)
-    set(USE_GUROBI OFF)
-    set(USE_XPRESS OFF)
-    set(USE_HIGHS OFF)
-
-    FetchContent_MakeAvailable(ortools)
-endif()
 
 
 
@@ -69,6 +44,11 @@ add_executable(oblivious_routing
         experiments/performance/demands/GravityModel.h
         experiments/performance/Performance.cpp
         experiments/performance/Performance.h
+        experiments/performance/LP_Oblivious_Ratio.cpp
+        experiments/performance/LP_Oblivious_Ratio.h
+        src/tree_based/raecke_solver.cpp
+        src/tree_based/raecke_solver.h
+        src/parse_parameter.h
 
         # (add any other .cpp files you have)
 )
@@ -76,9 +56,9 @@ add_executable(oblivious_routing
 
 # target_link_libraries(oblivious_routing ortools::ortools)
 target_include_directories(oblivious_routing PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
+target_link_libraries(oblivious_routing PRIVATE ortools::ortools)
 target_link_libraries(oblivious_routing
         PRIVATE
-        ortools::ortools
         Boost::boost
         Boost::program_options
         Boost::serialization

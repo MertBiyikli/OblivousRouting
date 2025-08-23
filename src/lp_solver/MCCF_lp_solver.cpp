@@ -159,3 +159,7 @@ void CMMF_Solver::PrintSolution(const Graph &graph) {
                 << kv.second << "\n";
     }
 }
+
+void CMMF_Solver::storeFlow() {
+
+}

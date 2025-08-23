@@ -11,12 +11,12 @@
 #include <vector>
 #include <tuple>
 #include "../utils/hash.h"
-
+#include "../solver/solver.h"
 
 
 using namespace operations_research;
 
-class LP{
+class LP : public ObliviousRoutingSolver{
 public:
     bool debug = false;
     int n, m;

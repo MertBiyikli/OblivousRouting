@@ -13,6 +13,11 @@
 #include <iostream>
 #include <algorithm>
 
+/* TODO:
+ *  - check if m_adj_distances has to be resized at the moment we init the graph. Can we move this in only to raecke algo, since there it is used
+ */
+
+
 class Graph{
     int m = 0; // Number of edges
     std::vector<int> m_vertices; // List of vertices

@@ -2,6 +2,18 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/abseil-cpp-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cbc-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cgl-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/clp-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/coinutils-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/eigen3-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/ortools-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/osi-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/protobuf-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/re2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/scip-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/zlib-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl/pyamgcl/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/googletest" vcs="Git" />

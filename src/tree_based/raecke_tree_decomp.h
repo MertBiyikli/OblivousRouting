@@ -17,8 +17,12 @@
 #include "mcct/mcct_derandomized_weighted_solver.h"
 #include "../solver/solver.h"
 
+
+// ToDO: refatore this such that the RaeckeFRT
+//  is called within the Raecke_Transform class as subroutine and make Raecke_Transform the main Raecke algorithm that inherits from Solver class
+
 class RaeckeFRT {
-    bool debug = false;
+
     MCCT_Solver m_mcct;
     Graph m_graph;
     double m_lambdaSum;
@@ -27,7 +31,7 @@ class RaeckeFRT {
     std::vector<Graph> m_graphs;
     std::vector< std::unordered_map<std::pair<int, int>, double> > m_idTree2edge2rload;
 public:
-
+    bool debug = false;
     // Getters / Setters
     Graph getGraph() const;
     void setGraph(const Graph& g);

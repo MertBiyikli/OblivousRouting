@@ -32,6 +32,7 @@ public:
     void PrintSolution(const Graph& graph) override;
 
     void AddDemands(const Demand& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
+    virtual void storeFlow() override;
 };
 
 #endif //OBLIVIOUSROUTING_MCCF_LP_SOLVER_H

@@ -32,7 +32,8 @@ DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
         if(nodeToCapacity[i] == 0.0) {
             throw std::runtime_error("Node " + std::to_string(i) + " has zero capacity, cannot generate demands.");
         }else{
-            std::cout << "Node " << i << " has capacity: " << nodeToCapacity[i] << "\n";
+            if(debug)
+                std::cout << "Node " << i << " has capacity: " << nodeToCapacity[i] << "\n";
         }
     }
 
@@ -57,7 +58,9 @@ DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
                       << baseFlow << ", lo: " << lo << ", hi: " << hi << "\n";
         }
         const double flow = dist(rng)*(hi-lo)+lo;
-        edge2demand[{d.first, d.second}] = flow; // Add the demand to the edge
+        // TODO: change this back
+        // edge2demand[{d.first, d.second}] = flow; // Add the demand to the edge
+        edge2demand[{d.first, d.second}] = 1.0; // Add the demand to the edge
     }
     return edge2demand;
 }

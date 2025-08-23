@@ -20,10 +20,8 @@
 #include <unordered_map>
 #include <utility>
 
-// ----------------------------------------------------------------------------
-// C++ reimplementation of Java RackeSolutionTransform (directed demands)
-// ----------------------------------------------------------------------------
 
+// TODO: move these the utils directory
 // Key types:
 using TerminalPair   = std::pair<int,int>;
 using DemandMap      = std::unordered_map<TerminalPair,double>;
@@ -128,10 +126,13 @@ public:
 
                         // update directed demands
                         auto& fwdMap = arc2demand2cumulativeFraction[{path[i], path[i+1]}];
-                        // auto& revMap = arc2demand2cumulativeFraction[{path[i+1], path[i]}];
+                        auto& revMap = arc2demand2cumulativeFraction[{path[i+1], path[i]}];
 
-                        fwdMap[pair]      += lambda;
-                        // revMap[revPair]   += lambda;
+                        double prev = 0.0;
+                        if (auto it = fwdMap.find(pair); it != fwdMap.end()) prev = it->second;
+
+                        fwdMap[pair] = prev + lambda;
+                        revMap[revPair] = prev + lambda;
                     }
                 }
             }

@@ -245,14 +245,14 @@ void ElectricalFlowNaive::run() {
         // break;
     }
 
-
+/*
     // take the average of the Ms matrices
     M_avg = Ms[0];
     for(int i = 1; i < Ms.size(); ++i) {
         M_avg += Ms[i];
     }
     M_avg /= static_cast<double>(Ms.size());
-
+*/
 
     //take the average of the flows
     for(auto& [edge, flow] : f_e_u) {
@@ -262,13 +262,13 @@ void ElectricalFlowNaive::run() {
 
 
 
-
+/*
     if(debug) {
         // print the average M matrix
         std::cout << "Average M matrix (first 5 rows and columns):\n";
         int n = M_avg.rows(), m = M_avg.cols();
-        for (int i = 0; i < std::min(5, n); ++i) {
-            for (int j = 0; j < std::min(5, m); ++j) {
+        for (int i = 0; i < std::min(500, n); ++i) {
+            for (int j = 0; j < std::min(500, m); ++j) {
 
                 // only print out non-zero values, or values that are not too close to zero
                 // to avoid printing too many zeros
@@ -289,7 +289,7 @@ void ElectricalFlowNaive::run() {
             }
         }
     }
-
+*/
 
 
     // TODO: move this into an extra function that is called after the run() method
@@ -539,7 +539,7 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
     auto bw_T = bw.transpose();
 
     Eigen::MatrixXd M(n, m);
-    Eigen::MatrixXd L_inv(n, n);
+    //Eigen::MatrixXd L_inv(n, n);
 
 
     if(debug)
@@ -581,6 +581,7 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
         }
 
         auto result = amg.solve(rhs);
+
         M.col(i) = result;
 
         if(debug) {
@@ -844,11 +845,72 @@ ElectricalFlowNaive::getRoutingPathsForCommodity(const std::vector<std::pair<int
     return routing_paths;
 }
 
+double ElectricalFlowNaive::getFlowForCommodity(int edge_id, int source, int target) {
+    if(target == x_fixed) {
+        return - (f_e_u.count({edge_id, source}) ? f_e_u.at({edge_id, source}) : 0.0);
+    }else if(source == x_fixed) {
+        return f_e_u.count({edge_id, target}) ? f_e_u.at({edge_id, target}) : 0.0;
+    }else{
+        // Not a fixed-x commodity; you'll reconstruct from two x-based flows
+        double f_s = f_e_u.count({edge_id, source}) ? f_e_u.at({edge_id, source}) : 0.0;
+        double f_t = f_e_u.count({edge_id, target}) ? f_e_u.at({edge_id, target}) : 0.0;
+        return f_t - f_s;
+    }
+}
+
+double ElectricalFlowNaive::getCongForCommodity(int edge_id, int source, int target) {
+    if(target == x_fixed) {
+        return - (f_e_u.count({edge_id, source}) ? f_e_u.at({edge_id, source}) : 0.0);
+    }else if(source == x_fixed) {
+        return f_e_u.count({edge_id, target}) ? f_e_u.at({edge_id, target}) : 0.0;
+    }else{
+        // Not a fixed-x commodity; you'll reconstruct from two x-based flows
+        double f_s = f_e_u.count({edge_id, source}) ? f_e_u.at({edge_id, source}) : 0.0;
+        double f_t = f_e_u.count({edge_id, target}) ? f_e_u.at({edge_id, target}) : 0.0;
+        return (std::abs(f_t) - std::abs(f_s))/m_graph.getEdgeCapacity(edges[edge_id].first, edges[edge_id].second);
+    }
+}
+
+
+double ElectricalFlowNaive::_getCongestion(const DemandMap& _demands) {
+    double congestion = 0.0;
+
+    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
+
+    // compute via the f_e_u the congestion from the edges
+    for(const auto& [demand, scaled_flow_value] : _demands) {
+        int s = demand.first;
+        int t = demand.second;
+
+        if (s == t || scaled_flow_value == 0.0) continue;
+
+        for (int eid = 0; eid < (int)edges.size(); ++eid) {
+            bool stop = false;
+            if(s > t) {
+                stop = true;
+            }
+            const double f_st_e = getCongForCommodity(eid, s, t);
+            const double contrib = std::abs(f_st_e) * scaled_flow_value;// / c_edges2capacities[edges[eid]];
+            total_edge_congestion[edges[eid]] += contrib;
+            if(debug) {
+                std::cout << "edge (" << edges[eid].first << " / " << edges[eid].second << " ) : comd: " << s << " -> " << t << " : " << f_st_e << std::endl;
+            }
+        }
+    }
+
+    for(const auto& [_, congestion_value] : total_edge_congestion) {
+        if(congestion_value > congestion) {
+            congestion = congestion_value; // Update the maximum congestion
+        }
+    }
+    return (congestion); // Return the maximum congestion across all edges
+}
+
 
 double ElectricalFlowNaive::getMaximumCongestion() {
     double max_cong = 0.0;
 
-    std::vector<double> total_edge_congestion(edges.size(), 0);
+    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
 
     // also add the flow for the fixed vertex x_fixed
     for(int i = 0; i<n; i++) {
@@ -860,7 +922,7 @@ double ElectricalFlowNaive::getMaximumCongestion() {
 
                 double flow = f_e_i - f_e_j; // Get the flow for the edge
                 if (std::abs(flow) > 1e-16) { // Only consider significant flows
-                    f_e_st[{edge_id, i, j}] += flow; // Sum the flow for the commodity pair (i, j)
+                    f_e_st[edges[edge_id]][{i, j}] += flow; // Sum the flow for the commodity pair (i, j)
                 }
             }
         }
@@ -868,12 +930,16 @@ double ElectricalFlowNaive::getMaximumCongestion() {
 
     if(debug) {
         // print out the flows
-        for (auto &[edge_commo, flow]: f_e_st) {
-            int edge_id = std::get<0>(edge_commo);
-            int source = std::get<1>(edge_commo);
-            int target = std::get<2>(edge_commo);
-            std::cout << "Flow for edge (" << edges[edge_id].first << ", " << edges[edge_id].second
-                      << ") commodity (" << source << " -> " << target << "): " << flow << "\n";
+        for (auto &[edge, flow_list]: f_e_st) {
+
+            for(auto& [source_target, flow] : flow_list) {
+                int source = source_target.first;
+                int target = source_target.second;
+                int edge_id = std::get<0>(edge);
+                // Print the flow for the edge and commodity pair
+                std::cout << "Flow for edge (" << edge.first << ", " << edge.second
+                          << ") commodity (" << source << " -> " << target << "): " << flow << "\n";
+            }
         }
     }
 
@@ -881,11 +947,17 @@ double ElectricalFlowNaive::getMaximumCongestion() {
     // iterate over every commodity
     // and sum up the total flow per edge
     for(auto& [edge, flow] : f_e_st) {
-        int edge_id = std::get<0>(edge);
-        total_edge_congestion[edge_id] += std::abs(flow)/c_edges2capacities[edges[edge_id]]; // Sum up the absolute flow values for each edge
+
+        for(auto& [commodity, flow_value] : flow) {
+
+            int source = commodity.first, target = commodity.second;
+
+            total_edge_congestion[edge] += (std::abs(flow_value))/
+                                              c_edges2capacities[edge]; // Sum up the absolute flow values for each edge
+        }
     }
 
-    for(auto& congestion: total_edge_congestion) {
+    for(auto& [edge, congestion]: total_edge_congestion) {
         if(congestion > max_cong) {
             max_cong = congestion; // Update the maximum congestion
         }
@@ -893,6 +965,29 @@ double ElectricalFlowNaive::getMaximumCongestion() {
 
     return max_cong;
 
+}
+
+void ElectricalFlowNaive::storeFlow(){
+    for (int edge_id = 0; edge_id < edges.size(); edge_id++) {
+        int u = edges[edge_id].first, v = edges[edge_id].second;
+        for (int s = 0; s<n; ++s) {
+            for (int t = 0; t<n; t++) {
+                if ( s == t ) continue;
+
+                double flow = getFlowForCommodity(edge_id, s, t);
+                if (std::abs(flow) > 1e-9) {
+
+                    // since this linear
+                    if (flow <0) {
+                        f_e_st[{v, u}][{s, t}] = -flow; // Store the reverse flow as well
+                    }else {
+                        f_e_st[{u, v}][{s, t}] = flow;
+                    }
+                    //f_e_st[{v, u}][{t, s}] = -flow; // Store the reverse flow as well
+                }
+            }
+        }
+    }
 }
 
 
@@ -904,21 +999,34 @@ double ElectricalFlowNaive::getCongestion(DemandMap& demands) {
 
     double max_cong = 0.0;
 
-    std::vector<double> total_edge_congestion(edges.size(), 0);
+    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
     // iterate over every commodity
-    for (auto &[edge_commo, flow]: f_e_st) {
-        int edge_id = std::get<0>(edge_commo);
-        int source = std::get<1>(edge_commo);
-        int target = std::get<2>(edge_commo);
+    for (auto &[edge, flow_list]: f_e_st) {
 
-        for(auto& [d, demand_value] : demands) {
-            if(source == d.first && target == d.second) {
-                // If the edge is part of the current commodity
-                total_edge_congestion[edge_id] += std::abs(flow)*demand_value/c_edges2capacities[edges[edge_id]]; // Sum up the absolute flow values for each edge
+        for (auto &[commodity, flow_value]: flow_list) {
+
+            int source = commodity.first, target = commodity.second;
+
+            double scaled_flow = 0.0;
+            if (demands.count({source, target}) == 0) {
+                // check for the reverse direction
+                if (demands.count({target, source}) == 0) {
+                    std::cerr << "Warning: No demand for commodity (" << source << ", " << target << "). Skipping.\n";
+                    continue; // Skip if no demand is defined for this commodity
+                } else {
+                    scaled_flow = demands[{target, source}]; // Get the demand value for the commodity
+                }
+            } else {
+                scaled_flow = demands[{source, target}]; // Get the demand value for the commodity
             }
+
+            total_edge_congestion[edge] += (std::abs(flow_value) * scaled_flow)/
+                                              c_edges2capacities[edge]; // Sum up the absolute flow values for each edge
         }
     }
 
-    double max_cong_edge = *std::max_element(total_edge_congestion.begin(), total_edge_congestion.end());
-    return max_cong_edge; // Return the maximum congestion across all edges
+
+    for (const auto&[e, cong]:total_edge_congestion) { max_cong = std::max(max_cong, cong);}
+
+    return max_cong; // Return the maximum congestion across all edges
 }

@@ -13,6 +13,7 @@
 #include "../utils/hash.h"
 #include "LP_Base.h"
 #include "../tree_based/raecke_transform.h"
+
 /*
  * This is an attempt of implementing the LP solver for the oblivious routing problem.
  * Using the paper "Making Intra-Domain Routing Robust to Changing and
@@ -25,8 +26,7 @@ class LPSolver : public LP {
 private:
     std::unordered_map<std::tuple<int, int, int>, MPVariable*> p_e_ij;
     std::unordered_map< std::pair<int, int>, MPVariable*> π_e_f;
-    std::unordered_map< std::tuple< int , std::pair<int, int> > , MPVariable*> f_e_st;
-
+    std::unordered_map< std::tuple< int , std::pair<int, int> > , MPVariable*> m_var_f_e_; // st;
     double max_cong = 0;
 
     virtual void CreateVariables(const Graph& graph) override;
@@ -36,6 +36,7 @@ private:
     std::vector<int> sourceVertices;
 
 public:
+    //std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_st_e;
     LPSolver(){};
 
 
@@ -45,9 +46,13 @@ public:
     void PrintSolution(const Graph& graph) override;
     void GetRoutingTable(const Graph& graph);
 
-    double getCongestion(DemandMap& demands) const;
+    virtual void storeFlow() override;
+    double getCongestion(DemandMap& demands, Graph& g) const;
 
     void PrintCommoditiesPerEdge(const Graph& graph);
+
+    double getDemandWeightedCongestion(const Graph& graph,
+                                                 const DemandMap& demands);
 };
 
 #endif //OBLIVOUSROUTING_LPSOLVER_H

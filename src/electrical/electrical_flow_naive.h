@@ -8,6 +8,7 @@
 #include <algorithm>
 #include "../graph.h"
 #include "../utils/hash.h"
+#include "../solver/solver.h"
 #include "AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
@@ -22,9 +23,9 @@ struct FlowPath {
 // IMPORTANT TODO: note that the edges are stored only as ordered paris, hence we are essentially missing the rest
 //              anti edges...
 
-class ElectricalFlowNaive{
+class ElectricalFlowNaive : public ObliviousRoutingSolver{
 
-    std::unordered_map<std::tuple<int, int, int>, double> f_e_st;
+
 
     bool debug = false;
     std::vector<Eigen::SparseMatrix<double>> Ms;
@@ -69,6 +70,9 @@ class ElectricalFlowNaive{
     double recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec);
 
 public:
+
+
+    // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
     std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x
     int x_fixed;
     // store the flow as an weighted adjacency list
@@ -97,6 +101,16 @@ public:
     getRoutingPathsForCommodity(const std::vector<std::pair<int, int>>& _commodity);
     double getMaximumCongestion();
     double getCongestion(DemandMap& _demands);
+    double _getCongestion(const DemandMap& _demands);
+
+    double getFlowForCommodity(int edge_id, int source, int target);
+    double getCongForCommodity(int edge_id, int source, int target);
+
+    void solve(const Graph& g) override {
+        this->init(g, debug);
+        this->run();
+    }
+    void storeFlow() override;
 };
 
 #endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_NAIVE_H

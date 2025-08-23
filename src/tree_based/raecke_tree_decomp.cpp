@@ -420,7 +420,7 @@ double RaeckeFRT::iterate(int treeIndex) {
     double l = getMaxRload(treeIndex, t);
     double delta = std::min(1/l, 1-m_lambdaSum);
     m_lambdas.push_back(delta);
-    m_lambdas.push_back(delta);
+    // m_lambdas.push_back(delta);
     m_graphs.push_back(*copyGraph);
     return delta;
 }
@@ -429,7 +429,7 @@ FRT_Tree RaeckeFRT::getTree(std::shared_ptr<Graph> &g) {
     m_mcct.setGraph(g);
     setRequirements(g);
     computeNewDistances(g);
-    return m_mcct.getBestTree();
+    return m_mcct.getBestTree(debug);
 }
 
 

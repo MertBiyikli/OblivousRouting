@@ -41,6 +41,10 @@ void Graph::readGraph(const std::string &filename) {
     this->m_adj.resize(n);
     this->m_adj_capacities.resize(n);
     this->m_adj_distances.resize(n);
+    this->m_vertices.resize(n);
+
+    // Fill vertices with 0, 1, ..., maxNodeIdSeen
+    std::iota(this->m_vertices.begin(), this->m_vertices.end(), 0);
 
     do {
         if (line.empty() || line[0] == 'c') continue;
@@ -225,10 +229,15 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
             continue;
         }
         // We only add each undirected edge once (u < v)
+        /*
         if (u > v) {
             continue;
         }
+        */
 
+        if ( u == 1 && v == 0) {
+            bool fFound = true;
+        }
         // Determine capacity:
         double capacityValue = 1.0;
         bool capacityParsed = false;
@@ -256,6 +265,10 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
             }
         }
         // if still not parsed, we leave capacityValue = 1.0 by default
+
+        if (capacityValue == 0) {
+            capacityValue = 1;
+        }
 
         // Finally, add the undirected edge (Graph::addEdge adds both directions)
         this->addEdge(u, v, capacityValue);
