@@ -26,11 +26,10 @@ class ObliviousRatio{
     std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double>> routing;
 
     // Worst case LP result
-    double max_congestion;
+    double max_congestion = 0;
     std::unordered_map<std::pair<int, int>, double> demand_vector;
 
     public:
-
     void init(Graph& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double>>& routing);
     double solve();
     double solveWorstCaseDemandLPPerEdge(const std::pair<int, int>& edge);

@@ -1,19 +1,19 @@
 //
-// Created by Mert Biyikli on 12.08.25.
+// Created by Mert Biyikli on 08.09.25.
 //
 
-#ifndef OBLIVIOUSROUTING_GRAVITYMODEL_H
-#define OBLIVIOUSROUTING_GRAVITYMODEL_H
+#ifndef OBLIVIOUSROUTING_UNIFORMMODEL_H
+#define OBLIVIOUSROUTING_UNIFORMMODEL_H
 
 #include <vector>
 #include "DemandModel.h"
 
-class GravityModel : public DemandModel {
+class UniformModel : public DemandModel {
 public:
     bool debug = false;
-    GravityModel() = default;
+    UniformModel() = default;
     // Generate a gravity model demand matrix
     virtual DemandMap generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0);
 };
 
-#endif //OBLIVIOUSROUTING_GRAVITYMODEL_H
+#endif //OBLIVIOUSROUTING_UNIFORMMODEL_H

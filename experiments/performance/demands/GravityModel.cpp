@@ -9,7 +9,7 @@
 #include <random>
 
 DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin) {
-    DemandMap edge2demand;
+    DemandMap demand2flow;
 
     std::unordered_set<int> nodes(g.getNumNodes());
     for(const auto& d : demands) {
@@ -59,8 +59,8 @@ DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
         }
         const double flow = dist(rng)*(hi-lo)+lo;
         // TODO: change this back
-        // edge2demand[{d.first, d.second}] = flow; // Add the demand to the edge
-        edge2demand[{d.first, d.second}] = 1.0; // Add the demand to the edge
+
+        demand2flow[{d.first, d.second}] = 1.0; // Add the demand to the edge
     }
-    return edge2demand;
+    return demand2flow;
 }

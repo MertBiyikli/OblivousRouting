@@ -4,9 +4,19 @@
 
 #ifndef OBLIVIOUSROUTING_HASH_H
 #define OBLIVIOUSROUTING_HASH_H
+
 #include <map>
 #include <vector>
 #include <tuple>
+#include <unordered_map>
+#include <utility>
+
+
+
+// Key types:
+using TerminalPair   = std::pair<int,int>;
+using DemandMap      = std::unordered_map<TerminalPair,double>;
+using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap>;
 
 // adjust this to support directed edge struct: struct Arc {int src, trg, cap, operator=()}
 namespace std {
@@ -68,5 +78,8 @@ namespace std {
         }
     };
 }
+
+
+
 
 #endif //OBLIVIOUSROUTING_HASH_H

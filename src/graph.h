@@ -89,6 +89,16 @@ public:
         if(u >= m_adj.size() || v >= m_adj.size()) {
             throw std::out_of_range("Node index out of range");
         }
+        if(u == v) {
+            throw std::invalid_argument("No self-loops allowed (u == v)");
+        }
+
+        auto it = std::find(m_adj[u].begin(), m_adj[u].end(), v);
+        if(it != m_adj[u].end()) {
+            return;
+            //throw std::runtime_error("Edge already exists");
+        }
+
         m_adj[u].push_back(v);
         m_adj_capacities[u].push_back(capacity);
         m_adj_distances[u].push_back(distance);
@@ -162,7 +172,7 @@ public:
         }
     }
 
-    double getShortestDistance(int u, int v) {
+    const double& getShortestDistance(int u, int v) const{
         return m_distanceMatrix[u][v];
     }
 

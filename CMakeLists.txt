@@ -3,7 +3,23 @@ project(ObliviousRouting CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(Boost_NO_BOOST_CMAKE ON)  # prefer system/Homebrew Boost over any packaged config
+# Allow build type to be set via command line or CLion UI
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Set sensible defaults per build type
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "" FORCE)
+
+# Good stacks on Clang/GCC:
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-fno-omit-frame-pointer)
+endif()
 
 
 # only require what the main binary needs
@@ -15,20 +31,16 @@ if(BUILD_TESTS)
     find_package(Boost 1.70 REQUIRED COMPONENTS unit_test_framework)
 endif()
 
-
 # ---- amgcl (vendored) ----
 add_subdirectory(extern/amgcl)
 
 list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
 find_package(ortools REQUIRED CONFIG)
 
-
-
-
-
+find_package(Eigen3 REQUIRED)
 
 # ---- Your target ----
-add_executable(oblivious_routing
+set(SRC_FILES
         main.cpp
         src/graph.cpp
         src/lp_solver/LPSolver.cpp
@@ -40,6 +52,7 @@ add_executable(oblivious_routing
         src/tree_based/raecke_transform.h
         src/electrical/electrical_flow_naive.cpp
         src/electrical/AMGSolver.cpp
+        src/electrical/AMGSolver.h
         experiments/performance/demands/GravityModel.cpp
         experiments/performance/demands/GravityModel.h
         experiments/performance/Performance.cpp
@@ -49,9 +62,17 @@ add_executable(oblivious_routing
         src/tree_based/raecke_solver.cpp
         src/tree_based/raecke_solver.h
         src/parse_parameter.h
-
-        # (add any other .cpp files you have)
+        experiments/performance/demands/DemandModel.h
+        experiments/performance/demands/BimodalModel.cpp
+        experiments/performance/demands/BimodalModel.h
+        experiments/performance/demands/GaussianModel.cpp
+        experiments/performance/demands/GaussianModel.h
+        experiments/performance/demands/UniformModel.cpp
+        experiments/performance/demands/UniformModel.h
 )
+
+add_executable(oblivious_routing ${SRC_FILES})
+
 
 
 # target_link_libraries(oblivious_routing ortools::ortools)
@@ -63,3 +84,5 @@ target_link_libraries(oblivious_routing
         Boost::program_options
         Boost::serialization
 )
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

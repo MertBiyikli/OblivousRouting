@@ -27,6 +27,7 @@
 #include "../graph.h"
 #include <unordered_map>
 #include "../utils/hash.h"
+#include <iostream>
 
 class AMGSolver{
 private:
@@ -64,6 +65,7 @@ private:
 
 public:
 
+    void check_openmp_runtime();
     // CSR storage
     std::vector<int> m_row_ptr, m_row_ptr_red;
     std::vector<int> m_col_ind, m_col_ind_red;

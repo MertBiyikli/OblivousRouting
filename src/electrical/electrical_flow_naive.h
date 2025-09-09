@@ -34,9 +34,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
     Eigen::SparseMatrix<double> M_avg;
 
 
-    // LaplacianSolver solver;
-    Graph m_graph;
-    AMGSolver amg;
+
 
     int n, m;
     Eigen::SparseMatrix<double> B;
@@ -70,7 +68,9 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
     double recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec);
 
 public:
-
+    // LaplacianSolver solver;
+    Graph m_graph;
+    AMGSolver amg;
 
     // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
     std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x

@@ -110,6 +110,8 @@ void ElectricalFlowNaive::init(const Graph &g, bool debug) {
     amg.init(w_edges2weights, n, debug);
     this->debug = debug;
 
+    // ToDo: remove this later on...
+    amg.check_openmp_runtime();
     // compute diagonal matrix consisting of only the capacities
     U = Eigen::SparseMatrix<double>(m, m);
     for(int i = 0; i < m; ++i) {
@@ -363,13 +365,13 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
 
     // for each column of X, solve the linear system with the Laplacian of the graph itself
     for(int i = 0; i<X.cols(); ++i) {
-        Eigen::VectorXd x = X.col(i);
+        // const Eigen::VectorXd& x = X.col(i);
 
         // TODO remove here the solver
-        Eigen::VectorXd u = amg.solve(x);
+        Eigen::VectorXd u = amg.solve(X.col(i));
         V.col(i) = u;
         if(debug) {
-            std::cout << "rhs: \n" << x.transpose() << "\n";
+            std::cout << "rhs: \n" <<X.col(i) << "\n";
             std::cout << "Column " << i << " of U:\n" << u.transpose() << "\n";
         }
     }
@@ -447,6 +449,8 @@ Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n
 // compute the median of the Matrix M vector vec product
 double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec) {
     auto s = M*vec;
+
+    // TODO: maybe always keep an allocated memory in the class to ensure not to call this ever time
 
     std::vector<double> abs_vals(s.size());
     for (int i = 0; i < s.size(); ++i) {

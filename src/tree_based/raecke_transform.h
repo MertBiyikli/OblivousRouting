@@ -19,13 +19,7 @@
 #include <map>
 #include <unordered_map>
 #include <utility>
-
-
-// TODO: move these the utils directory
-// Key types:
-using TerminalPair   = std::pair<int,int>;
-using DemandMap      = std::unordered_map<TerminalPair,double>;
-using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap>;
+#include "../utils/hash.h"
 
 class RaeckeSolutionTransform {
 public:

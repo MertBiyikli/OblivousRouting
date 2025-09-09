@@ -226,7 +226,6 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
         }
     }
 
-
     // compute the expected cost for the unsettled vertices
     for(const auto&[u, demand_map] : this->idVertex2idVertex2demand) {
         for(const auto&[v, d_uv] : demand_map) {
@@ -238,14 +237,15 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
             }
 
             std::unordered_map<int, double> centerCosts;
-            for(auto center : unsettledVertices) {
+            for(const auto& center : unsettledVertices)
+            {
                 if(!verticesPermutation.empty()
                 && verticesPermutation.back() == center) {
                     continue; // Skip the last vertex in the permutation
                 }
 
-                double firstDistance = graph->getShortestDistance(center, u);
-                double secondDistance = graph->getShortestDistance(center, v);
+                const double& firstDistance = graph->getShortestDistance(center, u);
+                const double& secondDistance = graph->getShortestDistance(center, v);
 
                 double bigger = std::max(firstDistance, secondDistance);
                 double smaller = std::min(firstDistance, secondDistance);
@@ -253,8 +253,8 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
                 bigger /= beta;
                 smaller /= beta;
 
-                int powerBigger = static_cast<int>(std::ceil(std::log2(bigger)/std::log2(2.0)))+2;
-                int powerSmaller = static_cast<int>(std::ceil(std::log2(smaller)/std::log2(2.0)))+2;
+                double powerBigger = static_cast<int>(std::ceil(std::log2(bigger)/std::log2(2.0)))+2;
+                double powerSmaller = static_cast<int>(std::ceil(std::log2(smaller)/std::log2(2.0)))+2;
 
                 if(debug) {
                     std::cout << "Center: " << center << ", Power bigger: " << powerBigger
@@ -274,9 +274,10 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
                     }
                 }
             }
-            for(auto& [key, value] : centerCosts) {
-                result += value/centerCosts.size(); // Add the cost for each center
+            for(const auto& [key, value]:centerCosts) {
+                result += value/centerCosts.size();
             }
+
         }
     }
     return result;

@@ -3,7 +3,26 @@
 //
 
 #include "AMGSolver.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
+void AMGSolver::check_openmp_runtime() {
+#ifdef _OPENMP
+    std::cout << "✅ OpenMP is enabled at compile time.\n";
+    std::cout << "🧵 omp_get_max_threads(): " << omp_get_max_threads() << "\n";
+    std::cout << "🧵 omp_get_num_threads(): ";
+#pragma omp parallel
+    {
+#pragma omp master
+        {
+            std::cout << omp_get_num_threads() << "\n";
+        }
+    }
+#else
+    std::cout << "❌ OpenMP is NOT enabled (compiled without -fopenmp).\n";
+#endif
+}
 void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug) {
     this->debug = debug;
     this->n = n;
@@ -115,6 +134,8 @@ void AMGSolver::buildLaplacian() {
 std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
     if (b.size() != n)
         throw std::runtime_error("RHS size mismatch");
+
+
 
     auto bvec= b;
     double mean_bvec = std::accumulate(bvec.begin(), bvec.end(), 0.0) / n;
