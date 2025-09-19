@@ -273,6 +273,8 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
         }
 
         // Finally, add the undirected edge (Graph::addEdge adds both directions)
+        // add random edge capacities
+        // capacityValue = rand()%this->getNumNodes()+10; // random factor in [0.5, 1.5]
         this->addEdge(u, v, capacityValue);
     }
 

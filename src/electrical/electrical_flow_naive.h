@@ -12,7 +12,7 @@
 #include "AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include "../tree_based/raecke_transform.h"
+#include "../tree_based/frt/raecke_frt_transform.h"
 
 struct FlowPath {
     std::vector<std::pair<int, int>> path;
@@ -44,7 +44,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
     double inv_m = 0.0;
     std::unordered_map<std::pair<int, int>, double> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
     double cap_X = 0.0;
-    int number_of_iterations = 0;
+    //int number_of_iterations = 0;
 
     // Once‐computed edge list & index mapping
 
@@ -66,6 +66,8 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
 
     Eigen::SparseMatrix<double> getSketchMatrix(int m, int n, double epsilon = 0.5);
     double recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec);
+
+
 
 public:
     // LaplacianSolver solver;
@@ -111,6 +113,7 @@ public:
         this->run();
     }
     void storeFlow() override;
+
 };
 
 #endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_NAIVE_H

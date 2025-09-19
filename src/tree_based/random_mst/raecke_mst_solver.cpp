@@ -1,32 +1,36 @@
 //
-// Created by Mert Biyikli on 18.08.25.
+// Created by Mert Biyikli on 18.09.25.
 //
 
-#include "raecke_solver.h"
+#include "raecke_mst_solver.h"
 
-void RaeckeSolver::solve(const Graph& graph) {
-    // Initialize the RaeckeFRT object
-    raeckeFRT.setGraph(graph);
+/*
+void RaeckeMSTSolver::solve(const Graph& graph) {
 
-    // Run the FRT algorithm
-    raeckeFRT.run();
+
+    raeckeMST.setGraph(graph);
+    raeckeMST.run();
+
+    this->iteration_count = raeckeMST.getTrees().size();
+
+    this->oracle_running_times = raeckeMST.oracle_running_times;
 }
 
-void RaeckeSolver::storeFlow() {
+void RaeckeMSTSolver::storeFlow() {
      double sumOfLambdas = 0.0;
-    for(size_t i = 0; i < raeckeFRT.getTrees().size(); ++i) {
-        double lambda_i = raeckeFRT.getLambdas()[i];
+    for(size_t i = 0; i < raeckeMST.getTrees().size(); ++i) {
+        double lambda_i = raeckeMST.getLambdas()[i];
         sumOfLambdas += lambda_i;
         double normalized_lambda = lambda_i / sumOfLambdas; // Normalize by the last lambda (which should be 1.0)
-        auto t = raeckeFRT.getTrees()[i];
-        auto copyGraph = raeckeFRT.getGraphs()[i];
-        raeckeTransform.addTree(raeckeFRT.getTrees()[i], normalized_lambda, raeckeFRT.getGraphs()[i]);
+        auto t = raeckeMST.getTrees()[i];
+        auto copyGraph = raeckeMST.getGraphs()[i];
+        raeckeTransform.addTree(raeckeMST.getTrees()[i], normalized_lambda, raeckeMST.getGraphs()[i]);
 
         if (debug) {
             // print out everything
             std::cout << "Tree " << i << ": Lambda = " << normalized_lambda << ", Graph = " << copyGraph.getNumNodes() << " nodes, "
                       << copyGraph.getNumEdges() << " edges.\n";
-            std::cout << "Tree " << i << ": Max Rload = " << raeckeFRT.getMaxRload(i, t) << std::endl;
+            std::cout << "Tree " << i << ": Max Rload = " << raeckeMST.getMaxRload(i) << std::endl;
         }
 
     }
@@ -46,4 +50,4 @@ void RaeckeSolver::storeFlow() {
 
         }
     }
-}
+}*/

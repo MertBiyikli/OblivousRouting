@@ -2,7 +2,8 @@
 #include "src/graph.h"
 #include "src/lp_solver/LPSolver.h"
 #include "src/lp_solver/MCCF_lp_solver.h"
-#include "src/tree_based/raecke_solver.h"
+#include "src/tree_based/frt/raecke_frt_solver.h"
+#include "src/tree_based/random_mst/raecke_mst_solver.h"
 #include "src/electrical/electrical_flow_naive.h"
 #include "experiments/performance/demands/DemandModel.h"
 #include "experiments/performance/demands/BimodalModel.h"
@@ -29,6 +30,8 @@ int main(int argc, char **argv) {
     g.readLFGFile(cfg->filename, /*undirected?*/ true);
 
 
+    std::cout << "Graph loaded: " << g.getNumNodes() << " nodes, " << g.getNumEdges() << " edges.\n";
+
     std::unique_ptr<ObliviousRoutingSolver> solver;
     switch (cfg->solver) {
         case SolverType::ELECTRICAL_NAIVE:
@@ -37,12 +40,21 @@ int main(int argc, char **argv) {
             break;
         case SolverType::RAECKE_FRT:
             std::cout << "Running Tree-based (Raecke/FRT)...\n";
-            solver = std::make_unique<RaeckeSolver>();
+            solver = std::make_unique<RaeckeFRTSolver>();
             break;
         case SolverType::LP_APPLEGATE_COHEN:
             std::cout << "Running LP (Applegate–Cohen)...\n";
             solver = std::make_unique<LPSolver>();
             break;
+        case SolverType::RAECKE_RANDOM_MST:
+            std::cout << "Running Tree-based (Raecke/MST)...\n";
+            solver = std::make_unique<RaeckeMSTSolver>();
+            break;
+    }
+
+    if ( !solver ) {
+        std::cerr << "Solver not implemented.\n";
+        return -1; // EX_UNAVAILABLE
     }
 
     // run the solver
@@ -51,6 +63,9 @@ int main(int argc, char **argv) {
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
     solver->storeFlow();
+
+
+    // solver->printFlow();
 
     ObliviousRatio OR;
     OR.init(g, solver->f_e_st);
@@ -87,7 +102,7 @@ int main(int argc, char **argv) {
                 std::cerr << "Unknown demand model type.\n";
         }
 
-        auto demand_map = demand_model->generate(g, demands, /*margin*/ 1.0);
+        auto demand_map = demand_model->generate(g, demands,  1.0);
         double total_demand = 0.0;
         for (const auto& [_, d] : demand_map) {
             total_demand += d;
@@ -109,6 +124,16 @@ int main(int argc, char **argv) {
 
         std::cout << "Worst case congestion for " << (argv[3] ? argv[3] : "<empty>") << " model demand: " << max_cong << std::endl;
     }
+
+    std::cout << "MWU number of iterations: " << solver->GetIterationCount() << std::endl;
+
+    // compute the average oracle running time
+    double mean = 0;
+    for (const auto& t : solver->oracle_running_times) {
+        mean += t;
+    }
+    mean /= solver->oracle_running_times.size();
+    std::cout << "Average oracle time: " << mean << " [milliseconds]" << std::endl;
 
 
     return 0;

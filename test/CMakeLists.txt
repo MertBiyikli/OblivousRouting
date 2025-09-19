@@ -15,8 +15,7 @@ add_executable(integration_test
         integration/mcct_node.cpp
         integration/raecke_test.cpp
         ../src/utils/hash.h
-        ../src/tree_based/raecke_transform.cpp
-        ../src/tree_based/raecke_transform.h
+        ../src/tree_based/frt/raecke_frt_transform.h
         ../src/lp_solver/LPSolver.cpp
         ../src/lp_solver/MCCF_lp_solver.h
         ../src/lp_solver/MCCF_lp_solver.cpp
@@ -34,11 +33,11 @@ target_include_directories(integration_test PRIVATE
 # MCCTs test
 add_test(NAME mcctTest COMMAND mcct_test)
 
-add_executable(mcct_test integration/mcct_node.cpp ../src/tree_based/mcct/Node.h ../src/tree_based/mcct/Tree.h ../src/tree_based/mcct/mcct_derandomized_weighted_solver.h
-        ../src/tree_based/raecke_tree_decomp.cpp
-        ../src/tree_based/raecke_tree_decomp.h
-        ../src/tree_based/mcct/Node.cpp
-        ../src/tree_based/mcct/mcct_derandomized_weighted_solver.cpp
+add_executable(mcct_test integration/mcct_node.cpp ../src/tree_based/frt/mcct/Node.h ../src/tree_based/frt/mcct/Tree.h ../src/tree_based/frt/mcct/mcct_derandomized_weighted_solver.h
+        ../src/tree_based/frt/raecke_frt.cpp
+        ../src/tree_based/frt/raecke_frt.h
+        ../src/tree_based/frt/mcct/Node.cpp
+        ../src/tree_based/frt/mcct/mcct_derandomized_weighted_solver.cpp
         ../src/utils/hash.h)
 
 

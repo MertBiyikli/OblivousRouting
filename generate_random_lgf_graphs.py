@@ -43,7 +43,7 @@ def main():
     outdir = Path("generated_graphs")
     outdir.mkdir(exist_ok=True)
 
-    sizes = [50, 60, 75, 100, 120, 140, 150, 180, 200]
+    sizes = [65, 85, 105, 125, 150, 155, 170]
     for n in sizes:
         m = int(n * 1.5)  # ~1.5 * n edges (moderate density)
         edges = generate_connected_graph(n, m)

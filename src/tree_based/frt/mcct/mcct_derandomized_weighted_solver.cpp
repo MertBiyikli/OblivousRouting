@@ -5,7 +5,7 @@
 #include "mcct_derandomized_weighted_solver.h"
 #include <unordered_set>
 #include <list>
-#include "../../utils/hash.h"
+#include "../../../utils/hash.h"
 
 FRT_Tree MCCT_Solver::getBestTree(bool debug) {
     computeBestBetaAndPermutation();
@@ -236,6 +236,8 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
                 continue; // Skip already settled demands
             }
 
+            const int level_u_v = demand2levelIncluded[{u, v}];
+
             std::unordered_map<int, double> centerCosts;
             for(const auto& center : unsettledVertices)
             {
@@ -267,7 +269,7 @@ double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPe
                     }
 
                     for(int i = powerBigger; i > powerSmaller; --i) {
-                        if(this->demand2levelIncluded[{u, v}] < i) {
+                        if(level_u_v < i) {
                             centerCosts[center] += d_uv * std::pow(2.0, i+2);
                             break; // Break after adding the cost for this center
                         }

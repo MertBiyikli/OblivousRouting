@@ -95,7 +95,7 @@ void ElectricalFlowNaive::init(const Graph &g, bool debug) {
     roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
     alpha_local = std::log2(n)*std::log2(n); // Initialize alpha_local based on the number of nodes
     this->cap_X = m;
-    this->number_of_iterations = 8.0*roh*std::log(m)/alpha_local;
+    this->iteration_count = 8.0*roh*std::log(m)/alpha_local;
     this->inv_m = 1.0 / static_cast<double>(m);
 
 
@@ -163,7 +163,9 @@ void ElectricalFlowNaive::run() {
 
     Eigen::VectorXd demand_u_x = Eigen::VectorXd::Zero(m_graph.getNumNodes()); // Initialize the demand vector for the fixed node x
 
-    for(int t = 0; t < std::min(number_of_iterations, std::numeric_limits<int>::max()); ++t) {
+    for(int t = 0; t < this->iteration_count; ++t) {
+
+        auto start = std::chrono::high_resolution_clock::now();
 
         // TODO: avoid using matrix multiplication for the routing matrix whatsever
         // since you can avoid this by storing the flow values directly as an map
@@ -245,6 +247,9 @@ void ElectricalFlowNaive::run() {
         updateEdgeDistances();
 
         // break;
+
+        auto end = std::chrono::high_resolution_clock::now();
+        oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
     }
 
 /*
@@ -258,7 +263,7 @@ void ElectricalFlowNaive::run() {
 
     //take the average of the flows
     for(auto& [edge, flow] : f_e_u) {
-        flow /= static_cast<double>(number_of_iterations); // Average the flow values
+        flow /= static_cast<double>(iteration_count); // Average the flow values
     }
 
 

@@ -9,30 +9,20 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <memory>
-#include "../utils/hash.h"
-#include "raecke_tree_decomp.h"
-// RaeckeSolutionTransform.hpp
-#pragma once
-
+#include "../../utils/hash.h"
+#include "../raecke_transform_base.h"
+#include "raecke_frt.h"
 #include <vector>
 #include <set>
 #include <map>
 #include <unordered_map>
 #include <utility>
-#include "../utils/hash.h"
+#include "../../utils/hash.h"
 
-class RaeckeSolutionTransform {
+class RaeckeFRTTransform :public RaeckeTransformBase<FRT_Tree> {
 public:
     // Recorded decomposition trees (if needed)
     std::vector<std::set<std::pair<int, int> >> decTree2notSpanningTrees;
-    // Routing: arcID -> ( (src,dst) -> cumulative fraction )
-    EdgeDemandMap arc2demand2cumulativeFraction;
-
-    RaeckeSolutionTransform() = default;
-
-    const EdgeDemandMap& getRoutingTable() const {
-        return arc2demand2cumulativeFraction;
-    }
 
     /**
      * Add a per-destination set of trees (vertex-disjoint) with weight lambda.

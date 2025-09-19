@@ -11,7 +11,7 @@ def guess_exe():
     names = [
         #"cmake-build-debug/oblivious_routing",
         #"cmake-build-relwithdebinfo/oblivious_routing",
-        "cmake-build-release/oblivious_routing",
+        "cmake-build-release/oblivious_routing", # remove parallel for sequential build
         "build/Debug/oblivious_routing",
         "build/Release/oblivious_routing",
     ]
@@ -26,6 +26,7 @@ CANON = {
     "electrical": "electrical", "electrical_naive": "electrical", "ef": "electrical", "e": "electrical", "0": "electrical",
     "tree": "tree", "raecke": "tree", "frt": "tree", "r": "tree", "t": "tree", "1": "tree",
     "cohen": "cohen", "lp": "cohen", "applegate": "cohen", "ac": "cohen", "l": "cohen", "2": "cohen",
+    "mst": "mst", "random_mst": "mst", "raecke_mst": "mst", "m": "mst", "3": "mst",
 }
 
 CANON_DEMAND = {
@@ -50,7 +51,7 @@ def canon_demand(s: str) -> str:
 def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float, logs_dir: Path, demand_model: str):
     start = time.perf_counter()
     ts = datetime.now().isoformat(timespec="seconds")
-    base = f"{solver}_{graph.stem}_rep{rep}"
+    base = f"{solver}_{graph.stem}_rep{rep}_{demand_model}"
     out_path = logs_dir / f"{base}.out"
     err_path = logs_dir / f"{base}.err"
     cmd = [str(exe), solver, str(graph), demand_model]
@@ -79,12 +80,12 @@ def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float, logs_
 def main():
     ap = argparse.ArgumentParser(description="Batch runner for oblivious_routing executable.")
     ap.add_argument("--exe", default=guess_exe(), help="Path to executable")
-    ap.add_argument("--solvers", nargs="+", default=["electrical", "tree", "cohen"],
-                    help="Solver tokens (e.g., electrical tree cohen or 0 1 2)")
+    ap.add_argument("--solvers", nargs="+", default=["electrical", "tree", "cohen", "mst"],
+                    help="Solver tokens (e.g., electrical tree cohen or 0 1 2 3)")
     ap.add_argument("--graphs", nargs="+", required=True,
                     help="Graph files or globs (e.g., data/*.lfg data/small.lfg)")
     ap.add_argument("--repeats", type=int, default=1, help="Repeat each combo N times")
-    ap.add_argument("--timeout", type=float, default=600, help="Per-run timeout (seconds)")
+    ap.add_argument("--timeout", type=float, default=1800, help="Per-run timeout (seconds)")
     ap.add_argument("--jobs", type=int, default=1, help="Parallel workers")
     ap.add_argument("--demand-model", nargs="+", default=["gravity", "bimodal", "gaussian", "uniform"], help="Demand model to use (e.g., gravity, binomial)")
     ap.add_argument("--dry-run", action="store_true", help="Only print jobs to run, don’t execute them")

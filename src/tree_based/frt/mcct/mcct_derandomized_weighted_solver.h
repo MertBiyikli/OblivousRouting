@@ -6,11 +6,12 @@
 #define OBLIVIOUSROUTING_MCCT_DERANDOMIZED_WEIGHTED_SOLVER_H
 
 
-#include "../../graph.h"
+#include "../../../graph.h"
 #include "Tree.h"
 
 #include <map>
 #include <set>
+#include <unordered_set>
 #include <vector>
 #include <memory>
 #include <cmath>
@@ -21,10 +22,10 @@ class MCCT_Solver {
     bool debug = false;
     FRT_Tree tree;
     std::shared_ptr<Graph> graph;
-    std::set<double> betas;
+    std::unordered_set<double> betas;
     double bestBeta;
     std::vector<int> verticesPermutation;
-    std::map<int, std::map<int, double>> idVertex2idVertex2demand; // Set of demands
+    std::unordered_map<int, std::unordered_map<int, double>> idVertex2idVertex2demand; // Set of demands
     std::map<std::pair<int, int>, int> demand2levelIncluded; // Map of demands to their levels in the tree
     public:
 
@@ -47,7 +48,7 @@ class MCCT_Solver {
         // Ensure that v1 and v2 are in the idVertex2idVertex2demand map
         auto& it = idVertex2idVertex2demand[v1];
         if (it.empty()) {
-            idVertex2idVertex2demand[v1] = std::map<int, double>();
+            idVertex2idVertex2demand[v1] = std::unordered_map<int, double>();
         }
 
         it[v2] = demand;
@@ -70,8 +71,8 @@ class MCCT_Solver {
         return *graph;
     }
 
-    void setGraph(std::shared_ptr<Graph>& g) {
-        graph = g;
+    void setGraph(Graph& g) {
+        graph = std::make_shared<Graph>(g);
     }
 
     void reset() {
@@ -82,11 +83,11 @@ class MCCT_Solver {
         demand2levelIncluded.clear();
     }
 
-    const std::set<double>& getBetas() const {
+    const std::unordered_set<double>& getBetas() const {
         return betas;
     }
 
-    void setBetas(const std::set<double>& b) {
+    void setBetas(const std::unordered_set<double>& b) {
         betas = b;
     }
 

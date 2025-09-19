@@ -85,7 +85,6 @@ public:
     bool updateEdge(int u, int v, double new_weight);
 
     bool checkMatrix() const;
-    void pinVertex(int v);
 
 };
 

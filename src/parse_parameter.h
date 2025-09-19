@@ -9,7 +9,8 @@
 enum class SolverType {
     ELECTRICAL_NAIVE,
     RAECKE_FRT,            // tree-based
-    LP_APPLEGATE_COHEN
+    LP_APPLEGATE_COHEN,
+    RAECKE_RANDOM_MST
 };
 
 enum class DemandModelType {
@@ -43,11 +44,14 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     // LP (Applegate–Cohen)
     if (s == "cohen" || s == "lp" || s == "applegate" || s == "ac" || s == "l")
         return SolverType::LP_APPLEGATE_COHEN;
+    if (s == "mst" || s == "random_mst" || s == "raecke_mst" || s == "rmst")
+        return SolverType::RAECKE_RANDOM_MST;
 
     // Optional: numeric shortcuts (documented in usage)
     if (s == "0") return SolverType::ELECTRICAL_NAIVE;
     if (s == "1") return SolverType::RAECKE_FRT;
     if (s == "2") return SolverType::LP_APPLEGATE_COHEN;
+    if (s == "3") return SolverType::RAECKE_RANDOM_MST;
 
     return std::nullopt;
 }
@@ -78,6 +82,7 @@ inline std::string usage(const char* prog) {
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
        << "  tree | raecke | frt | r | t   -> Tree-based (Raecke/FRT)\n"
        << "  cohen | lp | applegate | ac   -> LP (Applegate–Cohen)\n"
+       << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n\n"
        << "Numeric shortcuts: 0=electric, 1=tree, 2=cohen\n"
        << "[Optional] demand model (case-insensitive):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"

@@ -20,7 +20,7 @@ void AMGSolver::check_openmp_runtime() {
         }
     }
 #else
-    std::cout << "❌ OpenMP is NOT enabled (compiled without -fopenmp).\n";
+    std::cout << "OpenMP is NOT enabled (compiled without -fopenmp).\n";
 #endif
 }
 void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug) {
@@ -220,18 +220,6 @@ void AMGSolver::updateSolver() {
 
 }
 
-void AMGSolver::pinVertex(int v) {
-    for (int idx = m_row_ptr[v]; idx < m_row_ptr[v+1]; ++idx)
-        m_values[idx] = 0.0;
-    for (int row = 0; row < n; ++row) {
-        for (int idx = m_row_ptr[row]; idx < m_row_ptr[row+1]; ++idx) {
-            if (m_col_ind[idx] == v)
-                m_values[idx] = 0.0;
-        }
-    }
-    int diag = m_indexMap[{v,v}];
-    m_values[diag] = 1.0;
-}
 
 bool AMGSolver::checkMatrix() const {
     bool ok = true;

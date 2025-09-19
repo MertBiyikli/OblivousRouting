@@ -39,19 +39,21 @@ find_package(ortools REQUIRED CONFIG)
 
 find_package(Eigen3 REQUIRED)
 
+
+
+
 # ---- Your target ----
 set(SRC_FILES
         main.cpp
         src/graph.cpp
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
-        src/tree_based/raecke_tree_decomp.cpp
-        src/tree_based/mcct/Node.cpp
-        src/tree_based/mcct/mcct_derandomized_weighted_solver.cpp
-        src/tree_based/raecke_transform.cpp
-        src/tree_based/raecke_transform.h
+        src/tree_based/frt/raecke_frt.cpp
+        src/tree_based/frt/mcct/Node.cpp
+        src/tree_based/frt/mcct/mcct_derandomized_weighted_solver.cpp
+        src/tree_based/frt/raecke_frt_transform.h
         src/electrical/electrical_flow_naive.cpp
-        src/electrical/AMGSolver.cpp
+        #src/electrical/AMGSolver.cpp
         src/electrical/AMGSolver.h
         experiments/performance/demands/GravityModel.cpp
         experiments/performance/demands/GravityModel.h
@@ -59,8 +61,7 @@ set(SRC_FILES
         experiments/performance/Performance.h
         experiments/performance/LP_Oblivious_Ratio.cpp
         experiments/performance/LP_Oblivious_Ratio.h
-        src/tree_based/raecke_solver.cpp
-        src/tree_based/raecke_solver.h
+        src/tree_based/frt/raecke_frt_solver.h
         src/parse_parameter.h
         experiments/performance/demands/DemandModel.h
         experiments/performance/demands/BimodalModel.cpp
@@ -69,10 +70,53 @@ set(SRC_FILES
         experiments/performance/demands/GaussianModel.h
         experiments/performance/demands/UniformModel.cpp
         experiments/performance/demands/UniformModel.h
+        src/tree_based/random_mst/mst.h
+        src/tree_based/random_mst/raecke_random_mst.cpp
+        src/tree_based/random_mst/raecke_random_mst.h
+        src/tree_based/random_mst/raecke_mst_solver.cpp
+        src/tree_based/random_mst/raecke_mst_solver.h
+        src/tree_based/random_mst/raecke_mst_transform.h
+        src/tree_based/raecke_framework.h
+        src/tree_based/raecke_base.h
+        src/tree_based/raecke_transform_base.h
 )
 
-add_executable(oblivious_routing ${SRC_FILES})
 
+option(USE_OPENMP "Enable OpenMP support (used in AMGSolver)" OFF)
+
+# Only link OpenMP to AMGSolver if explicitly enabled
+if(USE_OPENMP)
+    add_executable(oblivious_routing ${SRC_FILES})
+
+    find_package(OpenMP REQUIRED)
+    message(STATUS "✅ OpenMP will be enabled for AMG solver")
+
+    # Only build AMGSolver as separate object library with OpenMP
+    add_library(amg_solver_obj OBJECT src/electrical/AMGSolver.cpp)
+    target_link_libraries(amg_solver_obj PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
+    target_include_directories(amg_solver_obj PRIVATE
+            ${CMAKE_SOURCE_DIR}/extern/amgcl
+    )
+
+    # macOS: ensure correct OpenMP runtime is linked
+    if(APPLE)
+        find_library(OMP_LIBRARY omp HINTS /opt/homebrew/lib /usr/local/lib)
+        if(OMP_LIBRARY)
+            message(STATUS "🔗 Found OpenMP runtime on macOS: ${OMP_LIBRARY}")
+            target_link_libraries(oblivious_routing PRIVATE ${OMP_LIBRARY})
+        else()
+            message(FATAL_ERROR "❌ OpenMP library not found on macOS")
+        endif()
+    endif()
+
+    # Inject compiled object into binary
+    target_sources(oblivious_routing PRIVATE $<TARGET_OBJECTS:amg_solver_obj>)
+
+else()
+    message(STATUS "🚫 OpenMP disabled — compiling AMGSolver in serial mode")
+    list(APPEND SRC_FILES src/electrical/AMGSolver.cpp)
+    add_executable(oblivious_routing ${SRC_FILES})
+endif()
 
 
 # target_link_libraries(oblivious_routing ortools::ortools)

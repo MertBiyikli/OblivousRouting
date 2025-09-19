@@ -3,6 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import re
+def parse_runtime_ms_from_out(out_path: Path) -> float:
+    if not out_path.exists():
+        return None
+    try:
+        with out_path.open("r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if "Running time" in line:
+                    m = re.search(r"Running\s*time\s*[:=]\s*([0-9.eE+,\-]+)", line)
+                    if m:
+                        return float(m.group(1).replace(",", "."))
+    except Exception as e:
+        print(f"⚠️ Could not read runtime from {out_path}: {e}")
+    return None
 
 def extract_threads_from_filename(filename: str) -> int:
     match = re.search(r"threads_(\d+)", filename)
@@ -51,6 +64,11 @@ def main():
         df = df[df["solver"].str.contains(args.solver, case=False)]
         df["threads"] = num_threads
         df["graph_path"] = df["graph"].apply(lambda p: Path(p))
+        # Resolve absolute path to .out file
+        csv_dir = path.parent.resolve()
+        df["stdout_path"] = df["stdout"].apply(lambda p: Path(p) if Path(p).is_absolute() else (csv_dir / p).resolve())
+        df["run_ms"] = df["stdout_path"].apply(parse_runtime_ms_from_out)
+
         df["num_vertices"] = df["graph_path"].apply(count_vertices_from_lgf)
         df["graph_name"] = df["graph_path"].apply(lambda p: p.stem)
         all_data.append(df)
@@ -63,7 +81,7 @@ def main():
     df_all = df_all[df_all["num_vertices"] > 0]
 
     # Compute average wall time per graph per thread count
-    grouped = df_all.groupby(["threads", "graph_name", "num_vertices"]).agg({"wall_time_s": "mean"}).reset_index()
+    grouped = df_all.groupby(["threads", "graph_name", "num_vertices"]).agg({"run_ms": "mean"}).reset_index()
 
     # Create a fixed graph order (by num_vertices, then name)
     graph_order = (
@@ -80,7 +98,7 @@ def main():
     # Plotting
     plt.figure(figsize=(12, 6))
     for threads, group_df in grouped.groupby("threads"):
-        plt.scatter(group_df["x_index"], group_df["wall_time_s"],
+        plt.scatter(group_df["x_index"], group_df["run_ms"],
                     label=f"{threads} threads", s=20)
 
     # X-axis labels: graph names (optional: also show |V| if you prefer)
@@ -88,7 +106,8 @@ def main():
                rotation=45, ha="right", fontsize=8)
 
     plt.xlabel("Graph instances (name + |V|)")
-    plt.ylabel("Avg wall time [s]")
+    plt.ylabel("Avg runtime [ms]")
+
     plt.title("Electrical Flow Runtime vs Graph Instances")
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.legend(title="OMP_NUM_THREADS")
