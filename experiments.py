@@ -87,7 +87,7 @@ def main():
     ap.add_argument("--repeats", type=int, default=1, help="Repeat each combo N times")
     ap.add_argument("--timeout", type=float, default=1800, help="Per-run timeout (seconds)")
     ap.add_argument("--jobs", type=int, default=1, help="Parallel workers")
-    ap.add_argument("--demand-model", nargs="+", default=["gravity", "bimodal", "gaussian", "uniform"], help="Demand model to use (e.g., gravity, binomial)")
+    ap.add_argument("--demand-model", nargs="+", default=["gravity"], help="Demand model to use (e.g., gravity, binomial)")
     ap.add_argument("--dry-run", action="store_true", help="Only print jobs to run, don’t execute them")
     ap.add_argument("--smoke-test", action="store_true", help="Run only the first job to validate pipeline")
 
