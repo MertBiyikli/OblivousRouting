@@ -64,7 +64,11 @@ def parse_out_metrics(out_path):
 
                 m = re_worst.search(s)
                 if m:
-                    worst = float(m.group(1).replace(",", "."))
+                    val = m.group(1).replace(",", ".")
+                    try:
+                        worst = float(val)
+                    except ValueError:
+                        worst = None  # or set to a specific error value if needed
                     continue
 
                 m = re_rand_generic.search(s)
