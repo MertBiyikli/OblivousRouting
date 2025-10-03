@@ -22,7 +22,7 @@ void AMGSolver::check_openmp_runtime() {
 #else
     std::cout << "OpenMP is NOT enabled (compiled without -fopenmp).\n";
 #endif
-}
+}/*
 void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug) {
     this->debug = debug;
     this->n = n;
@@ -32,6 +32,146 @@ void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weig
 
     m_edge_weights = _edge_weights;
     buildLaplacian();
+}*/
+
+
+void AMGSolver::buildLaplacian_(const Graph& g) {
+    // --- Step 1: Aggregate edge contributions into an adjacency list ---
+
+
+    std::vector<std::vector<int>> adj_list(n);
+    std::vector<std::vector<double>> adj_laplacian(n);
+
+    // first handle the diagonal entries
+    std::vector<double> diagonal(n, 0.0);
+    for (int v = 0; v < n; v++) {
+        for (int u_iter = 0; u_iter<g.neighbors(v).size(); u_iter++) {
+            int u = g.neighbors(v)[u_iter];
+            if (u == v) continue; // skip self-loops
+            double weights = adj_edge_weights[v][u_iter];
+
+            diagonal[v] += weights;
+            diagonal[u] += weights;
+        }
+    }
+
+    // create Laplacian from the edge weights
+    for ( int v = 0; v<n; v++) {
+        // Laplacian contributions:
+        adj_list[v].push_back(v);
+        adj_laplacian[v].push_back(diagonal[v]);
+    }
+
+    int ctr_nnz = 0;
+
+    // create Laplacian from the edge weights
+    for ( int v = 0; v<n; v++) {
+        for ( int u_iter = 0; u_iter<n; u_iter++) {
+            int u = g.neighbors(v)[u_iter];
+            double w = adj_edge_weights[v][u_iter];
+            if (u == v) continue;
+            // Laplacian contributions:
+            adj_list[v].push_back(u);
+            adj_laplacian[v].push_back(-w);
+
+            ctr_nnz++;
+        }
+    }
+
+
+    // --- Step 2: Count non-zeros per row ---
+    m_row_ptr.assign(n + 1, 0);
+    for (int v = 0; v < n; v++) {
+        m_row_ptr[v + 1]++;
+    }
+
+    for (int v = 0; v<n; v++) {
+        m_row_ptr[v + 1] += m_row_ptr[v];
+    }
+
+    // --- Step 3: Fill col_ind and values ---
+    ctr_nnz += n; // for diagonal entries
+    m_col_ind.resize(ctr_nnz);
+    m_values.resize(ctr_nnz);
+
+    std::vector<int> offset(n, 0);
+    m_indexMap.clear();
+
+
+    for (int v = 0; v<n; v++) {
+        for (int k = 0; k<adj_list[v].size(); k++) {
+            int u = adj_list[v][k];
+            double val = adj_laplacian[v][k];
+            int pos = m_row_ptr[v] + offset[v]++;
+            m_col_ind[pos] = u;
+            m_values[pos] = val;
+            m_indexMap[{v, u}] = pos;
+        }
+    }
+
+
+    // --- Step 4: Sort columns within each row ---
+    for (int r = 0; r < n; ++r) {
+        int start = m_row_ptr[r];
+        int end = m_row_ptr[r + 1];
+        std::vector<std::pair<int, double>> row;
+        row.reserve(end - start);
+        for (int k = start; k < end; ++k)
+            row.emplace_back(m_col_ind[k], m_values[k]);
+
+        std::sort(row.begin(), row.end(), [](auto &a, auto &b) { return a.first < b.first; });
+
+        for (int k = 0; k < (int)row.size(); ++k) {
+            m_col_ind[start + k] = row[k].first;
+            m_values[start + k] = row[k].second;
+            m_indexMap[{r, row[k].first}] = start + k;
+        }
+    }
+
+    // for now keep this step same as in buildLaplacian()
+    // in a more optimized version, we can put into #debug
+    // --- Step 5: Check diagonal entries ---
+    if(debug) {
+        for (int i = 0; i < n; ++i) {
+            auto it = m_indexMap.find({i, i});
+            if (it == m_indexMap.end()) {
+                // If diagonal entry is missing, insert one
+                std::cerr << "Warning: row " << i << " missing diagonal, inserting one.\n";
+                // Insert at end of row (resizing is simpler than shifting for now)
+                int insert_pos = m_row_ptr[i + 1];
+                m_col_ind.insert(m_col_ind.begin() + insert_pos, i);
+                m_values.insert(m_values.begin() + insert_pos, 1.0);
+                for (int r = i + 1; r <= n; ++r) m_row_ptr[r]++;
+                m_indexMap[{i, i}] = insert_pos;
+            } else if (m_values[it->second] == 0.0) {
+                std::cerr << "Warning: row " << i << " diagonal is zero, fixing to 1.\n";
+                m_values[it->second] = 1.0;
+            }
+        }
+    }
+
+    if(debug){
+        if (!checkMatrix()) {
+            throw std::runtime_error("Matrix structure is invalid");
+        }
+    }
+
+
+    Solver::params prm;
+    prm.solver.tol = 1e-12;
+
+    if(debug) {
+        std::cout << "row_ptr\n";
+        for (auto r: m_row_ptr) std::cout << r << " ";
+        std::cout << "\nm_col_ind\n";
+        for (auto c: m_col_ind) std::cout << c << " ";
+        std::cout << "\nm_values\n";
+        for (auto v: m_values) std::cout << v << " ";
+        std::cout << std::endl;
+    }
+
+    // Construct solver
+    solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
 }
 
 void AMGSolver::buildLaplacian() {
@@ -127,6 +267,22 @@ void AMGSolver::buildLaplacian() {
             throw std::runtime_error("Matrix structure is invalid");
         }
     }
+
+    Solver::params prm;
+    prm.solver.tol = 1e-6;
+
+    if(debug) {
+        std::cout << "row_ptr\n";
+        for (auto r: m_row_ptr) std::cout << r << " ";
+        std::cout << "\nm_col_ind\n";
+        for (auto c: m_col_ind) std::cout << c << " ";
+        std::cout << "\nm_values\n";
+        for (auto v: m_values) std::cout << v << " ";
+        std::cout << std::endl;
+    }
+
+    // Construct solver
+    solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
 }
 
 
@@ -144,35 +300,20 @@ std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
         val -= mean_bvec;
     }
 
-    Solver::params prm;
-    prm.solver.tol = 1e-12;
-
-    prm.precond.direct_coarse = false;
-
-    if(debug) {
-        std::cout << "row_ptr\n";
-        for (auto r: m_row_ptr) std::cout << r << " ";
-        std::cout << "\nm_col_ind\n";
-        for (auto c: m_col_ind) std::cout << c << " ";
-        std::cout << "\nm_values\n";
-        for (auto v: m_values) std::cout << v << " ";
-        std::cout << std::endl;
-    }
-
-
-    // Construct solver
-    Solver solver(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
-
     std::vector<double> x(n, 0.0);
-    auto res = solver(bvec, x);
-    if(debug) {
-        std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
-                  << "  Error: " << std::get<1>(res) << std::endl;
-    }
-    // --- Enforce zero-mean solution (orthogonal to nullspace) ---
-    double mean_x = std::accumulate(x.begin(), x.end(), 0.0) / n;
-    for(auto& val : x) {
-        val -= mean_x; // Project solution to zero-mean
+    if (solver) {
+        auto res = (*solver)(bvec, x);
+        if(debug) {
+            std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
+                      << "  Error: " << std::get<1>(res) << std::endl;
+        }
+        // --- Enforce zero-mean solution (orthogonal to nullspace) ---
+        double mean_x = std::accumulate(x.begin(), x.end(), 0.0) / n;
+        for(auto& val : x) {
+            val -= mean_x; // Project solution to zero-mean
+        }
+    }else {
+        std::cout << "[AMGSolver] No solver found." << std::endl;
     }
 
     return x;
@@ -216,11 +357,11 @@ bool AMGSolver::updateEdge(int u, int v, double new_weight) {
 // TODO : implement this
 void AMGSolver::updateSolver() {
     // Update hierarchy numeric values (same structure)
-    // solver.precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    solver->precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
 
 }
 
-
+/*
 bool AMGSolver::checkMatrix() const {
     bool ok = true;
 
@@ -278,3 +419,4 @@ bool AMGSolver::checkMatrix() const {
 
     return ok;
 }
+*/

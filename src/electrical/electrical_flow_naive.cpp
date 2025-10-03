@@ -15,6 +15,7 @@
 #include <amgcl/coarsening/smoothed_aggregation.hpp>
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/adapter/crs_tuple.hpp>
+#include "../utils/my_math.h"
 
 // Checks for issues in a CSR Laplacian matrix representation
 void diagnose_csr_laplacian(
@@ -22,7 +23,8 @@ void diagnose_csr_laplacian(
         const std::vector<int>& col_ind,
         const std::vector<double>& values,
         double tolerance = 1e-6
-) {
+)
+{
     int n = static_cast<int>(row_ptr.size()) - 1;
 
     std::vector<double> row_sums(n, 0.0);
@@ -72,20 +74,11 @@ void diagnose_csr_laplacian(
     }
 }
 
-double NegativeExponent(double base, int exp) {
-    if (base == 0.0) {
-        throw std::invalid_argument("Base cannot be zero for negative exponent.");
-    }
-    if (exp < 0) {
-        throw std::invalid_argument("Exponent must be non-negative.");
-    }
-    return 1.0 / std::pow(base, exp);
-}
 
 
 
 
-void ElectricalFlowNaive::init(const Graph &g, bool debug) {
+void ElectricalFlowNaive::init(const Graph &g,const std::string& solver_name,  bool debug) {
     m_graph = g;
 
     n = m_graph.getNumNodes();
@@ -107,11 +100,13 @@ void ElectricalFlowNaive::init(const Graph &g, bool debug) {
     extract_edge_list();
 
     // initialize the Laplacian Solver
-    amg.init(w_edges2weights, n, debug);
+    // Choose solver type dynamically (string or enum)
+    amg = SolverFactory::create(solver_name);   // or "amg_bicgstab" / "eigen_direct"
+    amg->init(w_edges2weights, n, debug);
     this->debug = debug;
 
     // ToDo: remove this later on...
-    amg.check_openmp_runtime();
+    // amg->check_openmp_runtime();
     // compute diagonal matrix consisting of only the capacities
     U = Eigen::SparseMatrix<double>(m, m);
     for(int i = 0; i < m; ++i) {
@@ -331,7 +326,8 @@ void ElectricalFlowNaive::run() {
                 }
             }
         } else {
-            std::cerr << "Warning: No outgoing flow for source " << source << ". Skipping scaling.\n";
+            if (debug)
+                std::cerr << "Warning: No outgoing flow for source " << source << ". Skipping scaling.\n";
         }
     }
 
@@ -373,7 +369,7 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
         // const Eigen::VectorXd& x = X.col(i);
 
         // TODO remove here the solver
-        Eigen::VectorXd u = amg.solve(X.col(i));
+        Eigen::VectorXd u = amg->solve(X.col(i));
         V.col(i) = u;
         if(debug) {
             std::cout << "rhs: \n" <<X.col(i) << "\n";
@@ -382,8 +378,9 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
     }
 
     // for each edge (u,v), compute the approximate load
+    Eigen::SparseVector<double> b;
     for(int i = 0; i < edges.size(); ++i) {
-        auto b = B.row(i);
+        b = B.row(i);
 
         double norm = recoverNorm(V.transpose(), b);
 
@@ -451,6 +448,7 @@ Eigen::SparseMatrix<double>  ElectricalFlowNaive::getSketchMatrix(int _m, int _n
 }
 
 
+
 // compute the median of the Matrix M vector vec product
 double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::VectorXd& vec) {
     auto s = M*vec;
@@ -465,7 +463,6 @@ double ElectricalFlowNaive::recoverNorm(const Eigen::MatrixXd& M, const Eigen::V
     std::nth_element(abs_vals.begin(), abs_vals.begin() + mid, abs_vals.end());
     return abs_vals[mid];
 }
-
 
 void ElectricalFlowNaive::updateEdgeDistances() {
     // Update the edge distances and probabilities
@@ -492,7 +489,7 @@ void ElectricalFlowNaive::updateEdgeDistances() {
     //solver.SyncEdgeWeights(); // Synchronize the weights in the Laplacian solver
 
     // TODO: change this by only changing the numeric values of the matrix solver
-    amg.init(w_edges2weights, n);
+    amg->init(w_edges2weights, n);
     // amg.updateSolver();
 
     // Refresh our weights[] array in the same edge‐order
@@ -539,7 +536,6 @@ void ElectricalFlowNaive::refreshWeightMatrix() {
 
 
 
-
 Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
     buildIncidence();
     buildWeightDiag();
@@ -552,30 +548,30 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
 
 
     if(debug)
-        diagnose_csr_laplacian(amg.m_row_ptr, amg.m_col_ind, amg.m_values);
+        diagnose_csr_laplacian(amg->m_row_ptr, amg->m_col_ind, amg->m_values);
 
     for(int i = 0; i<m; i++) {
 
         if(debug) {
             // print out the amg solver
-            for(auto [e, w] : amg.m_edge_weights) {
+            for(auto [e, w] : amg->m_edge_weights) {
                 std::cout << "Edge: " << e.first << " " << e.second << " : " << w << std::endl;
             }
 
             std::cout << "row_ptr "<< std::endl;
-            for(auto U : amg.m_row_ptr) {
+            for(auto U : amg->m_row_ptr) {
                 std::cout << "" << U << " ";
             }
             std::cout << std::endl;
 
             std::cout << "m_col_ind "<< std::endl;
-            for(auto U : amg.m_col_ind) {
+            for(auto U : amg->m_col_ind) {
                 std::cout << "" << U << " ";
             }
             std::cout << std::endl;
 
             std::cout << "m_values "<< std::endl;
-            for(auto U : amg.m_values) {
+            for(auto U : amg->m_values) {
                 std::cout << "" << U << " ";
             }
             std::cout << std::endl;
@@ -589,7 +585,7 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
             std::cout << "Solving for column " << i << " with rhs: " << rhs.transpose() << std::endl;
         }
 
-        auto result = amg.solve(rhs);
+        auto result = amg->solve(rhs);
 
         M.col(i) = result;
 
@@ -603,9 +599,9 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
             Eigen::SparseMatrix<double> Lsp(n, n);
             std::vector<Eigen::Triplet<double>> triplets;
             for (int row = 0; row < n; ++row) {
-                for (int idx = amg.m_row_ptr[row]; idx < amg.m_row_ptr[row + 1]; ++idx) {
-                    int col = amg.m_col_ind[idx];
-                    double val = amg.m_values[idx];
+                for (int idx = amg->m_row_ptr[row]; idx < amg->m_row_ptr[row + 1]; ++idx) {
+                    int col = amg->m_col_ind[idx];
+                    double val = amg->m_values[idx];
                     triplets.emplace_back(row, col, val);
                 }
             }
@@ -624,8 +620,6 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getRoutingMatrix() {
     return M.transpose().sparseView();
 
 }
-
-
 // Build the oriented incidence matrix B (E×V).  Each edge e=(u,v):
 //   row e has +1 in column u, –1 in column v.
 void ElectricalFlowNaive::buildIncidence() {

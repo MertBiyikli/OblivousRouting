@@ -13,7 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Set sensible defaults per build type
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -pg" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "" FORCE)
 
 # Good stacks on Clang/GCC:
@@ -54,7 +54,7 @@ set(SRC_FILES
         src/tree_based/frt/raecke_frt_transform.h
         src/electrical/electrical_flow_naive.cpp
         #src/electrical/AMGSolver.cpp
-        src/electrical/AMGSolver.h
+        src/electrical/laplacian_solvers/AMGSolver.h
         experiments/performance/demands/GravityModel.cpp
         experiments/performance/demands/GravityModel.h
         experiments/performance/Performance.cpp
@@ -79,6 +79,16 @@ set(SRC_FILES
         src/tree_based/raecke_framework.h
         src/tree_based/raecke_base.h
         src/tree_based/raecke_transform_base.h
+        experiments/performance/linear_oblivious_routing_ratio.h
+        experiments/performance/linear_oblivious_routing_ratio.cpp
+        src/electrical/laplacian_solvers/LaplacianSolver.h
+        src/electrical/laplacian_solvers/AMGBiCGStab.cpp
+        src/electrical/laplacian_solvers/AMGBiCGStab.h
+        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
+        src/electrical/electrical_flow_optimized.cpp
+        src/electrical/electrical_flow_optimized.h
+        src/utils/my_math.h
+        src/utils/my_math.cpp
 )
 
 
@@ -92,7 +102,12 @@ if(USE_OPENMP)
     message(STATUS "✅ OpenMP will be enabled for AMG solver")
 
     # Only build AMGSolver as separate object library with OpenMP
-    add_library(amg_solver_obj OBJECT src/electrical/AMGSolver.cpp)
+    add_library(amg_solver_obj OBJECT src/electrical/laplacian_solvers/AMGSolver.cpp
+            src/electrical/laplacian_solvers/AMGSolver.h
+            src/electrical/laplacian_solvers/LaplacianSolver.h
+            src/electrical/laplacian_solvers/AMGBiCGStab.cpp
+            src/electrical/laplacian_solvers/AMGBiCGStab.h
+            src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
     target_link_libraries(amg_solver_obj PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
     target_include_directories(amg_solver_obj PRIVATE
             ${CMAKE_SOURCE_DIR}/extern/amgcl
@@ -114,7 +129,12 @@ if(USE_OPENMP)
 
 else()
     message(STATUS "🚫 OpenMP disabled — compiling AMGSolver in serial mode")
-    list(APPEND SRC_FILES src/electrical/AMGSolver.cpp)
+    list(APPEND SRC_FILES src/electrical/laplacian_solvers/AMGSolver.cpp
+            src/electrical/laplacian_solvers/AMGSolver.h
+            src/electrical/laplacian_solvers/LaplacianSolver.h
+            src/electrical/laplacian_solvers/AMGBiCGStab.cpp
+            src/electrical/laplacian_solvers/AMGBiCGStab.h
+            src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
     add_executable(oblivious_routing ${SRC_FILES})
 endif()
 

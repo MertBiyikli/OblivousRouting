@@ -11,6 +11,7 @@
 
 class ObliviousRoutingSolver { // TODO: rename the class name
 public:
+    bool debug = false;
     std::vector<double> oracle_running_times;
     int iteration_count = 0;
     std::unordered_map<std::pair<int, int> , std::unordered_map<std::pair<int, int>, double >> f_e_st;

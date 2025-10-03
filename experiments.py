@@ -6,6 +6,20 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from glob import glob
 from datetime import datetime
+def count_edges(graph_path: Path) -> int:
+    with graph_path.open() as f:
+        lines = f.readlines()
+    try:
+        start = lines.index("@arcs\n")
+    except ValueError:
+        return 0
+    count = 0
+    for line in lines[start+1:]:
+        if line.startswith("@"):  # next section begins
+            break
+        if line.strip():
+            count += 1
+    return count
 
 def guess_exe():
     names = [
@@ -27,6 +41,7 @@ CANON = {
     "tree": "tree", "raecke": "tree", "frt": "tree", "r": "tree", "t": "tree", "1": "tree",
     "cohen": "cohen", "lp": "cohen", "applegate": "cohen", "ac": "cohen", "l": "cohen", "2": "cohen",
     "mst": "mst", "random_mst": "mst", "raecke_mst": "mst", "m": "mst", "3": "mst",
+    "electrical_optimized": "electrical_optimized", "ef_opt": "electrical_optimized", "eo": "electrical_optimized", "4": "electrical_optimized",
 }
 
 CANON_DEMAND = {
@@ -48,21 +63,41 @@ def canon_demand(s: str) -> str:
         raise ValueError(f"Unknown demand token: {s}")
     return CANON_DEMAND[k]
 
-def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float, logs_dir: Path, demand_model: str):
+import threading
+
+# global: track processes per (solver, graph, rep)
+group_processes = {}
+group_lock = threading.Lock()
+
+def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float,
+            logs_dir: Path, demand_model: str, number_edges: int = None) -> dict:
     start = time.perf_counter()
     ts = datetime.now().isoformat(timespec="seconds")
-    base = f"{solver}_{graph.stem}_rep{rep}_{demand_model}"
+    base = f"{solver}_{graph.stem}_rep{rep}_{demand_model}_{number_edges}_edges"
     out_path = logs_dir / f"{base}.out"
     err_path = logs_dir / f"{base}.err"
     cmd = [str(exe), solver, str(graph), demand_model]
+
+    p = subprocess.Popen(cmd, stdout=out_path.open("wb"), stderr=err_path.open("wb"))
+
+    # register this process under its group
+    group_key = (solver, str(graph), rep)
+    with group_lock:
+        group_processes.setdefault(group_key, []).append(p)
+
     try:
-        with out_path.open("wb") as out, err_path.open("wb") as err:
-            p = subprocess.run(cmd, stdout=out, stderr=err, timeout=timeout)
+        p.wait(timeout=timeout)
         timed_out = False
         rc = p.returncode
     except subprocess.TimeoutExpired:
         timed_out = True
         rc = 124
+        # Kill all jobs in this group
+        with group_lock:
+            for proc in group_processes.get(group_key, []):
+                if proc.poll() is None:  # still running
+                    proc.kill()
+
     wall = time.perf_counter() - start
     return {
         "timestamp": ts,
@@ -77,6 +112,7 @@ def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float, logs_
         "demand": demand_model
     }
 
+
 def main():
     ap = argparse.ArgumentParser(description="Batch runner for oblivious_routing executable.")
     ap.add_argument("--exe", default=guess_exe(), help="Path to executable")
@@ -85,7 +121,7 @@ def main():
     ap.add_argument("--graphs", nargs="+", required=True,
                     help="Graph files or globs (e.g., data/*.lfg data/small.lfg)")
     ap.add_argument("--repeats", type=int, default=1, help="Repeat each combo N times")
-    ap.add_argument("--timeout", type=float, default=1800, help="Per-run timeout (seconds)")
+    ap.add_argument("--timeout", type=float, default=1200, help="Per-run timeout (seconds)")
     ap.add_argument("--jobs", type=int, default=1, help="Parallel workers")
     ap.add_argument("--demand-model", nargs="+", default=["gravity"], help="Demand model to use (e.g., gravity, binomial)")
     ap.add_argument("--dry-run", action="store_true", help="Only print jobs to run, don’t execute them")
@@ -155,7 +191,8 @@ def main():
     all_ok = True
     results = []
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futs = [pool.submit(run_one, exe, s, g, r, args.timeout, logs_dir, demand)
+
+        futs = [pool.submit(run_one, exe, s, g, r, args.timeout, logs_dir, demand, count_edges(g))
                 for (s, g, r, demand) in combos]
 
         for fut in as_completed(futs):

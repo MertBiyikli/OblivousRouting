@@ -22,6 +22,7 @@ double LinearObliviousRatio::solve() {
 
     for ( const auto& [edge, flowMap]:routing) {
         for (const auto& [com, flow_value]  : flowMap) {
+            if ( flow_value < 1e-15 ) continue; // ignore zero flows
             auto undirected_edge = (edge.first < edge.second ? edge : std::make_pair(edge.second, edge.first));
 
             auto it = demand_vector.find( com );

@@ -9,10 +9,11 @@
 #include "../graph.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
-#include "AMGSolver.h"
+#include "laplacian_solvers/AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 #include "../tree_based/frt/raecke_frt_transform.h"
+#include "laplacian_solvers/LaplacianSolverFactory.h"
 
 struct FlowPath {
     std::vector<std::pair<int, int>> path;
@@ -27,7 +28,12 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
 
 
 
-    bool debug = false;
+    // Preallocate scratch buffers as class members to avoid reallocs
+    Eigen::VectorXd scratch_s;
+    std::vector<double> scratch_abs;
+
+
+
     std::vector<Eigen::SparseMatrix<double>> Ms;
 
     Eigen::SparseMatrix<double> W; // weight diagonal matrix
@@ -39,6 +45,9 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
     int n, m;
     Eigen::SparseMatrix<double> B;
     Eigen::SparseMatrix<double> U;
+
+    Eigen::SparseMatrix<double> bw_product_t;
+
     double roh = 0.0;
     double alpha_local = 0.0;
     double inv_m = 0.0;
@@ -56,6 +65,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
 
     void initEdgeDistances();
     void updateEdgeDistances();
+    // std::vector<Eigen::SparseVector<double>>  getRoutingMatrix();
     Eigen::SparseMatrix<double>  getRoutingMatrix();
     void buildWeightDiag();
     void refreshWeightMatrix();
@@ -72,7 +82,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
 public:
     // LaplacianSolver solver;
     Graph m_graph;
-    AMGSolver amg;
+    std::unique_ptr<LaplacianSolver> amg;
 
     // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
     std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x
@@ -86,7 +96,7 @@ public:
     void run();
 
     std::unordered_map<std::pair<int, int>, double> getApproxLoad();
-    void init(const Graph& g, bool debug = false);
+    void init(const Graph& g,const std::string& solver_name = ("amg_cg"), bool debug = false);
 
     Eigen::SparseMatrix<double> getFinalRoutingMatrix();
     std::unordered_map<std::pair<int, int>, Eigen::VectorXd> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);
@@ -109,7 +119,7 @@ public:
     double getCongForCommodity(int edge_id, int source, int target);
 
     void solve(const Graph& g) override {
-        this->init(g, debug);
+        this->init(g);
         this->run();
     }
     void storeFlow() override;

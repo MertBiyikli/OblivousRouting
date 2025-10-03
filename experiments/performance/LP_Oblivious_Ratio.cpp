@@ -16,7 +16,6 @@ void ObliviousRatio::init(Graph &g, const std::unordered_map<std::pair<int,int>,
             demands.insert(st);
         }
     }
-
 }
 
 double ObliviousRatio::solve() {
@@ -25,7 +24,6 @@ double ObliviousRatio::solve() {
     for (const auto& [edge, _] : routing) {
         auto result = solveWorstCaseDemandLPPerEdge(edge);
         max_cong = std::max(result, max_cong);
-
     }
     return max_cong;
 }

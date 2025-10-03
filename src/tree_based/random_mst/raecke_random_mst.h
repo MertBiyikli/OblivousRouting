@@ -29,7 +29,7 @@ class RaeckeMST : public RaeckeBase<MSTTree> {
     std::vector<int> mst_parents;
 
 public:
-    bool debug = false;
+
 
     // all pure virtual function to be implemented
     void init(Graph& _g);

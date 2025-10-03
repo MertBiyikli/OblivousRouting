@@ -283,6 +283,7 @@ struct Edge{
     int target;
     double capacity;
     double distance = 0.0; // optional distance, used in some algorithms
+
 };
 /*
 struct Arc{

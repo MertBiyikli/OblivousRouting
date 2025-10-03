@@ -24,14 +24,15 @@
 
 
 
-#include "../graph.h"
+#include "../../graph.h"
 #include <unordered_map>
-#include "../utils/hash.h"
+#include "../../utils/hash.h"
+#include "LaplacianSolver.h"
 #include <iostream>
 
-class AMGSolver{
+class AMGSolver : public LaplacianSolver {
 private:
-    bool debug = false;
+
     // AMG Solver define types
     typedef amgcl::make_solver<
             amgcl::amg<
@@ -43,48 +44,31 @@ private:
     > Solver;
 
 
+    std::unique_ptr<Solver> solver;
 
-    int n;
-
-    struct indexKey {
-        int r, c;
-        bool operator==(const indexKey &o) const { return r==o.r && c==o.c; }
-    };
-    struct indexKeyHash {
-        std::size_t operator()(const indexKey &k) const {
-            return std::hash<int>()(k.r*73856093 ^ k.c*19349663);
-        }
-    };
-    std::unordered_map<indexKey, int, indexKeyHash> m_indexMap;
-    std::unordered_map<std::pair<int,int>, int> m_edgeIndexMap;
-    int findIndex(int r, int c) const {
-        for (int k = m_row_ptr[r]; k < m_row_ptr[r + 1]; ++k)
-            if (m_col_ind[k] == c) return k;
-        return -1;
-    }
 
 public:
 
     void check_openmp_runtime();
-    // CSR storage
-    std::vector<int> m_row_ptr, m_row_ptr_red;
-    std::vector<int> m_col_ind, m_col_ind_red;
-    std::vector<double> m_values, m_values_red;
+
 
     int n_reduced = 0;
 
-    std::unordered_map<std::pair<int, int>, double> m_edge_weights; // Edge weights
-    void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false);
-    void buildLaplacian();
+ //   std::unordered_map<std::pair<int, int>, double> m_edge_weights; // Edge weights
+ //   void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false);
+ //   void buildLaplacian();
     // void buildReducedLaplacian();
     std::vector<double> solve(const std::vector<double> &b);
     Eigen::VectorXd solve(const Eigen::VectorXd &b);
     // Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
+    void updateSolver() override;
+    void buildLaplacian() override;
+    void buildLaplacian_(const Graph& g) override;
 
-    void updateSolver();
+
     bool updateEdge(int u, int v, double new_weight);
 
-    bool checkMatrix() const;
+    /*bool checkMatrix() const;*/
 
 };
 

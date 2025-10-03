@@ -130,6 +130,7 @@ def count_nodes_edges_lgf(path):
         pass
     return n, m
 
+
 # ------------------------ Main ------------------------
 
 def main():
@@ -183,6 +184,7 @@ def main():
 
     # Save merged for debugging
     df.to_csv(os.path.join(args.outdir, "merged_debug.csv"), index=False)
+
 
     # --------- Plot 1: Average running time by solver ---------
     if "run_ms" in df.columns:
@@ -264,54 +266,95 @@ def main():
         plt.savefig(os.path.join(args.outdir, "mwu_iterations_per_instance.png"), dpi=180)
         plt.close()
 
-    # --------- Plot 5: Worst-case congestion per demand model ---------
-    if "demand_congestion" in df.columns:
-        # Expand dict column into multiple demand columns
-        demand_df = df["demand_congestion"].dropna().apply(pd.Series)
-        df = pd.concat([df, demand_df], axis=1)
-
-        for demand in ["bimodal", "gaussian", "gravity", "uniform"]:
-            if demand in df.columns:
-                runs = df.dropna(subset=[demand]).copy()
-                runs = runs.groupby(["graph_name", "solver"])[demand].mean().reset_index()
-                fig, ax = plt.subplots()
-                for solver, sub in runs.groupby("solver"):
-                    ax.plot(sub["graph_name"], sub[demand], label=solver)
-                ax.set_title(f"Worst-case Congestion ({demand})")
-                ax.set_ylabel("Congestion")
-                ax.set_xticklabels([])   # hide the text labels
-                ax.legend()
-                fig.autofmt_xdate(rotation=90)
-                fig.tight_layout()
-                plt.savefig(os.path.join(args.outdir, f"worst_congestion_{demand}.png"), dpi=180)
-                plt.close()
-
-        # --------- Extra Plot: Average worst-case congestion per demand model ---------
-    if "demand_congestion" in df.columns:
+        # --------- Compute relative demand congestion per run ---------
+    if "demand_congestion" in df.columns and "worst_congestion" in df.columns:
         demand_df = df["demand_congestion"].dropna().apply(
             lambda x: pd.Series(x) if isinstance(x, dict) else pd.Series({})
         )
         df_expanded = pd.concat([df, demand_df], axis=1)
 
-        averages = {}
         for demand in ["bimodal", "gaussian", "gravity", "uniform"]:
             if demand in df_expanded.columns:
-                # Extract only numeric values safely
-                vals = df_expanded[demand].apply(
-                    lambda x: float(x) if isinstance(x, (int, float)) else None
-                ).dropna()
-                if not vals.empty:
-                    averages[demand] = vals.mean()
+                rel_col = f"{demand}_rel_pct"
+                df_expanded[rel_col] = (df_expanded[demand] / df_expanded["worst_congestion"]) * 100
 
-        if averages:
-            fig, ax = plt.subplots()
-            pd.Series(averages, dtype=float).plot.bar(ax=ax, color="skyblue")
-            ax.set_title("Average Worst-case Congestion by Demand Model")
-            ax.set_ylabel("Congestion")
-            ax.set_xlabel("Demand Model")
-            fig.tight_layout()
-            plt.savefig(os.path.join(args.outdir, "avg_worst_congestion_per_demand.png"), dpi=180)
-            plt.close()
+                runs = df.dropna(subset=[rel_col]).copy()
+                runs = runs.groupby(["graph_name", "solver"], as_index=False).agg({
+                    rel_col: "mean"
+                }).sort_values("graph_name")
+
+                fig, ax = plt.subplots(figsize=(12, 4))  # wide for readability
+                for solver, sub in runs.groupby("solver"):
+                    ax.plot(
+                        sub["graph_name"],
+                        sub[rel_col],
+                        marker="o",
+                        markersize=3,
+                        linestyle="-",
+                        label=solver,
+                    )
+
+                ax.axhline(100, color="black", linestyle="--", linewidth=1)
+                ax.set_title(f"{demand.capitalize()} congestion vs Worst-case (per instance)")
+                ax.set_ylabel("% of Worst-case Congestion")
+                ax.set_xlabel("Graph instances")
+                ax.set_xticks(range(len(runs["graph_name"].unique())))
+                ax.set_xticklabels(runs["graph_name"].unique(), rotation=90, fontsize=6)
+                ax.legend()
+                fig.tight_layout()
+                plt.savefig(os.path.join(args.outdir, f"rel_vs_worst_{demand}_per_instance.png"), dpi=180)
+                plt.close()
+
+
+
+
+    # --------- Extra Plot: Relative congestion (demand model vs worst-case) ---------
+    if "demand_congestion" in df.columns and "worst_congestion" in df.columns:
+        demand_df = df["demand_congestion"].dropna().apply(
+            lambda x: pd.Series(x) if isinstance(x, dict) else pd.Series({})
+        )
+        df_expanded = pd.concat([df, demand_df], axis=1)
+
+        for demand in ["bimodal", "gaussian", "gravity", "uniform"]:
+            if demand in df.columns and "worst_congestion" in df.columns:
+                rel_col = f"{demand}_rel_pct"
+                df[rel_col] = (df[demand] / df["worst_congestion"]) * 100
+
+                if rel_col not in df.columns:
+                    continue  # skip if no data
+
+                runs = df.dropna(subset=[rel_col]).copy()
+                if runs.empty:
+                    continue
+
+                runs = runs.groupby(["graph_name", "solver"], as_index=False).agg({
+                    rel_col: "mean"
+                }).sort_values("graph_name")
+
+                fig, ax = plt.subplots(figsize=(12, 4))
+                for solver, sub in runs.groupby("solver"):
+                    ax.plot(
+                        sub["graph_name"],
+                        sub[rel_col],
+                        marker="o",
+                        markersize=3,
+                        linestyle="-",
+                        label=solver,
+                    )
+
+                ax.axhline(100, color="black", linestyle="--", linewidth=1)
+                ax.set_title(f"{demand.capitalize()} congestion vs Worst-case (per instance)")
+                ax.set_ylabel("% of Worst-case Congestion")
+                ax.set_xlabel("Graph instances")
+                ax.set_xticks(range(len(runs["graph_name"].unique())))
+                ax.set_xticklabels(runs["graph_name"].unique(), rotation=90, fontsize=6)
+                ax.legend()
+                fig.tight_layout()
+                plt.savefig(os.path.join(args.outdir, f"rel_vs_worst_{demand}_per_instance.png"), dpi=180)
+                plt.close()
+
+        # --------- Extra Plot: Average worst-case congestion per demand model ---------
+
 
 
 if __name__ == "__main__":
