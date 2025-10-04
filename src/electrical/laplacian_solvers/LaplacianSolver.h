@@ -63,6 +63,25 @@ public:
         return -1;
     }
 
+    void init(std::vector<double>& _adj_edge_weights, int n,  std::vector<std::pair<int, int>>& edges, bool debug = false) {
+        this->debug = debug;
+        this->n = n;
+        m_row_ptr.clear();
+        m_col_ind.clear();
+        m_values.clear();
+
+        // convert edge list to edge weight map
+        m_edge_weights.clear();
+        for(int i = 0; i<edges.size(); i++) {
+            auto [e1, e2] = edges[i];
+            double w = _adj_edge_weights[i];
+            m_edge_weights[{e1, e2}] = w;
+            m_edge_weights[{e2, e1}] = w; // keep it symmetric
+        }
+
+        buildLaplacian();
+    }
+
     void init(std::vector<std::vector<double>>& _adj_edge_weights, int n, const Graph& g, bool debug = false) {
         this->debug = debug;
         this->n = n;
@@ -87,6 +106,58 @@ public:
         buildLaplacian();
 
 
+    }
+
+    void updateAllEdges(const std::vector<double>& new_weights,
+                    const std::vector<std::pair<int,int>>& edges) {
+        if (new_weights.size() != edges.size()) {
+            throw std::runtime_error("updateAllEdges: size mismatch between weights and edges");
+        }
+
+        for (size_t e = 0; e < edges.size(); ++e) {
+            int u = edges[e].first;
+            int v = edges[e].second;
+            double old_w = m_edge_weights[{u, v}];
+            double new_w = new_weights[e];
+            double delta = new_w - old_w;
+
+            if (std::abs(delta) < 1e-18) continue;
+
+            // Keep map symmetric
+            m_edge_weights[{u, v}] = new_w;
+            m_edge_weights[{v, u}] = new_w;
+
+            // --- Update CSR Laplacian entries ---
+            // Diagonal contributions
+            m_values[m_indexMap[{u, u}]] += delta;
+            m_values[m_indexMap[{v, v}]] += delta;
+
+            // Off-diagonal contributions
+            m_values[m_indexMap[{u, v}]] -= delta;
+            m_values[m_indexMap[{v, u}]] -= delta;
+
+        }
+    }
+
+    void updateAllEdges(const std::vector<std::vector<double>>& new_weights, const Graph& G) {
+        for (int u = 0; u < n; ++u) {
+            for (int idx = 0; idx < G.neighbors(u).size(); ++idx) {
+                int v = G.neighbors(u)[idx];
+
+                    double weight = new_weights[u][idx];
+                    double delta = weight - adj_edge_weights[u][idx];
+                    m_edge_weights[{u, v}] = weight; // Update the weight
+
+                    // Update diagonal
+                    m_values[m_indexMap[{u,u}]] += delta;
+                    m_values[m_indexMap[{v,v}]] += delta;
+
+                    // Update off-diagonals
+                    m_values[m_indexMap[{u,v}]] -= delta;
+                    m_values[m_indexMap[{v,u}]] -= delta;
+
+            }
+        }
     }
 
     void updateAllEdges(const std::unordered_map<std::pair<int, int>, double>& new_weights) {

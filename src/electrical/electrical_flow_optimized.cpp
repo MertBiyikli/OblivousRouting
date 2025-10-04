@@ -9,12 +9,15 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init(const Graph &g,const std::string& solver_name,  bool debug)
+void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string& solver_name)
 {
     m_graph = g;
 
     n = m_graph.getNumNodes();
     m = m_graph.getNumEdges();
+
+    adj_f_e_u_id.resize(m);
+    adj_f_e_u.resize(m);
 
     // set algorithm parameters
     roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
@@ -27,93 +30,65 @@ void ElectricalFlowOptimized::init(const Graph &g,const std::string& solver_name
     // fix a node x
     this->x_fixed = rand()%n; // Randomly select a fixed node x from the graph
 
-    // initialize distance, weights, probabilities
     initEdgeDistances();
-    extract_edge_list();
-
-    // initialize the Laplacian Solver
-    // Choose solver type dynamically (string or enum)
-    amg = SolverFactory::create(solver_name);   // or "amg_bicgstab" / "eigen_direct"
-    amg->init(w_edges2weights, n, debug);
-    //amg->init(w_edge_weight, n,g, debug);
-    this->debug = debug;
-
-
-    // ToDo: remove this later on...
-
-
-    // amg->check_openmp_runtime();
-    // compute diagonal matrix consisting of only the capacities
-    U = Eigen::SparseMatrix<double>(m, m);
-    for(int i = 0; i < m; ++i) {
-        U.insert(i, i) = c_edges2capacities[edges[i]]; // Insert the capacities into the diagonal matrix
-    }
-
-    this->SketchMatrix_T = getSketchMatrix(m, n, 0.5).transpose(); // Initialize the sketch matrix with epsilon = 0.5
-
-
-    // Precompute X = Bᵀ U Cᵀ once
+    buildWeightDiag();
     buildIncidence();
+
+    // init AMG
+    amg = SolverFactory::create(solver_name);
+    amg->init(edge_weights, n, edges, debug);
+
+    // U: diagonal of capacities (per-edge)
+    U = Eigen::SparseMatrix<double>(m, m);
+    for (int e = 0; e < m; ++e) U.insert(e, e) = edge_capacities[e];
+
+    SketchMatrix_T = getSketchMatrix(m, n, 0.5).transpose();
+
     Eigen::MatrixXd UCt = SketchMatrix_T; // m × ℓ
     for (int e = 0; e < m; ++e)
-        UCt.row(e) *= U.coeff(e,e);
-    auto X_dense = (B.transpose() * UCt ); // n × ℓ
+        UCt.row(e) *= U.coeff(e, e);
+
+    auto X_dense = (B.transpose() * UCt); // n × ℓ
     X = X_dense.sparseView();
 
 }
 
 void ElectricalFlowOptimized::initEdgeDistances() {
+    extract_edge_list();
 
-/*
-    this->x_edge_distance.resize(n);
-    this->p_edge_probability.resize(n);
-    this->w_edge_weight.resize(n);
-    this->c_edge_capacity.resize(n);
+    // note that the edges are stored undirected
+    // --- Per-edge init ---
+    edge_distances.assign(m, 1.0);
+    edge_capacities.resize(m);
+    edge_probabilities.resize(m);
+    edge_weights.resize(m);
 
-    // Initialize the edge distances and probabilities
-    for(int u = 0; u < n; ++u) {
-        for(int v : m_graph.neighbors(u)) {
-            double distance = 1.0;
-
-            x_edge_distance[u].push_back(distance);
-            double p_ = distance/cap_X;
-            p_edge_probability[u].push_back(p_);
-            double cap = m_graph.getEdgeCapacity(u, v);
-            c_edge_capacity[u].push_back(cap);
-            double w_ = std::pow(cap, 2) * 1.0/(p_ + inv_m);
-            w_edge_weight[u].push_back(w_);
-
-        }
+    for (int e = 0; e < m; ++e) {
+        auto [u,v] = edges[e];
+        double cap = m_graph.getEdgeCapacity(u, v);      // undirected capacity accessor
+        edge_capacities[e]  = cap;
+        edge_probabilities[e] = edge_distances[e] / cap_X;
+        edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);
     }
-*/
-    // Initialize the edge distances and probabilities
-    for(int u = 0; u < n; ++u) {
-        for(int v : m_graph.neighbors(u)) {
-            double distance = 1.0;
-            x_edge2distance[{u, v}] = distance; // Initialize distances to 1.0
-            c_edges2capacities[{u, v}] = m_graph.getEdgeCapacity( u, v);
 
-            // Update the probability based on the new distance
-            double p = distance/cap_X;
-            p_edge2probability[{u, v}] = p;
 
-            double w = std::pow(c_edges2capacities[{u, v}], 2) * 1.0/(p + inv_m); // Calculate the weight based on the probability and inverse of the number of edges
-            w_edges2weights[{u, v}] = w;
-        }
-    }
 }
 
 
 void ElectricalFlowOptimized::extract_edge_list() {
-    // we store only the undirected edges
+
+    // adjancency list version
+
+    // -> for the adjacency version we may not need an extra vector edges anymore...
     edges.reserve(m);
-    for(auto &kv : x_edge2distance) {
-        auto [u,v] = kv.first;
-        if(u < v) {
-            edges.emplace_back(u,v);
+    for (int u = 0; u<n; u++) {
+        for (int idx = 0; idx < m_graph.neighbors(u).size(); ++idx) {
+            const int v = m_graph.neighbors(u)[idx];
+            if (u < v) {
+                edges.emplace_back(u,v);
+            }
         }
     }
-
 
 
     // sort the edges based on the first node, then second node
@@ -122,163 +97,78 @@ void ElectricalFlowOptimized::extract_edge_list() {
                   if (a.first != b.first) return a.first < b.first;
                   return a.second < b.second;
               });
-
 }
 
 
 
 void ElectricalFlowOptimized::buildIncidence()
 {
-    if(B.nonZeros() == 0) {
+    if (B.nonZeros() == 0) {
         B = Eigen::SparseMatrix<double>(m, n);
-        std::vector<Eigen::Triplet<double>> T;
-        T.reserve(2*m);
-        for(int e = 0; e < m; ++e){
-            // auto [u,v] = edges[e];
-            T.emplace_back(e, edges[e].first, -1.0);
-            T.emplace_back(e, edges[e].second, +1.0);
+        std::vector<Eigen::Triplet<double>> T; T.reserve(2*m);
+        for (int e = 0; e < m; ++e) {
+            auto [u,v] = edges[e]; // u < v
+            T.emplace_back(e, u, -1.0);
+            T.emplace_back(e, v, +1.0);
         }
-        B.setFromTriplets(std::make_move_iterator(T.begin()),
-                  std::make_move_iterator(T.end()));
+        B.setFromTriplets(T.begin(), T.end());
     }
 }
 
 void ElectricalFlowOptimized::buildWeightDiag() {
-    if(!W.nonZeros()) {
-        // 1. Build W as a sparse diagonal matrix
+    if (!W.nonZeros()) {
         W = Eigen::SparseMatrix<double>(m, m);
-        std::vector<Eigen::Triplet<double>> w_triplets(m);
-        for (int e = 0; e < m; ++e) {
-            double weight = w_edges2weights[edges[e]];
-            w_triplets.emplace_back(e, e, weight); // Add a triplet for the diagonal entry
-        }
+        std::vector<Eigen::Triplet<double>> w_triplets; w_triplets.reserve(m);
+        for (int e = 0; e < m; ++e)
+            w_triplets.emplace_back(e, e, edge_weights[e]);
         W.setFromTriplets(w_triplets.begin(), w_triplets.end());
     }
-
-/*
-    // TODO: NOT Yet finished -> unordered_map -> adj_list of edge weights
-    if (!W.nonZeros()) {
-        // 1. Build W as a sparse diagonal matrix
-        W = Eigen::SparseMatrix<double>(m, m);
-        std::vector<Eigen::Triplet<double>> w_triplets(m);
-        int e_id = 0;
-        for (int v = 0; v < n; v++) {
-            for (int u_iter = 0; u_iter< m_graph.neighbors(v).size(); u_iter++) {
-                if (v > m_graph.neighbors(v)[u_iter]) continue; // only add one direction of the edge
-                // auto edge = std::make_pair(v, m_graph.neighbors(v)[u_iter]);
-
-                // int e = std::distance(edges.begin(), std::find(edges.begin(), edges.end(), edge));
-                double weight = w_edge_weight[v][u_iter];
-                w_triplets.emplace_back(e_id, e_id, weight); // Add a triplet for the diagonal entry
-                e_id++;
-            }
-        }
-    }*/
-}
-
-void ElectricalFlowOptimized::updateEdgeDistances() {
-    // Update the edge distances and probabilities
-    for(auto& edge : edges) {
-        int v = edge.first;
-        int u = edge.second;
-
-        double distance = x_edge2distance[edge];
-        if(distance <= 0.0 || std::isnan(distance)) continue;
-
-        // Update the probability based on the new distance
-        double p = distance/cap_X;
-        p_edge2probability[edge] = p;
-
-        double w = std::pow(c_edges2capacities[edge], 2) * 1.0/(p + inv_m); // Calculate the weight based on the probability and inverse of the number of edges
-        w_edges2weights[edge] = w;
-
-        w_edges2weights[{u, v}] = w; // Update the weight for the edge in the same order as edges vector
-
-        //amg->updateEdge(v, u, w);
-        //solver.NonSyncUpdateEdgeWeights({v, u}, w); // Update the weights in the Laplacian solver
-
-    }
-    //solver.SyncEdgeWeights(); // Synchronize the weights in the Laplacian solver
-
-    // TODO: change this by only changing the numeric values of the matrix solver
-    //amg->init(w_edges2weights, n);
-    amg->updateAllEdges(w_edges2weights);
-    amg->updateSolver();
-
-    refreshWeightMatrix();
-
-
-    if(debug) {
-        std::cout << "Updated edge distances and weights.\n";
-        std::cout << "Total capacity cap_X: " << cap_X << "\n";
-        std::cout << "Number of edges: " << edges.size() << "\n";
-        for(int i = 0; i < edges.size(); ++i) {
-            auto e = edges[i];
-            std::cout << "Edge (" << e.first << ", " << e.second << "): "
-                      << "Distance = " << x_edge2distance[e] << ", "
-                      << "Weight = " << w_edges2weights[e] << ", "
-                      << "Probability = " << p_edge2probability[e] << ", "
-                      << "Capacity = " << c_edges2capacities[e] << "\n";
-        }
-    }
-
-    // for now comment the below code out
-    /*
-    /// TODO: New:
-
-    // TODO: here comes the implementation for using adj_list as edge weights
-    cap_X = 0.0;
-
-    for (int v = 0; v < n; v++) {
-        for (int u_iter = 0; u_iter < m_graph.neighbors(v).size(); u_iter++) {
-            int u = m_graph.neighbors(v)[u_iter];
-            if (v > u) continue;
-
-            double dist = x_edge_distance[v][u_iter];
-            if (dist <= 0.0 || std::isnan(dist)) continue;
-
-            double p_ = dist / cap_X;
-            p_edge_probability[v][u_iter] = p_;
-
-            double cap = m_graph.getEdgeCapacity(v, u);
-            double w_ = std::pow(cap, 2) * 1.0/(p_ + inv_m);
-            w_edge_weight[v][u_iter] = w_;
-
-            // look up edge id and update edge vector
-            int eid = edge_id_map[make_key(v,u)];
-            edges[eid].weight = w_;
-        }
-    }
-
-
-    refreshWeightMatrix();
-    amg->init(w_edge_weight, n, m_graph);
-    */
 }
 
 void ElectricalFlowOptimized::refreshWeightMatrix() {
     if (!W.nonZeros()) {
-        W = Eigen::SparseMatrix<double>(m, m);
-        std::vector<Eigen::Triplet<double>> triplets;
-        triplets.reserve(m);
-        for (int e = 0; e < m; e++) {
-            double w = w_edges2weights[edges[e]];
-            triplets.emplace_back(e, e, w);
-        }
-        W.setFromTriplets(triplets.begin(), triplets.end());
+        buildWeightDiag();
     } else {
-        for (int e = 0; e < m; e++) {
-            double w = w_edges2weights[edges[e]];
-            W.coeffRef(e,e) = w;
-        }
+        for (int e = 0; e < m; ++e)
+            W.coeffRef(e, e) = edge_weights[e];
     }
 }
+
+void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& load) {
+
+    // Update distances per-edge, then mirror to per-adj
+    cap_X = 0.0;
+    for (int e = 0; e < m; ++e) {
+        if (load[e] <= 0.0 || std::isnan(load[e])) continue;
+        edge_distances[e] *= (1 + (1/(2*roh)) * load[e]);
+        cap_X += edge_distances[e];
+    }
+
+    // Per-edge recompute
+    for (int e = 0; e < m; ++e) {
+        double x = edge_distances[e];
+        if (x <= 0.0 || std::isnan(x)) continue;
+
+        double p = x / cap_X;
+        edge_probabilities[e] = p;
+
+        double cap = edge_capacities[e];
+        double w   = std::pow(cap, 2) / (p + inv_m);
+        edge_weights[e] = w;
+    }
+    amg->updateAllEdges(edge_weights, edges);
+    amg->updateSolver();
+
+    refreshWeightMatrix();
+}
+
 
 
 void ElectricalFlowOptimized::run() {
     // Sparse RHS with only two nonzeros per demand (+1 at u, -1 at x_fixed)
     Eigen::SparseVector<double> rhs(n);
     rhs.reserve(2);
+    std::vector<double> load(m, 0.0);
 
     for (int t = 0; t < this->iteration_count; ++t) {
         auto start = std::chrono::high_resolution_clock::now();
@@ -297,13 +187,12 @@ void ElectricalFlowOptimized::run() {
             Eigen::VectorXd x = amg->solve(rhs);
 
             // accumulate edge flows for commodity (u -> x_fixed):
-            // f_e = w_e * (x[a] - x[b])
-            // Use the contiguous 'weights' vector to avoid unordered_map in hot loop.
+            // f_e(u) = w_e * (x[u]-x[v])
             for (int e = 0; e < m; ++e) {
-                const auto [a, b] = edges[e];
-                const double fval = w_edges2weights[edges[e]] * (x[a] - x[b]);
+                double fval = edge_weights[e] * (x[edges[e].first] - x[edges[e].second]);
                 if (std::abs(fval) > 1e-16) {
-                    f_e_u[{e, u}] += fval;
+                    addFlow(e, u, fval); // per-adjacency list version
+                    //f_e_u[{e, u}] += fval;
                 }
             }
         }
@@ -320,39 +209,74 @@ void ElectricalFlowOptimized::run() {
             }
         }
 
-        // Approximate load & weight update (unchanged)
-        auto aload = getApproxLoad();
-
-        // --- Update distances based on loads ---
-        cap_X = 0.0;
-        for (int e = 0; e < m; ++e) {
-            auto edge = edges[e];
-            double load = aload[e];
-            if (load <= 0.0 || std::isnan(load)) continue;
-
-            x_edge2distance[edge] *= (1 + (1/(2*roh)) * load);
-            cap_X += x_edge2distance[edge];
-        }
-
-
-        updateEdgeDistances(); // keeps 'weights' vector in sync
+        getApproxLoad(load);
+        updateEdgeDistances(load); // keeps 'weights' vector in sync
 
         auto end = std::chrono::high_resolution_clock::now();
         oracle_running_times.push_back(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
         );
     }
+/*
+    // check if the flow map is in sync with the adjacency list version
+    bool in_sync = true;
+    for (int e = 0; e < m; ++e) {
+        for (int idx = 0; idx < adj_f_e_u_id[e].size(); ++idx) {
+            int u = adj_f_e_u_id[e][idx];
+            double f_adj = adj_f_e_u[e][idx];
+            double f_map = f_e_u[{e, u}];
+            if (std::abs(f_adj - f_map) > 1e-9) {
+                in_sync = false;
+                std::cerr << "Mismatch for edge_id=" << e << ", u=" << u
+                          << ": adj_list=" << f_adj << ", map=" << f_map << "\n";
+            }
+        }
+    }
 
+    // check the reverse direction
+    for(const auto& [e_u, f_map] : f_e_u) {
+        int e = e_u.first;
+        int u = e_u.second;
+        auto it = std::find(adj_f_e_u_id[e].begin(), adj_f_e_u_id[e].end(), u);
+        if (it == adj_f_e_u_id[e].end()) {
+            in_sync = false;
+            std::cerr << "Missing entry in adjacency list for edge_id=" << e << ", u=" << u
+                      << ": map=" << f_map << "\n";
+        } else {
+            int idx = std::distance(adj_f_e_u_id[e].begin(), it);
+            double f_adj = adj_f_e_u[e][idx];
+            if (std::abs(f_adj - f_map) > 1e-9) {
+                in_sync = false;
+                std::cerr << "Mismatch for edge_id=" << e << ", u=" << u
+                          << ": adj_list=" << f_adj << ", map=" << f_map << "\n";
+            }
+        }
+    }*/
+/*
     // Average flows across iterations
     for (auto &kv : f_e_u) {
         kv.second /= static_cast<double>(iteration_count);
-    }
+    }*/
 
-    scaleFlowDown();
+    //scaleFlowDown();
 }
 
 
 void ElectricalFlowOptimized::scaleFlowDown() {
+
+    // scale the flow from the adjacency list flow
+    for(int e = 0; e < m; ++e) {
+        for(int idx = 0; idx < adj_f_e_u_id[e].size(); ++idx) {
+            int u = adj_f_e_u_id[e][idx];
+            double f_adj = adj_f_e_u[e][idx];
+            f_adj /= static_cast<double>(iteration_count);
+            adj_f_e_u[e][idx] = f_adj;
+            f_e_u[{e, u}] = f_adj; // keep the map in sync
+        }
+    }
+
+
+    // TODO: move this into an extra function that is called after the run() method
     // scale the flow values to meet one unit of flow per commodity
     // for this sum up the outgoing for each source s of each commodity pair (s, t)
     // and multiply \forall e \in E f_st(e) by 1/sum_{s} f_st(e)
@@ -390,47 +314,35 @@ void ElectricalFlowOptimized::scaleFlowDown() {
     }
 }
 
-std::vector<double> ElectricalFlowOptimized::getApproxLoad() {
-    int ell = X.cols(); // sketch dimension
-
-    // Per-edge scratch storage
+void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
+    int ell = X.cols();
     std::vector<std::vector<double>> edge_diffs(m);
     for (int e = 0; e < m; ++e) edge_diffs[e].reserve(ell);
 
     Eigen::VectorXd rhs(n), sol(n);
-
-    // Solve for each RHS column
     for (int i = 0; i < ell; ++i) {
         rhs = X.col(i);
-        sol = amg->solve(rhs);   // ⬅️ reuse AMG hierarchy, only numeric update between runs
+        sol = amg->solve(rhs);
 
-        // Accumulate differences for all edges
-        // #pragma omp parallel for if(m > 200) schedule(static)
         for (int e = 0; e < m; ++e) {
             auto [u,v] = edges[e];
-            double diff = std::abs(sol[u] - sol[v]);
-            edge_diffs[e].push_back(diff);
+            edge_diffs[e].push_back(std::abs(sol[u] - sol[v]));
         }
     }
 
-    // Compute median per edge + weight/capacity scaling
-    std::vector<double> approx_load(m);
-// #pragma omp parallel for if(m > 200) schedule(static)
     for (int e = 0; e < m; ++e) {
         auto &arr = edge_diffs[e];
-        size_t mid = arr.size()/2;
+        size_t mid = arr.size() / 2;
         std::nth_element(arr.begin(), arr.begin()+mid, arr.end());
         double med = arr[mid];
-        approx_load[e] = w_edges2weights[edges[e]] * med / c_edges2capacities[edges[e]];
-
-        if(debug) {
-            const auto& [u,v] = edges[e];
-            std::cout << "Edge ("<<u<<","<<v<<") load="<<approx_load[e]<<"\n";
+        load[e] = edge_weights[e] * med / edge_capacities[e];
+        if (debug) {
+            auto [u,v] = edges[e];
+            std::cout << "Edge ("<<u<<","<<v<<") load="<<load[e]<<"\n";
         }
     }
-
-    return approx_load;
 }
+
 
 // Compute the median absolute difference between two node potentials
 // across all ℓ sampled solutions.
@@ -454,24 +366,33 @@ double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
 
 
 void ElectricalFlowOptimized::storeFlow(){
-    for (int edge_id = 0; edge_id < edges.size(); edge_id++) {
-        int u = edges[edge_id].first, v = edges[edge_id].second;
-        for (int s = 0; s<n; ++s) {
-            for (int t = 0; t<n; t++) {
-                if ( s == t ) continue;
+// adjacency list version
+    // TODO: uncomment this
 
-                double flow = getFlowForCommodity(edge_id, s, t);
-                if (std::abs(flow) > 1e-9) {
+    int e = 0;
+    for (int u = 0; u<n; ++u) {
+        for (int idx = 0; idx < m_graph.neighbors(u).size(); ++idx) {
+            int v = m_graph.neighbors(u)[idx];
+            if ( u > v ) continue;
 
-                    // since this linear
-                    if (flow <0) {
-                        f_e_st[{v, u}][{s, t}] = -flow; // Store the reverse flow as well
-                    }else {
-                        f_e_st[{u, v}][{s, t}] = flow;
+            for (int s = 0; s<n; ++s) {
+                for (int t = 0; t<n; t++) {
+                    if ( s == t ) continue;
+
+                    double flow = getFlowForCommodity(e, s, t);
+                    if (std::abs(flow) > 1e-9) {
+
+                        // since this linear
+                        if (flow <0) {
+                            f_e_st[{v, u}][{s, t}] = -flow; // Store the reverse flow as well
+                        }else {
+                            f_e_st[{u, v}][{s, t}] = flow;
+                        }
+                        //f_e_st[{v, u}][{t, s}] = -flow; // Store the reverse flow as well
                     }
-                    //f_e_st[{v, u}][{t, s}] = -flow; // Store the reverse flow as well
                 }
             }
+            e++;
         }
     }
 }

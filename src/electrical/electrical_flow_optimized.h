@@ -32,6 +32,15 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     double inv_m = 0.0;
     // std::unordered_map<std::pair<int, int>, double> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
 
+    std::vector<double> edge_weights;             // w_e
+    std::vector<double> edge_capacities;          // c_e
+    std::vector<double> edge_distances;           // x_e
+    std::vector<double> edge_probabilities;       // p_e
+
+    // --- Per-adjacency (directed, aligned with Graph::neighbors(u)) ---
+    std::vector<std::vector<int>> adj_edge_ids;   // maps (u, idx) -> edge_id (same id on both directions)
+
+
     //std::vector<std::vector<double>> x_edge_distance, p_edge_probability, w_edge_weight, c_edge_capacity;
     double cap_X = 0.0;
 
@@ -50,7 +59,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     // Helpers
     void extract_edge_list();
     void initEdgeDistances();
-    void updateEdgeDistances();
+    void updateEdgeDistances(const std::vector<double>& load);
     void buildWeightDiag();
     void refreshWeightMatrix();
     void buildIncidence();
@@ -62,7 +71,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     public:
 
     void solve(const Graph& g) override {
-        this->init(g);
+        this->init(g, debug);
         this->run();
     }
     void storeFlow() override;
@@ -79,12 +88,16 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     }
 
     std::unordered_map<long long, int> edge_id_map;
+
+    // std::vector<WeightedEdge> edges_with_weights; // u<v only
+
+
     std::vector<std::pair<int, int> > edges; // u<v only
     // std::vector<double>              weights; // same order
     void run();
     void scaleFlowDown();
 
-    std::vector<double> getApproxLoad();
+    void getApproxLoad(std::vector<double>& load);
     // Compute the median absolute difference between two node potentials
     // across all ℓ sampled solutions.
     //   diffs_u = potentials[u][*]  (length ℓ)
@@ -92,7 +105,31 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     double recoverNorm(const std::vector<double>& diffs_u,
                                             const std::vector<double>& diffs_v);
 
-    void init(const Graph& g,const std::string& solver_name = ("amg_cg"), bool debug = false);
+    void init(const Graph& g, bool debug = false, const std::string& solver_name = ("amg_cg"));
+
+
+
+    // for debugging purposes
+    bool CheckIfAdjacencyListInSyncWithUnordered_Map() const;
+
+    std::vector<std::vector<int>> adj_f_e_u_id; // per-adjacency list version of f_e_u (stores edge ids)
+    std::vector<std::vector<double>> adj_f_e_u; // per-adjacency list version of f_e_u
+    void addFlow(int edge_id, int u, double flow) {
+        // keep the edges and flows sorted by id
+        if (adj_f_e_u_id[edge_id].empty() || adj_f_e_u_id[edge_id].back() < u) {
+            adj_f_e_u_id[edge_id].push_back(u);
+            adj_f_e_u[edge_id].push_back(flow);
+        } else {
+            auto it = std::ranges::lower_bound(adj_f_e_u_id[edge_id], u);
+            int idx = std::distance(adj_f_e_u_id[edge_id].begin(), it);
+            if (it != adj_f_e_u_id[edge_id].end() && *it == u) {
+                adj_f_e_u[edge_id][idx] += flow; // accumulate
+            } else {
+                adj_f_e_u_id[edge_id].insert(it, u);
+                adj_f_e_u[edge_id].insert(adj_f_e_u[edge_id].begin() + idx, flow);
+            }
+        }
+    }
 
 };
 

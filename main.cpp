@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
-    solver->debug = true;
+    //solver->debug = true;
     solver->solve(g);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;

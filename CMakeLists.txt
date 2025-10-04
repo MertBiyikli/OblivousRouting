@@ -13,7 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Set sensible defaults per build type
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -pg" CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -fno-omit-frame-pointer" CACHE STRING "" FORCE) # add for macOs debugging
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "" FORCE)
 
 # Good stacks on Clang/GCC:

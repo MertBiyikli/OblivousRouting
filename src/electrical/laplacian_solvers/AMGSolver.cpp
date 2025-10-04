@@ -34,81 +34,56 @@ void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weig
     buildLaplacian();
 }*/
 
-
 void AMGSolver::buildLaplacian_(const Graph& g) {
-    // --- Step 1: Aggregate edge contributions into an adjacency list ---
-
-
-    std::vector<std::vector<int>> adj_list(n);
-    std::vector<std::vector<double>> adj_laplacian(n);
-
-    // first handle the diagonal entries
-    std::vector<double> diagonal(n, 0.0);
-    for (int v = 0; v < n; v++) {
-        for (int u_iter = 0; u_iter<g.neighbors(v).size(); u_iter++) {
-            int u = g.neighbors(v)[u_iter];
-            if (u == v) continue; // skip self-loops
-            double weights = adj_edge_weights[v][u_iter];
-
-            diagonal[v] += weights;
-            diagonal[u] += weights;
+    // --- Step 1: Aggregate edge contributions into a Laplacian map ---
+    struct pair_hash {
+        size_t operator()(const std::pair<int,int>& p) const {
+            return std::hash<int>()(p.first * 73856093 ^ p.second * 19349663);
         }
-    }
+    };
+    std::unordered_map<std::pair<int,int>, double, pair_hash> L;
 
-    // create Laplacian from the edge weights
-    for ( int v = 0; v<n; v++) {
-        // Laplacian contributions:
-        adj_list[v].push_back(v);
-        adj_laplacian[v].push_back(diagonal[v]);
-    }
-
-    int ctr_nnz = 0;
-
-    // create Laplacian from the edge weights
-    for ( int v = 0; v<n; v++) {
-        for ( int u_iter = 0; u_iter<n; u_iter++) {
-            int u = g.neighbors(v)[u_iter];
-            double w = adj_edge_weights[v][u_iter];
+    for (int u = 0; u < n; ++u) {
+        for (int idx = 0; idx<g.neighbors(u).size(); idx++) {
+            int v = g.neighbors(u)[idx];
+            double w = adj_edge_weights[u][idx];
             if (u == v) continue;
-            // Laplacian contributions:
-            adj_list[v].push_back(u);
-            adj_laplacian[v].push_back(-w);
 
-            ctr_nnz++;
+            // Laplacian contributions:
+            L[{u,u}] += w;
+            L[{v,v}] += w;
+            L[{u,v}] -= w;
+            L[{v,u}] -= w;
         }
     }
-
 
     // --- Step 2: Count non-zeros per row ---
     m_row_ptr.assign(n + 1, 0);
-    for (int v = 0; v < n; v++) {
-        m_row_ptr[v + 1]++;
+    for (auto &entry : L) {
+        int r = entry.first.first;
+        m_row_ptr[r + 1]++;
     }
-
-    for (int v = 0; v<n; v++) {
-        m_row_ptr[v + 1] += m_row_ptr[v];
+    for (int i = 0; i < n; i++) {
+        m_row_ptr[i + 1] += m_row_ptr[i];
     }
 
     // --- Step 3: Fill col_ind and values ---
-    ctr_nnz += n; // for diagonal entries
-    m_col_ind.resize(ctr_nnz);
-    m_values.resize(ctr_nnz);
+    int nnz = (int)L.size();
+    m_col_ind.resize(nnz);
+    m_values.resize(nnz);
 
     std::vector<int> offset(n, 0);
     m_indexMap.clear();
 
-
-    for (int v = 0; v<n; v++) {
-        for (int k = 0; k<adj_list[v].size(); k++) {
-            int u = adj_list[v][k];
-            double val = adj_laplacian[v][k];
-            int pos = m_row_ptr[v] + offset[v]++;
-            m_col_ind[pos] = u;
-            m_values[pos] = val;
-            m_indexMap[{v, u}] = pos;
-        }
+    for (auto &entry : L) {
+        int r = entry.first.first;
+        int c = entry.first.second;
+        double val = entry.second;
+        int pos = m_row_ptr[r] + offset[r]++;
+        m_col_ind[pos] = c;
+        m_values[pos] = val;
+        m_indexMap[{r, c}] = pos;
     }
-
 
     // --- Step 4: Sort columns within each row ---
     for (int r = 0; r < n; ++r) {
@@ -128,8 +103,6 @@ void AMGSolver::buildLaplacian_(const Graph& g) {
         }
     }
 
-    // for now keep this step same as in buildLaplacian()
-    // in a more optimized version, we can put into #debug
     // --- Step 5: Check diagonal entries ---
     if(debug) {
         for (int i = 0; i < n; ++i) {
@@ -156,9 +129,8 @@ void AMGSolver::buildLaplacian_(const Graph& g) {
         }
     }
 
-
     Solver::params prm;
-    prm.solver.tol = 1e-12;
+    prm.solver.tol = 1e-6;
 
     if(debug) {
         std::cout << "row_ptr\n";
@@ -173,6 +145,7 @@ void AMGSolver::buildLaplacian_(const Graph& g) {
     // Construct solver
     solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
 }
+
 
 void AMGSolver::buildLaplacian() {
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---

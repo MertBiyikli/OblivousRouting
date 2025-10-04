@@ -96,7 +96,7 @@ public:
     void run();
 
     std::unordered_map<std::pair<int, int>, double> getApproxLoad();
-    void init(const Graph& g,const std::string& solver_name = ("amg_cg"), bool debug = false);
+    void init(const Graph& g,bool debug = false,const std::string& solver_name = ("amg_cg"));
 
     Eigen::SparseMatrix<double> getFinalRoutingMatrix();
     std::unordered_map<std::pair<int, int>, Eigen::VectorXd> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);
@@ -119,7 +119,7 @@ public:
     double getCongForCommodity(int edge_id, int source, int target);
 
     void solve(const Graph& g) override {
-        this->init(g);
+        this->init(g, debug);
         this->run();
     }
     void storeFlow() override;

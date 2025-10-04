@@ -78,7 +78,7 @@ void diagnose_csr_laplacian(
 
 
 
-void ElectricalFlowNaive::init(const Graph &g,const std::string& solver_name,  bool debug) {
+void ElectricalFlowNaive::init(const Graph &g,bool debug,const std::string& solver_name) {
     m_graph = g;
 
     n = m_graph.getNumNodes();
@@ -372,8 +372,10 @@ std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLo
         Eigen::VectorXd u = amg->solve(X.col(i));
         V.col(i) = u;
         if(debug) {
+            /*
             std::cout << "rhs: \n" <<X.col(i) << "\n";
             std::cout << "Column " << i << " of U:\n" << u.transpose() << "\n";
+            */
         }
     }
 
