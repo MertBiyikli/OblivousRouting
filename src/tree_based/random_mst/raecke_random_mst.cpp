@@ -24,7 +24,7 @@ void RaeckeMST::init(Graph& _g) {
         }
     }
 }
-
+/*
 double RaeckeMST::iterate(int treeIndex) {
     MSTTree t = getTree(m_graph);
     m_trees.push_back(t);
@@ -38,73 +38,54 @@ double RaeckeMST::iterate(int treeIndex) {
     m_graphs.push_back(Graph(m_graph));
 
     return delta;
-}
+}*/
 
 
 MSTTree RaeckeMST::getTree(Graph &g) {
-    std::vector<std::pair<int,int>> mst_edges = mst.build_mst(g);
-    MSTTree t = mst.build_tree(g, mst_edges, 0);
-
     // Todo: maybe think of a more lets say clean approach of recomputing the distance
     computeNewDistances(g);
+    std::vector<std::pair<int,int>> mst_edges = mst.build_mst(g);
+    MSTTree t = mst.build_tree(g, mst_edges, 0);
     return t;
 }
 
-void RaeckeMST::computeRLoads(int treeIndex, MSTTree &_t, Graph& g) {
-
-    if(m_idTree2edge2rload.size() <= treeIndex) {
+// raecke_random_mst.cpp
+void RaeckeMST::computeRLoads(int treeIndex, MSTTree& _t, Graph& g) {
+    if (m_idTree2edge2rload.size() <= treeIndex) {
         m_idTree2edge2rload.resize(treeIndex + 1);
     }
-
-
-
-    m_idTree2edge2rload[treeIndex] = std::unordered_map<std::pair<int, int>, double>();
     auto& edge2Load = m_idTree2edge2rload[treeIndex];
+    edge2Load.clear();
 
-    // collect all tree edges that are incidient to one of the endpoints from e
-    std::unordered_set<std::pair<int, int>> treeEdges;
+    constexpr double EPS = 1e-12;
 
-    for (int u = 0; u < g.getNumNodes(); u++) {
-        for (const auto& v : g.neighbors(u)) {
+    // For each original (undirected) edge, compute rload via the unique MST path
+    for (int u = 0; u < g.getNumNodes(); ++u) {
+        for (int v : g.neighbors(u)) {
+            if (u > v) continue; // handle each undirected edge once
 
-            treeEdges.clear();
-            // compute the rloads for each edge e in the original graph
+            // Get MST path (sequence of vertices) between u and v
+            std::vector<int> path = RandomMST::getMSTPath(u, v, _t.parent);
 
-            // iterate through the parent and children in _t to find the tree edges
-            for (auto& child : _t.children[u]) {
-                std::pair<int, int> edge = {std::min(u, child), std::max(u, child)};
-                treeEdges.insert(edge);
+            // Sum capacities along the MST path
+            double path_cap_sum = 0.0;
+            for (size_t i = 1; i < path.size(); ++i) {
+                int a = path[i-1], b = path[i];
+                path_cap_sum += g.getEdgeCapacity(a, b);
             }
 
-            for (auto& child : _t.children[v]) {
-                std::pair<int, int> edge = {std::min(v, child), std::max(v, child)};
-                treeEdges.insert(edge);
-            }
+            // Denominator: capacity of (u,v), floored to avoid div-by-zero
+            double cap_uv = g.getEdgeCapacity(u, v);
+            if (cap_uv < EPS) cap_uv = EPS;
 
-            // parent edge
-            if ( _t.parent[v] != v) {
-                std::pair<int, int> edge = {std::min(v, _t.parent[v]), std::max(v, _t.parent[v])};
-                treeEdges.insert(edge);
-            }
-            if ( _t.parent[u] != u) {
-                std::pair<int, int> edge = {std::min(u, _t.parent[u]), std::max(u, _t.parent[u])};
-                treeEdges.insert(edge);
-            }
+            double rload = path_cap_sum / cap_uv;
 
-            double rload = 0;
-            // compute the rload for each edge
-            for (const auto& edge : treeEdges) {
-                rload += g.getEdgeCapacity(edge.first, edge.second);
-            }
-
-            rload /= g.getEdgeCapacity(u, v);
-            // add to the edge2Load map
-            m_idTree2edge2rload[treeIndex][{u, v}] = rload;
-            m_idTree2edge2rload[treeIndex][{v, u}] = rload; // undirected graph
-
+            // Store both directions for convenience
+            edge2Load[{u, v}] = rload;
+            edge2Load[{v, u}] = rload;
         }
     }
-
 }
+
 
 

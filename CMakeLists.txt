@@ -73,7 +73,6 @@ set(SRC_FILES
         src/tree_based/random_mst/mst.h
         src/tree_based/random_mst/raecke_random_mst.cpp
         src/tree_based/random_mst/raecke_random_mst.h
-        src/tree_based/random_mst/raecke_mst_solver.cpp
         src/tree_based/random_mst/raecke_mst_solver.h
         src/tree_based/random_mst/raecke_mst_transform.h
         src/tree_based/raecke_framework.h
@@ -82,8 +81,6 @@ set(SRC_FILES
         experiments/performance/linear_oblivious_routing_ratio.h
         experiments/performance/linear_oblivious_routing_ratio.cpp
         src/electrical/laplacian_solvers/LaplacianSolver.h
-        src/electrical/laplacian_solvers/AMGBiCGStab.cpp
-        src/electrical/laplacian_solvers/AMGBiCGStab.h
         src/electrical/laplacian_solvers/LaplacianSolverFactory.h
         src/electrical/electrical_flow_optimized.cpp
         src/electrical/electrical_flow_optimized.h
@@ -105,8 +102,6 @@ if(USE_OPENMP)
     add_library(amg_solver_obj OBJECT src/electrical/laplacian_solvers/AMGSolver.cpp
             src/electrical/laplacian_solvers/AMGSolver.h
             src/electrical/laplacian_solvers/LaplacianSolver.h
-            src/electrical/laplacian_solvers/AMGBiCGStab.cpp
-            src/electrical/laplacian_solvers/AMGBiCGStab.h
             src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
     target_link_libraries(amg_solver_obj PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
     target_include_directories(amg_solver_obj PRIVATE
@@ -132,8 +127,6 @@ else()
     list(APPEND SRC_FILES src/electrical/laplacian_solvers/AMGSolver.cpp
             src/electrical/laplacian_solvers/AMGSolver.h
             src/electrical/laplacian_solvers/LaplacianSolver.h
-            src/electrical/laplacian_solvers/AMGBiCGStab.cpp
-            src/electrical/laplacian_solvers/AMGBiCGStab.h
             src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
     add_executable(oblivious_routing ${SRC_FILES})
 endif()

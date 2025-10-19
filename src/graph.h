@@ -24,6 +24,8 @@ class Graph{
     std::vector<std::vector<int>> m_adj;
     std::vector<std::vector<double>> m_adj_capacities, m_adj_distances;
     std::vector<std::vector<double>> m_distanceMatrix;
+    std::vector<std::vector<int>> m_next; // next[i][j] = first node after i on the shortest path to j
+
 public:
     Graph() = default;
     Graph(int n) : m_adj(n), m_adj_capacities(n), m_adj_distances(n) {
@@ -39,6 +41,7 @@ public:
           m_adj_capacities(other.m_adj_capacities),
           m_adj_distances(other.m_adj_distances),
           m_distanceMatrix(other.m_distanceMatrix),
+          m_next(other.m_next),
           m(other.getNumEdges()){};
 
     Graph& operator=(const Graph& other) {
@@ -48,6 +51,7 @@ public:
             m_adj_capacities = other.m_adj_capacities;
             m_adj_distances = other.m_adj_distances;
             m_distanceMatrix = other.m_distanceMatrix;
+            m_next = other.m_next;
             m = other.getNumEdges();
         }
         return *this;
@@ -192,30 +196,50 @@ public:
 
     void createDistanceMatrix() {
         int n = getNumNodes();
-        m_distanceMatrix.resize(n, std::vector<double>(n, std::numeric_limits<double>::infinity()));
+        const double INF = std::numeric_limits<double>::infinity();
 
-        for(int i = 0; i < n; ++i) {
-            m_distanceMatrix[i][i] = 0.0; // Distance to self is 0
-            for(size_t j = 0; j < m_adj[i].size(); ++j) {
-                int neighbor = m_adj[i][j];
-                double distance = m_adj_distances[i][j];
-                m_distanceMatrix[i][neighbor] = distance;
+        m_distanceMatrix.assign(n, std::vector<double>(n, INF));
+        m_next.assign(n, std::vector<int>(n, -1));
+
+        // --- Initialization ---
+        for (int i = 0; i < n; ++i) {
+            m_distanceMatrix[i][i] = 0.0;
+            m_next[i][i] = i;
+
+            for (size_t k = 0; k < m_adj[i].size(); ++k) {
+                int j = m_adj[i][k];
+                double dist = m_adj_distances[i][k];
+                if (dist < m_distanceMatrix[i][j]) {
+                    m_distanceMatrix[i][j] = dist;
+                    m_distanceMatrix[j][i] = dist;   // <== ensure symmetry
+                    m_next[i][j] = j;
+                    m_next[j][i] = i;                // <== reverse direction too
+                }
             }
         }
 
-        // Floyd-Warshall algorithm to compute all-pairs shortest paths
-        for(int k = 0; k < n; ++k) {
-            for(int i = 0; i < n; ++i) {
-                for(int j = 0; j < n; ++j) {
-                    if(m_distanceMatrix[i][j] > m_distanceMatrix[i][k] + m_distanceMatrix[k][j]) {
-                        m_distanceMatrix[i][j] = m_distanceMatrix[i][k] + m_distanceMatrix[k][j];
+        // --- Floyd–Warshall main loop ---
+        for (int k = 0; k < n; ++k) {
+            for (int i = 0; i < n; ++i) {
+                if (m_distanceMatrix[i][k] == INF) continue; // unreachable
+                for (int j = 0; j < n; ++j) {
+                    if (m_distanceMatrix[k][j] == INF) continue;
+                    double alt = m_distanceMatrix[i][k] + m_distanceMatrix[k][j];
+                    if (alt < m_distanceMatrix[i][j]) {
+                        m_distanceMatrix[i][j] = alt;
+                        m_next[i][j] = m_next[i][k]; // first step i→k
+
+                        // also maintain the reverse for undirected graphs
+                        m_distanceMatrix[j][i] = alt;
+                        m_next[j][i] = m_next[j][k];
                     }
                 }
             }
         }
     }
 
-    double GetDiameter() const {
+
+    const double GetDiameter() const {
         if (m_distanceMatrix.empty()) {
             throw std::runtime_error("Distance matrix is not initialized. Call createDistanceMatrix() first.");
         }
@@ -230,6 +254,19 @@ public:
         }
         return diameter;
     }
+
+    std::vector<int> getPrecomputedShortestPath(int u, int v) const {
+        std::vector<int> path;
+        if (m_next.empty() || m_next[u][v] == -1) return path; // no path
+        path.push_back(u);
+        while (u != v) {
+            u = m_next[u][v];
+            if (u == -1) { path.clear(); return path; } // disconnected
+            path.push_back(u);
+        }
+        return path;
+    }
+
 
     std::vector<int> getShortestPath(int u, int v) {
         if (u < 0 || u >= m_adj.size() || v < 0 || v >= m_adj.size()) {

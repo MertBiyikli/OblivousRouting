@@ -58,8 +58,8 @@ public:
  //   void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false);
  //   void buildLaplacian();
     // void buildReducedLaplacian();
-    std::vector<double> solve(const std::vector<double> &b);
-    Eigen::VectorXd solve(const Eigen::VectorXd &b);
+    std::vector<double> solve(const std::vector<double> &b) override;
+    Eigen::VectorXd solve(const Eigen::VectorXd &b) override;
     // Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
     void updateSolver() override;
     void buildLaplacian() override;

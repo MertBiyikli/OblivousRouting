@@ -38,6 +38,7 @@ public:
                        Tree& _t,
                        Graph& copyGraph) = 0;
 
+
     void run() {
         init(m_graph);
         int id = 0;
@@ -49,6 +50,8 @@ public:
             oracle_running_times.push_back((std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start)).count());
             id++;
         }
+
+
     }
 
     virtual double iterate(int treeIndex) {
@@ -117,33 +120,79 @@ public:
 
 
     virtual void computeNewDistances(Graph &g) {
-        double totalRLoadsAllEdges = this->getRloadAllEdges(g);
-        std::unordered_map<std::pair<int, int>, double> edge2scaledDist;
+        constexpr double EPS = 1e-12;
 
-        for(int u = 0; u<g.getNumNodes(); u++) {
-            for (const auto& v : g.neighbors(u)) {
+        // --- 1) Compute totalrLoad for every edge and track max (for log-sum-exp) ---
+        std::unordered_map<std::pair<int,int>, double> total_r_by_edge;
+        total_r_by_edge.reserve(static_cast<size_t>(g.getNumEdges()) * 2);
+
+        double max_total_r = -std::numeric_limits<double>::infinity();
+
+        for (int u = 0; u < g.getNumNodes(); ++u) {
+            for (int v : g.neighbors(u)) {
                 double totalrLoad = 0.0;
                 for (size_t i = 0; i < m_trees.size(); ++i) {
-                    auto it = this->m_idTree2edge2rload[i].find({u, v});
-                    double rLoad = (it != this->m_idTree2edge2rload[i].end() ? it->second : 0.0);
-                    totalrLoad += rLoad * m_lambdas[i];
+                    auto it = m_idTree2edge2rload[i].find({u, v});
+                    if (it != m_idTree2edge2rload[i].end()) {
+                        totalrLoad += it->second * m_lambdas[i];
+                    }
                 }
-                double num         = std::exp(totalrLoad) / g.getEdgeCapacity(u, v);
-                double newDistance = num / totalRLoadsAllEdges;
+                total_r_by_edge[{u, v}] = totalrLoad;
+                if (totalrLoad > max_total_r) max_total_r = totalrLoad;
+            }
+        }
 
-                if(std::isinf(newDistance) || std::isinf(num)) {
-                    throw std::runtime_error("Infinity encountered in newDistance or Exponential calculation for edge: " + std::to_string(u) + " → " + std::to_string(v));
+        // If no trees yet (first iteration), we still need (finite) distances.
+        if (!std::isfinite(max_total_r)) max_total_r = 0.0;
+
+        // --- 2) Compute denominator using the same shift (log-sum-exp) ---
+        // denom = Σ_e exp(totalrLoad(e))
+        //       = exp(M) * Σ_e exp(totalrLoad(e) - M)
+        // We only need the scaled sum: sumExp = Σ_e exp(totalrLoad(e) - M)
+        double sumExp = 0.0;
+        for (int u = 0; u < g.getNumNodes(); ++u) {
+            for (int v : g.neighbors(u)) {
+                double tr = total_r_by_edge[{u, v}] - max_total_r;
+                // exp of (possibly negative) number; safe
+                sumExp += std::exp(tr);
+            }
+        }
+        // Guard against degenerate graphs
+        if (sumExp <= 0.0 || !std::isfinite(sumExp)) {
+            throw std::runtime_error("computeNewDistances: invalid sumExp in log-sum-exp normalization.");
+        }
+
+        // --- 3) Update distances with the same shift in numerator & denominator ---
+        // newDistance(u,v) = [exp(totalrLoad(u,v)) / cap(u,v)] / Σ_e exp(totalrLoad(e))
+        //                  = [exp(totalrLoad(u,v) - M) / cap(u,v)] / Σ_e exp(totalrLoad(e) - M)
+        //                  = safe, because both numerator and denominator are well-scaled.
+        std::unordered_map<std::pair<int,int>, double> edge2scaledDist;
+        edge2scaledDist.reserve(total_r_by_edge.size());
+
+        for (int u = 0; u < g.getNumNodes(); ++u) {
+            for (int v : g.neighbors(u)) {
+                double cap = g.getEdgeCapacity(u, v);
+                if (cap < EPS) cap = EPS;
+
+                double tr_shifted = total_r_by_edge[{u, v}] - max_total_r;
+                double num_scaled = std::exp(tr_shifted) / cap;  // safe
+
+                if (!std::isfinite(num_scaled)) {
+                    throw std::runtime_error("computeNewDistances: non-finite num_scaled for edge (" +
+                                             std::to_string(u) + "," + std::to_string(v) + ").");
                 }
 
-                if(std::isnan(newDistance)) {
-                    throw std::runtime_error("NaN encountered in newDistance calculation for edge: " + std::to_string(u) + " → " + std::to_string(v));
+                double newDistance = num_scaled / sumExp;        // also safe
+                if (!std::isfinite(newDistance)) {
+                    throw std::runtime_error("computeNewDistances: non-finite newDistance for edge (" +
+                                             std::to_string(u) + "," + std::to_string(v) + ").");
                 }
 
                 edge2scaledDist[{u, v}] = newDistance;
             }
         }
 
-        // Normalize distances
+        // --- 4) Normalize distances to keep min distance = 1 (your original policy) ---
         normalizeDistance(g, edge2scaledDist);
     }
 
@@ -152,13 +201,13 @@ public:
         double minDistance = std::numeric_limits<double>::infinity();
         for(int u = 0; u < _g.getNumNodes(); u++) {
             for (const auto& v : _g.neighbors(u)) {
-                double scaledDist = edge2scaledDist[{u, v}];
-                if (scaledDist < minDistance) {
-                    minDistance = scaledDist;
-                }
+                auto it = edge2scaledDist.find({u, v});
+                if (it == edge2scaledDist.end()) continue;
+                double d = it->second;
+                if (std::isfinite(d) && d < minDistance) minDistance = d;
             }
         }
-
+        if (!std::isfinite(minDistance) || minDistance <= 0.0) minDistance = 1.0;
         for(int u = 0; u < _g.getNumNodes(); u++) {
             for (const auto &v: _g.neighbors(u)) {
                 double arc2scaledDistValue = edge2scaledDist[{u, v}];

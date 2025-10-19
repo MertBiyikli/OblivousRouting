@@ -73,10 +73,17 @@ def run_one(exe: Path, solver: str, graph: Path, rep: int, timeout: float,
             logs_dir: Path, demand_model: str, number_edges: int = None) -> dict:
     start = time.perf_counter()
     ts = datetime.now().isoformat(timespec="seconds")
-    base = f"{solver}_{graph.stem}_rep{rep}_{demand_model}_{number_edges}_edges"
+    # Construct output base name safely
+    suffix = f"_{demand_model}" if demand_model else ""
+    base = f"{solver}_{graph.stem}_rep{rep}{suffix}_{number_edges}_edges"
     out_path = logs_dir / f"{base}.out"
     err_path = logs_dir / f"{base}.err"
-    cmd = [str(exe), solver, str(graph), demand_model]
+
+    # Build the command dynamically
+    cmd = [str(exe), solver, str(graph)]
+    if demand_model:
+        cmd.append(demand_model)
+
 
     p = subprocess.Popen(cmd, stdout=out_path.open("wb"), stderr=err_path.open("wb"))
 
@@ -123,7 +130,7 @@ def main():
     ap.add_argument("--repeats", type=int, default=1, help="Repeat each combo N times")
     ap.add_argument("--timeout", type=float, default=1200, help="Per-run timeout (seconds)")
     ap.add_argument("--jobs", type=int, default=1, help="Parallel workers")
-    ap.add_argument("--demand-model", nargs="+", default=["gravity"], help="Demand model to use (e.g., gravity, binomial)")
+    ap.add_argument("--demand-model", nargs="+",  default=None, help="Demand model to use (e.g., gravity, binomial)")
     ap.add_argument("--dry-run", action="store_true", help="Only print jobs to run, don’t execute them")
     ap.add_argument("--smoke-test", action="store_true", help="Run only the first job to validate pipeline")
 
@@ -149,7 +156,13 @@ def main():
         sys.exit(1)
 
     solvers = [canon_solver(s) for s in args.solvers]
-    demands = [canon_demand(s) for s in args.demand_model]
+
+    if args.demand_model is not None:
+        demands = [canon_demand(s) for s in args.demand_model]
+    else:
+        # make it empty to use default in executable
+        demands = [None]
+
     logs_dir = Path(args.logs)
     logs_dir.mkdir(parents=True, exist_ok=True)
 

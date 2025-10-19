@@ -40,7 +40,6 @@ public:
                        FRT_Tree& _t,
                        Graph& copyGraph);
 
-
     void setRequirements(const Graph& g);
 
 };

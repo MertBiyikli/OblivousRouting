@@ -28,128 +28,131 @@ void CMMF_Solver::AddDemands(const Demand& d, double demand) {
 }
 
 
+// C++
 void CMMF_Solver::CreateVariables(const Graph &graph) {
-
-
-    // CREATE Alpha variable
+    // α: maximum congestion
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
 
-    for(int v = 0; v<n; v++) {
-        this->map_vertex2edge[v] = std::unordered_map<int, MPVariable*>();
-        for(int edge_id = 0;  edge_id<edges.size(); edge_id++) {
-            if(edges[edge_id].first == v) continue;
-
-            this->map_vertex2edge[v][edge_id] =solver->MakeNumVar(0.0, solver->infinity(),
-                                                                  "f_" + std::to_string(edge_id) + "_" + std::to_string(v));
+    // f[eid, t] >= 0 for every undirected edge and destination t
+    for (int s = 0; s<n; s++) {
+        for (int t = 0; t < n; ++t) {
+            if (s == t) continue;
+            auto &edge2var = map_vertex2edge[{s,t}];
+            edge2var.clear();
+            for (int eid = 0; eid < static_cast<int>(edges.size()); ++eid) {
+                edge2var[eid] = solver->MakeNumVar(
+                    0.0, solver->infinity(),
+                    "f_" + std::to_string(eid) + "_" + std::to_string(t)
+                );
+            }
         }
     }
 }
 
 void CMMF_Solver::CreateConstraints(const Graph &graph) {
-
-    for (int dest = 0; dest < n; ++dest) {
-        for (int v = 0; v < n; ++v) {
-            if (v == dest) continue;
+    // 1) Flow conservation: for each commodity t and node v != t
+    //    sum_out f(v->w, t) - sum_in f(w->v, t) = demand(v, t)
+    for (int s = 0; s < n; ++s) {
+        for (int t = 0; t < n; ++t) {
+            if (s == t) continue;
 
             double rhs = 0.0;
-            auto demand_it = m_demands.find({v, dest});
-            if(demand_it != m_demands.end()) rhs = demand_it->second;
+            auto it = m_demands.find({s, t});
+            if (it != m_demands.end()) rhs = it->second;
 
-            MPConstraint* constraint = solver->MakeRowConstraint(rhs, solver->infinity());
+            MPConstraint* c = solver->MakeRowConstraint(rhs, rhs);
 
+            for (int eid = 0; eid < static_cast<int>(edges.size()); ++eid) {
+                const auto &e = edges[eid];
+                if (e.first == s)  c->SetCoefficient(map_vertex2edge[{s, t}][eid], +1.0); // out
+                if (e.second == s) c->SetCoefficient(map_vertex2edge[{s, t}][eid], -1.0); // in
+            }
+        }
+    }
 
-            for(int edge_id = 0; edge_id<edges.size(); edge_id++) {
+    // 2) Congestion (capacity) constraints for undirected edges {u,v} handled once
+    //    sum_t f(u->v,t) + f(v->u,t) - alpha * cap(u,v) <= 0
+    for (int eid = 0; eid < static_cast<int>(edges.size()); ++eid) {
+        int u = edges[eid].first;
+        int v = edges[eid].second;
+        if (u > v) continue; // ensure each undirected pair processed once
 
-                if(edges[edge_id].first == v) {
-                    constraint->SetCoefficient(map_vertex2edge[dest][edge_id], 1.0);
+        // find reverse arc if present
+        int rev_id = -1;
+        auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(v, u));
+        if (rev_it != edges.end()) rev_id = static_cast<int>(std::distance(edges.begin(), rev_it));
 
-                    // get reverse edge
-                    auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(edges[edge_id].second, edges[edge_id].first));
-                    if(rev_it != edges.end()
-                    && ((*rev_it).first != dest)
-                    ) {
-                        int rev_edge_id = std::distance(edges.begin(),rev_it);
-                        constraint->SetCoefficient( map_vertex2edge[dest][rev_edge_id], -1.0);
-                    }
+        MPConstraint* c = solver->MakeRowConstraint(-solver->infinity(), 0.0);
+
+        // -cap(u,v) * alpha
+        const double cap = graph.getEdgeCapacity(u, v);
+        c->SetCoefficient(alpha, -cap);
+
+        // + sum of flows on both directions (if reverse exists)
+        for (int s = 0; s<n; s++) {
+            for (int t = 0; t < n; ++t) {
+                if (s == t) continue;
+                c->SetCoefficient(map_vertex2edge[{s, t}][eid], +1.0);
+                if (rev_id != -1) {
+                    c->SetCoefficient(map_vertex2edge[{s, t}][rev_id], +1.0);
                 }
             }
-
-            // add constraint greater or equal
-
         }
     }
-
-
-    for(int edge_id = 0; edge_id<edges.size(); edge_id++) {
-        int u = edges[edge_id].first, v = edges[edge_id].second;
-        if(u > v) continue;
-
-        MPConstraint* constraint = solver->MakeRowConstraint(0.0, solver->infinity());
-
-        constraint->SetCoefficient(alpha,  graph.getEdgeCapacity(u, v));
-
-        for(int dest = 0; dest < n; dest++) {
-            if(u == dest) continue;
-            constraint->SetCoefficient(map_vertex2edge[dest][edge_id], -1.0);
-            if(v == dest) continue;
-
-            auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(v,v));
-            int rev_edge_id = -1;
-            if(rev_it != edges.end()) {
-                rev_edge_id = std::distance(edges.begin(), rev_it);
-                constraint->SetCoefficient(map_vertex2edge[dest][rev_edge_id], -1.0);
-            }
-        }
-    }
-
 }
 
 void CMMF_Solver::SetObjective() {
-    // === OBJECTIVE ===
-    solver->MutableObjective()->SetCoefficient(alpha, 1.0);
-    solver->MutableObjective()->SetMinimization();
+    auto* obj = solver->MutableObjective();
+    obj->SetCoefficient(alpha, 1.0);
+    obj->SetMinimization();
 }
+
 
 void CMMF_Solver::PrintSolution(const Graph &graph) {
     // 1) Print the congestion factor
     std::cout << "α = " << alpha->solution_value() << "\n\n";
 
     // 2) For each commodity (i.e. each destination “t”) print all non-zero arc flows
-    for (int t = 0; t < graph.getNumNodes(); ++t) {
-        std::cout << "Flows for commodity dest=" << t << ":\n";
-        auto &edge2var = map_vertex2edge[t];
-        bool any = false;
-        for (auto &kv : edge2var) {
-            int arcId    = kv.first;
-            MPVariable* v= kv.second;
-            double f     = v->solution_value();
-            if (f > 1e-8) {
-                any = true;
-                const auto &e = edges[arcId];
-                std::cout
-                        << "  edge (" << e.first << " / " << e.second << "): "
-                        << f << "\n";
+    for (int s = 0; s < n; s++) {
+        for (int t = 0; t < graph.getNumNodes(); ++t) {
+            if ( s == t) continue;
+            std::cout << "Flows for commodity dest=" << s << " -> " << t << ":\n";
+            auto &edge2var = map_vertex2edge[{s, t}];
+            bool any = false;
+            for (auto &kv : edge2var) {
+                int arcId    = kv.first;
+                MPVariable* v= kv.second;
+                double f     = v->solution_value();
+                if (f > 1e-8) {
+                    any = true;
+                    const auto &e = edges[arcId];
+                    std::cout
+                            << "  edge (" << e.first << " / " << e.second << "): "
+                            << f << "\n";
+                }
             }
+            if (!any) {
+                std::cout << "  (all zero)\n";
+            }
+            std::cout << "\n";
         }
-        if (!any) {
-            std::cout << "  (all zero)\n";
-        }
-        std::cout << "\n";
     }
-
     // 3) (Optional) If you also want to see total load per undirected edge:
     //    sum over both directions
     std::cout << "Total load per undirected edge:\n";
     std::map<std::pair<int,int>, double> und_load;
-    for (int t = 0; t < graph.getNumNodes(); ++t) {
-        for (auto &kv : map_vertex2edge[t]) {
-            int arcId = kv.first;
-            double f  = kv.second->solution_value();
-            if (f <= 1e-8) continue;
-            const auto &e = edges[arcId];
-            // key = sorted pair of endpoints
-            auto key = std::minmax(e.first, e.second);
-            und_load[key] += f;
+    for (int s = 0; s < n; s++) {
+        for (int t = 0; t < graph.getNumNodes(); ++t) {
+            if (s == t) continue;
+            for (auto &kv : map_vertex2edge[{s,t}]) {
+                int arcId = kv.first;
+                double f  = kv.second->solution_value();
+                if (f <= 1e-8) continue;
+                const auto &e = edges[arcId];
+                // key = sorted pair of endpoints
+                auto key = std::minmax(e.first, e.second);
+                und_load[key] += f;
+            }
         }
     }
     for (auto &kv : und_load) {

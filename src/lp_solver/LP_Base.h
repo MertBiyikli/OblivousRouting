@@ -78,7 +78,7 @@ public:
             std::cerr << "WARNING: LP is infeasible or unbounded.\n";
             return false;
         } else {
-            std::cout << "Optimal congestion alpha: " << alpha->solution_value() << std::endl;
+            std::cout << "Optimal offline congestion: " << alpha->solution_value() << std::endl;
 
             return true;
         }

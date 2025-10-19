@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     Graph g;
     g.readLFGFile(cfg->filename, /*undirected?*/ true);
     std::cout << "Graph loaded: " << g.getNumNodes() << " nodes, " << g.getNumEdges() << " edges.\n";
-    // g.print();
+    //g.print();
 
     std::unique_ptr<ObliviousRoutingSolver> solver;
     switch (cfg->solver) {
@@ -63,12 +63,14 @@ int main(int argc, char **argv) {
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
     //solver->storeFlow();
     //solver->printFlow();
-/*
+
     // compute worst case demand for linear oblivious routing
+
+    /*
     LinearObliviousRatio ratio;
     ratio.init(g, solver->f_e_st);
     std::cout << "Linear oblivious routing worst case demand congestion: " << ratio.solve() << std::endl;
-    */
+*/
 /*
     // compute worst case demand set
     ObliviousRatio OR;
@@ -76,18 +78,20 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    //HandleDemandModel(argc, argv, cfg, g, solver);
+    // HandleDemandModel(argc, argv, cfg, g, solver);
 
-    std::cout << "MWU number of iterations: " << solver->GetIterationCount() << std::endl;
 
-    // compute the average oracle running time
-    double mean = 0;
-    for (const auto& t : solver->oracle_running_times) {
-        mean += t;
+    if (cfg->solver != SolverType::LP_APPLEGATE_COHEN) {
+        std::cout << "MWU number of iterations: " << solver->GetIterationCount() << std::endl;
+
+        // compute the average oracle running time
+        double mean = 0;
+        for (const auto& t : solver->oracle_running_times) {
+            mean += t;
+        }
+        mean /= solver->oracle_running_times.size();
+        std::cout << "Average oracle time: " << mean << " [milliseconds]" << std::endl;
     }
-    mean /= solver->oracle_running_times.size();
-    std::cout << "Average oracle time: " << mean << " [milliseconds]" << std::endl;
-
 
     return 0;
 }

@@ -63,7 +63,6 @@ public:
     // Build a random MST edge set using Kruskal with random priorities
     std::vector<std::pair<int,int>> build_mst(const Graph& g, uint64_t seed=0xC0FFEE) {
 
-
         std::vector<std::tuple<double,int,int>> keyed;
         keyed.reserve(this->edges.size());
         for (auto [u,v] : this->edges) keyed.emplace_back(g.getEdgeDistance(u, v), u, v);

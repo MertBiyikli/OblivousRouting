@@ -258,7 +258,7 @@ void ElectricalFlowOptimized::run() {
         kv.second /= static_cast<double>(iteration_count);
     }*/
 
-    //scaleFlowDown();
+    scaleFlowDown();
 }
 
 
@@ -364,7 +364,7 @@ double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
     return abs_diffs[mid];
 }
 
-
+/*
 void ElectricalFlowOptimized::storeFlow(){
 // adjacency list version
     // TODO: uncomment this
@@ -395,9 +395,51 @@ void ElectricalFlowOptimized::storeFlow(){
             e++;
         }
     }
+}*/
+
+
+void ElectricalFlowOptimized::storeFlow(){
+    // adjacency list version
+    for (int e = 0; e<adj_f_e_u_id.size(); e++) {
+        int u = edges[e].first;
+        int v = edges[e].second;
+        for (int s = 0; s<n; ++s) {
+            for (int t = 0; t<n; t++) {
+                if ( s == t ) continue;
+
+
+                double flow(0);
+                auto it = std::find(adj_f_e_u_id[e].begin(), adj_f_e_u_id[e].end(), s);
+                if (it != adj_f_e_u_id[e].end()) {
+                    int idx = std::distance(adj_f_e_u_id[e].begin(), it);
+                    flow = adj_f_e_u[e][idx];
+                }
+                else {
+                    auto it2 = std::find(adj_f_e_u_id[e].begin(), adj_f_e_u_id[e].end(), t);
+                    if (it2 != adj_f_e_u_id[e].end()) {
+                        int idx = std::distance(adj_f_e_u_id[e].begin(), it2);
+                        flow = -adj_f_e_u[e][idx];
+                    }
+                }
+                if (std::abs(flow) > 1e-9) {
+                    // since this linear
+                    if (flow <0) {
+                        f_e_st[{v, u}][{s, t}] = -flow; // Store the reverse flow as well
+                    }else {
+                        f_e_st[{u, v}][{s, t}] = flow;
+                    }
+                }
+            }
+        }
+    }
 }
 
+
+
 double ElectricalFlowOptimized::getFlowForCommodity(int edge_id, int source, int target) {
+
+
+
     if(target == x_fixed) {
         return - (f_e_u.count({edge_id, source}) ? f_e_u.at({edge_id, source}) : 0.0);
     }else if(source == x_fixed) {

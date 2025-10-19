@@ -7,7 +7,7 @@
 
 #include "LaplacianSolver.h"
 #include "AMGSolver.h"           // AMG + CG
-#include "AMGBiCGStab.h"   // AMG + BiCGStab
+
 
 
 #include <memory>
@@ -25,8 +25,6 @@ public:
         switch (type) {
             case SolverType::AMG_CG:
                 return std::make_unique<AMGSolver>();
-            case SolverType::AMG_BICGSTAB:
-                return std::make_unique<AMGBiCGStabSolver>();
             default:
                 throw std::invalid_argument("Unknown solver type");
         }

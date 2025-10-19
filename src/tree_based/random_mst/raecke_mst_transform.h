@@ -22,7 +22,7 @@ public:
             double         lambda,
             Graph&   graph)
     {
-        normalizeOldSolutionBasedOnNewLambda(lambda);
+        // normalizeOldSolutionBasedOnNewLambda(lambda);
 
         // For every pair (src,dst) of terminals, route on unique MST path
         auto vertices = graph.getVertices();

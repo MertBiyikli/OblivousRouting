@@ -30,7 +30,6 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     double roh = 0.0;
     double alpha_local = 0.0;
     double inv_m = 0.0;
-    // std::unordered_map<std::pair<int, int>, double> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
 
     std::vector<double> edge_weights;             // w_e
     std::vector<double> edge_capacities;          // c_e
@@ -64,9 +63,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     void refreshWeightMatrix();
     void buildIncidence();
 
-    std::vector<Eigen::SparseVector<double>>  getRoutingMatrix();
     Eigen::SparseMatrix<double> getSketchMatrix(int m, int n, double epsilon = 0.5);
-    // double recoverNorm(const Eigen::MatrixXd& M, const Eigen::SparseVector<double>& vec);
 
     public:
 
@@ -109,27 +106,6 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
 
 
-    // for debugging purposes
-    bool CheckIfAdjacencyListInSyncWithUnordered_Map() const;
-
-    std::vector<std::vector<int>> adj_f_e_u_id; // per-adjacency list version of f_e_u (stores edge ids)
-    std::vector<std::vector<double>> adj_f_e_u; // per-adjacency list version of f_e_u
-    void addFlow(int edge_id, int u, double flow) {
-        // keep the edges and flows sorted by id
-        if (adj_f_e_u_id[edge_id].empty() || adj_f_e_u_id[edge_id].back() < u) {
-            adj_f_e_u_id[edge_id].push_back(u);
-            adj_f_e_u[edge_id].push_back(flow);
-        } else {
-            auto it = std::ranges::lower_bound(adj_f_e_u_id[edge_id], u);
-            int idx = std::distance(adj_f_e_u_id[edge_id].begin(), it);
-            if (it != adj_f_e_u_id[edge_id].end() && *it == u) {
-                adj_f_e_u[edge_id][idx] += flow; // accumulate
-            } else {
-                adj_f_e_u_id[edge_id].insert(it, u);
-                adj_f_e_u[edge_id].insert(adj_f_e_u[edge_id].begin() + idx, flow);
-            }
-        }
-    }
 
 };
 

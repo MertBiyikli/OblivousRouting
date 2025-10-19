@@ -209,6 +209,18 @@ inline void HandleDemandModel(int argc,
         }
 
         std::cout << "Worst case congestion for " << (argv[3] ? argv[3] : "<empty>") << " model demand: " << max_cong << std::endl;
+
+
+
+
+        // compute the Maximum Commodity flow for the given demand set
+        CMMF_Solver mccf;
+        for (const auto& [d, value] : demand_map) {
+            mccf.AddDemands({d.first, d.second}, value);
+        }
+
+        mccf.solve(_g);
+
     }
 }
 #endif //OBLIVIOUSROUTING_PARSE_PARAMETER_H

@@ -37,6 +37,27 @@ public:
             std::cout << std::endl;
         }
     }
+
+
+    // TODO: make the adjacency list representation global for all solvers, except maybe the Applegate and Cohen one...
+    std::vector<std::vector<int>> adj_f_e_u_id; // per-adjacency list version of f_e_u (stores edge ids)
+    std::vector<std::vector<double>> adj_f_e_u; // per-adjacency list version of f_e_u
+    void addFlow(int edge_id, int u, double flow) {
+        // keep the edges and flows sorted by id
+        if (adj_f_e_u_id[edge_id].empty() || adj_f_e_u_id[edge_id].back() < u) {
+            adj_f_e_u_id[edge_id].push_back(u);
+            adj_f_e_u[edge_id].push_back(flow);
+        } else {
+            auto it = std::ranges::lower_bound(adj_f_e_u_id[edge_id], u);
+            int idx = std::distance(adj_f_e_u_id[edge_id].begin(), it);
+            if (it != adj_f_e_u_id[edge_id].end() && *it == u) {
+                adj_f_e_u[edge_id][idx] += flow; // accumulate
+            } else {
+                adj_f_e_u_id[edge_id].insert(it, u);
+                adj_f_e_u[edge_id].insert(adj_f_e_u[edge_id].begin() + idx, flow);
+            }
+        }
+    }
 };
 
 #endif //OBLIVOUSROUTING_SOLVER_H
