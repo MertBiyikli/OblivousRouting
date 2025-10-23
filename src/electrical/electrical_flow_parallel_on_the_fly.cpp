@@ -1,16 +1,26 @@
 //
-// Created by Mert Biyikli on 30.09.25.
+// Created by Mert Biyikli on 22.10.25.
 //
 
-#include "electrical_flow_optimized.h"
+#include "electrical_flow_parallel_on_the_fly.h"
+
 #include "../utils/my_math.h"
-#include <random>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /*
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string& solver_name)
+void ElectricalFlowParallelOnTheFly::init(const Graph &g, bool debug, const std::string& solver_name)
 {
+    // print how many threads are running
+#ifdef  _OPENMP
+    std::cout << "Number of threads: " << omp_get_max_threads() << "\n";
+#endif
+
     m_graph = g;
 
     n = m_graph.getNumNodes();
@@ -31,7 +41,6 @@ void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string
 
     // fix a node x
     this->x_fixed = 0; // Randomly select a fixed node x from the graph
-    //tree_parent = buildBFSTree(x_fixed);
 
 
     initEdgeDistances();
@@ -39,8 +48,9 @@ void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string
     buildIncidence();
 
     // init AMG
-    amg = SolverFactory::create(solver_name);
+    amg = SolverFactory::create("amg_parallel");
     amg->init(edge_weights, n, edges, debug);
+
 
     // U: diagonal of capacities (per-edge)
     U = Eigen::SparseMatrix<double>(m, m);
@@ -57,7 +67,7 @@ void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string
 
 }
 
-void ElectricalFlowOptimized::initEdgeDistances() {
+void ElectricalFlowParallelOnTheFly::initEdgeDistances() {
     extract_edge_list();
 
     // note that the edges are stored undirected
@@ -66,7 +76,9 @@ void ElectricalFlowOptimized::initEdgeDistances() {
     edge_capacities.resize(m);
     edge_probabilities.resize(m);
     edge_weights.resize(m);
-
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(static)
+#endif
     for (int e = 0; e < m; ++e) {
         auto [u,v] = edges[e];
         double cap = m_graph.getEdgeCapacity(u, v);      // undirected capacity accessor
@@ -79,7 +91,7 @@ void ElectricalFlowOptimized::initEdgeDistances() {
 }
 
 
-void ElectricalFlowOptimized::extract_edge_list() {
+void ElectricalFlowParallelOnTheFly::extract_edge_list() {
 
     // adjancency list version
 
@@ -105,7 +117,7 @@ void ElectricalFlowOptimized::extract_edge_list() {
 
 
 
-void ElectricalFlowOptimized::buildIncidence()
+void ElectricalFlowParallelOnTheFly::buildIncidence()
 {
     if (B.nonZeros() == 0) {
         B = Eigen::SparseMatrix<double>(m, n);
@@ -119,7 +131,7 @@ void ElectricalFlowOptimized::buildIncidence()
     }
 }
 
-void ElectricalFlowOptimized::buildWeightDiag() {
+void ElectricalFlowParallelOnTheFly::buildWeightDiag() {
     if (!W.nonZeros()) {
         W = Eigen::SparseMatrix<double>(m, m);
         std::vector<Eigen::Triplet<double>> w_triplets; w_triplets.reserve(m);
@@ -129,7 +141,7 @@ void ElectricalFlowOptimized::buildWeightDiag() {
     }
 }
 
-void ElectricalFlowOptimized::refreshWeightMatrix() {
+void ElectricalFlowParallelOnTheFly::refreshWeightMatrix() {
     if (!W.nonZeros()) {
         buildWeightDiag();
     } else {
@@ -138,59 +150,40 @@ void ElectricalFlowOptimized::refreshWeightMatrix() {
     }
 }
 
-void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& load) {
+void ElectricalFlowParallelOnTheFly::updateEdgeDistances(const std::vector<double>& load) {
     // --- 1) stable MWU in log-space with damping & clipping ---
-    const double eta   = 1.0 / (4.0 * roh);   // smaller than your 1/(2*roh)
-    const double gclip = 10.0;                // gradient clip (tune 5–20)
 
-    // Kahan sum for cap_X
-    double capX = 0.0, c = 0.0;
-
+    // Update distances per-edge, then mirror to per-adj
+    cap_X = 0.0;
+#ifdef _OPENMP
+    #pragma omp parallel for reduction(+:cap_X) schedule(dynamic)
+#endif
     for (int e = 0; e < m; ++e) {
-        double g = std::clamp(load[e], -gclip, gclip);
-        // multiplicative: x_e <- x_e * exp(eta * g)
-        double xe = edge_distances[e];
-        if (xe > 0.0 && std::isfinite(g)) {
-            double upd = std::exp(eta * g);
-            xe *= upd;
-            // avoid denormals
-            if (!std::isfinite(xe)) xe = (g > 0 ? 1e308 : 1e-308);
-            edge_distances[e] = xe;
-        }
-        // Kahan accumulate cap_X
-        double y = xe - c;
-        double t = capX + y;
-        c = (t - capX) - y;
-        capX = t;
+        if (load[e] <= 0.0 || std::isnan(load[e])) continue;
+        edge_distances[e] *= (1 + (1/(2*roh)) * load[e]);
+        cap_X += edge_distances[e];
     }
-    cap_X = capX;
 
-    // --- 2) recompute probabilities and weights with caps ---
-    // floors / caps to keep W well-conditioned
-    const double p_floor = 1.0 / (10.0 * m);       // soft floor
-    const double w_floor = 1e-12;
-    const double w_cap   = 1e12;                   // tune as needed
-
+    // Per-edge recompute
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+#endif
     for (int e = 0; e < m; ++e) {
         double x = edge_distances[e];
-        if (x <= 0.0 || !std::isfinite(x)) x = 1e-12;
+        if (x <= 0.0 || std::isnan(x)) continue;
 
         double p = x / cap_X;
-        if (!std::isfinite(p)) p = 1.0 / m;
-        p = std::max(p, p_floor);                  // floor the prob
-
         edge_probabilities[e] = p;
 
-        const double cap = edge_capacities[e];
-        double w = (cap * cap) / (p + inv_m);
-        if (!std::isfinite(w)) w = w_cap;
-        w = std::min(std::max(w, w_floor), w_cap); // clamp
+        double cap = edge_capacities[e];
+        double w   = std::pow(cap, 2) / (p + inv_m);
         edge_weights[e] = w;
     }
 
-    // Tell AMG we're only changing numeric values (no rebuild here)
-    amg->updateAllEdges(edge_weights, edges);  // ideally becomes value-only update
-    amg->updateSolver();                       // later: make this infrequent (every ~25 iters)
+
+    amg->updateAllEdges(edge_weights, edges);
+    amg->updateSolver();
+
 
     refreshWeightMatrix();
 }
@@ -198,43 +191,87 @@ void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& loa
 
 
 
-void ElectricalFlowOptimized::run() {
+void ElectricalFlowParallelOnTheFly::run() {
     // Sparse RHS with only two nonzeros per demand (+1 at u, -1 at x_fixed)
     Eigen::SparseVector<double> rhs(n);
     rhs.reserve(2);
     std::vector<double> load(m, 0.0);
 
+#ifdef _OPENMP
+    int num_threads = omp_get_max_threads();
+#else
+    int num_threads = 1;
+#endif
+
+    const int batch_size = m/num_threads;   // tune: 4–16 works best
+    const int chunk       = batch_size;
+
+    std::vector<std::vector<std::tuple<int, int, double>>> thread_flows(num_threads);
+    std::vector<std::vector<double>> thread_times(num_threads);
+    std::vector<Eigen::VectorXd> threads_rhs(num_threads, Eigen::VectorXd::Zero(n));
+
+
     for (int t = 0; t < this->iteration_count; ++t) {
+
+
         auto start = std::chrono::high_resolution_clock::now();
 
-        // --- main loop over sources (u -> x_fixed) ---
-        for (int u = 0; u < n; ++u) {
-            if (u == x_fixed) continue;
+        #pragma omp parallel for schedule(static, chunk)
+        for (int u = 0; u < n; u ++) {
 
-            // build RHS (sum is zero automatically)
-            rhs.setZero();
-            rhs.coeffRef(u)       =  1.0;
-            rhs.coeffRef(x_fixed) = -1.0;
+#ifdef _OPENMP
+            const int tid = omp_get_thread_num();
+#else
+            const int tid = 0;
+#endif
+            auto &local_times = thread_times[tid];
+            auto &local_flows = thread_flows[tid];
+            auto &local_rhs = threads_rhs[tid];
 
-            // Solve L x = b (solver returns dense potentials; that’s expected)
-            // If your amg wrapper doesn't accept SparseVector, use: amg->solve(rhs.toDense())
-            auto start = std::chrono::high_resolution_clock::now();
-            Eigen::VectorXd x = amg->solve(rhs);
-            auto end = std::chrono::high_resolution_clock::now();
-            pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
+            local_rhs.setZero(n);
+            local_rhs[u] =  1.0;
+            local_rhs[x_fixed] = -1.0;
 
-            // accumulate edge flows for commodity (u -> x_fixed):
-            // f_e(u) = w_e * (x[u]-x[v])
+            // solve this batch (manual multi; still reuses AMG hierarchy)
+            auto t0 = std::chrono::high_resolution_clock::now();
+            auto* amgMT = static_cast<AMGSolverMT*>(amg.get());
+            const auto& x = (amgMT)->solve_single_thread(local_rhs);
+            auto t1 = std::chrono::high_resolution_clock::now();
+
+            const double avg_ms =
+                std::chrono::duration<double, std::milli>(t1 - t0).count() / local_rhs.size();
+            // store per-RHS times thread-locally (no locks)
+            local_times.insert(local_times.end(), local_rhs.size(), avg_ms);
+
+            // compute flows for every result; keep it thread-local
+            // (SoA edge list is faster; this uses your existing edges[e].first/second)
             for (int e = 0; e < m; ++e) {
-                double fval = edge_weights[e] * (x[edges[e].first] - x[edges[e].second]);
-
-                if (u == edges[e].first)      div_accum[u] += fval;
-                else if (u == edges[e].second) div_accum[u] -= fval;
-                if (std::abs(fval) > 1e-32) {
-                    addFlow(e, u, fval); // per-adjacency list version
-                    //f_e_u[{e, u}] += fval;
-                }
+                const int a = edges[e].first;
+                const int b = edges[e].second;
+                const double fval = edge_weights[e] * (x[a] - x[b]);
+                if (std::abs(fval) > 1e-32)
+                    local_flows.emplace_back(e, u, fval);
             }
+
+            local_rhs.setZero(n);
+        } // end omp parallel for over batches
+
+
+
+        // --- merge phase ---
+        // Merge all thread buffers (lock-free, outside parallel region)
+        for (int tid = 0; tid < num_threads; ++tid) {
+            for (double tval : thread_times[tid])
+                pure_oracle_running_times.push_back(tval);
+
+            for (auto &[e, u, fval] : thread_flows[tid])
+                addFlow(e, u, fval);
+        }
+
+        for (auto& vec : thread_times) {
+            pure_oracle_running_times.insert(
+                pure_oracle_running_times.end(), vec.begin(), vec.end()
+            );
         }
 
         // (Optional) debug: print flows per (edge, source)
@@ -243,12 +280,13 @@ void ElectricalFlowOptimized::run() {
         }
 
         getApproxLoad(load);
-        updateEdgeDistances(load); // keeps 'weights' vector in sync
+        updateEdgeDistances(load);
 
         auto end = std::chrono::high_resolution_clock::now();
         oracle_running_times.push_back(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
         );
+
     }
 
 
@@ -258,7 +296,7 @@ void ElectricalFlowOptimized::run() {
 }
 
 
-void ElectricalFlowOptimized::scaleFlowDown() {
+void ElectricalFlowParallelOnTheFly::scaleFlowDown() {
 
     // scale the flow from the adjacency list flow
     if (iteration_count > 0) {
@@ -306,13 +344,6 @@ void ElectricalFlowOptimized::scaleFlowDown() {
         if (debug ) std::cout << "outgoing flow: " << val << " for source " << i << "\n";
     }
 
-    // Print out the div_accum values for debugging
-    if (debug) {
-        for ( int s = 0; s < n; ++s) {
-            if (s == x_fixed) continue;
-            std::cout << "div_accum[" << s << "] = " << div_accum[s] << "\n";
-        }
-    }
 
     // ---------- 3) Rescale all (e, s) by the commodity's net outflow ----------
     // After this, each commodity s should have unit net outflow at s.
@@ -345,35 +376,51 @@ void ElectricalFlowOptimized::scaleFlowDown() {
     }
 }
 
-void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
+void ElectricalFlowParallelOnTheFly::getApproxLoad(std::vector<double>& load) {
     const int ell = X.cols();
-    // Preconditions: edge_wc precomputed, load sized to m, edge_* sized to m.
+    load.assign(m, 0.0);
 
-    // 1) Flat buffer for edge-major diffs
-    edge_diffs.resize(static_cast<size_t>(m) * ell); // member or static thread-local if re-used
+    // --- Buffer for per-edge differences ---
+    edge_diffs.resize(static_cast<size_t>(m) * ell);
 
-    Eigen::VectorXd rhs(n), sol(n);
+    // 1. Try dynamic cast to parallel AMG solver
+    AMGSolverMT* amg_mt = dynamic_cast<AMGSolverMT*>(amg.get());
+    Eigen::MatrixXd potentials;
 
-    // 2) Fill diffs (AMG solve → edge diffs)
-    for (int i = 0; i < ell; ++i) {
-        rhs = X.col(i);
+    if (amg_mt == nullptr) {
+        throw std::runtime_error("[ElectricalFlowParallel::getApproxLoad] AMG solver is not parallel-capable (AMGSolverMT).");
+    }
 
-        auto start = std::chrono::high_resolution_clock::now();
-        sol = amg->solve(rhs);  // prefer in-place if available
-        auto end = std::chrono::high_resolution_clock::now();
-        pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
+    // ---- (A) Parallel batch solve using AMG pool ----
+    if (debug)
+        std::cout << "[ElectricalFlowParallel] Using parallel AMG batch solver (" << ell << " RHS)\n";
 
-        const double* __restrict psol = sol.data();
+    Eigen::MatrixXd RHS = X; // n × ell (already sparseView->dense fine)
+    auto start = std::chrono::high_resolution_clock::now();
+    potentials = amg_mt->solve_many(RHS); // parallel multi-RHS solve
+    auto end = std::chrono::high_resolution_clock::now();
+    pure_oracle_running_times.push_back(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+    );
 
-        // stride on store (edge-major), but gives fast medians later
-        for (int e = 0; e < m; ++e) {
+    // 2. Compute edge differences in parallel
+    const double* __restrict psol = potentials.data();
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(static)
+#endif
+    for (int e = 0; e < m; ++e) {
+        const int u = edges[e].first;
+        const int v = edges[e].second;
+        for (int i = 0; i < ell; ++i) {
             edge_diffs[static_cast<size_t>(e) * ell + i] =
-                std::fabs(psol[edges[e].first] - psol[edges[e].second]);
+                std::fabs(psol[u + i * n] - psol[v + i * n]);
         }
     }
 
-    // 3) Medians + load
+    // 3. Median aggregation and load computation
+#ifdef _OPENMP
     #pragma omp parallel for schedule(static)
+#endif
     for (int e = 0; e < m; ++e) {
         double* __restrict arr = &edge_diffs[static_cast<size_t>(e) * ell];
         std::nth_element(arr, arr + (ell >> 1), arr + ell);
@@ -381,38 +428,17 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
         load[e] = edge_weights[e] * med;
     }
 
-    // Optional: debug after, not inside hot loops
     if (debug) {
-        for (int e = 0; e < m; ++e) {
-            // print sampled edges only, or aggregate stats
-        }
+        double avg_load = std::accumulate(load.begin(), load.end(), 0.0) / m;
+        std::cout << "[ElectricalFlowParallel] Avg edge load = " << avg_load << "\n";
     }
 }
 
 
 
-// Compute the median absolute difference between two node potentials
-// across all ℓ sampled solutions.
-//   diffs_u = potentials[u][*]  (length ℓ)
-//   diffs_v = potentials[v][*]  (length ℓ)
-double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
-                                        const std::vector<double>& diffs_v) {
-    assert(diffs_u.size() == diffs_v.size());
-    size_t L = diffs_u.size();
-
-    std::vector<double> abs_diffs;
-    abs_diffs.reserve(L);
-    for (size_t i = 0; i < L; ++i) {
-        abs_diffs.push_back(std::abs(diffs_u[i] - diffs_v[i]));
-    }
-
-    size_t mid = L / 2;
-    std::nth_element(abs_diffs.begin(), abs_diffs.begin() + mid, abs_diffs.end());
-    return abs_diffs[mid];
-}
 
 
-void ElectricalFlowOptimized::storeFlow(){
+void ElectricalFlowParallelOnTheFly::storeFlow(){
     // adjacency list version
     for (int e = 0; e<adj_f_e_u_id.size(); e++) {
         int u = edges[e].first;
@@ -450,7 +476,7 @@ void ElectricalFlowOptimized::storeFlow(){
 
 
 
-double ElectricalFlowOptimized::getFlowForCommodity(int edge_id, int source, int target) {
+double ElectricalFlowParallelOnTheFly::getFlowForCommodity(int edge_id, int source, int target) {
 
 
 
@@ -466,7 +492,7 @@ double ElectricalFlowOptimized::getFlowForCommodity(int edge_id, int source, int
     }
 }
 
-Eigen::SparseMatrix<double> ElectricalFlowOptimized::getSketchMatrix(int _m, int _n, double eps) {
+Eigen::SparseMatrix<double> ElectricalFlowParallelOnTheFly::getSketchMatrix(int _m, int _n, double eps) {
     double c = 1.1;
     double delta = NegativeExponent(_n, 10); // Set delta to a small value or a default value
     double epsilon = eps; // Set epsilon to the provided value or a default value

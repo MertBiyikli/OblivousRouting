@@ -25,6 +25,10 @@ class RaeckeMSTSolver : public ObliviousRoutingSolver {
     RaeckeMSTTransform transform;
 
 public:
+
+    RaeckeMSTSolver() = default;
+    ~RaeckeMSTSolver() = default;
+
     void solve(const Graph &g) override {
         mst_algo.setGraph(g);
         mst_algo.run(transform);  // pass transform directly

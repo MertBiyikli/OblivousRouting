@@ -50,8 +50,6 @@ public:
             oracle_running_times.push_back((std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - start)).count());
             id++;
         }
-
-
     }
 
     virtual double iterate(int treeIndex) {

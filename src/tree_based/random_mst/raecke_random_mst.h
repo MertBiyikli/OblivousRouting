@@ -26,6 +26,8 @@ class RaeckeMST : public RaeckeBase<MSTTree> {
     std::uniform_int_distribution<uint64_t> dist;
 
 public:
+    RaeckeMST() = default;
+    virtual ~RaeckeMST() = default;
     void init(Graph& g);
     MSTTree getTree(Graph& g);
     void computeRLoads(int idx, MSTTree& t, Graph& g);

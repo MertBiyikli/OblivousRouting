@@ -1,26 +1,19 @@
 //
-// Created by Mert Biyikli on 30.09.25.
+// Created by Mert Biyikli on 22.10.25.
 //
 
-#ifndef OBLIVIOUSROUTING_ELECTRICAL_FLOW_OPTIMIZED_H
-#define OBLIVIOUSROUTING_ELECTRICAL_FLOW_OPTIMIZED_H
+#ifndef OBLIVIOUSROUTING_ELECTRICAL_FLOW_PARALLEL_ON_THE_FLY_H
+#define OBLIVIOUSROUTING_ELECTRICAL_FLOW_PARALLEL_ON_THE_FLY_H
 
 #include <algorithm>
 #include "../graph.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
-#include "laplacian_solvers/AMGSolver.h"
+#include "laplacian_solvers/AMGSolverParallel.h"
 #include <Eigen/Sparse>
-#include <Eigen/Dense>
-#include "../tree_based/frt/raecke_frt_transform.h"
 #include "laplacian_solvers/LaplacianSolverFactory.h"
 
-struct WeightedEdge {
-    std::pair<int, int> edge; // (u,v) with u<v
-    double weight;
-};
-
-class ElectricalFlowOptimized : public ObliviousRoutingSolver{
+class ElectricalFlowParallelOnTheFly : public ObliviousRoutingSolver{
     private:
 
     int n, m;
@@ -104,7 +97,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     double recoverNorm(const std::vector<double>& diffs_u,
                                             const std::vector<double>& diffs_v);
 
-    void init(const Graph& g, bool debug = false, const std::string& solver_name = ("amg_cg"));
+    void init(const Graph& g, bool debug = false, const std::string& solver_name = ("amg_parallel"));
 
 /*
     std::vector<int> buildBFSTree(int root);
@@ -113,4 +106,4 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
 };
 
-#endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_OPTIMIZED_H
+#endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_PARALLEL_ON_THE_FLY_H

@@ -25,6 +25,7 @@ def guess_exe():
     names = [
         #"cmake-build-debug/oblivious_routing",
         #"cmake-build-relwithdebinfo/oblivious_routing",
+        "cmake-build-release_parallel/oblivious_routing", # remove parallel for sequential build
         "cmake-build-release/oblivious_routing", # remove parallel for sequential build
         "build/Debug/oblivious_routing",
         "build/Release/oblivious_routing",
@@ -42,6 +43,8 @@ CANON = {
     "cohen": "cohen", "lp": "cohen", "applegate": "cohen", "ac": "cohen", "l": "cohen", "2": "cohen",
     "mst": "mst", "random_mst": "mst", "raecke_mst": "mst", "m": "mst", "3": "mst",
     "electrical_optimized": "electrical_optimized", "ef_opt": "electrical_optimized", "eo": "electrical_optimized", "4": "electrical_optimized",
+    "electrical_parallel_batches": "electrical_parallel_batches", "ef_par_batches": "electrical_parallel_batches", "5": "electrical_parallel_batches",
+    "electrical_parallel_onthefly": "electrical_parallel_onthefly", "ef_par_onthefly": "electrical_parallel_onthefly", "6": "electrical_parallel_onthefly",
 }
 
 CANON_DEMAND = {

@@ -3,6 +3,7 @@
 //
 
 #include "AMGSolver.h"
+#include <algorithm>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -10,7 +11,6 @@
 void AMGSolver::check_openmp_runtime() {
 #ifdef _OPENMP
     std::cout << "✅ OpenMP is enabled at compile time.\n";
-    std::cout << "🧵 omp_get_max_threads(): " << omp_get_max_threads() << "\n";
     std::cout << "🧵 omp_get_num_threads(): ";
 #pragma omp parallel
     {
@@ -35,6 +35,7 @@ void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weig
 }*/
 
 void AMGSolver::buildLaplacian_(const Graph& g) {
+    check_openmp_runtime();
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
     struct pair_hash {
         size_t operator()(const std::pair<int,int>& p) const {
@@ -130,7 +131,10 @@ void AMGSolver::buildLaplacian_(const Graph& g) {
     }
 
     Solver::params prm;
-    prm.solver.tol = 1e-6;
+    prm.solver.tol = 1e-6;  // relax tolerance slightly
+    prm.solver.maxiter = 500; // limit
+    prm.precond.coarsening.aggr.eps_strong = 0.08;
+
 
     if(debug) {
         std::cout << "row_ptr\n";
@@ -148,6 +152,7 @@ void AMGSolver::buildLaplacian_(const Graph& g) {
 
 
 void AMGSolver::buildLaplacian() {
+    check_openmp_runtime();
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
     struct pair_hash {
         size_t operator()(const std::pair<int,int>& p) const {
@@ -242,7 +247,16 @@ void AMGSolver::buildLaplacian() {
     }
 
     Solver::params prm;
-    prm.solver.tol = 1e-6;
+    prm.solver.tol = 1e-6;  // relax tolerance slightly
+    prm.solver.maxiter = 500; // limit
+    prm.precond.coarsening.aggr.eps_strong = 0.08;
+
+    // --- AMG hierarchy parameters ---
+    prm.precond.coarsening.aggr.block_size = 1;
+    prm.precond.coarsening.aggr.eps_strong = 0.08;  // weak coupling threshold (~0.05–0.1 works best)
+    prm.precond.npre = 1;                           // 1 pre-smooth
+    prm.precond.npost = 1;                          // 1 post-smooth
+
 
     if(debug) {
         std::cout << "row_ptr\n";
@@ -264,46 +278,47 @@ std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
     if (b.size() != n)
         throw std::runtime_error("RHS size mismatch");
 
+    x_buffer.assign(n, 0.0);
+    bvec_buffer.assign(b.begin(), b.end());
 
-
-    auto bvec= b;
-    double mean_bvec = std::accumulate(bvec.begin(), bvec.end(), 0.0) / n;
+    // --- Enforce zero-mean RHS (orthogonal to nullspace) ---
+    double mean_bvec = std::reduce(bvec_buffer.begin(), bvec_buffer.end(), 0.0) / n;
     // divide each entry of bvec by the mean to ensure zero-sum
-    for(auto& val : bvec) {
+    for(auto& val : bvec_buffer) {
         val -= mean_bvec;
     }
 
-    std::vector<double> x(n, 0.0);
+
     if (solver) {
-        auto res = (*solver)(bvec, x);
         if(debug) {
+            const auto res = (*solver)(bvec_buffer, x_buffer);
             std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
                       << "  Error: " << std::get<1>(res) << std::endl;
+        }else {
+            (*solver)(bvec_buffer, x_buffer);
         }
         // --- Enforce zero-mean solution (orthogonal to nullspace) ---
-        double mean_x = std::accumulate(x.begin(), x.end(), 0.0) / n;
-        for(auto& val : x) {
+        double mean_x = std::reduce( x_buffer.begin(), x_buffer.end()) / n;
+        for(auto& val : x_buffer) {
             val -= mean_x; // Project solution to zero-mean
         }
     }else {
         std::cout << "[AMGSolver] No solver found." << std::endl;
     }
 
-    return x;
+    return x_buffer;
 }
 
 Eigen::VectorXd AMGSolver::solve(const Eigen::VectorXd& b) {
-    std::vector<double> bvec;
-    for(int i = 0; i < b.size(); ++i) {
-        bvec.emplace_back(b[i]);
-    }
+    const int n = b.size();
+    std::vector<double> bvec(n);
+    std::memcpy(bvec.data(), b.data(), n * sizeof(double));
 
-    auto res = this->solve(bvec);
-    Eigen::VectorXd result(res.size());
-    for (int i = 0; i < res.size(); ++i) {
-        result[i] = res[i];
-    }
-    return result;
+    result.clear();
+    result = this->solve(bvec);
+    Eigen::VectorXd eigen_output(result.size());
+    std::memcpy(eigen_output.data(), result.data(), n * sizeof(double));
+    return eigen_output;
 }
 
 
@@ -327,11 +342,10 @@ bool AMGSolver::updateEdge(int u, int v, double new_weight) {
     }
 }
 
-// TODO : implement this
 void AMGSolver::updateSolver() {
+
     // Update hierarchy numeric values (same structure)
     solver->precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
-
 }
 
 /*

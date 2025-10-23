@@ -6,11 +6,11 @@
 #include "src/tree_based/random_mst/raecke_mst_solver.h"
 #include "src/electrical/electrical_flow_naive.h"
 #include "src/electrical/electrical_flow_optimized.h"
+#include "src/electrical/electrical_flow_parallel.h"
 #include "experiments/performance/LP_Oblivious_Ratio.h"
 #include "experiments/performance/linear_oblivious_routing_ratio.h"
 #include "src/parse_parameter.h"
-
-
+#include "src/electrical/electrical_flow_parallel_on_the_fly.h"
 
 
 int main(int argc, char **argv) {
@@ -48,6 +48,17 @@ int main(int argc, char **argv) {
         case SolverType::ELECTRICAL_OPTIMIZED:
             std::cout << "Running Electrical Flow (optimized)...\n";
             solver = std::make_unique<ElectricalFlowOptimized>();
+            break;
+        case SolverType::ELECTRICAL_PARALLEL_BATCHES:
+            std::cout << "Running Electrical Flow (parallel - batches)...\n";
+            solver = std::make_unique<ElectricalFlowParallel>();
+            break;
+        case SolverType::ELECTRICAL_PARALLEL_ONTHEFLY:
+            std::cout << "Running Electrical Flow (parallel - on the fly)...\n";
+            solver = std::make_unique<ElectricalFlowParallelOnTheFly>();
+            break;
+        default:
+            break;
     }
 
     if ( !solver ) {
@@ -61,7 +72,7 @@ int main(int argc, char **argv) {
     solver->solve(g);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
-    //solver->storeFlow();
+    // solver->storeFlow();
     //solver->printFlow();
 
     // compute worst case demand for linear oblivious routing
@@ -91,6 +102,14 @@ int main(int argc, char **argv) {
         }
         mean /= solver->oracle_running_times.size();
         std::cout << "Average oracle time: " << mean << " [milliseconds]" << std::endl;
+
+        // compute the average pure oracle running time
+        double pure_mean = 0;
+        for (const auto& t : solver->pure_oracle_running_times) {
+            pure_mean += t;
+        }
+        pure_mean /= solver->pure_oracle_running_times.size();
+        std::cout << "Average pure oracle time: " << pure_mean << " [milliseconds]" << std::endl;
     }
 
     return 0;

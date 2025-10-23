@@ -13,7 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Set sensible defaults per build type
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -fno-omit-frame-pointer" CACHE STRING "" FORCE) # add for macOs debugging
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O2 -fno-omit-frame-pointer -fno-inline-functions")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "" FORCE)
 
 # Good stacks on Clang/GCC:
@@ -35,7 +35,9 @@ endif()
 add_subdirectory(extern/amgcl)
 
 list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
+include_directories(BEFORE ${ORTOOLS_ROOT}/include)
 find_package(ortools REQUIRED CONFIG)
+include_directories(BEFORE /Users/halilibrahim/local/ortools/include)
 
 find_package(Eigen3 REQUIRED)
 
@@ -48,88 +50,98 @@ set(SRC_FILES
         src/graph.cpp
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
+        src/tree_based/random_mst/raecke_mst_solver.cpp
+        src/tree_based/random_mst/raecke_random_mst.cpp
         src/tree_based/frt/raecke_frt.cpp
         src/tree_based/frt/mcct/Node.cpp
         src/tree_based/frt/mcct/mcct_derandomized_weighted_solver.cpp
-        src/tree_based/frt/raecke_frt_transform.h
         src/electrical/electrical_flow_naive.cpp
-        #src/electrical/AMGSolver.cpp
+        src/electrical/electrical_flow_optimized.cpp
+        src/electrical/electrical_flow_optimized.h
+        src/electrical/electrical_flow_parallel.cpp
+        src/electrical/electrical_flow_parallel.h
+        src/electrical/laplacian_solvers/AMGSolver.cpp
         src/electrical/laplacian_solvers/AMGSolver.h
-        experiments/performance/demands/GravityModel.cpp
-        experiments/performance/demands/GravityModel.h
+        src/electrical/laplacian_solvers/LaplacianSolver.h
+        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
         experiments/performance/Performance.cpp
         experiments/performance/Performance.h
         experiments/performance/LP_Oblivious_Ratio.cpp
         experiments/performance/LP_Oblivious_Ratio.h
-        src/tree_based/frt/raecke_frt_solver.h
-        src/parse_parameter.h
-        experiments/performance/demands/DemandModel.h
+        experiments/performance/linear_oblivious_routing_ratio.cpp
+        experiments/performance/linear_oblivious_routing_ratio.h
+        experiments/performance/demands/GravityModel.cpp
+        experiments/performance/demands/GravityModel.h
         experiments/performance/demands/BimodalModel.cpp
         experiments/performance/demands/BimodalModel.h
         experiments/performance/demands/GaussianModel.cpp
         experiments/performance/demands/GaussianModel.h
         experiments/performance/demands/UniformModel.cpp
         experiments/performance/demands/UniformModel.h
-        src/tree_based/random_mst/mst.h
-        src/tree_based/random_mst/raecke_random_mst.cpp
-        src/tree_based/random_mst/raecke_random_mst.h
-        src/tree_based/random_mst/raecke_mst_solver.h
-        src/tree_based/random_mst/raecke_mst_transform.h
-        src/tree_based/raecke_framework.h
-        src/tree_based/raecke_base.h
-        src/tree_based/raecke_transform_base.h
-        experiments/performance/linear_oblivious_routing_ratio.h
-        experiments/performance/linear_oblivious_routing_ratio.cpp
-        src/electrical/laplacian_solvers/LaplacianSolver.h
-        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
-        src/electrical/electrical_flow_optimized.cpp
-        src/electrical/electrical_flow_optimized.h
-        src/utils/my_math.h
         src/utils/my_math.cpp
+        src/utils/my_math.h
+        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
+        src/electrical/laplacian_solvers/AMGSolverParallel.h
+        src/electrical/electrical_flow_parallel_on_the_fly.cpp
+        src/electrical/electrical_flow_parallel_on_the_fly.h
 )
 
-
+# ---------------------------------------------------------------------------
+# ✅ OpenMP configuration
+# ---------------------------------------------------------------------------
 option(USE_OPENMP "Enable OpenMP support (used in AMGSolver)" OFF)
 
-# Only link OpenMP to AMGSolver if explicitly enabled
 if(USE_OPENMP)
-    add_executable(oblivious_routing ${SRC_FILES})
-
     find_package(OpenMP REQUIRED)
-    message(STATUS "✅ OpenMP will be enabled for AMG solver")
+    message(STATUS "✅ OpenMP enabled")
 
-    # Only build AMGSolver as separate object library with OpenMP
-    add_library(amg_solver_obj OBJECT src/electrical/laplacian_solvers/AMGSolver.cpp
-            src/electrical/laplacian_solvers/AMGSolver.h
-            src/electrical/laplacian_solvers/LaplacianSolver.h
-            src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
-    target_link_libraries(amg_solver_obj PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
-    target_include_directories(amg_solver_obj PRIVATE
-            ${CMAKE_SOURCE_DIR}/extern/amgcl
-    )
+    add_executable(oblivious_routing ${SRC_FILES})
+    # target_link_libraries(oblivious_routing PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
+    # Force the linker to prefer LLVM’s lib directory
+    target_link_directories(oblivious_routing PRIVATE /usr/local/opt/llvm/lib)
+    target_link_options(oblivious_routing PRIVATE -Wl,-rpath,/usr/local/opt/llvm/lib)
 
-    # macOS: ensure correct OpenMP runtime is linked
+    # Hard-pin the exact dylib to avoid picking /usr/local/lib/libomp.dylib
+    target_link_libraries(oblivious_routing PRIVATE /usr/local/opt/llvm/lib/libomp.dylib)
+
     if(APPLE)
-        find_library(OMP_LIBRARY omp HINTS /opt/homebrew/lib /usr/local/lib)
+        # Ensure we link to the correct Homebrew OpenMP runtime
+        find_library(OMP_LIBRARY omp HINTS /usr/local/lib /opt/homebrew/lib)
         if(OMP_LIBRARY)
-            message(STATUS "🔗 Found OpenMP runtime on macOS: ${OMP_LIBRARY}")
+            message(STATUS "🔗 Linking OpenMP runtime: ${OMP_LIBRARY}")
             target_link_libraries(oblivious_routing PRIVATE ${OMP_LIBRARY})
         else()
-            message(FATAL_ERROR "❌ OpenMP library not found on macOS")
+            message(FATAL_ERROR "❌ libomp.dylib not found. Install via `brew install libomp`.")
         endif()
     endif()
-
-    # Inject compiled object into binary
-    target_sources(oblivious_routing PRIVATE $<TARGET_OBJECTS:amg_solver_obj>)
-
 else()
-    message(STATUS "🚫 OpenMP disabled — compiling AMGSolver in serial mode")
-    list(APPEND SRC_FILES src/electrical/laplacian_solvers/AMGSolver.cpp
-            src/electrical/laplacian_solvers/AMGSolver.h
-            src/electrical/laplacian_solvers/LaplacianSolver.h
-            src/electrical/laplacian_solvers/LaplacianSolverFactory.h)
+    message(STATUS "🚫 OpenMP disabled — building serial version")
     add_executable(oblivious_routing ${SRC_FILES})
 endif()
+
+# --- macOS + Clang OpenMP configuration ---
+if(APPLE)
+    if(USE_OPENMP)
+        find_library(OMP_LIBRARY omp HINTS /usr/local/lib /opt/homebrew/lib)
+        if(OMP_LIBRARY)
+            message(STATUS "🔗 Using OpenMP runtime: ${OMP_LIBRARY}")
+            # target_link_libraries(oblivious_routing PRIVATE ${OMP_LIBRARY})
+            target_compile_options(oblivious_routing PRIVATE -Xclang -fopenmp)
+            # Force the linker to prefer LLVM’s lib directory
+            target_link_directories(oblivious_routing PRIVATE /usr/local/opt/llvm/lib)
+            target_link_options(oblivious_routing PRIVATE -Wl,-rpath,/usr/local/opt/llvm/lib)
+
+            # Hard-pin the exact dylib to avoid picking /usr/local/lib/libomp.dylib
+            target_link_libraries(oblivious_routing PRIVATE /usr/local/opt/llvm/lib/libomp.dylib)
+        else()
+            message(FATAL_ERROR "❌ libomp.dylib not found. Install with: brew install libomp")
+        endif()
+    endif ()
+endif()
+
+
+
+
 
 
 # target_link_libraries(oblivious_routing ortools::ortools)
@@ -141,5 +153,7 @@ target_link_libraries(oblivious_routing
         Boost::program_options
         Boost::serialization
 )
+
+target_link_libraries(oblivious_routing PRIVATE Eigen3::Eigen)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
