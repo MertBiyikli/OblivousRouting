@@ -218,10 +218,10 @@ void ElectricalFlowOptimized::run() {
 
             // Solve L x = b (solver returns dense potentials; that’s expected)
             // If your amg wrapper doesn't accept SparseVector, use: amg->solve(rhs.toDense())
-            auto start = std::chrono::high_resolution_clock::now();
+            auto start_pure = std::chrono::high_resolution_clock::now();
             Eigen::VectorXd x = amg->solve(rhs);
-            auto end = std::chrono::high_resolution_clock::now();
-            pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
+            auto end_pure = std::chrono::high_resolution_clock::now();
+            pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end_pure-start_pure).count());
 
             // accumulate edge flows for commodity (u -> x_fixed):
             // f_e(u) = w_e * (x[u]-x[v])

@@ -29,7 +29,7 @@ public:
         return iteration_count;
     }
 
-    void printFlow() const {
+    void printFlow_() const {
         for (const auto& [edge, flow_map] : f_e_st) {
             std::cout << "Edge (" << edge.first << ", " << edge.second << "): ";
             for (const auto& [commodity, value] : flow_map) {

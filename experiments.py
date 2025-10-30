@@ -45,6 +45,7 @@ CANON = {
     "electrical_optimized": "electrical_optimized", "ef_opt": "electrical_optimized", "eo": "electrical_optimized", "4": "electrical_optimized",
     "electrical_parallel_batches": "electrical_parallel_batches", "ef_par_batches": "electrical_parallel_batches", "5": "electrical_parallel_batches",
     "electrical_parallel_onthefly": "electrical_parallel_onthefly", "ef_par_onthefly": "electrical_parallel_onthefly", "6": "electrical_parallel_onthefly",
+    "ckr": "ckr", "raecke_ckr": "ckr", "ckr_partition": "ckr", "7": "ckr",
 }
 
 CANON_DEMAND = {

@@ -34,6 +34,7 @@ public:
 
         iteration_count = m_algorithm.getTrees().size();
         this->oracle_running_times = m_algorithm.oracle_running_times;
+        this->pure_oracle_running_times = m_algorithm.pure_oracle_running_times;
     }
 
     void storeFlow() override {

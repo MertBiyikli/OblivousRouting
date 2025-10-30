@@ -32,6 +32,7 @@ protected:
 
 public:
     std::vector<double> oracle_running_times; // TODO: remove this
+    std::vector<double> pure_oracle_running_times; // TODO: remove this
     virtual void init(Graph& g) = 0;
     virtual Tree getTree(Graph& g) = 0;
     virtual void computeRLoads(int treeIndex,

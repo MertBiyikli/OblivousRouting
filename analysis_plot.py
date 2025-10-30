@@ -35,6 +35,8 @@ def get_solver_color(name: str) -> str:
         return "#9467bd"  # purple
     elif "lp" in n:
         return "#d62728"  # red
+    elif "ckr" in n:
+        return "#e377c2"  # pink
     else:
         return "gray"     # fallback
 
@@ -264,6 +266,8 @@ def main():
         "tree": "#2ca02c",
         "mst": "#7f7f7f",
         "cohen": "#8c8c8c",
+        "ckr": "#e377c2",
+        "lp": "#d62728",
     }
 
     if "n_edges" in df.columns and "run_ms" in df.columns:

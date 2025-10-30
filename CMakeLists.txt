@@ -84,6 +84,16 @@ set(SRC_FILES
         src/electrical/laplacian_solvers/AMGSolverParallel.h
         src/electrical/electrical_flow_parallel_on_the_fly.cpp
         src/electrical/electrical_flow_parallel_on_the_fly.h
+        src/tree_based/ckr/ckr_partition.cpp
+        src/tree_based/ckr/ckr_partition.h
+        src/utils/priority_queue.h
+        src/utils/lca_datstructure.h
+        src/tree_based/ckr/ckr_tree_decomposer.cpp
+        src/tree_based/ckr/ckr_tree_decomposer.h
+        src/tree_based/ckr/raecke_ckr_transform.h
+        src/tree_based/ckr/raecke_ckr_solver.h
+        src/tree_based/ckr/raecke_ckr_optimized.cpp
+        src/tree_based/ckr/raecke_ckr_optimized.h
 )
 
 # ---------------------------------------------------------------------------

@@ -21,7 +21,8 @@ enum class SolverType {
     RAECKE_RANDOM_MST,
     ELECTRICAL_OPTIMIZED,
     ELECTRICAL_PARALLEL_BATCHES,
-    ELECTRICAL_PARALLEL_ONTHEFLY
+    ELECTRICAL_PARALLEL_ONTHEFLY,
+    RAECKE_CKR
 };
 
 enum class DemandModelType {
@@ -63,6 +64,8 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
         return SolverType::ELECTRICAL_PARALLEL_BATCHES;
     if (s == "electrical_parallel_onthefly" || s == "electrical_onthefly" || s == "e_onthefly")
         return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
+    if (s == "ckr" || s == "ckr_partition" || s == "raecke_ckr")
+        return SolverType::RAECKE_CKR;
 
 
     if (s == "0") return SolverType::ELECTRICAL_NAIVE;
@@ -72,6 +75,7 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     if (s == "4") return SolverType::ELECTRICAL_OPTIMIZED;
     if (s == "5") return SolverType::ELECTRICAL_PARALLEL_BATCHES;
     if (s == "6") return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
+    if (s == "7") return SolverType::RAECKE_CKR;
 
     return std::nullopt;
 }
@@ -101,11 +105,12 @@ inline std::string usage(const char* prog) {
        << "Solvers (case-insensitive):\n"
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
        << "  tree | raecke | frt | r | t   -> Tree-based (Raecke/FRT)\n"
-       << "  cohen | lp | applegate | ac   -> LP (Applegate–Cohen)\n"
+       << "  cohen | lp | applegate | ac   -> Tree-based (Raecke/MST)\n"
        << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n"
        << "  electrical_optimized | electricalopt | eo -> Electrical Flow (optimized)\n"
         << "  electrical_parallel_batches | electricalpar_batches | e_batches -> Electrical Flow (parallel)\n"
         << "  electrical_parallel_onthefly | electricalpar_onthefly | e_onthefly -> Electrical Flow (parallel)\n"
+        << "  ckr | ckr_partition | raecke_ckr | -> Tree-based (Raecke/CKR)\n"
        << "Numeric shortcuts: 0=electric, 1=tree, 2=cohen, 3=mst, 4=electrical_optimized_seq, 5=electrical_optimized_par_batches, 6=electrical_optimized_par_onthefly\n"
        << "[Optional] demand model (case-insensitive):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"
