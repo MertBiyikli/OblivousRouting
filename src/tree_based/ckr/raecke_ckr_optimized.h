@@ -194,7 +194,7 @@ struct FlowStorage {
         int lo = 0, hi = m;
         while (lo < hi) {
             int mid = (lo + hi) >> 1;
-            auto [eu, ev] = edges[mid];
+            const auto& [eu, ev] = edges[mid];
             if (eu < a || (eu == a && ev < b))
                 lo = mid + 1;
             else
@@ -202,12 +202,12 @@ struct FlowStorage {
         }
 
         // call optimized addFlow
-        if (lo < m && edges[lo] == std::make_pair(a,b)) {
+        // if (lo < m && edges[lo] == std::make_pair(a,b)) {
             addFlow(lo, s, flow);
-        } else {
+        // } else {
             // edge not found (should not happen)
-            throw std::runtime_error("Edge not found in FlowStorage::addFlow");
-        }
+           //  throw std::runtime_error("Edge not found in FlowStorage::addFlow");
+        // }
     }
 
 // TODO: make the adjacency list representation global for all solvers, except maybe the Applegate and Cohen one...
@@ -369,6 +369,9 @@ public:
 
                 int repParent = node->members.empty() ? S[0] : node->members[0];
                 int repChild  = S[0];
+
+                // TODO: improve representative selection
+                //  ideally use something like an LCA data structure to avoid shortest path computations
                 auto path = graph.getShortestPath(repParent, repChild);
                 if (path.size() < 2) continue;
 
