@@ -16,6 +16,7 @@
 #include "src/utils/lca_datstructure.h"
 #include "src/tree_based/ckr/raecke_ckr_solver.h"
 #include "src/tree_based/ckr/raecke_ckr_optimized.h"
+#include "src/tree_based/ckr/ckr_optimized_efficient_scaling.h"
 
 
 int main(int argc, char **argv) {
@@ -65,6 +66,11 @@ int main(int argc, char **argv) {
         case SolverType::RAECKE_CKR:
             std::cout << "Running Tree-based (Raecke/CKR)... \n";
             solver = std::make_unique<RaeckeCKROptimized>();
+            break;
+        case SolverType::RAECKE_CKR_OPTIMIZED:
+            std::cout << "Running Tree-based (Raecke/CKR Optimized)... \n";
+            solver = std::make_unique<MendelScaling::RaeckeCKROptimized>();
+            break;
         default:
             break;
     }
@@ -87,75 +93,7 @@ int main(int argc, char **argv) {
 
     // verify flow conservation
 
-    /*
-    std::cout << "Testing the CKR Partitioning module...\n";
-    // init distances
-    double d = 1;
-    for (int s = 0; s<g.getNumNodes(); s++) {
-        for (auto& v : g.neighbors(s)) {
-            if (s > v) continue;
-            g.updateEdgeDistance(s, v, d);
-            d+=1.0;
-        }
-    }
 
-    g.createDistanceMatrix();
-    g.print();
-    // init random subset of vertices
-    std::vector<int> X;
-    for (int i = 0; i<g.getNumNodes()/2; i++) {
-        X.push_back(i);
-    }
-    CKRPartion ckr;
-    ckr.init(g, false);
-    double delta = g.GetDiameter();
-    // print out the input set
-    std::cout << "Input set X:\n";
-    for (const auto& x : X) {
-        std::cout << x << " ";
-    }
-    std::cout << "\nDelta: " << delta << "\n";
-    auto cluster = ckr.computePartition(X, delta);
-
-    // print out the cluster
-    std::cout << "Cluster assignments:\n";
-    for (size_t i = 0; i<cluster.size(); i++) {
-        std::cout << "Node " << X[i] << " -> Cluster " << cluster[i] << "\n";
-    }
-
-
-    int root(0);
-
-    std::vector<lca::Edge> edges;
-    RandomMST mst_tree;
-    auto mst_edges = mst_tree.build_mst(g);
-    for (auto [u, v]:mst_edges) {
-        edges.push_back({ u, v});
-    }
-    lca::LCA_n_1 tree(edges, root);
-
-    int q = 3;
-    for (int i = 0; i < q; ++i) {
-        std::cout << "Query " << i << "th, (u, v) = "<< '\n';
-        int u = rand()%g.getNumNodes(), v=rand()%g.getNumNodes();
-        std::cout << "LCA(" << u << ", " << v << ") = " << tree.LCA(u, v) << '\n';
-    }
-
-    //delta /= 2;
-    TreeDecomposer decomposer;
-    std::vector<int> node_ids(g.getNumNodes());
-    std::iota(node_ids.begin(), node_ids.end(), 0);
-    TreeNode* DecompTree = decomposer.decompose(g, delta, node_ids);
-
-
-    std::cout << "CKR Decomposition Tree:" << std::endl;
-    print_tree(DecompTree);
-    // compute worst case demand for linear oblivious routing
-
-    RaeckeCKRSolver sol;
-    sol.solve(g);
-    sol.storeFlow();
-    sol.printFlow_();*/
     /*
     LinearObliviousRatio ratio;
     ratio.init(g, solver->f_e_st);

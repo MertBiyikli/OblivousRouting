@@ -394,7 +394,6 @@ public:
             }
         }
     }
-
 };
 
 class RaeckeCKROptimized : public ObliviousRoutingSolver {
@@ -417,14 +416,6 @@ public:
 
     void storeFlow() override {
         f_e_st.clear();
-        /*
-        // Simply copy from transform.flow_map into f_e_st
-        for (const auto& [edge, dem_map] : transform.flow_map) {
-            for (const auto& [dem, val] : dem_map) {
-                if (std::abs(val) <= 1e-12) continue;
-                f_e_st[edge][dem] += val;
-            }
-        }*/
         // store the flow from the adjacency list flow
         for (int e = 0; e<transform.flow_storage.adj_f_e_u_id.size(); e++) {
             int u = transform.flow_storage.edges[e].first;

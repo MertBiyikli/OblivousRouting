@@ -66,7 +66,7 @@ private:
         return result;
     }
 
-    void normalizeOldSolutionBasedOnNewLambda(double lambda) {
+    void normalizeOldSolutionBasedOnNewLambda(double lambda) override{
         for (auto& [arc, dmap] : arc2demand2cumulativeFraction) {
             for (auto& [d, frac] : dmap) {
                 frac *= (1.0 - lambda);

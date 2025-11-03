@@ -22,7 +22,8 @@ enum class SolverType {
     ELECTRICAL_OPTIMIZED,
     ELECTRICAL_PARALLEL_BATCHES,
     ELECTRICAL_PARALLEL_ONTHEFLY,
-    RAECKE_CKR
+    RAECKE_CKR,
+    RAECKE_CKR_OPTIMIZED
 };
 
 enum class DemandModelType {
@@ -66,6 +67,8 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
         return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
     if (s == "ckr" || s == "ckr_partition" || s == "raecke_ckr")
         return SolverType::RAECKE_CKR;
+    if (s == "ckr_optimized" || s == "ckropt" || s == "raecke_ckr_optimized")
+        return SolverType::RAECKE_CKR_OPTIMIZED;
 
 
     if (s == "0") return SolverType::ELECTRICAL_NAIVE;
@@ -76,6 +79,7 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     if (s == "5") return SolverType::ELECTRICAL_PARALLEL_BATCHES;
     if (s == "6") return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
     if (s == "7") return SolverType::RAECKE_CKR;
+    if (s == "8") return SolverType::RAECKE_CKR_OPTIMIZED;
 
     return std::nullopt;
 }
@@ -111,6 +115,7 @@ inline std::string usage(const char* prog) {
         << "  electrical_parallel_batches | electricalpar_batches | e_batches -> Electrical Flow (parallel)\n"
         << "  electrical_parallel_onthefly | electricalpar_onthefly | e_onthefly -> Electrical Flow (parallel)\n"
         << "  ckr | ckr_partition | raecke_ckr | -> Tree-based (Raecke/CKR)\n"
+        << "  ckr_optimized | ckropt | raecke_ckr_optimized -> Tree-based (Raecke/CKR Optimized)\n\n"
        << "Numeric shortcuts: 0=electric, 1=tree, 2=cohen, 3=mst, 4=electrical_optimized_seq, 5=electrical_optimized_par_batches, 6=electrical_optimized_par_onthefly\n"
        << "[Optional] demand model (case-insensitive):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"

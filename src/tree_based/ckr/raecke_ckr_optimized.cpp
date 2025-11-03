@@ -88,7 +88,7 @@ TreeNode* RaeckeCKR::getTree(Graph& g)
             node_ptrs.push_back(node);
 
         current_centers = L.centers;
-        Delta *= 0.5;  // shrink scale for next level
+        Delta /= 2;  // shrink scale for next level
     }
 
     // ----- 3) final root -----

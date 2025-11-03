@@ -239,6 +239,7 @@ public:
     }
 
 
+    // maybe think of a way better/faster way of computin the diameter
     const double GetDiameter() const {
         if (m_distanceMatrix.empty()) {
             throw std::runtime_error("Distance matrix is not initialized. Call createDistanceMatrix() first.");

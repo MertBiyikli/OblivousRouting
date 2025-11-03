@@ -94,6 +94,8 @@ set(SRC_FILES
         src/tree_based/ckr/raecke_ckr_solver.h
         src/tree_based/ckr/raecke_ckr_optimized.cpp
         src/tree_based/ckr/raecke_ckr_optimized.h
+        src/tree_based/ckr/ckr_optimized_efficient_scaling.cpp
+        src/tree_based/ckr/ckr_optimized_efficient_scaling.h
 )
 
 # ---------------------------------------------------------------------------
