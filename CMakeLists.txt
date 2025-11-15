@@ -34,10 +34,10 @@ endif()
 # ---- amgcl (vendored) ----
 add_subdirectory(extern/amgcl)
 
-list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
-include_directories(BEFORE ${ORTOOLS_ROOT}/include)
+# list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
+# include_directories(BEFORE ${ORTOOLS_ROOT}/include)
 find_package(ortools REQUIRED CONFIG)
-include_directories(BEFORE /Users/halilibrahim/local/ortools/include)
+# include_directories(BEFORE /Users/halilibrahim/local/ortools/include)
 
 find_package(Eigen3 REQUIRED)
 
@@ -105,58 +105,27 @@ set(SRC_FILES
         # src/tree_based/optimized_versions/frt/mcct_optimized.h
 )
 
+
 # ---------------------------------------------------------------------------
-# ✅ OpenMP configuration
+# OpenMP configuration (portable: Linux + macOS)
 # ---------------------------------------------------------------------------
-option(USE_OPENMP "Enable OpenMP support (used in AMGSolver)" OFF)
+option(USE_OPENMP "Enable OpenMP support (used in AMGSolver)" ON)
 
 if(USE_OPENMP)
     find_package(OpenMP REQUIRED)
-    message(STATUS "✅ OpenMP enabled")
-
-    add_executable(oblivious_routing ${SRC_FILES})
-    # target_link_libraries(oblivious_routing PRIVATE OpenMP::OpenMP_CXX Eigen3::Eigen)
-    # Force the linker to prefer LLVM’s lib directory
-    target_link_directories(oblivious_routing PRIVATE /usr/local/opt/llvm/lib)
-    target_link_options(oblivious_routing PRIVATE -Wl,-rpath,/usr/local/opt/llvm/lib)
-
-    # Hard-pin the exact dylib to avoid picking /usr/local/lib/libomp.dylib
-    target_link_libraries(oblivious_routing PRIVATE /usr/local/opt/llvm/lib/libomp.dylib)
-
-    if(APPLE)
-        # Ensure we link to the correct Homebrew OpenMP runtime
-        find_library(OMP_LIBRARY omp HINTS /usr/local/lib /opt/homebrew/lib)
-        if(OMP_LIBRARY)
-            message(STATUS "🔗 Linking OpenMP runtime: ${OMP_LIBRARY}")
-            target_link_libraries(oblivious_routing PRIVATE ${OMP_LIBRARY})
-        else()
-            message(FATAL_ERROR "❌ libomp.dylib not found. Install via `brew install libomp`.")
-        endif()
-    endif()
-else()
-    message(STATUS "🚫 OpenMP disabled — building serial version")
-    add_executable(oblivious_routing ${SRC_FILES})
 endif()
 
-# --- macOS + Clang OpenMP configuration ---
-if(APPLE)
-    if(USE_OPENMP)
-        find_library(OMP_LIBRARY omp HINTS /usr/local/lib /opt/homebrew/lib)
-        if(OMP_LIBRARY)
-            message(STATUS "🔗 Using OpenMP runtime: ${OMP_LIBRARY}")
-            # target_link_libraries(oblivious_routing PRIVATE ${OMP_LIBRARY})
-            target_compile_options(oblivious_routing PRIVATE -Xclang -fopenmp)
-            # Force the linker to prefer LLVM’s lib directory
-            target_link_directories(oblivious_routing PRIVATE /usr/local/opt/llvm/lib)
-            target_link_options(oblivious_routing PRIVATE -Wl,-rpath,/usr/local/opt/llvm/lib)
+add_executable(oblivious_routing ${SRC_FILES})
 
-            # Hard-pin the exact dylib to avoid picking /usr/local/lib/libomp.dylib
-            target_link_libraries(oblivious_routing PRIVATE /usr/local/opt/llvm/lib/libomp.dylib)
-        else()
-            message(FATAL_ERROR "❌ libomp.dylib not found. Install with: brew install libomp")
-        endif()
-    endif ()
+if(USE_OPENMP)
+    target_link_libraries(oblivious_routing PRIVATE OpenMP::OpenMP_CXX)
 endif()
+
+# Optional: keep a small macOS tweak if you still need it locally
+if(APPLE AND USE_OPENMP)
+    target_compile_options(oblivious_routing PRIVATE -Xclang -fopenmp)
+endif()
+
 
 
 

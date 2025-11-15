@@ -1,78 +1,78 @@
 # ============================================================
-#  Stage 1: Build (compiler + dependencies + build your binary)
+# Stage 1: Build OR-Tools + your binary
 # ============================================================
-FROM debian:stable-slim AS builder
+FROM ubuntu:24.04 AS builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN echo "AMGCL_DIR=$AMGCL_DIR" \
- && echo "ORTOOLS_DIR=$ORTOOLS_DIR" \
- && ls -l $AMGCL_DIR \
- && ls -l $ORTOOLS_DIR
+# --- Fix TLS/SSL issues inside Docker on macOS/Ubuntu ---
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake git wget curl pkg-config \
-    libomp-dev libeigen3-dev unzip ca-certificates \
-    && update-ca-certificates \
+    build-essential cmake ninja-build git pkg-config \
+    wget unzip \
+    libeigen3-dev libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 
-# OR-Tools C++ SDK
-WORKDIR /opt
+# ------------------------------------------------------------
+# 1. Download & build OR-Tools C++ (stable version)
+# ------------------------------------------------------------
+ENV ORTOOLS_VERSION v9.10
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates && update-ca-certificates
+RUN git clone --branch ${ORTOOLS_VERSION} --depth=1 https://github.com/google/or-tools.git
 
-RUN wget https://github.com/google/or-tools/releases/download/v9.10/or-tools_amd64_ubuntu-22.04_cpp_v9.10.4067.tar.gz \
-    && tar -xzf or-tools_amd64_ubuntu-22.04_cpp_v9.10.4067.tar.gz \
-    && extracted=$(tar -tzf or-tools_amd64_ubuntu-22.04_cpp_v9.10.4067.tar.gz | head -1 | cut -f1 -d"/") \
-    && mv "$extracted" /opt/or-tools \
-    && rm or-tools_amd64_ubuntu-22.04_cpp_v9.10.4067.tar.gz
+WORKDIR /opt/or-tools
 
+RUN cmake -S . -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_DEPS=ON \
+      -DBUILD_CXX=ON \
+      -DBUILD_PYTHON=OFF \
+      -DBUILD_JAVA=OFF \
+      -DBUILD_EXAMPLES=OFF \
+      -DBUILD_TESTING=OFF \
+ && cmake --build build -j"$(nproc)" \
+ && cmake --install build
 
-ENV ORTOOLS_DIR=/opt/or-tools
-
-# AMGCL header-only solver
-RUN git clone --depth 1 https://github.com/ddemidov/amgcl.git
-ENV AMGCL_DIR=/opt/amgcl
-
-# Copy project AFTER dependencies (max caching)
-WORKDIR /build
+# ------------------------------------------------------------
+# 2. Build your project
+# ------------------------------------------------------------
+WORKDIR /app
 COPY . .
 
-RUN cmake -S . -B /build \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_PREFIX_PATH="$ORTOOLS_DIR" \
-    -DCMAKE_CXX_FLAGS="-O3 -march=native -fopenmp" \
-    2>&1 | tee /tmp/cmake_config.log \
- && cmake --build /build -j$(nproc) \
-    2>&1 | tee /tmp/cmake_build.log \
- && echo "==== BUILD DIRECTORY CONTENT ====" \
- && ls -R /build
+RUN cmake -S . -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DUSE_OPENMP=ON \
+ && cmake --build build -j"$(nproc)"
 
-
-
-
+RUN cmake --build build -j"$(nproc)" \
+ && cd build && ctest --show-only
 
 
 # ============================================================
-#  Stage 2: Runtime (small)
+# Stage 2: Runtime image
 # ============================================================
-FROM debian:stable-slim
+FROM ubuntu:24.04 AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake git wget curl pkg-config \
-    libomp-dev libeigen3-dev unzip ca-certificates \
-    lib
+    libstdc++6 libgomp1 libboost-program-options-dev libboost-serialization-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/local/bin
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder /app/build/oblivious_routing /usr/local/bin/oblivious_routing
 
 
-COPY --from=builder /opt/or-tools /opt/or-tools
-ENV ORTOOLS_DIR=/opt/or-tools
-
-COPY --from=builder /build/oblivious_routing /usr/local/bin/oblivious_routing
+WORKDIR /app/build
+COPY --from=builder /app/build/ /app/build/
 
 
 WORKDIR /data
+
 ENTRYPOINT ["oblivious_routing"]
+CMD ["--help"]
