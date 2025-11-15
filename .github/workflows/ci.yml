@@ -51,9 +51,10 @@ jobs:
           build-args: |
             ORTOOLS_SOURCE=.cache/ortools
           tags: |
-            ghcr.io/${{ toLower(github.repository_owner) }}/oblivousrouting:latest
-            ghcr.io/${{ toLower(github.repository_owner) }}/oblivousrouting:${{ github.sha }}
-            ghcr.io/${{ toLower(github.repository_owner) }}/oblivousrouting:${{ github.ref_name }}
+            ghcr.io/mertbiyikli/oblivousrouting:latest
+            ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
+            ghcr.io/mertbiyikli/oblivousrouting:${{ github.ref_name }}
+      
       
       
       
