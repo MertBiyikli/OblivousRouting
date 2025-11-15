@@ -45,6 +45,7 @@ public:
 
 
         TreeNode* root = new TreeNode{level};
+        root->radius = delta;
 
         for (auto& [cid, nodes] : cluster_to_nodes) {
             std::unordered_map<int, int> index_map;
@@ -60,13 +61,20 @@ public:
                     if (index_map.count(v)) {
                         int i = index_map[u], j = index_map[v];
                         if (i > j) continue;
-                        subgraph.addEdge(i, j, G.getEdgeCapacity(u, v));
+
+//#ifdef DEBUG
+                        double cap = G.getEdgeCapacity(u, v);
+                        double dist = G.getEdgeDistance(u, v);
+                        std::cout << "Adding edge in subgraph: " << i << " - " << j << " | cap: " << cap << ", dist: " << dist << std::endl;
+//#endif
+                        subgraph.addEdge(i, j, G.getEdgeCapacity(u, v), G.getEdgeDistance(u, v));
                     }
                 }
             }
 
             TreeNode* child = decompose(subgraph, delta * 0.5, local_to_global, level + 1);
             child->members = local_to_global;  // These are now true original graph node IDs
+            child->radius = delta * 0.5;
             root->children.push_back(child);
         }
 

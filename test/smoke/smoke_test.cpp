@@ -40,7 +40,7 @@ TEST(GraphTest, InvalidEdgeThrows) {
 TEST(GraphTest, ReadGraph) {
     Graph g;
 
-    g.readGraph("../test/randomgraphs/small/graph_10_6.dimacs");
+    g.readGraph("../experiments/datasets/Backbone/1755.lgf);
 
     EXPECT_EQ(g.numNodes(), 6);
     EXPECT_EQ(g.numEdges(), 10);

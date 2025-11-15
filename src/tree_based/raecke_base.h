@@ -54,6 +54,7 @@ public:
     }
 
     virtual double iterate(int treeIndex) {
+        // m_graph.print();
         Tree t = getTree(m_graph);
         m_trees.push_back(t);
 

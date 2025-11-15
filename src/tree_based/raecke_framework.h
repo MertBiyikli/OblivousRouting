@@ -50,6 +50,7 @@ public:
         auto const& routingRaecke = m_transform.getRoutingTable();
         for (const auto& [edge, demandMap] : routingRaecke) {
             for (const auto& [d, fraction] : demandMap) {
+                if (d.first > d.second) continue; // skip trivial cases
                 f_e_st[edge][d]=fraction;
             }
         }

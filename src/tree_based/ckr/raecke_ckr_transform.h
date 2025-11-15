@@ -45,10 +45,10 @@ private:
                         std::pair<int, int> arc{path[i], path[i+1]};
 
                         auto& fwdMap = arc2demand2cumulativeFraction[arc];
-                        auto& revMap = arc2demand2cumulativeFraction[{arc.second, arc.first}];
+                        // auto& revMap = arc2demand2cumulativeFraction[{arc.second, arc.first}];
 
                         fwdMap[pair] += lambda;
-                        revMap[revPair] += lambda;
+                        // revMap[revPair] += lambda;
                     }
                 }
             }

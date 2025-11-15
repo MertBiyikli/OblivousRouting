@@ -15,8 +15,12 @@
 #include "src/tree_based/ckr/ckr_tree_decomposer.h"
 #include "src/utils/lca_datstructure.h"
 #include "src/tree_based/ckr/raecke_ckr_solver.h"
-#include "src/tree_based/ckr/raecke_ckr_optimized.h"
+// #include "src/tree_based/ckr/raecke_ckr_optimized.h"
 #include "src/tree_based/ckr/ckr_optimized_efficient_scaling.h"
+// #include "src/tree_based/optimized_versions/frt/raecke_frt_opt.h"
+#include "src/tree_based/optimized_versions/frt/mcct_optimized.h"
+// #include "src/tree_based/optimized_versions/raecke_optimized_base.h"
+#include "src/graph_csr.h"
 
 
 int main(int argc, char **argv) {
@@ -33,6 +37,27 @@ int main(int argc, char **argv) {
     std::cout << "Graph loaded: " << g.getNumNodes() << " nodes, " << g.getNumEdges() << " edges.\n";
     //g.print();
 
+    Graph_csr csr_graph;
+    csr_graph.readLFGFile(cfg->filename, true);
+    csr_graph.preprocess();
+    csr_graph.print();
+/*
+    MCCT_optimized mcct_optimized(csr_graph);
+    // mcct_optimized.setGraph(csr_graph);
+    auto best_tree = mcct_optimized.getBestTree(true);
+    mcct_optimized.printTree(best_tree);
+*/
+
+    int u = 0, v = 1;
+    auto path = csr_graph.getShortestPath(u, v);
+    std::cout << "Shortest path with endpoints: " << u << " , " << v << std::endl;
+    for (auto& it : path) {
+        std::cout << it << " ";
+    }
+    // print the computed diameter of the graph
+    double diameter = csr_graph.computeExactDiameterUsingDijkstra();
+    std::cout << "\nGraph diameter: " << diameter << std::endl;
+    std::cout << std::endl;
     std::unique_ptr<ObliviousRoutingSolver> solver;
     switch (cfg->solver) {
         case SolverType::ELECTRICAL_NAIVE:
@@ -65,12 +90,20 @@ int main(int argc, char **argv) {
             break;
         case SolverType::RAECKE_CKR:
             std::cout << "Running Tree-based (Raecke/CKR)... \n";
-            solver = std::make_unique<RaeckeCKROptimized>();
+            solver = std::make_unique<RaeckeCKRSolver>();
             break;
+            /*
         case SolverType::RAECKE_CKR_OPTIMIZED:
+            std::cout << "THIS IS STILL BUGGY...\n";
             std::cout << "Running Tree-based (Raecke/CKR Optimized)... \n";
             solver = std::make_unique<MendelScaling::RaeckeCKROptimized>();
             break;
+            */
+/*
+        case SolverType::OPTIMIZED_RAECKE_FRT:
+            std::cout << "Running Optimized Raecke FRT... \n";
+            solver = std::make_unique<RaeckeFRTOptimized>();
+            break;*/
         default:
             break;
     }
@@ -82,14 +115,16 @@ int main(int argc, char **argv) {
 
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
-    //solver->debug = true;
+    solver->debug = true;
     solver->solve(g);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
 
+
+
     // TODO: this store flow is a major bottleneck for the tree based experiments.
-    // solver->storeFlow();
-    // solver->printFlow_();
+   solver->storeFlow();
+   solver->printFlow_();
 
     // verify flow conservation
 
@@ -106,7 +141,7 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    // HandleDemandModel(argc, argv, cfg, g, solver);
+    HandleDemandModel(argc, argv, cfg, g, solver);
 
 
     if (cfg->solver != SolverType::LP_APPLEGATE_COHEN) {

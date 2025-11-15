@@ -1,0 +1,8 @@
+build/
+cmake-build*
+datasets/
+logs/
+*.csv
+*.out
+*.log
+.git

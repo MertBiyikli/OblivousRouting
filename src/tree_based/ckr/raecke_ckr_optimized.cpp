@@ -24,15 +24,10 @@ TreeNode* RaeckeCKR::getTree(Graph& g)
     if (n == 0) return nullptr;
 
     // ----- 1) choose base scale -----
-    double wmax = 0.0;
-    for (int u = 0; u < n; ++u)
-        for (auto& v : g.neighbors(u)) {
-            double w = g.getEdgeDistance(u, v);
-            if (w > wmax)
-                wmax = w;
-        }
-    double Delta = std::max(1.0, wmax) *
-                   (1u << (32 - __builtin_clz(std::max(1, n))));
+    if (!g.IsDistanceMatrixComputed())
+        g.createDistanceMatrix();
+
+    double Delta = g.GetDiameter();
 
     std::mt19937 rng(std::random_device{}());
     m_levels.clear();

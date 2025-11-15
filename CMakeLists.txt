@@ -92,10 +92,17 @@ set(SRC_FILES
         src/tree_based/ckr/ckr_tree_decomposer.h
         src/tree_based/ckr/raecke_ckr_transform.h
         src/tree_based/ckr/raecke_ckr_solver.h
-        src/tree_based/ckr/raecke_ckr_optimized.cpp
-        src/tree_based/ckr/raecke_ckr_optimized.h
+        # src/tree_based/ckr/raecke_ckr_optimized.cpp
+        # src/tree_based/ckr/raecke_ckr_optimized.h
         src/tree_based/ckr/ckr_optimized_efficient_scaling.cpp
         src/tree_based/ckr/ckr_optimized_efficient_scaling.h
+        src/tree_based/optimized_versions/raecke_optimized_base.h
+        src/tree_based/optimized_versions/frt/raecke_frt_opt.h
+        src/tree_based/optimized_versions/frt/raecke_frt_transform_opt.h
+        # src/tree_based/optimized_versions/frt/raecke_frt_opt.cpp
+        src/graph_csr.h
+        # src/tree_based/optimized_versions/frt/mcct_optimized.cpp
+        # src/tree_based/optimized_versions/frt/mcct_optimized.h
 )
 
 # ---------------------------------------------------------------------------
@@ -169,3 +176,6 @@ target_link_libraries(oblivious_routing
 target_link_libraries(oblivious_routing PRIVATE Eigen3::Eigen)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# ---- Tests ----
+add_subdirectory(test)

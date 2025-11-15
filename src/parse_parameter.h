@@ -23,7 +23,8 @@ enum class SolverType {
     ELECTRICAL_PARALLEL_BATCHES,
     ELECTRICAL_PARALLEL_ONTHEFLY,
     RAECKE_CKR,
-    RAECKE_CKR_OPTIMIZED
+    RAECKE_CKR_OPTIMIZED,
+    OPTIMIZED_RAECKE_FRT,
 };
 
 enum class DemandModelType {
@@ -69,6 +70,8 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
         return SolverType::RAECKE_CKR;
     if (s == "ckr_optimized" || s == "ckropt" || s == "raecke_ckr_optimized")
         return SolverType::RAECKE_CKR_OPTIMIZED;
+    if (s == "optimized_raecke_frt" || s == "raecke_frt_opt" || s == "oref")
+        return SolverType::OPTIMIZED_RAECKE_FRT;
 
 
     if (s == "0") return SolverType::ELECTRICAL_NAIVE;
@@ -80,6 +83,7 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     if (s == "6") return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
     if (s == "7") return SolverType::RAECKE_CKR;
     if (s == "8") return SolverType::RAECKE_CKR_OPTIMIZED;
+    if (s == "9") return SolverType::OPTIMIZED_RAECKE_FRT;
 
     return std::nullopt;
 }

@@ -29,6 +29,9 @@ public:
         auto start = std::chrono::high_resolution_clock::now();
         TreeNode* DecompTree = decomposer.decompose(g, delta, node_ids);
         pure_oracle_running_times.push_back((std::chrono::duration<double, std::milli>( std::chrono::high_resolution_clock::now() - start)).count());
+
+        computeNewDistances(g);
+        g.print();
         return DecompTree;
     }
 

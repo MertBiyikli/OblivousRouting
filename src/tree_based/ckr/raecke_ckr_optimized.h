@@ -113,13 +113,6 @@ static std::vector<int> build_ckr_level(
     std::vector<int>    dist_epoch(n, 0);
     int epoch = 1;
 
-    auto reset_heap_and_epoch = [&]() {
-        while (!pq.empty()) pq.pop();
-        ++epoch;  // lazy-reset dist[] via epoch
-    };
-    auto has_dist = [&](int v) { return dist_epoch[v] == epoch; };
-    auto set_dist = [&](int v, double d) { dist_epoch[v] = epoch; dist[v] = d; };
-
     L.centers.clear();
     L.centers.reserve(n);
 
@@ -127,15 +120,13 @@ static std::vector<int> build_ckr_level(
         if (L.owner[c] != -1) continue;          // already captured
         // Start a new center
         L.centers.push_back(c);
-        reset_heap_and_epoch();
-        set_dist(c, 0.0);
+        dist[c] = 0.0;
         L.pred[c] = -1;
         pq.emplace(0.0, c);
 
         while (!pq.empty()) {
             auto [d,u] = pq.top(); pq.pop();
             if (d >= L.R) break;
-            if (!has_dist(u) || d != dist[u]) continue;
             if (L.owner[u] != -1) continue;      // skip: already assigned by earlier center
 
             // Capture u for center c
@@ -145,8 +136,8 @@ static std::vector<int> build_ckr_level(
                 if (L.owner[v] != -1) continue;  // already captured
                 double w = G.getEdgeDistance(u, v);
                 double nd = d + w;
-                if (nd < L.R && (!has_dist(v) || nd < dist[v])) {
-                    set_dist(v, nd);
+                if (nd < L.R && ( nd < dist[v])) {
+                    dist[v] =  nd;
                     L.pred[v] = u;               // predecessor towards center c
                     pq.emplace(nd, v);
                 }

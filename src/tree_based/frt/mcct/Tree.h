@@ -13,6 +13,7 @@
 class FRT_Tree {
     std::shared_ptr<FRT_Node> root;
     std::map<int, std::vector<std::shared_ptr<FRT_Node>>> idLayer2nodes;
+    std::vector<std::shared_ptr<FRT_Node>> all_nodes;
 public:
     void createRoot(int layers) {
         root = std::make_shared<FRT_Node>();
@@ -42,6 +43,10 @@ public:
 
     std::vector<std::shared_ptr<FRT_Node>>& GetLayerNodes(int layer) {
         return idLayer2nodes[layer];  // Return empty vector if layer not found
+    }
+
+    const auto& GetLayer2Nodes() const {
+        return idLayer2nodes;
     }
 
     void print() {
@@ -76,6 +81,44 @@ public:
                 q.push(child);
             }
         }
+    }
+
+    std::shared_ptr<FRT_Node> getNode(int id) const {
+        if (id < 0 || id >= (int)all_nodes.size())
+            throw std::runtime_error("Invalid node id");
+        return all_nodes[id];
+    }
+
+    // --- Additions ---
+    int addClusterNode(const std::vector<int>& vertices, int level = 0) {
+        auto node = std::make_shared<FRT_Node>();
+
+        for (auto& v : vertices) {
+            node->addVertex(v);
+        }
+        if (!vertices.empty()) node->setCenter(vertices.front());
+
+        idLayer2nodes[level].push_back(node);
+        all_nodes.push_back(node);
+
+        // --- Automatically set the first node as root ---
+        if (!root) {
+            root = node;
+        }
+
+        return (int)all_nodes.size() - 1;
+    }
+
+    void addTreeEdge(int child_id, int parent_id) {
+        if (child_id < 0 || parent_id < 0 ||
+            child_id >= (int)all_nodes.size() || parent_id >= (int)all_nodes.size())
+            throw std::runtime_error("Invalid node id in addTreeEdge.");
+
+        auto parent = all_nodes[parent_id];
+        auto child = all_nodes[child_id];
+
+        child->setParent(parent);
+        parent->addChild(child);
     }
 };
 

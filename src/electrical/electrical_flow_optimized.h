@@ -57,7 +57,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     Eigen::SparseMatrix<double> bw_product_t;
 
     // Helpers
-    void extract_edge_list();
+    void extract_edge_list(); // TODO: refactor this
     void initEdgeDistances();
     void updateEdgeDistances(const std::vector<double>& load);
     void buildWeightDiag();

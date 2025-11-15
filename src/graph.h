@@ -170,7 +170,11 @@ public:
         if(it != m_adj[u].end()) {
             int index = std::distance(m_adj[u].begin(), it);
             m_adj_capacities[u][index] = capacity;
-            m_adj_capacities[v][index] = capacity; // Assuming undirected graph, update both directions
+
+            // update reverse direction accordingly
+            auto anti_edge = std::find(m_adj[v].begin(), m_adj[v].end(), u);
+            int anti_index = std::distance(m_adj[v].begin(), anti_edge);
+            m_adj_capacities[v][anti_index] = capacity; // Assuming undirected graph, update both directions
         } else {
             throw std::runtime_error("Edge not found");
         }
@@ -309,6 +313,9 @@ public:
         for (int at = v; at != -1; at = prev[at]) {
             path.push_back(at);
         }
+
+        // reverse the path
+        std::reverse(path.begin(), path.end());
         return path;
     }
 

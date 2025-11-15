@@ -114,6 +114,16 @@ public:
             }
         }
     }
+
+    double getFlowForEdgeCommodity(int edge_id, int s, int t) const {
+        for (int idx = 0; idx < adj_f_e_u_id[edge_id].size(); ++idx) {
+            if (adj_f_e_u_id[edge_id][idx] == s) {
+                return adj_f_e_u[edge_id][idx];
+            }
+        }
+        return 0.0;
+
+    }
 };
 
 #endif //OBLIVOUSROUTING_SOLVER_H
