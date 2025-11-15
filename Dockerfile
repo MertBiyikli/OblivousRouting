@@ -5,10 +5,10 @@ FROM ubuntu:24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# --- Fix TLS/SSL issues inside Docker on macOS/Ubuntu ---
+# Fix SSL trust for git/github
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
-
+# System build deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git pkg-config \
     wget unzip \
@@ -18,9 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /opt
 
 # ------------------------------------------------------------
-# 1. Download & build OR-Tools C++ (stable version)
+# 1. Download & build OR-Tools (C++)
 # ------------------------------------------------------------
-ENV ORTOOLS_VERSION v9.10
+ENV ORTOOLS_VERSION=v9.10
 
 RUN git clone --branch ${ORTOOLS_VERSION} --depth=1 https://github.com/google/or-tools.git
 
@@ -38,7 +38,7 @@ RUN cmake -S . -B build -G Ninja \
  && cmake --install build
 
 # ------------------------------------------------------------
-# 2. Build your project
+# 2. Build your project (NO TESTS INSIDE DOCKER)
 # ------------------------------------------------------------
 WORKDIR /app
 COPY . .
@@ -46,11 +46,8 @@ COPY . .
 RUN cmake -S . -B build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DUSE_OPENMP=ON \
+      -DBUILD_TESTS=OFF \
  && cmake --build build -j"$(nproc)"
-
-RUN cmake --build build -j"$(nproc)" \
- && cd build && ctest --show-only
-
 
 # ============================================================
 # Stage 2: Runtime image
@@ -63,14 +60,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libstdc++6 libgomp1 libboost-program-options-dev libboost-serialization-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/local/bin
-COPY --from=builder /usr/local/bin/ /usr/local/bin/
+# App binary
 COPY --from=builder /app/build/oblivious_routing /usr/local/bin/oblivious_routing
-
-
-WORKDIR /app/build
-COPY --from=builder /app/build/ /app/build/
-
 
 WORKDIR /data
 

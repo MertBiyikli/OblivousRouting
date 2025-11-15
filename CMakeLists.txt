@@ -26,13 +26,14 @@ endif()
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 
 # if you have tests that need unit_test_framework, guard it:
-option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build test targets" OFF)
+
 if(BUILD_TESTS)
     find_package(Boost 1.70 REQUIRED COMPONENTS unit_test_framework)
 endif()
 
 # ---- amgcl (vendored) ----
-add_subdirectory(extern/amgcl)
+# add_subdirectory(extern/amgcl)
 
 # list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
 # include_directories(BEFORE ${ORTOOLS_ROOT}/include)
@@ -147,4 +148,6 @@ target_link_libraries(oblivious_routing PRIVATE Eigen3::Eigen)
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # ---- Tests ----
-add_subdirectory(test)
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif()
