@@ -51,9 +51,10 @@ jobs:
           build-args: |
             ORTOOLS_SOURCE=.cache/ortools
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner | lower }}/oblivousrouting:latest
+            ghcr.io/${{ github.repository_owner | lower }}/oblivousrouting:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner | lower }}/oblivousrouting:${{ github.ref_name }}
+      
 
       - name: Run Tiny Tests (PR only)
         if: github.event_name == 'pull_request'
