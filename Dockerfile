@@ -24,16 +24,26 @@ ENV ORTOOLS_VERSION=v9.10
 
 ARG ORTOOLS_SOURCE=/opt/or-tools
 
-# If ORTOOLS_SOURCE exists, use the cached source
-COPY ${ORTOOLS_SOURCE} /opt/or-tools-source/ || true
+# ----------------------------------------
+# OR-Tools caching support
+# ----------------------------------------
 
-RUN if [ -d "/opt/or-tools-source" ]; then \
-        echo "Using cached OR-Tools source"; \
-        cp -r /opt/or-tools-source /opt/or-tools; \
+# Create cache directory so COPY never fails
+RUN mkdir -p /opt/or-tools-source
+
+# Copy any cached OR-Tools source (may be empty)
+COPY .cache/ortools/ /opt/or-tools-source/
+
+# Build OR-Tools from cached source if available, otherwise download
+RUN if [ -d "/opt/or-tools-source" ] && [ "$(ls -A /opt/or-tools-source)" ]; then \
+      echo "Using cached OR-Tools source"; \
+      cd /opt/or-tools-source && cmake -S . -B build -G Ninja && cmake --build build -j"$(nproc)" && cmake --install build; \
     else \
-        echo "No cached OR-Tools found – cloning fresh"; \
-        git clone --depth=1 --branch ${ORTOOLS_VERSION} https://github.com/google/or-tools.git /opt/or-tools; \
+      echo "Downloading OR-Tools from GitHub"; \
+      cd /opt && git clone --depth=1 https://github.com/google/or-tools.git or-tools-source && \
+      cd or-tools-source && cmake -S . -B build -G Ninja && cmake --build build -j"$(nproc)" && cmake --install build; \
     fi
+
 
 WORKDIR /opt/or-tools
 
