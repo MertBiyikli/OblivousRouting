@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_PERFORMANCE_H
 
 #include <chrono>
+#include <functional>
 #include "../../src/graph.h"
 
 class Performance{
