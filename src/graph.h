@@ -272,7 +272,7 @@ public:
         return path;
     }
 
-
+/*
     std::vector<int> getShortestPath(int u, int v) {
         if (u < 0 || u >= m_adj.size() || v < 0 || v >= m_adj.size()) {
             throw std::out_of_range("Node index out of range");
@@ -317,6 +317,56 @@ public:
         // reverse the path
         std::reverse(path.begin(), path.end());
         return path;
+    }*/
+
+    std::vector<int> getShortestPath(int u, int v) {
+        if (u < 0 || u >= m_adj.size() || v < 0 || v >= m_adj.size()) {
+            throw std::out_of_range("Node index out of range");
+        }
+
+        const int n = m_adj.size();
+        std::vector<double> dist(n, std::numeric_limits<double>::infinity());
+        std::vector<int> prev(n, -1);
+        std::vector<bool> visited(n, false);
+
+        dist[u] = 0.0;
+        using Node = std::pair<double, int>; // (distance, node)
+        std::priority_queue<Node, std::vector<Node>, std::greater<>> pq;
+        pq.emplace(0.0, u);
+
+        while (!pq.empty()) {
+            auto [d, node] = pq.top();
+            pq.pop();
+
+            if (visited[node]) continue;
+            visited[node] = true;
+
+            if (node == v) break; // Early exit when target reached
+
+            for (size_t i = 0; i < m_adj[node].size(); ++i) {
+                int neighbor = m_adj[node][i];
+                double edgeDist = m_adj_distances[node][i];
+
+                if (dist[node] + edgeDist < dist[neighbor]) {
+                    dist[neighbor] = dist[node] + edgeDist;
+                    prev[neighbor] = node;
+                    pq.emplace(dist[neighbor], neighbor);
+                }
+            }
+        }
+
+        // Build the path
+        std::vector<int> path;
+        path.reserve(n);
+        for (int at = v; at != -1; at = prev[at]) {
+            path.push_back(at);
+        }
+        std::reverse(path.begin(), path.end());
+
+        // Optional: check if reachable
+        if (path.front() != u) return {}; // empty path if no connection
+
+        return path; // NRVO ensures no copy
     }
 
     void readGraph(const std::string &filename);

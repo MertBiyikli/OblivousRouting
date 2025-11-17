@@ -12,7 +12,20 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <boost/container/flat_set.hpp>
+
 #include <map>
+
+#define INVALID_EDGE_ID -1
+
+using _Edge = std::pair<int, int>; // (u, v)
+
+// Optionally, define a custom comparator to enforce u < v ordering
+struct EdgeCompare {
+    bool operator()(const _Edge& a, const _Edge& b) const {
+        return (a.first == b.first) ? (a.second < b.second) : (a.first < b.first);
+    }
+};
 
 /*
  * The idea is to have a graph class that uses CSR format internally
@@ -30,7 +43,14 @@ public:
     mutable std::vector<double> dist_buf;
     mutable std::vector<int> parent_buf;
 
+    boost::container::flat_set<_Edge, EdgeCompare> edgeSet;
 
+
+    // TODO: somehow you also have to explicitly state the the default constructor should not be used
+    Graph_csr(int n) : n(n), m(0) {
+        vertices.resize(n);
+        std::iota(vertices.begin(), vertices.end(), 0);
+    }
     void preprocess() {
 
         // check consistency
@@ -104,17 +124,16 @@ public:
     }
 
     void addEdge(int u, int v, double cap) {
-        // search in the edges first if the edge already exists
-        auto edge = (u < v ? std::make_pair<int, int>(std::move(u),std::move(v))
-            :std::make_pair<int, int>(std::move(v),std::move(u)));
-        auto it = std::find(edges.begin(), edges.end(),
-        edge
-        );
-        if (it != edges.end()) {
-            // throw std::runtime_error("Graph_csr::addEdge : Edge already exists");
-            return; // do nothing
+
+        if (u > v) std::swap(u, v);
+        _Edge edge{u, v};
+
+        auto [it, inserted] = edgeSet.insert(edge);
+        if (!inserted) {
+            return; // Edge already exists
         }
-        edges.push_back({u, v});
+
+        edges.emplace_back(u, v);
         capacity.push_back(cap);
         distance.push_back(1.0); // default distance
         m++;
@@ -126,7 +145,7 @@ public:
             if (edges[e].second == v)
                 return e;
         }
-        return -1;
+        return INVALID_EDGE_ID;
     }
 
     double getEdgeCapacity(int edge_id) const {
@@ -140,19 +159,17 @@ public:
     }
 
     double getEdgeCapacity(int u, int v) const {
-        int source = std::min(u, v);
-        int target = std::max(u, v);
+        if ( u > v) std::swap(u, v);
+        int source = u;
+        int target = v;
 
-        int head_idx = head[source];
-        int end_idx = (source + 1 < n) ? head[source + 1] : m;
-        for (int e = head_idx; e < end_idx; ++e) {
-            const auto& [a, b] = edges[e];
-            if (a != source) break; // moved past source's edges
-            if (b == target) {
-                return capacity[e];
-            }
-        }
-        throw std::runtime_error("Edge not found");
+        _Edge k{u, v};
+        if (!edgeSet.contains(k))
+            throw std::runtime_error("Edge not found");
+        int e = getEdgeId(u, v);
+        if (e == INVALID_EDGE_ID)
+            throw std::runtime_error("Edge not found");
+        return capacity[e];
     }
 
     double getEdgeDistance(int edge_id) const {
@@ -186,7 +203,7 @@ public:
             throw std::out_of_range("Edge index out of range");
         }
         if (distance.size() < edge_id) {
-            throw std::runtime_error("Edge index exceeds distance size");
+            throw std::out_of_range("Edge index exceeds distance size");
         }
         distance[edge_id] = dist;
     }
@@ -194,6 +211,15 @@ public:
     void updateEdgeDistance(int u, int v, double dist) {
         int source = std::min(u, v);
         int target = std::max(u, v);
+
+        if (source < 0 || source >= n || target < 0 || target >= n) {
+            throw std::out_of_range("Node index out of range");
+        }
+
+         _Edge k{u, v};
+        if (!edgeSet.contains(k))
+            throw std::runtime_error("Edge not found");
+
 
         int head_idx = head[source];
         int end_idx = (source + 1 < n) ? head[source + 1] : m;
@@ -567,7 +593,7 @@ public:
         // Finally, add the undirected edge (Graph::addEdge adds both directions)
         // add random edge capacities
         // capacityValue = rand()%this->getNumNodes()+10; // random factor in [0.5, 1.5]
-        this->addEdge(u, v, capacityValue);
+        this->addEdge((u), (v), capacityValue);
     }
 
 }

@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive     # ← REQUIRED TO CLONE extern/amgcl and extern/googletest
+
 
       - name: Cache OR-Tools source
         id: ortools-cache
@@ -65,3 +68,13 @@ jobs:
           echo "Running tiny tests inside container..."
           docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }} \
             bash -c "cd /app/build && ctest -R Tiny --output-on-failure"
+          
+
+      - name: Cache OR-Tools build artifacts
+        id: ortools-build-cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/ortools-build
+          key: ortools-build-${{ hashFiles('.cache/ortools/**') }}
+
+

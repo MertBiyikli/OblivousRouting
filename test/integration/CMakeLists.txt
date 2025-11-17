@@ -1,5 +1,5 @@
 # --------------------------------------------------
-# Tiny, dependency-free correctness tests
+# Integration, dependency-free correctness tests
 # --------------------------------------------------
 
 cmake_minimum_required(VERSION 3.16)
@@ -18,35 +18,35 @@ set(CMAKE_BUILD_RPATH
 )
 
 # --------------------------------------------------
-# Tiny test-only library (no OR-Tools, no AMGCL)
+# INTEGRATION test-only library (no OR-Tools, no AMGCL)
 # --------------------------------------------------
 
-file(GLOB TINY_SRC
+file(GLOB INTEGRATION_SRC
         ${CMAKE_SOURCE_DIR}/src/utils/*.cpp
         ${CMAKE_SOURCE_DIR}/src/tree_based/frt/*.cpp
         ${CMAKE_SOURCE_DIR}/src/tree_based/frt/mcct/*.cpp
         ${CMAKE_SOURCE_DIR}/src/graph/*.cpp
 )
 
-add_library(tiny_core STATIC ${TINY_SRC})
+add_library(integration_core STATIC ${INTEGRATION_SRC})
 
-target_include_directories(tiny_core PUBLIC
+target_include_directories(integration_core PUBLIC
         ${CMAKE_SOURCE_DIR}/src
 )
 
 # --------------------------------------------------
-# Automatically build tiny test files
+# Automatically build integration test files
 # --------------------------------------------------
 
-file(GLOB TINY_TEST_FILES "*.cpp")
+file(GLOB INTEGRATION_TEST_FILES "*.cpp")
 
-foreach(TEST_FILE ${TINY_TEST_FILES})
+foreach(TEST_FILE ${INTEGRATION_TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 
     add_executable(${TEST_NAME} ${TEST_FILE})
 
     target_link_libraries(${TEST_NAME} PRIVATE
-            tiny_core
+            integration_core
             GTest::gtest
             GTest::gtest_main
             Boost::boost
