@@ -15,37 +15,43 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      # ---------------------------
-      # Checkout, including submodules
-      # ---------------------------
+      #############################################
+      # Checkout with submodules fixed
+      #############################################
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive    # CHANGED: ensure extern/amgcl & extern/googletest are present
+          submodules: recursive   # IMPORTANT!
 
-      # ---------------------------
-      # Cache OR-Tools source
-      # ---------------------------
-      - name: Cache OR-Tools source
+      #############################################
+      # Cache precompiled OR-Tools directory
+      #############################################
+      - name: Cache OR-Tools
         id: ortools-cache
         uses: actions/cache@v4
         with:
           path: .cache/ortools
-          key: ortools-${{ hashFiles('Dockerfile') }}
-          restore-keys: ortools-
+          key: ortools-v9.10-${{ hashFiles('Dockerfile') }}
+          restore-keys: ortools-v9.10-
 
-      - name: Prepare OR-Tools cache directory (on miss)
+      - name: Initialize OR-Tools cache on miss
         if: steps.ortools-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p .cache/ortools
-          git clone --depth=1 --branch v9.10 https://github.com/google/or-tools.git .cache/ortools
+          echo "Downloading OR-Tools for cache warm-up..."
+          wget -q https://github.com/google/or-tools/releases/download/v9.10/or-tools_ubuntu-24.04_cpp_v9.10.4067.tar.gz -O ortools.tar.gz
+          tar -xzf ortools.tar.gz --strip-components=1 -C .cache/ortools
+          rm ortools.tar.gz
 
-      # ---------------------------
-      # Docker buildx + registry login
-      # ---------------------------
+      #############################################
+      # Docker buildx setup
+      #############################################
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      #############################################
+      # GHCR login
+      #############################################
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -53,9 +59,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---------------------------
-      # Build & push Docker image
-      # ---------------------------
+      #############################################
+      # Build + push Docker image
+      #############################################
       - name: Build and Push Image
         uses: docker/build-push-action@v6
         with:
@@ -63,13 +69,13 @@ jobs:
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/mertbiyikli/oblivousrouting:latest
-            ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
-            ghcr.io/mertbiyikli/oblivousrouting:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
-      # ---------------------------
-      # Optional: run tiny tests on PRs
-      # ---------------------------
+      #############################################
+      # Optional: run tiny tests inside container
+      #############################################
       - name: Run Tiny Tests (PR only)
         if: github.event_name == 'pull_request'
         run: |

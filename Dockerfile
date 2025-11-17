@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# -------------------------
-# Base image (shared)
-# -------------------------
+###############################################
+# Base image (shared between build + runtime)
+###############################################
 FROM ubuntu:24.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -12,12 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# -------------------------
+
+###############################################
 # Builder image
-# -------------------------
+###############################################
 FROM base AS builder
 
-# Build tools + libs needed for building your project and OR-Tools
+# Build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git pkg-config \
     wget unzip \
@@ -26,51 +27,53 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt
 
-# ----------------------------------------
-# OR-Tools: use cached source if provided
-# ----------------------------------------
 
-# Ensure target directory exists so COPY never errors
-RUN mkdir -p /opt/or-tools-source
+###########################################################
+# OR-Tools installation using PRECOMPILED binary + cache
+###########################################################
 
-# Copy cached OR-Tools source from build context (from .cache/ortools)
-# This directory is prepared & cached by GitHub Actions.
-COPY .cache/ortools/ /opt/or-tools-source/
+# Ensure the target directory exists to avoid COPY errors
+RUN mkdir -p /opt/or-tools
 
-# If cache is non-empty, build from there; otherwise clone fresh.
-RUN if [ -d "/opt/or-tools-source" ] && [ "$(ls -A /opt/or-tools-source)" ]; then \
-      echo "Using cached OR-Tools source in /opt/or-tools-source"; \
+# Bring in cached precompiled OR-Tools from GitHub Actions
+COPY .cache/ortools/ /opt/or-tools/
+
+# If cache is empty, download OR-Tools for Ubuntu 24.04
+RUN if [ ! -f "/opt/or-tools/lib/libortools.a" ]; then \
+      echo "Downloading precompiled OR-Tools v9.10 for Ubuntu 24.04..."; \
+      wget -q https://github.com/google/or-tools/releases/download/v9.10/or-tools_ubuntu-24.04_cpp_v9.10.4067.tar.gz -O or-tools.tar.gz && \
+      mkdir -p /opt/or-tools && \
+      tar -xzf or-tools.tar.gz --strip-components=1 -C /opt/or-tools && \
+      rm or-tools.tar.gz; \
     else \
-      echo "No OR-Tools source in context, cloning from GitHub..."; \
-      rm -rf /opt/or-tools-source && \
-      git clone --depth=1 --branch v9.10 https://github.com/google/or-tools.git /opt/or-tools-source; \
-    fi && \
-    cd /opt/or-tools-source && \
-    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build -j"$(nproc)" && \
-    cmake --install build
+      echo "Using cached OR-Tools."; \
+    fi
 
-# -------------------------
+# Make OR-Tools available via CMake
+ENV CMAKE_PREFIX_PATH=/opt/or-tools
+ENV LD_LIBRARY_PATH=/opt/or-tools/lib:${LD_LIBRARY_PATH}
+
+
+###############################################
 # Build your project
-# -------------------------
+###############################################
 WORKDIR /app
 
-# Copy your entire repo (including extern/, CMakeLists.txt, src/, etc.)
+# Copy entire repository including extern/
 COPY . .
 
-# Configure & build (tests disabled to keep image smaller / faster)
 RUN cmake -S . -B build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DUSE_OPENMP=ON \
       -DBUILD_TESTS=OFF \
     && cmake --build build -j"$(nproc)"
 
-# -------------------------
-# Runtime image
-# -------------------------
+
+###############################################
+# Runtime image (small and clean)
+###############################################
 FROM base AS runtime
 
-# Only runtime dependencies (smaller image)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libstdc++6 libgomp1 \
     libboost-program-options-dev libboost-serialization-dev \
@@ -78,7 +81,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy the built binary from the builder stage
+# Copy binary from build stage
 COPY --from=builder /app/build/oblivious_routing /app/oblivious_routing
 
 ENTRYPOINT ["./oblivious_routing"]
