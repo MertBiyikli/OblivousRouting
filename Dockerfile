@@ -23,7 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt
 
-# OR-Tools 9.8 - last version that works fully without Abseil
+RUN rm -rf /opt/or-tools-src  # <-- IMPORTANT: remove cached folder
+
 RUN git clone --depth=1 --branch v9.8 https://github.com/google/or-tools.git or-tools-src
 
 WORKDIR /opt/or-tools-src
@@ -31,6 +32,7 @@ WORKDIR /opt/or-tools-src
 RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j"$(nproc)" \
     && cmake --install build
+
 
 
 ##############################
