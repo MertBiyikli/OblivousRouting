@@ -15,12 +15,17 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # ---------------------------
+      # Checkout, including submodules
+      # ---------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive     # ← REQUIRED TO CLONE extern/amgcl and extern/googletest
+          submodules: recursive    # CHANGED: ensure extern/amgcl & extern/googletest are present
 
-
+      # ---------------------------
+      # Cache OR-Tools source
+      # ---------------------------
       - name: Cache OR-Tools source
         id: ortools-cache
         uses: actions/cache@v4
@@ -29,12 +34,15 @@ jobs:
           key: ortools-${{ hashFiles('Dockerfile') }}
           restore-keys: ortools-
 
-      - name: Prepare OR-Tools cache directory
+      - name: Prepare OR-Tools cache directory (on miss)
         if: steps.ortools-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p .cache/ortools
           git clone --depth=1 --branch v9.10 https://github.com/google/or-tools.git .cache/ortools
 
+      # ---------------------------
+      # Docker buildx + registry login
+      # ---------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -45,36 +53,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ---------------------------
+      # Build & push Docker image
+      # ---------------------------
       - name: Build and Push Image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          build-args: |
-            ORTOOLS_SOURCE=.cache/ortools
           tags: |
             ghcr.io/mertbiyikli/oblivousrouting:latest
             ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
             ghcr.io/mertbiyikli/oblivousrouting:${{ github.ref_name }}
-      
-      
-      
-      
 
+      # ---------------------------
+      # Optional: run tiny tests on PRs
+      # ---------------------------
       - name: Run Tiny Tests (PR only)
         if: github.event_name == 'pull_request'
         run: |
           echo "Running tiny tests inside container..."
           docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }} \
             bash -c "cd /app/build && ctest -R Tiny --output-on-failure"
-          
-
-      - name: Cache OR-Tools build artifacts
-        id: ortools-build-cache
-        uses: actions/cache@v4
-        with:
-          path: .cache/ortools-build
-          key: ortools-build-${{ hashFiles('.cache/ortools/**') }}
-
-
