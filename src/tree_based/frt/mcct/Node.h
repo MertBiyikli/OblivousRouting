@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <set>
+#include <algorithm>
 
 class FRT_Node {
 public:

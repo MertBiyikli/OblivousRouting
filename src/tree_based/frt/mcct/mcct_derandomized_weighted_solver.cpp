@@ -6,6 +6,13 @@
 #include <unordered_set>
 #include <list>
 #include "../../../utils/hash.h"
+#include <cmath>
+
+struct PairHash {
+    std::size_t operator()(const std::pair<int,int>& p) const noexcept {
+        return std::hash<int>()(p.first) ^ (std::hash<int>()(p.second) << 1);
+    }
+};
 
 FRT_Tree MCCT_Solver::getBestTree(bool debug) {
     computeBestBetaAndPermutation();
@@ -155,7 +162,7 @@ void MCCT_Solver::computeBetas(bool debug) {
                 std::cout << "Log2 distance: " << log2Dist << ", Base: " << base << ", Beta: " << beta << std::endl;
             }
 
-            if(isnan(beta) || isinf(beta)) {
+            if(std::isnan(beta) || std::isinf(beta)) {
                 throw std::runtime_error("Beta value is NaN or Inf, check the distance values.");
             }
             // Enforce minimum beta > 1
@@ -175,7 +182,7 @@ void MCCT_Solver::computeBetas(bool debug) {
 double MCCT_Solver::computeExpectation(double beta, std::vector<int> &verticesPermutation,
                                        std::set<int> &unsettledVertices, bool debug) {
     double result = 0.0;
-    std::unordered_set<std::pair<int, int>> settledDemands;
+    std::unordered_set<std::pair<int, int>, PairHash> settledDemands;
 
     if(!verticesPermutation.empty()) {
         int center = verticesPermutation.back();

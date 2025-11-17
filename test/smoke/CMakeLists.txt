@@ -1,16 +1,11 @@
-# --------------------------------------------------
-# SMoke, dependency-free correctness tests
-# --------------------------------------------------
-
 cmake_minimum_required(VERSION 3.16)
 
-# Find GoogleTest
 find_package(GTest REQUIRED)
+
+find_package(Eigen3 REQUIRED)
+
 find_package(Boost REQUIRED)
 
-# --------------------------------------------------
-# Fix RPATH issues on macOS for GTest dynamic libs
-# --------------------------------------------------
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(CMAKE_BUILD_RPATH
@@ -18,7 +13,7 @@ set(CMAKE_BUILD_RPATH
 )
 
 # --------------------------------------------------
-# Smoke test-only library (no OR-Tools, no AMGCL)
+# Smoke Core (now includes electrical solvers)
 # --------------------------------------------------
 
 file(GLOB SMOKE_SRC
@@ -30,14 +25,18 @@ file(GLOB SMOKE_SRC
         ${CMAKE_SOURCE_DIR}/src/graph/*.cpp
 )
 
+
+include_directories(${CMAKE_SOURCE_DIR}/extern/amgcl)
 add_library(smoke_core STATIC ${SMOKE_SRC})
 
 target_include_directories(smoke_core PUBLIC
         ${CMAKE_SOURCE_DIR}/src
+        ${EIGEN_INCLUDE_DIR}
+        ${AMGCL_INCLUDE_DIR}
 )
 
 # --------------------------------------------------
-# Automatically build smoke test files
+# Build each test as an executable
 # --------------------------------------------------
 
 file(GLOB SMOKE_TEST_FILES "*.cpp")
@@ -52,15 +51,8 @@ foreach(TEST_FILE ${SMOKE_TEST_FILES})
             GTest::gtest
             GTest::gtest_main
             Boost::boost
+            Eigen3::Eigen
     )
-
-
-
-    target_include_directories(${TEST_NAME} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src
-    )
-
-    target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
 
     gtest_discover_tests(${TEST_NAME})
 endforeach()
