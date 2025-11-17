@@ -84,6 +84,14 @@ public:
         }
     }
 
+    double getCongestion() {
+        if (alpha) {
+            return alpha->solution_value();
+        } else {
+            throw std::runtime_error("LP not solved yet, alpha variable is null.");
+        }
+    }
+
     void setDebug(bool debug) {this->debug = debug;}
 };
 

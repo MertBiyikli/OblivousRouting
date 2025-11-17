@@ -12,6 +12,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <queue>
 #include <boost/container/flat_set.hpp>
 
 #include <map>
@@ -45,6 +46,7 @@ public:
 
     boost::container::flat_set<_Edge, EdgeCompare> edgeSet;
 
+    Graph_csr() = default;
 
     // TODO: somehow you also have to explicitly state the the default constructor should not be used
     Graph_csr(int n) : n(n), m(0) {

@@ -52,9 +52,9 @@ public:
 
         for (auto& [edge, dmap] : routing) {
             for (auto& [dem, flow] : dmap)
-                routing[edge][dem] = flow / total_outflow[dem];
+                f_e_st[edge][dem] = flow / total_outflow[dem];
         }
-        f_e_st = routing; // final flow table
+        //f_e_st = routing; // final flow table
     }
 };
 

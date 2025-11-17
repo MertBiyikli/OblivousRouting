@@ -172,13 +172,13 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
     }
 }
 
-inline void HandleDemandModel(int argc,
+inline std::pair<double, double> HandleDemandModel(int argc,
                               char** argv,
                               const std::optional<Config>& cfg,
                               Graph& _g,
                               std::unique_ptr<ObliviousRoutingSolver>& _solver)
 {
-    if (argc < 4 || !cfg) { return; }
+    if (argc < 4 || !cfg) { return {}; }
 
 
     // if a demand model is provided, compute the oblivious ratio for that demand model
@@ -242,8 +242,10 @@ inline void HandleDemandModel(int argc,
         for (const auto& [d, value] : demand_map) {
             mccf.AddDemands({d.first, d.second}, value);
         }
-
         mccf.solve(_g);
+        double offline = mccf.getCongestion();
+
+        return {offline, max_cong};
 
     }
 }

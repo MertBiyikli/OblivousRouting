@@ -12,6 +12,8 @@
 #include <numeric>
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
+#include <queue>
 
 /* TODO:
  *  - check if m_adj_distances has to be resized at the moment we init the graph. Can we move this in only to raecke algo, since there it is used

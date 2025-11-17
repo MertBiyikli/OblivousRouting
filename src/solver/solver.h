@@ -8,6 +8,8 @@
 #include <vector>
 #include "../graph.h"
 #include "../utils/hash.h"
+#include <unordered_map>
+//#include <boost/unordered_map.hpp>
 
 class ObliviousRoutingSolver { // TODO: rename the class name
 public:
@@ -16,6 +18,11 @@ public:
     std::vector<double> pure_oracle_running_times;
     int iteration_count = 0;
     std::unordered_map<std::pair<int, int> , std::unordered_map<std::pair<int, int>, double >> f_e_st;
+
+  /*  boost::unordered_map<
+        std::pair<int, int>,
+        boost::unordered_map<std::pair<int, int>, double >
+    > f_e_st;*/
     std::vector<std::vector<double>> m_routingTable;
     ObliviousRoutingSolver() = default;
     virtual ~ObliviousRoutingSolver() = default;
