@@ -7,6 +7,7 @@
 
 #include "ckr_partition.h"
 #include <vector>
+#include <unordered_map>
 
 struct TreeNode; // Forward declaration
 

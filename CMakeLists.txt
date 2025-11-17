@@ -36,7 +36,7 @@ endif()
 
 
 
-add_subdirectory(extern/amgcl)
+#add_subdirectory(extern/amgcl)
 
 # list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
 # include_directories(BEFORE ${ORTOOLS_ROOT}/include)
