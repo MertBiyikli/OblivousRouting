@@ -40,8 +40,8 @@ COPY .cache/ortools/ /opt/or-tools/
 
 # If cache is empty, download OR-Tools for Ubuntu 24.04
 RUN if [ ! -f "/opt/or-tools/lib/libortools.a" ]; then \
-      echo "Downloading precompiled OR-Tools v9.10 (generic Linux x86_64)..."; \
-      wget -q https://github.com/google/or-tools/releases/download/v9.10/or-tools_amd64_linux_v9.10.4067.tar.gz -O or-tools.tar.gz && \
+      echo "Downloading precompiled OR-Tools v9.10 (Linux x86_64)..."; \
+      wget -q https://github.com/google/or-tools/releases/download/v9.10/or-tools_linux_amd64_v9.10.4067.tar.gz -O or-tools.tar.gz && \
       mkdir -p /opt/or-tools && \
       tar -xzf or-tools.tar.gz --strip-components=1 -C /opt/or-tools && \
       rm or-tools.tar.gz; \
