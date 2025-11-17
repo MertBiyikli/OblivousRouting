@@ -36,5 +36,6 @@ jobs:
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/mertbiyikli/oblivousrouting:latest
+            ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
+            ghcr.io/mertbiyikli/oblivousrouting:${{ github.ref_name }}
