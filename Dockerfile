@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1
 
+########################################################
+# Base image
+########################################################
 FROM ubuntu:24.04 AS base
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,27 +13,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 
-#########################################################
-# BUILDER
-#########################################################
+########################################################
+# Builder stage
+########################################################
 FROM base AS builder
 
+# ONLY the necessary build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build git pkg-config \
-    wget unzip \
-    libeigen3-dev libboost-all-dev \
-    absl-dev libre2-dev zlib1g-dev \
-    libprotobuf-dev protobuf-compiler \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    pkg-config \
+    wget \
+    unzip \
+    libeigen3-dev \
+    libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 
 
-#########################################################
-# Build OR-Tools from source (stable & correct)
-#########################################################
-
-# Clone OR-tools (v9.10) with full history OFF
+########################################################
+# Build OR-Tools v9.10 from source
+########################################################
 RUN git clone --depth=1 --branch v9.10 https://github.com/google/or-tools.git or-tools-src
 
 WORKDIR /opt/or-tools-src
@@ -39,13 +46,12 @@ RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     && cmake --install build
 
 
-#########################################################
+########################################################
 # Build your project
-#########################################################
+########################################################
 FROM builder AS build-app
 
 WORKDIR /app
-
 COPY . .
 
 RUN cmake -S . -B build -G Ninja \
@@ -55,16 +61,16 @@ RUN cmake -S . -B build -G Ninja \
     && cmake --build build -j"$(nproc)"
 
 
-#########################################################
-# FINAL RUNTIME IMAGE
-#########################################################
+########################################################
+# Final runtime image
+########################################################
 FROM base AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libstdc++6 libgomp1 \
-    libboost-program-options-dev libboost-serialization-dev \
-    libre2-9 absl-dev zlib1g \
-    libprotobuf-dev \
+    libstdc++6 \
+    libgomp1 \
+    libboost-program-options-dev \
+    libboost-serialization-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
