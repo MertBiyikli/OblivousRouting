@@ -32,9 +32,15 @@ RUN git clone https://github.com/google/or-tools.git or-tools-src \
 
 WORKDIR /opt/or-tools-src
 
-RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+RUN cmake -S . -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DORTOOLS_BUILD_MATHOPT=OFF \
+      -DORTOOLS_BUILD_PDLP=OFF \
+      -DORTOOLS_BUILD_FLATZINC=OFF \
+      -DBUILD_DEPS=ON \
     && cmake --build build -j"$(nproc)" \
     && cmake --install build
+
 
 
 
