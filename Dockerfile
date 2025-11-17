@@ -25,7 +25,10 @@ WORKDIR /opt
 
 RUN rm -rf /opt/or-tools-src  # <-- IMPORTANT: remove cached folder
 
-RUN git clone --depth=1 --branch v9.8 https://github.com/google/or-tools.git or-tools-src
+RUN git clone https://github.com/google/or-tools.git or-tools-src \
+    && cd or-tools-src \
+    && git checkout tags/v9.8
+
 
 WORKDIR /opt/or-tools-src
 
