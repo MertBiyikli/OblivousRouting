@@ -8,6 +8,7 @@
 #include "../../solver/solver.h"
 #include <random>
 #include "ckr_tree_decomposer.h"
+#include <chrono>
 
 /*
  * Optimized Raecke CKR implementation with efficient scaling:
