@@ -270,7 +270,7 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
 
         template<class T>
         double iterate(int id, T& transform) {
-            TreeNode* t = getTree(m_graph);
+            std::shared_ptr<TreeNode> t = getTree(m_graph);
             computeRLoads(t, m_graph);
             double l = getMaxRload();
             double lambda = std::min(1.0/l, 1.0 - m_lambdaSum);
@@ -379,8 +379,8 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
         std::vector<double> oracle_running_times;
         void init(const Graph& g);
         void preprocess();
-        TreeNode* getTree(Graph& g);
-        void computeRLoads(TreeNode* t, Graph& g);
+        std::shared_ptr<TreeNode> getTree(Graph& g);
+        void computeRLoads(std::shared_ptr<TreeNode> t, Graph& g);
         double getMaxRload();
         void addLoadToEdge(int u, int v, double load);
         void computeNewDistances(Graph& g);
@@ -417,7 +417,7 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
 
         void init(const Graph& g);
         inline void addFlow(int u, int v, int s, int t, double flow);
-        void addTree(const TreeNode* root, double lambda, Graph& graph);
+        void addTree(std::shared_ptr<TreeNode> root, double lambda, Graph& graph);
     };
 
     class RaeckeCKROptimized : public ObliviousRoutingSolver

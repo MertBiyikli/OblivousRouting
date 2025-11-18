@@ -8,26 +8,31 @@
 #include "ckr_partition.h"
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 struct TreeNode; // Forward declaration
 
-void print_tree(TreeNode* node, int indent = 0);
+void print_tree(std::shared_ptr<TreeNode> node, int indent = 0);
 
-struct TreeNode {
-    int id;
+struct TreeNode : public std::enable_shared_from_this<TreeNode> {
+
+    int id{};
     std::vector<int> members; // original graph nodes
-    std::vector<TreeNode*> children;
-    TreeNode* parent;
+    std::vector<std::shared_ptr<TreeNode>> children;
+    std::weak_ptr<TreeNode> parent;
     double radius = 0.0;
 };
 
 
 class TreeDecomposer {
 public:
-    TreeNode* decompose(Graph& G, double delta, const std::vector<int>& global_node_ids, int level = 0) {
+    std::shared_ptr<TreeNode> decompose(Graph& G, double delta, const std::vector<int>& global_node_ids, int level = 0) {
         const int n = G.getNumNodes();
         if (n == 1) {
-            TreeNode* leaf = new TreeNode{level, {0}, {}};
+            auto leaf = std::make_shared<TreeNode>();
+            leaf->id = level;
+            leaf->members.push_back(global_node_ids[0]);
+            leaf->radius = 0.0;
             return leaf;
         }
 
@@ -45,7 +50,8 @@ public:
         }
 
 
-        TreeNode* root = new TreeNode{level};
+        std::shared_ptr<TreeNode> root = std::make_shared<TreeNode>();
+        root->id = level;
         root->radius = delta;
 
         for (auto& [cid, nodes] : cluster_to_nodes) {
@@ -73,10 +79,10 @@ public:
                 }
             }
 
-            TreeNode* child = decompose(subgraph, delta * 0.5, local_to_global, level + 1);
+            std::shared_ptr<TreeNode> child = decompose(subgraph, delta * 0.5, local_to_global, level + 1);
             child->members = local_to_global;  // These are now true original graph node IDs
             child->radius = delta * 0.5;
-            root->children.push_back(child);
+            root->children.push_back(std::move(child));
         }
 
 

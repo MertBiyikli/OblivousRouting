@@ -56,7 +56,7 @@ namespace MendelScaling {
 
 
 
-    TreeNode* RaeckeCKR::getTree(Graph& g) {
+    std::shared_ptr<TreeNode> RaeckeCKR::getTree(Graph& g) {
         const int n = g.getNumNodes();
         if (n == 0) return nullptr;
 
@@ -68,9 +68,10 @@ namespace MendelScaling {
         preprocess();
 
         // ---- (1) prepare node pointers for the finest level ----
-        std::vector<TreeNode*> prev_nodes(n);
+        std::vector<std::shared_ptr<TreeNode>> prev_nodes(n);
         for (int v = 0; v < n; ++v) {
-            prev_nodes[v] = new TreeNode(v);
+            prev_nodes[v] = std::make_shared<TreeNode>();
+            prev_nodes[v]->id = v;
             prev_nodes[v]->members = {v};  // keep original vertex IDs here
         }
 
@@ -85,7 +86,7 @@ namespace MendelScaling {
                   << " quotient scales (log n levels)\n";
 
         // ---- (3) build hierarchical levels ----
-        TreeNode* root = nullptr;
+        std::shared_ptr<TreeNode> root;
         std::vector<int> current_centers(n);
         std::iota(current_centers.begin(), current_centers.end(), 0);
 
@@ -101,14 +102,14 @@ namespace MendelScaling {
             build_ckr_level(Q.Gq, Delta, L, rng);
 
             // parent nodes at this Δ-level
-            std::unordered_map<int, TreeNode*> center_to_parent;
+            std::unordered_map<int, std::shared_ptr<TreeNode>> center_to_parent;
             center_to_parent.reserve(L.centers.size()*2);
 
             // --- group vertices by owner into new TreeNodes (as in your original code) ---
             std::unordered_map<int, TreeNode*> center_to_node;
             // Efficiently map each prev_node (cluster from previous finer step) to a quotient vertex id
             // We use the first original member of that cluster as representative:
-            for (TreeNode* childCluster : prev_nodes) {
+            for (auto childCluster : prev_nodes) {
                 if (!childCluster) continue;
                 int rep = childCluster->members.empty() ? -1 : childCluster->members[0];
                 if (rep < 0) continue;
@@ -119,10 +120,11 @@ namespace MendelScaling {
                 if (c == -1) continue;  // should be rare; skip if not assigned (due to R cutoff)
 
                 // parent TreeNode for this center
-                TreeNode* parent = nullptr;
+                std::shared_ptr<TreeNode> parent;
                 auto it = center_to_parent.find(c);
                 if (it == center_to_parent.end()) {
-                    parent = new TreeNode(L.centers[c]);
+                    parent = std::make_shared< TreeNode>();
+                    parent->id = L.centers[c];
                     parent->radius = Delta;
                     center_to_parent[c] = parent;
                 } else parent = it->second;
@@ -145,15 +147,17 @@ namespace MendelScaling {
         // Final root: if multiple parents remain, wrap them under one root; else take the only one.
         if (prev_nodes.empty()) {
             // Degenerate case: all collapsed early → build a single root that contains all vertices
-            root = new TreeNode(0);
+            root = std::make_shared< TreeNode>();
+            root->id = 0;
             root->members.resize(n);
             std::iota(root->members.begin(), root->members.end(), 0);
         } else if (prev_nodes.size() == 1) {
             root = prev_nodes.front();
         } else {
-            root = new TreeNode(-1);
+            root =std::make_shared< TreeNode>();
+            root->id = -1;
             root->radius = (scales.empty()? 0.0 : scales.front());
-            for (auto* ch : prev_nodes) {
+            for (auto ch : prev_nodes) {
                 root->children.push_back(ch);
                 ch->parent = root;
                 root->members.insert(root->members.end(), ch->members.begin(), ch->members.end());
@@ -168,17 +172,17 @@ namespace MendelScaling {
 
 
 
-    void RaeckeCKR::computeRLoads(TreeNode *t, Graph &g) {
+    void RaeckeCKR::computeRLoads(std::shared_ptr<TreeNode> t, Graph &g) {
     // iterate through the tree and store the rloads into the adjacency list
-    std::queue<TreeNode*> q;
+    std::queue<std::shared_ptr<TreeNode>> q;
         q.push(t);
 
         while (!q.empty()) {
-            TreeNode* node = q.front();
+            std::shared_ptr<TreeNode> node = q.front();
             q.pop();
 
             // --- 3️⃣ Process each child: represents a cut S_child | V\S_child ---
-            for (TreeNode* child : node->children) {
+            for (auto child : node->children) {
                 // Add child to traversal queue
                 q.push(child);
 
@@ -470,14 +474,14 @@ namespace MendelScaling {
         flow_storage.addFlow(u, v, s, flow);
     }
 
-    void CKRTransform::addTree(const TreeNode* root, double lambda, Graph& graph) {
+    void CKRTransform::addTree(std::shared_ptr<TreeNode> root, double lambda, Graph& graph) {
         if (!root) return;
-        std::queue<const TreeNode*> q;
+        std::queue<std::shared_ptr<TreeNode>> q;
         q.push(root);
 
         while (!q.empty()) {
-            const auto* node = q.front(); q.pop();
-            for (const auto* child : node->children) {
+            std::shared_ptr<TreeNode> node = q.front(); q.pop();
+            for (auto child : node->children) {
                 q.push(child);
                 const auto& S = child->members;
                 if (S.empty()) continue;

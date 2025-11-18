@@ -13,21 +13,21 @@
 
 
 
-class CKRSolver : public RaeckeBase<TreeNode*> {
+class CKRSolver : public RaeckeBase<std::shared_ptr<TreeNode>> {
 public:
     void init(Graph& g) override {
         m_graph = g;
     }
 
 
-    TreeNode* getTree(Graph& g) override{
+    std::shared_ptr<TreeNode> getTree(Graph& g) override{
         g.createDistanceMatrix();
         double delta = g.GetDiameter();
         TreeDecomposer decomposer;
         std::vector<int> node_ids(g.getNumNodes());
         std::iota(node_ids.begin(), node_ids.end(), 0);
         auto start = std::chrono::high_resolution_clock::now();
-        TreeNode* DecompTree = decomposer.decompose(g, delta, node_ids);
+        std::shared_ptr<TreeNode> DecompTree = decomposer.decompose(g, delta, node_ids);
         pure_oracle_running_times.push_back((std::chrono::duration<double, std::milli>( std::chrono::high_resolution_clock::now() - start)).count());
 
         computeNewDistances(g);
@@ -36,7 +36,7 @@ public:
     }
 
 
-    void computeRLoads(int treeIndex, TreeNode*& tree, Graph& copyGraph) override {
+    void computeRLoads(int treeIndex, std::shared_ptr<TreeNode>& tree, Graph& copyGraph) override {
             // --- 1️⃣ Ensure enough space for r-load maps ---
         if (m_idTree2edge2rload.size() <= treeIndex)
             m_idTree2edge2rload.resize(treeIndex + 1);
@@ -45,15 +45,15 @@ public:
         edge2Load.clear();
 
         // --- 2️⃣ BFS or DFS traversal (we'll use queue for clarity) ---
-        std::queue<TreeNode*> q;
+        std::queue<std::shared_ptr<TreeNode>> q;
         q.push(tree);
 
         while (!q.empty()) {
-            TreeNode* node = q.front();
+            std::shared_ptr<TreeNode> node = q.front();
             q.pop();
 
             // --- 3️⃣ Process each child: represents a cut S_child | V\S_child ---
-            for (TreeNode* child : node->children) {
+            for ( auto child : node->children) {
                 // Add child to traversal queue
                 q.push(child);
 

@@ -6,7 +6,7 @@
 
 
 
-void print_tree(TreeNode* node, int indent) {
+void print_tree(std::shared_ptr<TreeNode> node, int indent) {
     for (int i = 0; i < indent; ++i) std::cout << " ";
     std::cout << "Level " << node->id << " | Nodes: ";
     for (int u : node->members) std::cout << u << " ";

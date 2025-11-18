@@ -15,9 +15,9 @@
 #include "../raecke_transform_base.h"
 #include "ckr_tree_decomposer.h"
 
-class RaeckeCKRTransform : public RaeckeTransformBase<TreeNode*> {
+class RaeckeCKRTransform : public RaeckeTransformBase<std::shared_ptr<TreeNode>> {
 public:
-    virtual EdgeDemandMap& addTree(TreeNode*& root, double lambda, Graph& graph) override{
+    virtual EdgeDemandMap& addTree(std::shared_ptr<TreeNode>& root, double lambda, Graph& graph) override{
         normalizeOldSolutionBasedOnNewLambda(lambda);
         distributeDemands(root, graph, lambda);
         removeCycles(graph);
@@ -25,10 +25,10 @@ public:
     }
 
 private:
-    void distributeDemands(TreeNode* node, Graph& graph, double lambda) {
+    void distributeDemands(const std::shared_ptr<TreeNode>& node, Graph& graph, double lambda) {
         if (!node) return;
 
-        for (TreeNode* child : node->children) {
+        for (const auto& child : node->children) {
             std::set<int> A = collectSubtreeVertices(child);
             std::set<int> B;
             for (int v : graph.getVertices()) {
@@ -57,9 +57,9 @@ private:
         }
     }
 
-    std::set<int> collectSubtreeVertices(TreeNode* node) {
+    std::set<int> collectSubtreeVertices(const std::shared_ptr<TreeNode>& node) {
         std::set<int> result(node->members.begin(), node->members.end());
-        for (TreeNode* child : node->children) {
+        for (const auto& child : node->children) {
             auto sub = collectSubtreeVertices(child);
             result.insert(sub.begin(), sub.end());
         }
