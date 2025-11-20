@@ -23,12 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt
 
-RUN rm -rf /opt/or-tools-src  # <-- IMPORTANT: remove cached folder
-
-RUN git clone https://github.com/google/or-tools.git or-tools-src \
-    && cd or-tools-src \
-    && git checkout tags/v9.8
-
+RUN git clone --depth=1 --branch v9.8 https://github.com/google/or-tools.git or-tools-src
 
 WORKDIR /opt/or-tools-src
 
