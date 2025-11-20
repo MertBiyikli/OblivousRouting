@@ -62,3 +62,33 @@ jobs:
           docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
           docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }} \
             bash -c "cd /app/build && ctest -R Tiny --output-on-failure"
+
+  # -------------------------
+  # 3. Build native executable
+  # -------------------------
+  build-native:
+    runs-on: ubuntu-24.04
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build git pkg-config libeigen3-dev libboost-all-dev
+
+      - name: Build native binary
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j$(nproc)
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oblivious_routing-executable
+          path: build/oblivious_routing
+          retention-days: 30
