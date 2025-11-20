@@ -42,6 +42,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oblivious_routing-executable
+          path: build/oblivious_routing
+          retention-days: 30
+
   test:
     runs-on: ubuntu-24.04
     needs: build
@@ -104,9 +111,3 @@ jobs:
           cmake -S . -B build -G Ninja -DUSE_OPENMP=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 build-noomp
           cmake --build build -j$(nproc)
 
-      - name: Upload executable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: oblivious_routing-executable
-          path: build/oblivious_routing
-          retention-days: 30
