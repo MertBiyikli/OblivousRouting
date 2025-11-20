@@ -59,8 +59,8 @@ jobs:
 
       - name: Run tiny tests
         run: |
-          docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }} \
+          docker pull ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
+          docker run --rm ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }} \
             bash -c "cd /app/build && ctest -R Tiny --output-on-failure"
 
   # -------------------------
@@ -83,7 +83,7 @@ jobs:
 
       - name: Build native binary
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DUSE_OPENMP=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 build-noomp
           cmake --build build -j$(nproc)
 
       - name: Upload executable artifact
