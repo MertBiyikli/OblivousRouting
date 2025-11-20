@@ -57,6 +57,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Export OR-Tools installation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ortools-install
+          path: /opt/ortools-install.tar.gz
+
+
       - name: Run tiny tests
         run: |
           docker pull ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
@@ -80,6 +87,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build git pkg-config libeigen3-dev libboost-all-dev
+
+      - name: Download OR-Tools installation
+        uses: actions/download-artifact@v4
+        with:
+          name: ortools-install
+          path: ortools/
+
+      - name: Install OR-Tools into /usr/local
+        run: |
+          sudo tar -xzf ortools/ortools-install.tar.gz -C /usr/local
+            
 
       - name: Build native binary
         run: |

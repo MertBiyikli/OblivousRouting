@@ -36,6 +36,7 @@ RUN cmake -S . -B build -G Ninja \
     && cmake --build build -j"$(nproc)" \
     && cmake --install build
 
+RUN tar -czf /opt/ortools-install.tar.gz -C /usr/local .
 
 
 
