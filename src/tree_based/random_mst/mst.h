@@ -12,9 +12,11 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
-#include "../../graph.h"
+#include "../../datastructures/graph.h"
+#include "../../datastructures/graph_csr.h"
 
 
+class Graph_csr;
 /* Union find data structure to be used in the Kruskal's algorithm */
 // ---------- DSU ----------
 struct DSU {
@@ -48,43 +50,61 @@ public:
     int n;
     std::vector<std::pair<int,int>> edges;
     std::vector<std::vector<int>> adj; // adjacency list of current MST
+    std::vector<std::tuple<double,int,int>> keyed;
 
     std::vector<std::vector<double>> weights;
     void setGraph(const Graph& g) {
+
+        // clear all first
+        edges.clear();
+        keyed.clear();
+        weights.clear();
+
         n = g.getNumNodes();
-        adj.resize(n);
+
         for (int u : g.getVertices())
             for (int v : g.neighbors(u))
                 if (u < v) edges.emplace_back(u,v);
     }
 
+    void setGraph(const Graph_csr& g) {
+        n = g.getNumNodes();
+
+        keyed.reserve(g.getNumEdges());
+        for (int u = 0; u < n; ++u) {
+            for (int v : g.neighbors(u)) {
+                edges.emplace_back(u, v);
+                keyed.emplace_back(g.getEdgeDistance(u, v), u, v);
+            }
+        }
+    }
+
 
 
     // Build a random MST edge set using Kruskal with random priorities
-    std::vector<std::pair<int,int>> build_mst(const Graph& g, uint64_t seed=0xC0FFEE) {
-
-        std::vector<std::tuple<double,int,int>> keyed;
-        keyed.reserve(this->edges.size());
-        for (auto [u,v] : this->edges) keyed.emplace_back(g.getEdgeDistance(u, v), u, v);
-
+    std::vector<std::pair<int,int>> build_mst() {
+        if (edges.empty() || keyed.empty()) return {};
 
         // apply kruskals algorithm
         std::sort(keyed.begin(), keyed.end(),
                   [](auto& a, auto& b){ return std::get<0>(a) < std::get<0>(b); });
 
 
-        DSU dsu(g.getNumNodes());
+        DSU dsu(n);
         std::vector<std::pair<int,int>> mst;
-        mst.reserve(g.getNumNodes()-1);
+        mst.reserve(n-1);
 
         for (auto& [key,u,v] : keyed) {
             if (dsu.unite(u,v)) {
                 mst.emplace_back(u,v);
-                if ((int)mst.size()+1 == g.getNumNodes()) break;
+                if ((int)mst.size()+1 == n) break;
             }
         }
         return mst;
     }
+
+
+
 
     // Turn MST edges into a rooted MSTTree (root at 0 by default)
     MSTTree build_tree(const Graph& g,
@@ -115,6 +135,8 @@ public:
         MSTTree t = {root, parent, children};
         return t;
     }
+
+
 
 
 

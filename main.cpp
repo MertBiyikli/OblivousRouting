@@ -1,5 +1,5 @@
 #include <iostream>
-#include "src/graph.h"
+#include "src/datastructures/graph.h"
 #include "src/lp_solver/LPSolver.h"
 #include "src/lp_solver/MCCF_lp_solver.h"
 #include "src/tree_based/frt/raecke_frt_solver.h"
@@ -20,7 +20,10 @@
 // #include "src/tree_based/optimized_versions/frt/raecke_frt_opt.h"
 #include "src/tree_based/optimized_versions/frt/mcct_optimized.h"
 // #include "src/tree_based/optimized_versions/raecke_optimized_base.h"
-#include "src/graph_csr.h"
+#include "src/datastructures/graph_csr.h"
+#include "src/tree_based/ckr/utils/ultrametric_tree.h"
+#include "src/tree_based/ckr/optimized/efficient_raecke_ckr.h"
+
 
 
 int main(int argc, char **argv) {
@@ -33,31 +36,14 @@ int main(int argc, char **argv) {
     if (!cfg) { std::cerr << err; return -1; } // EX_USAGE
 
     Graph g;
-    g.readLFGFile(cfg->filename, /*undirected?*/ true);
+    g.readLGFFile(cfg->filename, /*undirected?*/ true);
     std::cout << "Graph loaded: " << g.getNumNodes() << " nodes, " << g.getNumEdges() << " edges.\n";
     //g.print();
 
-    Graph_csr csr_graph;
-    csr_graph.readLFGFile(cfg->filename, true);
-    csr_graph.preprocess();
-    csr_graph.print();
-/*
-    MCCT_optimized mcct_optimized(csr_graph);
-    // mcct_optimized.setGraph(csr_graph);
-    auto best_tree = mcct_optimized.getBestTree(true);
-    mcct_optimized.printTree(best_tree);
-*/
+    Graph_csr g_csr;
+    g_csr.readLGFFile(cfg->filename,  true);
+    g_csr.finalize();
 
-    int u = 0, v = 1;
-    auto path = csr_graph.getShortestPath(u, v);
-    std::cout << "Shortest path with endpoints: " << u << " , " << v << std::endl;
-    for (auto& it : path) {
-        std::cout << it << " ";
-    }
-    // print the computed diameter of the graph
-    double diameter = csr_graph.computeExactDiameterUsingDijkstra();
-    std::cout << "\nGraph diameter: " << diameter << std::endl;
-    std::cout << std::endl;
     std::unique_ptr<ObliviousRoutingSolver> solver;
     switch (cfg->solver) {
         case SolverType::ELECTRICAL_NAIVE:
@@ -92,13 +78,13 @@ int main(int argc, char **argv) {
             std::cout << "Running Tree-based (Raecke/CKR)... \n";
             solver = std::make_unique<RaeckeCKRSolver>();
             break;
-            /*
+
         case SolverType::RAECKE_CKR_OPTIMIZED:
             std::cout << "THIS IS STILL BUGGY...\n";
             std::cout << "Running Tree-based (Raecke/CKR Optimized)... \n";
             solver = std::make_unique<MendelScaling::RaeckeCKROptimized>();
             break;
-            */
+
 /*
         case SolverType::OPTIMIZED_RAECKE_FRT:
             std::cout << "Running Optimized Raecke FRT... \n";
@@ -115,7 +101,7 @@ int main(int argc, char **argv) {
 
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
-    solver->debug = true;
+    // solver->debug = true;
     solver->solve(g);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
@@ -123,8 +109,10 @@ int main(int argc, char **argv) {
 
 
     // TODO: this store flow is a major bottleneck for the tree based experiments.
-   solver->storeFlow();
-   solver->printFlow_();
+
+    // solver->storeFlow();
+    // solver->printFlow_();
+
 
     // verify flow conservation
 
@@ -141,7 +129,8 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    HandleDemandModel(argc, argv, cfg, g, solver);
+    // HandleDemandModel(argc, argv, cfg, g, solver);
+
 
 
     if (cfg->solver != SolverType::LP_APPLEGATE_COHEN) {
@@ -164,5 +153,38 @@ int main(int argc, char **argv) {
         std::cout << "Average pure oracle time: " << pure_mean << " [milliseconds]" << std::endl;
     }
 
+
+    /* Developing the efficient ckr raceke shit
+     *
+     */
+
+    std::cout << "Now running the CKR partiotion..." << std::endl;
+    EfficientRaeckeCKR efficient_raecke_ckr_solver;
+    efficient_raecke_ckr_solver.debug = false;
+    start_time = std::chrono::high_resolution_clock::now();
+    efficient_raecke_ckr_solver.solve_(g_csr);
+    end_time = std::chrono::high_resolution_clock::now();
+    // efficient_raecke_ckr_solver.storeFlow();
+    // efficient_raecke_ckr_solver.printFlow_();
+
+
+    std::cout << "CKR Solver number of iterations: " << efficient_raecke_ckr_solver.GetIterationCount() << std::endl;
+    // print out statistics
+    double total_time_msec = std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count();
+    std::cout << "Total running time: " << total_time_msec << " [milliseconds]" << std::endl;
+
+    double mean_oracle_time = 0;
+    for (const auto& t : efficient_raecke_ckr_solver.oracle_running_times) {
+        mean_oracle_time += t;
+    }
+    mean_oracle_time /= efficient_raecke_ckr_solver.oracle_running_times.size();
+    std::cout << "Average oracle time: " << mean_oracle_time << " [milliseconds]" << std::endl;
+
+    double mean_pure_oracle_time = 0;
+    for (const auto& t : efficient_raecke_ckr_solver.pure_oracle_running_times) {
+        mean_pure_oracle_time += t;
+    }
+    mean_pure_oracle_time /= efficient_raecke_ckr_solver.pure_oracle_running_times.size();
+    std::cout << "Average pure oracle time: " << mean_pure_oracle_time << " [milliseconds]" << std::endl;
     return 0;
 }

@@ -3,7 +3,7 @@
 //
 
 #include "gtest/gtest.h"
-#include "../../src/graph.h"
+#include "../../src/datastructures/graph.h"
 #include "../../src/solver/solver.h"
 #include "../../src/electrical/electrical_flow_optimized.h"
 #include <stdexcept>

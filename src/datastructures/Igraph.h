@@ -1,68 +1,105 @@
 //
-// Created by Mert Biyikli on 11.05.25.
+// Created by Mert Biyikli on 25.11.25.
 //
 
-
-#include "graph.h"
-#include <stdexcept>
-#include <iostream>
+#ifndef OBLIVIOUSROUTING_IGRAPH_H
+#define OBLIVIOUSROUTING_IGRAPH_H
+#include <vector>
 #include <fstream>
 #include <sstream>
-#include <queue>
-#include <limits>
+
+using Edge = std::pair<int, int>; // (u, v)
 
 
-void Graph::readGraph(const std::string &filename) {
-    std::ifstream infile(filename);
-    std::cout << "Reading graph from file: " << filename << std::endl;
-    if (!infile) {
-        throw std::runtime_error("Could not open file: " + filename);
+// Optionally, define a custom comparator to enforce u < v ordering
+struct EdgeCompare {
+    bool operator()(const Edge& a, const Edge& b) const {
+        return (a.first == b.first) ? (a.second < b.second) : (a.first < b.first);
+    }
+};
+
+#define INVALID_EDGE_ID -1
+
+
+class IGraph {
+public:
+    int n, m;
+    std::vector<int> vertices; // List of vertices
+
+
+    IGraph() = default;
+
+    explicit IGraph(int n) : n(n), m(0) {
+        vertices.resize(n);
+        std::iota(vertices.begin(), vertices.end(), 0);
     }
 
-    std::string line;
-    int n = 0, m = 0;
+    IGraph(const IGraph&) = default;
+    IGraph(IGraph&&) noexcept = default;
+    IGraph& operator=(const IGraph&) = default;
+    IGraph& operator=(IGraph&&) noexcept = default;
 
-    while (std::getline(infile, line)) {
-        if (line.empty() || line[0] == 'c') continue;
+    virtual ~IGraph() = default;
 
-        std::istringstream iss(line);
-        if (line[0] == 'p') {
-            std::string tmp;
-            iss >> tmp >> tmp >> n >> m;
-            break;
+
+    struct NeighborRangeBase {
+        virtual ~NeighborRangeBase() = default;
+        virtual const int* beginPtr() const = 0;
+        virtual const int* endPtr() const = 0;
+    };
+
+    struct NeighborRange {
+        const int* b;
+        const int* e;
+
+        const int* begin() const { return b; }
+        const int* end()   const { return e; }
+
+        const int size() const { return static_cast<int>(e - b); }
+        int operator[](size_t i) const {
+            return b[i];
         }
+    };
+
+    virtual NeighborRange neighbors(int node) const = 0;
+
+    // node index based access
+    virtual double getEdgeCapacity(int u, int v) const = 0;
+    virtual double getEdgeDistance(int u, int v) const = 0;
+    virtual void updateEdgeDistance(int u, int v, double distance) = 0;
+
+    // edge index based access
+    virtual double getEdgeCapacity(int e) const = 0;
+    virtual double getEdgeDistance(int e) const = 0;
+    virtual void updateEdgeDistance(int e, double dist) = 0;
+
+    virtual void addEdge(int u, int v, double capacity, double distance = 1) = 0;
+    virtual std::vector<int> getShortestPath(int source, int target) const = 0;
+    virtual const double GetDiameter() const = 0;
+
+    template<typename T>
+    std::vector<int> getShortestPathParameterized(int source, int target, T parameter) const {
+     // TODO: implement this in the derived classes if needed
+        return {};
     }
 
-    if (n == 0) {
-        throw std::runtime_error("Invalid or missing problem line in DIMACS file");
+    virtual int getNumNodes() const {
+        return n;
     }
 
+    virtual int getNumEdges() const {
+        return m;
+    }
 
-    this->m_adj.resize(n);
-    this->m_adj_capacities.resize(n);
-    this->m_adj_distances.resize(n);
-    this->m_vertices.resize(n);
+    virtual const std::vector<int>& getVertices() const {
+        return vertices;
+    }
 
-    // Fill vertices with 0, 1, ..., maxNodeIdSeen
-    std::iota(this->m_vertices.begin(), this->m_vertices.end(), 0);
+    // Note that this function does change the members from the base class
+    virtual void InitializeMemberByParser(int maxNodeIdSeen) = 0;
 
-    do {
-        if (line.empty() || line[0] == 'c') continue;
-
-        std::istringstream iss(line);
-        if (line[0] == 'a') {
-            char dummy;
-            int u, v;
-            double cap = 1.0;
-            iss >> dummy >> u >> v;
-            if (!(iss >> cap)) cap = 1.0;
-            this->addEdge(u - 1, v - 1, cap);  // convert to 0-based
-        }
-    } while (std::getline(infile, line));
-}
-
-void Graph::readLFGFile(const std::string &filename, bool withDistances) {
-    std::ifstream infile(filename);
+    void readLGFFile(const std::string& filename, bool withDistances) {
+        std::ifstream infile(filename);
     if (!infile) {
         throw std::runtime_error("Could not open LGF file: " + filename);
     }
@@ -142,15 +179,8 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
     }
 
     // 2) Initialize our graph with (maxNodeIdSeen+1) nodes
-    int n = maxNodeIdSeen + 1;
-    int m = 0;
-    m_adj.clear();
-    m_adj.resize(n);
-    m_adj_distances.resize(n);
+    InitializeMemberByParser(maxNodeIdSeen);
 
-    m_adj_capacities.resize(n);
-    m_vertices.resize(n);
-    std::iota(m_vertices.begin(), m_vertices.end(), 0); // fill vertices with 0, 1, ..., maxNodeIdSeen
 
     // 3) Second pass: scan for "@arcs", find header, then parse each arc line:
     inArcsSection = false;
@@ -223,8 +253,8 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
         // Parse u, v (1‐based IDs in LGF)
         int u, v;
         try {
-            u = std::min(std::stoi(parts[0]), std::stoi(parts[1]));  // convert to 0‐based
-            v = std::max(std::stoi(parts[0]), std::stoi(parts[1]));
+            u = std::stoi(parts[0]);  // convert to 0‐based
+            v = std::stoi(parts[1]);
         } catch (...) {
             continue; // malformed
         }
@@ -275,12 +305,9 @@ void Graph::readLFGFile(const std::string &filename, bool withDistances) {
         // Finally, add the undirected edge (Graph::addEdge adds both directions)
         // add random edge capacities
         // capacityValue = rand()%this->getNumNodes()+10; // random factor in [0.5, 1.5]
-        this->addEdge(u, v, capacityValue);
+        this->addEdge((u), (v), capacityValue);
     }
+    }
+};
 
-    // 4) (Optional) If you have a PruneGraph class, prune degree‐one vertices
-    //     new PruneGraph().pruneDegreeOne(*this);
-    //
-    // If you do not have PruneGraph or you don’t want to prune, simply comment out the line above.
-}
-
+#endif //OBLIVIOUSROUTING_IGRAPH_H

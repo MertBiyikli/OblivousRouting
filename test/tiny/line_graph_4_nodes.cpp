@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include "../../src/graph.h"
+#include "../../src/datastructures/graph.h"
 #include "../../src/tree_based/frt/raecke_frt_solver.h"
 
 TEST(TinyGraph, Line4BasicGraphSanity) {

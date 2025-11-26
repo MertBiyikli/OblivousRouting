@@ -33,9 +33,6 @@ if(BUILD_TESTS)
 endif()
 
 # ---- amgcl (vendored) ----
-
-
-
 #add_subdirectory(extern/amgcl)
 
 # list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
@@ -51,7 +48,7 @@ find_package(Eigen3 REQUIRED)
 # ---- Your target ----
 set(SRC_FILES
         main.cpp
-        src/graph.cpp
+        src/datastructures/graph.cpp
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
         src/tree_based/random_mst/raecke_mst_solver.cpp
@@ -104,9 +101,15 @@ set(SRC_FILES
         src/tree_based/optimized_versions/frt/raecke_frt_opt.h
         src/tree_based/optimized_versions/frt/raecke_frt_transform_opt.h
         # src/tree_based/optimized_versions/frt/raecke_frt_opt.cpp
-        src/graph_csr.h
+        src/datastructures/graph_csr.h
         # src/tree_based/optimized_versions/frt/mcct_optimized.cpp
         # src/tree_based/optimized_versions/frt/mcct_optimized.h
+        src/tree_based/ckr/utils/ultrametric_tree.h
+        src/tree_based/ckr/utils/ultrametric_tree.cpp
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.h
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.cpp
+        src/tree_based/ckr/optimized/efficient_raecke_ckr.h
+
 )
 
 

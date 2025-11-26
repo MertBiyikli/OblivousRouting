@@ -24,7 +24,7 @@
 
 
 
-#include "../../graph.h"
+#include "../../datastructures/graph.h"
 #include <unordered_map>
 #include "../../utils/hash.h"
 #include "LaplacianSolver.h"

@@ -7,7 +7,7 @@
 #include <string>
 #include <optional>
 #include <algorithm>
-#include "graph.h"
+#include "datastructures/graph.h"
 #include "../experiments/performance/demands/DemandModel.h"
 #include "../experiments/performance/demands/BimodalModel.h"
 #include "../experiments/performance/demands/GaussianModel.h"
@@ -248,5 +248,6 @@ inline std::pair<double, double> HandleDemandModel(int argc,
         return {offline, max_cong};
 
     }
+    return {};
 }
 #endif //OBLIVIOUSROUTING_PARSE_PARAMETER_H

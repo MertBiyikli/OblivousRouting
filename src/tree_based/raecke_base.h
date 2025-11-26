@@ -10,7 +10,7 @@
 #include <utility>
 #include <cmath>
 #include <stdexcept>
-#include "../graph.h"
+#include "../datastructures/graph.h"
 #include "../utils/hash.h"
 
 

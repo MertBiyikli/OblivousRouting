@@ -4,7 +4,7 @@
 
 
 #include <gtest/gtest.h>
-#include "../../src/graph_csr.h"
+#include "../../src/datastructures/graph_csr.h"
 
 TEST(TinyGraph, Line4BasicGraphSanity) {
     Graph_csr g(4);
@@ -21,7 +21,7 @@ TEST(TinyGraph, Line4GraphNeighbors) {
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
-    g.preprocess();
+    g.finalize();
 
     // Node 1: expects neighbors 0 and 2 (CSR sorted order)
     std::vector<int> nbr1;
@@ -57,7 +57,7 @@ TEST(TinyGraph, Line4EdgeUpdates) {
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
 
-    g.preprocess();
+    g.finalize();
 
 
     // Update edge distance
@@ -77,7 +77,7 @@ TEST(TinyGraph, Line4StressTestUpdateMethod) {
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
 
-    g.preprocess();
+    g.finalize();
 
     double new_distance = 2.0;
 
@@ -103,7 +103,7 @@ TEST(TinyGraph, Line4ShortestPath) {
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
 
-    g.preprocess();
+    g.finalize();
 
     auto path_0_3 = g.getShortestPath(0, 3);
     EXPECT_EQ(path_0_3.size(), 4);
@@ -124,7 +124,7 @@ TEST(TinyGraph, Line4Diameter) {
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
 
-    g.preprocess();
-    EXPECT_EQ(g.computeExactDiameterUsingDijkstra(), 3); // distance matrix not initialized
+    g.finalize();
+    EXPECT_EQ(g.GetDiameter(), 3); // distance matrix not initialized
 
 }

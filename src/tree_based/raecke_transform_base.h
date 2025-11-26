@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_RAECKE_TRANSFORM_BASE_H
 #define OBLIVIOUSROUTING_RAECKE_TRANSFORM_BASE_H
 
-#include "../graph.h"
+#include "../datastructures/graph.h"
 #include <unordered_map>
 #include <utility>
 #include "../utils/hash.h"

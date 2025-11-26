@@ -136,7 +136,7 @@ void MCCT_Solver::computeBetas(bool debug) {
     auto& vertices = graph->getVertices();
     std::list<int> toBeAnalyzed(vertices.begin(), vertices.end());
 
-    for(int& v : vertices) {
+    for(const auto& v : vertices) {
         toBeAnalyzed.pop_front(); // Remove vertex 0 from the list
         for(int& u : toBeAnalyzed) {
             // add debug statement to check the vertices being analyzed

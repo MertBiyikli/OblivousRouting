@@ -44,7 +44,8 @@ double RaeckeMST::iterate(int treeIndex) {
 MSTTree RaeckeMST::getTree(Graph &g) {
     // Todo: maybe think of a more lets say clean approach of recomputing the distance
     computeNewDistances(g);
-    std::vector<std::pair<int,int>> mst_edges = mst.build_mst(g);
+    mst.setGraph(g);
+    std::vector<std::pair<int,int>> mst_edges = mst.build_mst();
     MSTTree t = mst.build_tree(g, mst_edges, 0);
     return t;
 }

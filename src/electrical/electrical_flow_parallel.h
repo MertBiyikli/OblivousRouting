@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_ELECTRICAL_FLOW_PARALLEL_H
 
 #include <algorithm>
-#include "../graph.h"
+#include "../datastructures/graph.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
 #include "laplacian_solvers/AMGSolverParallel.h"

@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_MCCT_OPTIMIZED_H
 
 
-#include "../../../graph_csr.h"   // <-- your new optimized class
+#include "../../../datastructures/graph_csr.h"
 #include "../../frt/mcct/Tree.h"
 
 #include <map>

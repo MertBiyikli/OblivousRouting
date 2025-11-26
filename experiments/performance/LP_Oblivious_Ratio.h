@@ -10,7 +10,7 @@
 #include <vector>
 #include <tuple>
 #include "../../src/utils/hash.h"
-#include "../../src/graph.h"
+#include "../../src/datastructures/graph.h"
 #include "../../src/lp_solver/LP_Base.h"
 
 

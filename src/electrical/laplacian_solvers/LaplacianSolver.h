@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 #define OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 
-#include "../../graph.h"
+#include "../../datastructures/graph.h"
 #include "../../utils/hash.h"
 #include <vector>
 #include <unordered_map>

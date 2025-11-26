@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_DEMANDMODEL_H
 
 #include "../../src/utils/hash.h"
-#include "../../src/graph.h"
+#include "../../../src/datastructures/graph.h"
 
 class DemandModel {
 public:

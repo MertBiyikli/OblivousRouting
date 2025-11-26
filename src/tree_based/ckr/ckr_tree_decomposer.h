@@ -37,7 +37,7 @@ public:
         }
 
 
-        CKRPartion ckr;
+        CKRPartition ckr;
         ckr.init(G);
         std::vector<int> X(n);
         std::iota(X.begin(), X.end(),0);
@@ -51,7 +51,6 @@ public:
 
 
         std::shared_ptr<TreeNode> root = std::make_shared<TreeNode>();
-        root->id = level;
         root->radius = delta;
 
         for (auto& [cid, nodes] : cluster_to_nodes) {
@@ -84,8 +83,6 @@ public:
             child->radius = delta * 0.5;
             root->children.push_back(std::move(child));
         }
-
-
 
         return root;
     }

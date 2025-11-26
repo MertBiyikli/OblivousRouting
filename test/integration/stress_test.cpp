@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 #include <chrono>
-#include "../../src/graph_csr.h"
-#include "../../src/graph.h"
+#include "../../src/datastructures/graph_csr.h"
+#include "../../src/datastructures/graph.h"
 
 
 template<typename T>
@@ -78,7 +78,7 @@ TEST(StressTest, CSR_LargeGraphEdgeUpdate) {
     // First add edges
     measureEdgeAdditionTime(g, num_nodes, num_edges);
 
-    g.preprocess();
+    g.finalize();
 
 
     // Now measure update times

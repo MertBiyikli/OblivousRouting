@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_MCCT_DERANDOMIZED_WEIGHTED_SOLVER_H
 
 
-#include "../../../graph.h"
+#include "../../../datastructures/graph.h"
 #include "Tree.h"
 
 #include <map>

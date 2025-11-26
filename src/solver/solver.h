@@ -6,7 +6,7 @@
 #define OBLIVOUSROUTING_SOLVER_H
 
 #include <vector>
-#include "../graph.h"
+#include "../datastructures/graph.h"
 #include "../utils/hash.h"
 #include <unordered_map>
 //#include <boost/unordered_map.hpp>

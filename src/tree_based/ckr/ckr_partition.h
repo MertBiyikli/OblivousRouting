@@ -6,13 +6,25 @@
 #define OBLIVIOUSROUTING_CKR_PARTITION_H
 
 
-#include "../../graph.h"
+#include "../../datastructures/graph.h"
+#include "../../datastructures/graph_csr.h"
 
-class CKRPartion {
+
+struct CKRLevel {
+    double R = 0.0;                      // the random radius used at this level
+    std::vector<int> owner;              // owner[v] = center that captured v at this level (or -1)
+    std::vector<int> pred;               // pred[v] = predecessor of v towards its owner center at this level (-1 for center)
+    std::vector<int> centers;            // the centers chosen at this level (subset of V)
+};
+
+class CKRPartition {
     Graph m_graph;
 public:
-    void init(Graph &g, bool debug=false);
+    void init(const Graph &g, bool debug=false);
+
     std::vector<int> computePartition(const std::vector<int>& _X, const double& delta);
+    std::vector<int> computePartition(const std::vector<int>& X, const double& delta, CKRLevel& L);
+    std::vector<int> computePartition(const Graph_csr& g, const std::vector<int>& X, const double& delta, CKRLevel& L);
 };
 
 #endif //OBLIVIOUSROUTING_CKR_PARTITION_H

@@ -14,8 +14,8 @@
 #include <absl/strings/str_format.h>
 #include <absl/strings/internal/str_format/extension.h>
 
-#include "../../graph.h"
-#include "../../graph_csr.h"
+#include "../../datastructures/graph.h"
+#include "../../datastructures/graph_csr.h"
 #include "../../solver/solver.h"
 #include "frt/raecke_frt_transform_opt.h"
 
@@ -114,7 +114,7 @@ public:
             }
         }
         csr_g.n = g.getNumNodes(),csr_g.m = g.getNumEdges();
-        csr_g.preprocess();
+        csr_g.finalize();
         m_graph = csr_g;
     }
 

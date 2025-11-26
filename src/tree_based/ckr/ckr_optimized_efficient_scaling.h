@@ -8,6 +8,9 @@
 #include "../../solver/solver.h"
 #include <random>
 #include "ckr_tree_decomposer.h"
+#include "utils/ultrametric_tree.h"
+#include "raecke_ckr_transform.h"
+
 #include <chrono>
 
 /*
@@ -21,226 +24,6 @@ namespace MendelScaling {
 
     class CKRTransform;
     class RaeckeCKR;
-    struct CKRLevel {
-        double R = 0.0;                      // the random radius used at this level
-        std::vector<int> owner;              // owner[v] = center that captured v at this level (or -1)
-        std::vector<int> pred;               // pred[v] = predecessor of v towards its owner center at this level (-1 for center)
-        std::vector<int> centers;            // the centers chosen at this level (subset of V)
-    };
-
-struct UltrametricTree {
-    // Each original vertex v is a leaf at index v (0..n-1).
-    // Internal nodes are appended at indices n .. n+merges-1.
-    struct Node {
-        int parent = -1;
-        std::vector<int> child;
-        double Gamma = 0.0;   // label Γ(u) (nondecreasing toward root)
-    };
-
-    int n = 0;                // #original vertices
-    int N = 0;                // total nodes = leaves + internal
-    int root = -1;
-    std::vector<Node> T;
-
-    // Binary lifting tables for level-ancestor-like jumps
-    std::vector<std::vector<int>> up;     // up[k][u] = 2^k-th ancestor of u (or -1)
-    std::vector<double> gamma;            // Γ(u), cached for easy access
-    std::vector<int> depth;               // depth in the ultrametric tree
-
-    // Build ultrametric from an MST using Kruskal-like dendrogram construction:
-    // Sort MST edges by weight ascending; each union creates a new internal node
-    // with Γ = edge weight; connect components as its children.
-    template<class EdgeList>
-    void buildFromMST(int n_, const EdgeList& mst_edges, const std::vector<double>& mst_w) {
-        n = n_;
-        const int m = (int)mst_edges.size();
-        // DSU
-        std::vector<int> parent(2*n + m, -1), dsu(2*n + m);
-        std::iota(dsu.begin(), dsu.end(), 0);
-        auto find = [&](int x) {
-            while (dsu[x] != x) { dsu[x] = dsu[dsu[x]]; x = dsu[x]; }
-            return x;
-        };
-        auto unite = [&](int a, int b) {
-            a = find(a); b = find(b);
-            if (a == b) return -1;
-            dsu[a] = a; dsu[b] = b; // make sure reps are clean
-            return 0;
-        };
-
-        // Initially each leaf is its own component represented by itself (0..n-1)
-        // We will create internal nodes starting at id = cur = n
-        T.clear(); T.resize(n); // n leaf nodes
-        for (int v = 0; v < n; ++v) T[v].Gamma = 0.0;
-
-        // We need a separate DSU parent array that points to current representative node id.
-        // rep[v] maps DSU representative to the current *tree node id* of that component.
-        std::vector<int> rep(2*n + m);
-        for (int v = 0; v < n; ++v) rep[v] = v, dsu[v] = v;
-
-        // Sort MST edges by weight ascending
-        std::vector<int> ord(m);
-        std::iota(ord.begin(), ord.end(), 0);
-        std::sort(ord.begin(), ord.end(), [&](int i, int j){ return mst_w[i] < mst_w[j]; });
-
-        int cur = n; // next internal node id
-        for (int idx : ord) {
-            int u = mst_edges[idx].first;
-            int v = mst_edges[idx].second;
-            double w = mst_w[idx];
-
-            int ru = find(rep[u]);
-            int rv = find(rep[v]);
-            if (ru == rv) continue;
-
-            // Create new internal node
-            if ((int)T.size() <= cur) T.resize(cur+1);
-            T[cur].Gamma = w;
-            int nodeU = rep[ru];
-            int nodeV = rep[rv];
-            T[cur].child.push_back(nodeU);
-            T[cur].child.push_back(nodeV);
-            T[nodeU].parent = cur;
-            T[nodeV].parent = cur;
-
-            // Unite DSU reps and map to new node
-            dsu[ru] = cur;
-            dsu[rv] = cur;
-            rep[cur] = cur;
-            rep[ru] = cur;
-            rep[rv] = cur;
-
-            ++cur;
-        }
-        N = cur;
-        // Find root (the last internal or the single leaf)
-        root = (N > 0 ? N-1 : (n>0? n-1 : -1));
-        if (root == -1 && n > 0) root = n-1;
-
-        // Preprocess lifting
-        preprocessLifting();
-    }
-
-    void preprocessLifting() {
-        gamma.assign(N, 0.0);
-        for (int i = 0; i < N; ++i) gamma[i] = T[i].Gamma;
-
-        depth.assign(N, 0);
-        std::queue<int> q;
-        if (root != -1) q.push(root), depth[root] = 0;
-        while (!q.empty()) {
-            int u = q.front(); q.pop();
-            for (int v : T[u].child) {
-                depth[v] = depth[u] + 1;
-                q.push(v);
-            }
-        }
-        int LOG = 1;
-        while ((1<<LOG) <= std::max(1, N)) ++LOG;
-        up.assign(LOG, std::vector<int>(N, -1));
-        for (int u = 0; u < N; ++u) {
-            up[0][u] = T[u].parent;
-        }
-        for (int k = 1; k < LOG; ++k) {
-            for (int u = 0; u < N; ++u) {
-                int mid = up[k-1][u];
-                up[k][u] = (mid == -1 ? -1 : up[k-1][mid]);
-            }
-        }
-    }
-
-    // Return the *highest* ancestor of leaf v whose Γ <= threshold.
-    // If leaf’s Γ(leaf)=0 is already > threshold (never happens), it returns the leaf itself.
-    int sigmaDelta(int v_leaf, double Delta) const {
-        if (N == 0 || v_leaf < 0 || v_leaf >= n) return v_leaf;
-        const double thr = Delta / (2.0 * (double) n);
-
-        int u = v_leaf;
-        if (gamma[u] > thr) return u; // safety
-        // climb as long as parent exists and Γ(parent) <= thr
-        for (int k = (int)up.size()-1; k >= 0; --k) {
-            int p = up[k][u];
-            if (p != -1 && gamma[p] <= thr) {
-                u = p;
-            }
-        }
-        return u;
-    }
-};
-
-    struct QuotientLevel {
-    Graph Gq;                                 // quotient graph at Δ
-    std::vector<int> sigma_compact_of_v;      // size n: original vertex v -> compact qid in [0..k-1]
-    std::vector<std::vector<int>> members_of_q; // size k: list of original vertices in each quotient node
-};
-
-// Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
-// Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
-inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const UltrametricTree& ultra, double Delta) {
-    const int n = G.getNumNodes();
-
-    // 1) Map each original vertex to ancestor σΔ(v)
-    std::vector<int> sigma_node(n);
-    for (int v = 0; v < n; ++v) {
-        sigma_node[v] = ultra.sigmaDelta(v, Delta); // ultra node id
-    }
-
-    // 2) Compact those ancestor IDs to 0..k-1
-    std::unordered_map<int,int> idmap;
-    idmap.reserve(n*2);
-    int next_id = 0;
-    std::vector<int> qid_of_sigma(ultra.N, -1);
-    for (int v = 0; v < n; ++v) {
-        int s = sigma_node[v];
-        int &ref = qid_of_sigma[s];
-        if (ref == -1) ref = next_id++;
-    }
-
-    // 3) Original v -> compact quotient id
-    std::vector<int> sigma_compact_of_v(n);
-    sigma_compact_of_v.reserve(n);
-    for (int v = 0; v < n; ++v) {
-        sigma_compact_of_v[v] = qid_of_sigma[sigma_node[v]];
-    }
-    const int k = next_id;
-
-    // 4) Members of each quotient node
-    std::vector<std::vector<int>> members_of_q(k);
-    for (int v = 0; v < n; ++v) {
-        members_of_q[sigma_compact_of_v[v]].push_back(v);
-    }
-
-    // 5) Build quotient edges with min inter-edge weight
-    Graph Gq(k);
-    std::unordered_map<long long,double> min_w;
-    min_w.reserve((size_t)G.getNumEdges());
-    auto key = [](int a,int b){ return ((long long)a<<32) | (unsigned)b; };
-
-    for (int u = 0; u < n; ++u) {
-        int cu = sigma_compact_of_v[u];
-        for (int v : G.neighbors(u)) {
-            int cv = sigma_compact_of_v[v];
-            if (cu == cv) continue;
-            int a = (cu < cv) ? cu : cv;
-            int b = (cu < cv) ? cv : cu;
-            double w = G.getEdgeDistance(u, v);
-            long long K = key(a,b);
-            auto it = min_w.find(K);
-            if (it == min_w.end() || w < it->second)
-                min_w[K] = w;
-        }
-    }
-    for (auto& [K, w] : min_w) {
-        int a = (int)(K >> 32);
-        int b = (int)(K & 0xffffffff);
-        Gq.addEdge(a,b,w);
-    }
-
-    return {.Gq = std::move(Gq),
-            .sigma_compact_of_v = std::move(sigma_compact_of_v),
-            .members_of_q = std::move(members_of_q)};
-}
-
 
 
 
@@ -251,13 +34,13 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
         // similar members as RaeckeCKR but with efficient scaling modifications
     public:
 
-        template<class T>
-        void run(T& transform) {
+
+        void run() {
             m_lambdaSum = 0.0;
             int id = 0;
             while (m_lambdaSum < 1.0) {
                 auto start = std::chrono::high_resolution_clock::now();
-                m_lambdaSum += iterate(id, transform);
+                m_lambdaSum += iterate(id);
 
                 oracle_running_times.push_back(
                     std::chrono::duration<double, std::milli>(
@@ -268,18 +51,34 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
             }
         }
 
-        template<class T>
-        double iterate(int id, T& transform) {
+
+        double iterate(int id) {
             std::shared_ptr<TreeNode> t = getTree(m_graph);
-            computeRLoads(t, m_graph);
-            double l = getMaxRload();
+            computeRLoads(t, m_graph, id);
+            double l = getMaxRload(id);
             double lambda = std::min(1.0/l, 1.0 - m_lambdaSum);
 
-            // directly add flow contribution
-            transform.addTree(t, lambda, m_graph);
 
+            // for debuggin purposes print the tree , graph and the current edge loads, as well as the current lambda
+            if (debug) {
+                std::cout << "Iteration " << id << ":\n";
+                std::cout << "Current lambda: " << lambda << "\n";
+                std::cout << "Current Tree:\n";
+                print_tree(t);
+                std::cout << "Current Graph Distances:\n";
+                m_graph.print();
+                std::cout << "Current Edge R-Loads:\n";
+                for (const auto& [edge, rLoad] : edge2Load[id]) {
+                    std::cout << "Edge (" << edge.first << ", " << edge.second << ") : R-Load = " << rLoad << "\n";
+                }
+            }
+
+
+            m_lambdas.push_back(lambda);
+            m_graphs.push_back(m_graph);
+            m_trees.push_back(t);
             // update weights
-            // m_lambdaSum += lambda;
+            m_lambdaSum += lambda;
             computeNewDistances(m_graph);
 
             edge2Load.clear(); // clear for next iteration
@@ -293,6 +92,10 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
 
         std::vector<CKRLevel> m_levels;          // from finest (0) upward
 
+
+        std::vector<int> build_ckr_level(const Graph& g, double Delta, CKRLevel& L);
+
+        /*
         // Build one CKR level at scale Delta. Returns next-level centers.
         static std::vector<int> build_ckr_level(
             const Graph& G,
@@ -363,26 +166,33 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
             }
             return L.centers; // these are the "surviving" centers for the next (coarser) scale
         }
+        */
 
     bool debug = false;
 
         Graph m_graph;
         double m_lambdaSum = 0.0;
         double diameter = 0.0;
+
+
+        // TODO: keep this for now, but can lead to memory performance issue
+        std::vector<Graph> m_graphs;
+        std::vector<double> m_lambdas;
+        std::vector<std::shared_ptr<TreeNode>> m_trees;
         UltrametricTree ultrametric;
 
         bool use_mendel_scaling = true;      // toggle at runtime or via CLI
         uint32_t ckr_seed = 0xC0FFEE;       // for reproducible partitions
 
 
-        std::unordered_map<std::pair<int, int>, double> edge2Load;
+        std::vector<std::unordered_map<std::pair<int, int>, double>> edge2Load;
         std::vector<double> oracle_running_times;
         void init(const Graph& g);
         void preprocess();
         std::shared_ptr<TreeNode> getTree(Graph& g);
-        void computeRLoads(std::shared_ptr<TreeNode> t, Graph& g);
-        double getMaxRload();
-        void addLoadToEdge(int u, int v, double load);
+        void computeRLoads(std::shared_ptr<TreeNode> t, Graph& g, int tree_index);
+        double getMaxRload(int tree) const;
+        // void addLoadToEdge(int u, int v, double load);
         void computeNewDistances(Graph& g);
         void setGraph(const Graph& g);
         const Graph& getGraph() const;
@@ -422,25 +232,43 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
 
     class RaeckeCKROptimized : public ObliviousRoutingSolver
     {
-        RaeckeCKR ckr_algo;
-        CKRTransform transform;
+
 
     public:
-
+        RaeckeCKR ckr_algo;
+        RaeckeCKRTransform transform;
         RaeckeCKROptimized() = default;
         ~RaeckeCKROptimized() = default;
 
         void solve(const Graph &g) override {
+            ckr_algo.debug = debug;
             ckr_algo.setGraph(g);
-            transform.init(g);
+
             ckr_algo.init(g);
-            ckr_algo.run(transform);  // pass transform directly
+            ckr_algo.run();  // pass transform directly
             iteration_count = ckr_algo.getIterationCount();
             oracle_running_times = ckr_algo.oracle_running_times;
             scaleDownFlow(); // normalize after building
         }
 
         void storeFlow() override {
+            // directly add flow contribution
+            for (int i = 0; i < ckr_algo.m_graphs.size(); ++i) {
+                transform.addTree(ckr_algo.m_trees[i],ckr_algo.m_lambdas[i], ckr_algo.m_graphs[i]);
+            }
+
+            // store the flow
+            // given the demand map
+            auto const& routingRaecke = transform.getRoutingTable();
+            for (const auto& [edge, demandMap] : routingRaecke) {
+                for (const auto& [d, fraction] : demandMap) {
+                    if (d.first > d.second) continue; // skip trivial cases
+                    f_e_st[edge][d]=fraction;
+                }
+            }
+
+            scaleDownFlow();
+/*
             f_e_st.clear();
             // store the flow from the adjacency list flow
             for (int e = 0; e<transform.flow_storage.adj_f_e_u_id.size(); e++) {
@@ -474,11 +302,32 @@ inline QuotientLevel build_quotient_graph_with_map(const Graph& G, const Ultrame
                         }
                     }
                 }
-            }
+            }*/
         } // handled during run()
 
         void scaleDownFlow() {
-            transform.flow_storage.scaleDownFlow();
+            // scale the flow to meet unit flow
+            std::unordered_map<std::pair<int, int>, double > outgoingflow_per_commodity;
+
+            for ( const auto& [edge, flowMap]:f_e_st) {
+                for (const auto& [com, flow_value]  : flowMap) {
+                    if ( flow_value < 1e-15 ) continue; // ignore zero flows
+                    if (!outgoingflow_per_commodity.contains(com) )
+                        outgoingflow_per_commodity[com] = 0;
+
+                    if (edge.first == com.first
+                        || edge.second == com.first) {
+                        outgoingflow_per_commodity[com] += std::abs(flow_value);
+                        }
+                }
+            }
+
+            // scale the flow values to meet one unit of flow per commodity
+            for ( auto& [edge, flowMap]:f_e_st) {
+                for (auto& [com, flow_value] : flowMap) {
+                    flow_value /= outgoingflow_per_commodity[com];
+                }
+            }
         }
     };
 }

@@ -7,7 +7,7 @@
 
 #include <chrono>
 #include <functional>
-#include "../../src/graph.h"
+#include "../../src/datastructures/graph.h"
 
 class Performance{
 public:
