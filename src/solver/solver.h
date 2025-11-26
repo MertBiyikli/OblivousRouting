@@ -11,7 +11,13 @@
 #include <unordered_map>
 //#include <boost/unordered_map.hpp>
 
+class Graph_csr;
+
+
+
 class ObliviousRoutingSolver { // TODO: rename the class name
+protected:
+    std::unique_ptr<IGraph> graph;
 public:
     bool debug = false;
     std::vector<double> oracle_running_times;
@@ -19,16 +25,30 @@ public:
     int iteration_count = 0;
     std::unordered_map<std::pair<int, int> , std::unordered_map<std::pair<int, int>, double >> f_e_st;
 
-  /*  boost::unordered_map<
-        std::pair<int, int>,
-        boost::unordered_map<std::pair<int, int>, double >
-    > f_e_st;*/
     std::vector<std::vector<double>> m_routingTable;
     ObliviousRoutingSolver() = default;
     virtual ~ObliviousRoutingSolver() = default;
 
+
+    void solve() {
+        if (graph) {
+            runSolve(*graph);
+            graph->resetEdgeWeights();
+        }else {
+            throw std::runtime_error("Graph not set in ObliviousRoutingSolver.");
+        }
+    }
+
     // ToDo: Think of an efficient way of storing the routing table
-    virtual void solve(const Graph& graph) = 0;
+
+    // TODO: use the graph interface to support both CSR and Adjacency list
+    virtual void runSolve(const IGraph& graph) = 0;
+
+
+    template<class GraphType>
+    void setGraph(GraphType g) {
+        graph = std::make_unique<GraphType>(std::move(g));
+    }
     virtual void storeFlow() = 0;
 
 

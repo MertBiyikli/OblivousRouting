@@ -57,7 +57,8 @@ public:
         });
     }
 
-    void solve(const Graph &graph) {
+    void runSolve(const IGraph &graph_) {
+        auto graph = dynamic_cast<const Graph&>(graph_); // cast to Graph
         if(Run(graph))
         {
             if(debug)

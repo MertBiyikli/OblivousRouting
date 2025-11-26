@@ -29,7 +29,8 @@ public:
     RaeckeMSTSolver() = default;
     ~RaeckeMSTSolver() = default;
 
-    void solve(const Graph &g) override {
+    void runSolve(const IGraph &g_) override {
+        auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
         mst_algo.setGraph(g);
         mst_algo.run(transform);  // pass transform directly
         iteration_count = mst_algo.getIterationCount();

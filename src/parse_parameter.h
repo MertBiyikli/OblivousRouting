@@ -13,6 +13,7 @@
 #include "../experiments/performance/demands/GaussianModel.h"
 #include "../experiments/performance/demands/GravityModel.h"
 #include "../experiments/performance/demands/UniformModel.h"
+#include "lp_solver/MCCF_lp_solver.h"
 
 enum class SolverType {
     ELECTRICAL_NAIVE,
@@ -242,7 +243,8 @@ inline std::pair<double, double> HandleDemandModel(int argc,
         for (const auto& [d, value] : demand_map) {
             mccf.AddDemands({d.first, d.second}, value);
         }
-        mccf.solve(_g);
+        mccf.setGraph(_g);
+        mccf.solve();
         double offline = mccf.getCongestion();
 
         return {offline, max_cong};

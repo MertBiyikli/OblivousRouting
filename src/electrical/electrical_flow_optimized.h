@@ -12,6 +12,8 @@
 #include "laplacian_solvers/AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
+
+#include "../datastructures/graph_csr.h"
 #include "../tree_based/frt/raecke_frt_transform.h"
 #include "laplacian_solvers/LaplacianSolverFactory.h"
 
@@ -25,7 +27,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
     int n, m;
     // LaplacianSolver solver;
-    Graph m_graph;
+    Graph_csr m_graph;
     std::unique_ptr<LaplacianSolver> amg;
     double roh = 0.0;
     double alpha_local = 0.0;
@@ -68,9 +70,14 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
     public:
 
-    void solve(const Graph& g) override {
-        this->init(g, debug);
-        this->run();
+
+    void runSolve(const IGraph& g_) override {
+        if (auto* g = dynamic_cast<const Graph_csr*>(&g_)) {
+            this->init(*g, debug);
+            this->run();
+        } else {
+            throw std::runtime_error("ElectricalFlowOptimized: This solver only supports Graph_csr.");
+        }
     }
     void storeFlow() override;
     double getFlowForCommodity(int edge_id, int source, int target);
@@ -104,7 +111,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
     double recoverNorm(const std::vector<double>& diffs_u,
                                             const std::vector<double>& diffs_v);
 
-    void init(const Graph& g, bool debug = false, const std::string& solver_name = ("amg_cg"));
+    void init(const Graph_csr& g, bool debug = false, const std::string& solver_name = ("amg_cg"));
 
 /*
     std::vector<int> buildBFSTree(int root);

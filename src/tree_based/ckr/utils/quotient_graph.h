@@ -9,6 +9,8 @@
 #include "ultrametric_tree.h"
 #include <vector>
 
+
+// TODO: embrace the nice properties of the clean Graph API here
 namespace MendelScaling {
 
     template <typename G>

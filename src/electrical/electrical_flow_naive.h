@@ -118,7 +118,8 @@ public:
     double getFlowForCommodity(int edge_id, int source, int target);
     double getCongForCommodity(int edge_id, int source, int target);
 
-    void solve(const Graph& g) override {
+    void runSolve(const IGraph& g_) override {
+        auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
         this->init(g, debug);
         this->run();
     }

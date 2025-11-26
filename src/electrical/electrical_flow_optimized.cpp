@@ -9,12 +9,12 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init(const Graph &g, bool debug, const std::string& solver_name)
+void ElectricalFlowOptimized::init(const Graph_csr &g, bool debug, const std::string& solver_name)
 {
     m_graph = g;
 
     n = m_graph.getNumNodes();
-    m = m_graph.getNumEdges();
+    m = m_graph.getNumEdges()/2;
 
     adj_f_e_u_id.resize(m);
     adj_f_e_u.resize(m);
@@ -68,8 +68,7 @@ void ElectricalFlowOptimized::initEdgeDistances() {
     edge_weights.resize(m);
 
     for (int e = 0; e < m; ++e) {
-        auto [u,v] = edges[e];
-        double cap = m_graph.getEdgeCapacity(u, v);      // undirected capacity accessor
+        double cap = m_graph.getEdgeCapacity(e);      // undirected capacity accessor
         edge_capacities[e]  = cap;
         edge_probabilities[e] = edge_distances[e] / cap_X;
         edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);
@@ -85,14 +84,13 @@ void ElectricalFlowOptimized::extract_edge_list() {
 
     // -> for the adjacency version we may not need an extra vector edges anymore...
     edges.reserve(m);
-    for (int u = 0; u<n; u++) {
-        for (int idx = 0; idx < m_graph.neighbors(u).size(); ++idx) {
-            const int v = m_graph.neighbors(u)[idx];
-            if (u < v) {
-                edges.emplace_back(u,v);
-            }
+    for (int e = 0; e < m_graph.getNumEdges(); e++) {
+        auto [u, v] = m_graph.edgeEndpoints(e);
+        if (u < v) {
+            edges.emplace_back(u,v);
         }
     }
+
 
 
     // sort the edges based on the first node, then second node

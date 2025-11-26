@@ -95,6 +95,14 @@ public:
         return vertices;
     }
 
+    virtual void resetEdgeWeights() {
+        for (int v = 0; v < n; ++v) {
+            for (int i = 0; i < neighbors(v).size(); ++i) {
+                updateEdgeDistance(v, neighbors(v)[i], 1.0);
+            }
+        }
+    }
+
     // Note that this function does change the members from the base class
     virtual void InitializeMemberByParser(int maxNodeIdSeen) = 0;
 

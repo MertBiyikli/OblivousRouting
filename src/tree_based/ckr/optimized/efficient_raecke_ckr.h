@@ -14,40 +14,28 @@
 #include "../../../datastructures/graph_csr.h"
 
 class EfficientRaeckeCKR : public ObliviousRoutingSolver
-    {
-
-
+{
     public:
+    Graph_csr* g = nullptr;     // 🔥 pointer to the one true graph
+
         EfficientCKR ckr_algo;
         RaeckeCKRTransform transform;
         EfficientRaeckeCKR() = default;
         ~EfficientRaeckeCKR() = default;
-    void solve(const Graph &graph) override {
-        return;
-    }
-/*
-        void solve(const Graph &g) override {
+
+        void runSolve(const IGraph &g_) override {
             ckr_algo.debug = debug;
-            ckr_algo.setGraph(g);
+            auto& g = dynamic_cast<const Graph_csr&>(g_);
+            ckr_algo.setGraph(const_cast<Graph_csr&>(g));
+            ckr_algo.init();
 
-            ckr_algo.init(g);
-            ckr_algo.run();  // pass transform directly
-            iteration_count = ckr_algo.getIterationCount();
-            oracle_running_times = ckr_algo.oracle_running_times;
-            scaleDownFlow(); // normalize after building
-        }*/
-
-    void solve_(const Graph_csr &g) {
-            ckr_algo.debug = debug;
-            ckr_algo.setGraph(g);
-
-            ckr_algo.init(g);
             ckr_algo.run();  // pass transform directly
             iteration_count = ckr_algo.getIterationCount();
             oracle_running_times = ckr_algo.oracle_running_times;
             pure_oracle_running_times = ckr_algo.pure_oracle_running_times;
             scaleDownFlow(); // normalize after building
         }
+
 
         void storeFlow() override {
             // directly add flow contribution

@@ -25,7 +25,7 @@ TEST(SmokeTest, ElectricalFlowOptimizedBasicTest) {
     std::vector<std::pair<int, int>> demands = { {0, 2} };
     std::vector<double> demand_values = { 1.0 };
 
-    solver->solve(g);
+    solver->runSolve(g);
 
     int argc = 3;
     char* argv[] = { (char*)"electrical_optimized", (char*)"input_graph.txt", (char*)"gravity" };

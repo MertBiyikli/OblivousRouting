@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
     // solver->debug = true;
-    solver->solve(g);
+    solver->runSolve(g_csr);
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
 
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
     EfficientRaeckeCKR efficient_raecke_ckr_solver;
     efficient_raecke_ckr_solver.debug = false;
     start_time = std::chrono::high_resolution_clock::now();
-    efficient_raecke_ckr_solver.solve_(g_csr);
+    efficient_raecke_ckr_solver.runSolve(g_csr);
     end_time = std::chrono::high_resolution_clock::now();
     // efficient_raecke_ckr_solver.storeFlow();
     // efficient_raecke_ckr_solver.printFlow_();

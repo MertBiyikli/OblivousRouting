@@ -151,7 +151,7 @@ TEST(TinyGraph, Line4RaeckeTree) {
     g.addEdge(2,3,1);
 
    RaeckeFRTSolver solver;
-    solver.solve(g);
+    solver.runSolve(g);
     solver.storeFlow();
     solver.printFlow_();
 

@@ -240,7 +240,8 @@ namespace MendelScaling {
         RaeckeCKROptimized() = default;
         ~RaeckeCKROptimized() = default;
 
-        void solve(const Graph &g) override {
+        void runSolve(const IGraph &g_) override {
+            auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
             ckr_algo.debug = debug;
             ckr_algo.setGraph(g);
 

@@ -21,7 +21,7 @@
  */
 class EfficientCKR {
 
-    Graph_csr m_graph;
+    Graph_csr* g_ptr = nullptr;
     double m_lambdaSum = 0.0;
     double diameter = 0.0;
 
@@ -58,12 +58,15 @@ class EfficientCKR {
                 );
                 id++;
             }
+
+            g_ptr = nullptr;
+
         }
 
 
         double iterate(int id) {
-            std::shared_ptr<TreeNode> t = getTree(m_graph);
-            computeRLoads(t, m_graph, id);
+            std::shared_ptr<TreeNode> t = getTree();
+            computeRLoads(t, id);
             double l = getMaxRload(id);
             double lambda = std::min(1.0/l, 1.0 - m_lambdaSum);
 
@@ -75,7 +78,7 @@ class EfficientCKR {
                 std::cout << "Current Tree:\n";
                 print_tree(t);
                 std::cout << "Current Graph Distances:\n";
-                m_graph.print();
+                g_ptr->print();
                 std::cout << "Current Edge R-Loads:\n";
                 for (const auto& [edge, rLoad] : edge2Load[id]) {
                     std::cout << "Edge (" << edge.first << ", " << edge.second << ") : R-Load = " << rLoad << "\n";
@@ -84,11 +87,11 @@ class EfficientCKR {
 
 
             m_lambdas.push_back(lambda);
-            m_graphs.push_back(m_graph);
+            m_graphs.push_back(*g_ptr);
             m_trees.push_back(t);
             // update weights
             m_lambdaSum += lambda;
-            computeNewDistances(m_graph);
+            computeNewDistances();
 
             //edge2Load.clear(); // clear for next iteration
             return lambda;
@@ -104,18 +107,24 @@ class EfficientCKR {
 
         std::vector<int> build_ckr_level(const Graph_csr& g, double Delta, CKRLevel& L);
 
+    void setGraph(Graph_csr& graph) {
+        g_ptr = &graph;              // no copy
+    }
+
+    void init() {
+        g_ptr->finalize();
+        diameter = g_ptr->GetDiameter();
+    }
 
 
 
-        void init(const Graph_csr& g);
         void preprocess();
-        std::shared_ptr<TreeNode> getTree(Graph_csr& g);
-        void computeRLoads(std::shared_ptr<TreeNode> t, Graph_csr& g, int tree_index);
+        std::shared_ptr<TreeNode> getTree();
+        void computeRLoads(std::shared_ptr<TreeNode> t, int tree_index);
         double getMaxRload(int tree) const;
         // void addLoadToEdge(int u, int v, double load);
-        void computeNewDistances(Graph_csr& g);
-        void setGraph(const Graph_csr& g);
-        const Graph_csr& getGraph() const;
+        void computeNewDistances();
+
 
 
     };
