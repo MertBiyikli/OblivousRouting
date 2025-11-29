@@ -343,7 +343,10 @@ bool AMGSolver::updateEdge(int u, int v, double new_weight) {
 }
 
 void AMGSolver::updateSolver() {
-
+/* BUG: In some iterations the AMGSolver outputs "Zero sum in skyline_lu factorization"
+ *      The error is putput when the factorize method is called.
+ *
+*/
     // Update hierarchy numeric values (same structure)
     solver->precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
 }

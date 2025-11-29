@@ -9,8 +9,11 @@
 #include "../../../datastructures/graph_csr.h"
 #include "../ckr_tree_decomposer.h"
 #include "../raecke_ckr_transform.h"
+#include "../../raecke_oracle_iteration.h"
 #include "../utils/ultrametric_tree.h"
 #include "../ckr_tree_decomposer.h"
+#include "../utils/quotient_graph.h"
+#include "../../efficient_raecke_base.h"
 #include <chrono>
 
 /*
@@ -19,115 +22,35 @@
     * - use the precomputed MST as preprocessing
     * - embrace LCA DS for better performance and Quotient Graph Generating
  */
-class EfficientCKR {
+class EfficientCKR : public EfficientRaeckeBase<std::shared_ptr<TreeNode>, std::vector<double>> {
+public:
 
-    Graph_csr* g_ptr = nullptr;
-    double m_lambdaSum = 0.0;
-    double diameter = 0.0;
-
+    std::vector<double> scales;
     MendelScaling::UltrametricTree ultrametric;
 
-    bool use_mendel_scaling = true;      // toggle at runtime or via CLI
-    uint32_t ckr_seed = 0xC0FFEE;       // for reproducible partitions
 
+    bool debug = false;
 
-    std::vector<std::unordered_map<std::pair<int, int>, double>> edge2Load;
+    std::vector<CKRLevel> m_levels;          // from finest (0) upward
 
-    std::vector<std::vector<double>> tree_edge2Load;
-    public:
+    std::shared_ptr<TreeNode> getTree() override;
+private:
+    std::vector<int> build_ckr_level(const Graph_csr& g, double Delta, CKRLevel& L);
+    void preprocess();
 
-    // TODO:  For now these member are public however later we can make them private and provide accessors instead of exposing them
-        bool debug = false;
-        std::vector<double> oracle_running_times;
-        std::vector<double> pure_oracle_running_times;
-        // TODO: keep this for now, but can lead to memory performance issue
-        std::vector<Graph_csr> m_graphs;
-        std::vector<double> m_lambdas;
-        std::vector<std::shared_ptr<TreeNode>> m_trees;
-        void run() {
-            m_lambdaSum = 0.0;
-            int id = 0;
-            while (m_lambdaSum < 1.0) {
-                auto start = std::chrono::high_resolution_clock::now();
-                m_lambdaSum += iterate(id);
+    void computeScales();
+    void computeLevelPartition(
+        MendelScaling::QuotientLevel<Graph_csr>& Q,
+        double Delta,
+        CKRLevel& L);
+    void buildTreeLevel(
+        std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
+        const MendelScaling::QuotientLevel<Graph_csr> &Q,
+        const CKRLevel& L,
+        const double Delta);
+    void finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode>>& prev_nodes);
 
-                oracle_running_times.push_back(
-                    std::chrono::duration<double, std::milli>(
-                        std::chrono::high_resolution_clock::now() - start
-                    ).count()
-                );
-                id++;
-            }
-
-            g_ptr = nullptr;
-
-        }
-
-
-        double iterate(int id) {
-            std::shared_ptr<TreeNode> t = getTree();
-            computeRLoads(t, id);
-            double l = getMaxRload(id);
-            double lambda = std::min(1.0/l, 1.0 - m_lambdaSum);
-
-
-            // for debuggin purposes print the tree , graph and the current edge loads, as well as the current lambda
-            if (debug) {
-                std::cout << "Iteration " << id << ":\n";
-                std::cout << "Current lambda: " << lambda << "\n";
-                std::cout << "Current Tree:\n";
-                print_tree(t);
-                std::cout << "Current Graph Distances:\n";
-                g_ptr->print();
-                std::cout << "Current Edge R-Loads:\n";
-                for (const auto& [edge, rLoad] : edge2Load[id]) {
-                    std::cout << "Edge (" << edge.first << ", " << edge.second << ") : R-Load = " << rLoad << "\n";
-                }
-            }
-
-
-            m_lambdas.push_back(lambda);
-            m_graphs.push_back(*g_ptr);
-            m_trees.push_back(t);
-            // update weights
-            m_lambdaSum += lambda;
-            computeNewDistances();
-
-            //edge2Load.clear(); // clear for next iteration
-            return lambda;
-        }
-
-        const int getIterationCount() const {
-            return static_cast<int>(oracle_running_times.size());
-        }
-
-
-        std::vector<CKRLevel> m_levels;          // from finest (0) upward
-
-
-        std::vector<int> build_ckr_level(const Graph_csr& g, double Delta, CKRLevel& L);
-
-    void setGraph(Graph_csr& graph) {
-        g_ptr = &graph;              // no copy
-    }
-
-    void init() {
-        g_ptr->finalize();
-        diameter = g_ptr->GetDiameter();
-    }
-
-
-
-        void preprocess();
-        std::shared_ptr<TreeNode> getTree();
-        void computeRLoads(std::shared_ptr<TreeNode> t, int tree_index);
-        double getMaxRload(int tree) const;
-        // void addLoadToEdge(int u, int v, double load);
-        void computeNewDistances();
-
-
-
-    };
+};
 
 
 #endif //OBLIVIOUSROUTING_EFFICIENT_CKR_H

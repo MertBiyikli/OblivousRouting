@@ -95,13 +95,12 @@ set(SRC_FILES
         src/tree_based/ckr/raecke_ckr_solver.h
         # src/tree_based/ckr/raecke_ckr_optimized.cpp
         # src/tree_based/ckr/raecke_ckr_optimized.h
-        src/tree_based/ckr/ckr_optimized_efficient_scaling.cpp
-        src/tree_based/ckr/ckr_optimized_efficient_scaling.h
         src/tree_based/optimized_versions/raecke_optimized_base.h
         src/tree_based/optimized_versions/frt/raecke_frt_opt.h
         src/tree_based/optimized_versions/frt/raecke_frt_transform_opt.h
         # src/tree_based/optimized_versions/frt/raecke_frt_opt.cpp
         src/datastructures/graph_csr.h
+        src/datastructures/graph_csr.cpp
         # src/tree_based/optimized_versions/frt/mcct_optimized.cpp
         # src/tree_based/optimized_versions/frt/mcct_optimized.h
         src/tree_based/ckr/utils/ultrametric_tree.h
@@ -109,6 +108,8 @@ set(SRC_FILES
         src/tree_based/ckr/optimized/efficient_oracle_ckr.h
         src/tree_based/ckr/optimized/efficient_oracle_ckr.cpp
         src/tree_based/ckr/optimized/efficient_raecke_ckr.h
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.h
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.cpp
 
 )
 

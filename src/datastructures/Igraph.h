@@ -21,6 +21,7 @@ struct EdgeCompare {
 #define INVALID_EDGE_ID -1
 
 
+
 class IGraph {
 public:
     int n, m;
@@ -41,6 +42,8 @@ public:
 
     virtual ~IGraph() = default;
 
+
+    virtual void finalize() = 0;
 
     struct NeighborRangeBase {
         virtual ~NeighborRangeBase() = default;
@@ -67,6 +70,7 @@ public:
     virtual double getEdgeCapacity(int u, int v) const = 0;
     virtual double getEdgeDistance(int u, int v) const = 0;
     virtual void updateEdgeDistance(int u, int v, double distance) = 0;
+    virtual int getEdgeId(int u, int v) const = 0;
 
     // edge index based access
     virtual double getEdgeCapacity(int e) const = 0;
@@ -77,11 +81,42 @@ public:
     virtual std::vector<int> getShortestPath(int source, int target) const = 0;
     virtual const double GetDiameter() const = 0;
 
+/*
+ *The following methods are for the parameterized shortest path computations.
+ *These methods can be overridden in derived classes if needed.
+ */
     template<typename T>
-    std::vector<int> getShortestPathParameterized(int source, int target, T parameter) const {
-     // TODO: implement this in the derived classes if needed
-        return {};
+    T getDistanceVector() {
+        T dist;
+        // Special-case adjacency-list style distances
+        if constexpr (std::is_same_v<T, std::vector<std::vector<double>>>) {
+            dist.resize(n);
+            for (int u = 0; u < n; ++u) {
+                dist[u].assign(neighbors(u).size(), 1.0); // default distance 1.0
+                for (auto& v : neighbors(u)) {
+                    dist[u].emplace_back(getEdgeDistance(u, v));
+                }
+            }
+            return dist;
+        }
+        // CSR style
+        else if constexpr (std::is_same_v<T, std::vector<double>>) {
+            dist.resize(m);
+            for (int e = 0; e < m; ++e) {
+                dist[e] = getEdgeDistance(e);
+            }
+            return dist;
+        }
+        // Fallback: default-construct
+        else {
+            return T{};
+        }
     }
+
+    virtual std::vector<int>
+    getShortestPath(int s, int t, const std::vector<double>& dist) const = 0;
+
+
 
     virtual int getNumNodes() const {
         return n;
@@ -317,5 +352,7 @@ public:
     }
     }
 };
+
+
 
 #endif //OBLIVIOUSROUTING_IGRAPH_H

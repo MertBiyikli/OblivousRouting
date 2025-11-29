@@ -19,7 +19,6 @@
 
 
 
-
 class Graph : public IGraph {
     // int m = 0; // Number of edges
     // std::vector<int> m_vertices; // List of vertices
@@ -74,13 +73,27 @@ public:
 
 
     // Edge based indexing
-    int getEdgeId(int u, int v) const;
+    int getEdgeId(int u, int v) const override;
     std::pair<int,int> edgeEndpoints(int e) const ;
 
     void updateEdgeCapacity(int u, int v, double capacity);
 
     void print() const;
     void readGraph(const std::string &filename);
+
+
+    // TODO: need to implement tjis for the adjacency list based distances
+    std::vector<int>
+        getShortestPath(int s, int t, const std::vector<double>& dist_e) const override {
+        return {};
+    };
+
+    void finalize() override {
+        // do nothing
+        return;
+    }
+
+
     // void readLFGFile(const std::string& filename, bool withDistances);
 };
 

@@ -8,48 +8,53 @@
 
 #include "../../../solver/solver.h"
 #include "../ckr_tree_decomposer.h"
-#include "../raecke_ckr_transform.h"
 #include "efficient_oracle_ckr.h"
+#include "efficient_raecke_ckr_transform.h"
 #include <chrono>
 #include "../../../datastructures/graph_csr.h"
 
 class EfficientRaeckeCKR : public ObliviousRoutingSolver
 {
     public:
-    Graph_csr* g = nullptr;     // 🔥 pointer to the one true graph
+        Graph_csr* g = nullptr;
 
         EfficientCKR ckr_algo;
-        RaeckeCKRTransform transform;
+        EfficientRaeckeCKRTransform transform;
         EfficientRaeckeCKR() = default;
         ~EfficientRaeckeCKR() = default;
 
         void runSolve(const IGraph &g_) override {
-            ckr_algo.debug = debug;
-            auto& g = dynamic_cast<const Graph_csr&>(g_);
-            ckr_algo.setGraph(const_cast<Graph_csr&>(g));
-            ckr_algo.init();
+
+            auto& graph = this->graphAs<Graph_csr>();     // CLEAN
+            g = &graph;
+            ckr_algo.setGraph(graph);
+
 
             ckr_algo.run();  // pass transform directly
             iteration_count = ckr_algo.getIterationCount();
-            oracle_running_times = ckr_algo.oracle_running_times;
-            pure_oracle_running_times = ckr_algo.pure_oracle_running_times;
+            oracle_running_times = ckr_algo.getOracleRunningTimes();
+            pure_oracle_running_times = ckr_algo.getPureOracleRunningTimes();
             scaleDownFlow(); // normalize after building
         }
 
 
         void storeFlow() override {
-            // directly add flow contribution
-            for (int i = 0; i < ckr_algo.m_graphs.size(); ++i) {
-                transform.addTree(ckr_algo.m_trees[i],ckr_algo.m_lambdas[i], ckr_algo.m_graphs[i]);
-            }
+            auto& graph = this->graphAs<Graph_csr>();     // CLEAN
+            transform.init(graph, ckr_algo.getIterations());
+            transform.transform();
+
 
             // store the flow
             // given the demand map
             auto const& routingRaecke = transform.getRoutingTable();
-            for (const auto& [edge, demandMap] : routingRaecke) {
-                for (const auto& [d, fraction] : demandMap) {
+            for (int e = 0; e < g->getNumEdges(); ++e) {
+                auto& edge_flow_map = routingRaecke.adj_ids[e];
+                auto& edge_flow_vals = routingRaecke.adj_vals[e];
+                for (int idx = 0; idx < edge_flow_map.size(); ++idx) {
+                    const auto& d = edge_flow_map[idx];
+                    const auto& fraction = edge_flow_vals[idx];
                     if (d.first > d.second) continue; // skip trivial cases
-                    f_e_st[edge][d]=fraction;
+                    f_e_st[{g->from[e], g->to[e]}][d] = fraction;
                 }
             }
 

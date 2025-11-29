@@ -39,6 +39,11 @@ public:
         }
     }
 
+    template<class T>
+    T& graphAs() {
+        return dynamic_cast<T&>(*graph);
+    }
+
     // ToDo: Think of an efficient way of storing the routing table
 
     // TODO: use the graph interface to support both CSR and Adjacency list

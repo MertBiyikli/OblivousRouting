@@ -16,7 +16,7 @@
 #include "src/utils/lca_datstructure.h"
 #include "src/tree_based/ckr/raecke_ckr_solver.h"
 // #include "src/tree_based/ckr/raecke_ckr_optimized.h"
-#include "src/tree_based/ckr/ckr_optimized_efficient_scaling.h"
+
 // #include "src/tree_based/optimized_versions/frt/raecke_frt_opt.h"
 #include "src/tree_based/optimized_versions/frt/mcct_optimized.h"
 // #include "src/tree_based/optimized_versions/raecke_optimized_base.h"
@@ -80,9 +80,8 @@ int main(int argc, char **argv) {
             break;
 
         case SolverType::RAECKE_CKR_OPTIMIZED:
-            std::cout << "THIS IS STILL BUGGY...\n";
             std::cout << "Running Tree-based (Raecke/CKR Optimized)... \n";
-            solver = std::make_unique<MendelScaling::RaeckeCKROptimized>();
+            solver = std::make_unique<EfficientRaeckeCKR>();
             break;
 
 /*
@@ -102,17 +101,18 @@ int main(int argc, char **argv) {
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
     // solver->debug = true;
-    solver->runSolve(g_csr);
+    solver->setGraph(g_csr);
+    solver->solve();
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
 
 
 
     // TODO: this store flow is a major bottleneck for the tree based experiments.
-
-    // solver->storeFlow();
-    // solver->printFlow_();
-
+/*
+    solver->storeFlow();
+    solver->printFlow_();
+*/
 
     // verify flow conservation
 
@@ -154,18 +154,20 @@ int main(int argc, char **argv) {
     }
 
 
-    /* Developing the efficient ckr raceke shit
+    /* Developing the efficient ckr raecke shit
      *
      */
-
-    std::cout << "Now running the CKR partiotion..." << std::endl;
+/*
+    std::cout << "Now running the CKR partition..." << std::endl;
     EfficientRaeckeCKR efficient_raecke_ckr_solver;
     efficient_raecke_ckr_solver.debug = false;
     start_time = std::chrono::high_resolution_clock::now();
-    efficient_raecke_ckr_solver.runSolve(g_csr);
+    efficient_raecke_ckr_solver.setGraph(g_csr);
+    efficient_raecke_ckr_solver.solve();
     end_time = std::chrono::high_resolution_clock::now();
-    // efficient_raecke_ckr_solver.storeFlow();
-    // efficient_raecke_ckr_solver.printFlow_();
+
+    efficient_raecke_ckr_solver.storeFlow();
+    efficient_raecke_ckr_solver.printFlow_();
 
 
     std::cout << "CKR Solver number of iterations: " << efficient_raecke_ckr_solver.GetIterationCount() << std::endl;
@@ -186,5 +188,5 @@ int main(int argc, char **argv) {
     }
     mean_pure_oracle_time /= efficient_raecke_ckr_solver.pure_oracle_running_times.size();
     std::cout << "Average pure oracle time: " << mean_pure_oracle_time << " [milliseconds]" << std::endl;
-    return 0;
+    return 0;*/
 }

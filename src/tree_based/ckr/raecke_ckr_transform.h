@@ -15,6 +15,7 @@
 #include "../raecke_transform_base.h"
 #include "ckr_tree_decomposer.h"
 #include "../../datastructures/graph_csr.h"
+#include "../raecke_oracle_iteration.h"
 
 class RaeckeCKRTransform : public RaeckeTransformBase<std::shared_ptr<TreeNode>> {
 public:
@@ -262,6 +263,7 @@ private:
         return std::nullopt;
     }
 };
+
 
 
 

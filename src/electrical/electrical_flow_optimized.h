@@ -27,7 +27,7 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
     int n, m;
     // LaplacianSolver solver;
-    Graph_csr m_graph;
+    const Graph_csr* m_graph = nullptr;
     std::unique_ptr<LaplacianSolver> amg;
     double roh = 0.0;
     double alpha_local = 0.0;
@@ -72,12 +72,15 @@ class ElectricalFlowOptimized : public ObliviousRoutingSolver{
 
 
     void runSolve(const IGraph& g_) override {
-        if (auto* g = dynamic_cast<const Graph_csr*>(&g_)) {
-            this->init(*g, debug);
-            this->run();
-        } else {
-            throw std::runtime_error("ElectricalFlowOptimized: This solver only supports Graph_csr.");
+        const auto* g_csr = dynamic_cast<const Graph_csr*>(&g_);
+        if (!g_csr) {
+            throw std::runtime_error(
+                "ElectricalFlowOptimized: this solver only supports Graph_csr.");
         }
+
+        init(*g_csr, debug);
+        run();
+
     }
     void storeFlow() override;
     double getFlowForCommodity(int edge_id, int source, int target);

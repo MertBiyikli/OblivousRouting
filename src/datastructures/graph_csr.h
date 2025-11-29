@@ -16,6 +16,7 @@
 #include <boost/container/flat_set.hpp>
 #include "Igraph.h"
 #include <map>
+#include "../utils/priority_queue.h"
 
 
 
@@ -85,7 +86,7 @@ public:
      * If unsure whether finalize has been called, it is safe to call it again as it will
      * do nothing if the graph is already processed.
      */
-    void finalize() {
+    void finalize() override {
     if (is_processed) {
         return;
     }
@@ -181,7 +182,7 @@ public:
 
 
     // returns edge id for (u,v), or -1 if not exists
-    int getEdgeId(int u, int v) const {
+    int getEdgeId(int u, int v) const override{
         if (!is_processed)
             throw std::runtime_error("Graph_csr::getEdgeId: graph not finalized");
 
@@ -307,7 +308,7 @@ public:
         }
 
     }
-
+/*
     std::vector<int> getShortestPath(int src, int tgt = -1) const override {
         using P = std::pair<double, int>; // (distance, node)
         const double INF = std::numeric_limits<double>::infinity();
@@ -366,6 +367,77 @@ public:
         std::reverse(path.begin(), path.end());
         return path;
     }
+*/
+
+    std::vector<int> getShortestPath(int src, int tgt = -1) const override {
+        const double INF = std::numeric_limits<double>::infinity();
+
+        if (src < 0 || src >= n)
+            throw std::out_of_range("Graph_csr::getShortestPath: src or tgt out of range");
+
+        // --- resize reusable buffers only if needed ---
+        if ((int)dist_buf.size() != n) {
+            dist_buf.resize(n);
+            parent_buf.resize(n);
+        }
+
+        auto& dist   = dist_buf;
+        auto& parent = parent_buf;
+
+        std::fill(dist.begin(),   dist.end(),   INF);
+        std::fill(parent.begin(), parent.end(), -1);
+
+        // --- initialize distance of source ---
+        dist[src] = 0.0;
+
+        // --- fast heap with handles ---
+        MinHeap<double,int> pq(n);
+        pq.insert(src, 0.0);
+
+        while (!pq.empty()) {
+            int u     = pq.top();
+            double du = pq.topKey();
+            pq.deleteTop();
+
+            // skip stale entries
+            if (du > dist[u]) continue;
+
+            // early exit: we can stop once tgt is extracted
+            if (u == tgt) break;
+
+            // iterate CSR edges of u
+            int start = head[u];
+            int end   = head[u+1];
+
+            for (int e = start; e < end; ++e) {
+                int v = to[e];
+                double w = distance[e];      // customized weights (parameterized)
+                double nd = du + w;
+
+                if (nd < dist[v]) {
+                    dist[v] = nd;
+                    parent[v] = u;
+                    pq.insertOrAdjustKey(v, nd);
+                }
+            }
+        }
+        // If we don't have a specific target, skip reconstruction
+        if (tgt < 0)
+            return {};
+        // --- reconstruct path ---
+        std::vector<int> path;
+        if (dist[tgt] == INF) return path; // unreachable
+
+        for (int v = tgt; v != -1; v = parent[v])
+            path.push_back(v);
+
+        std::reverse(path.begin(), path.end());
+        return path;
+    }
+
+
+    std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist) const override;
+
 
     // ===============================================================
     // 🔹 Extract edge IDs along the path found by the last Dijkstra run

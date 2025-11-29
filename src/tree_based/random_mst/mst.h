@@ -53,6 +53,18 @@ public:
     std::vector<std::tuple<double,int,int>> keyed;
 
     std::vector<std::vector<double>> weights;
+    void setGraph(const IGraph& g) {
+        // clear all first
+        edges.clear();
+        keyed.clear();
+        weights.clear();
+
+        n = g.getNumNodes();
+
+        for (int u : g.getVertices())
+            for (int v : g.neighbors(u))
+                if (u < v) edges.emplace_back(u,v);
+    }
     void setGraph(const Graph& g) {
 
         // clear all first

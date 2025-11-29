@@ -262,6 +262,7 @@ void Graph::print() const {
     }
 }
 
+
 bool Graph::IsDistanceMatrixComputed() const {
     return !m_distanceMatrix.empty();
 }
