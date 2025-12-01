@@ -9,6 +9,8 @@
 #include "../datastructures/Igraph.h"
 #include "raecke_oracle_iteration.h"
 #include <cassert>
+#include <chrono>
+#include <cmath>
 
 template<typename Tree, typename DistanceType>
 class EfficientRaeckeBase {

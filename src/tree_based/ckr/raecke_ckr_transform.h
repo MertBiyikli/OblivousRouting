@@ -11,6 +11,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
 #include "../../utils/hash.h"
 #include "../raecke_transform_base.h"
 #include "ckr_tree_decomposer.h"
