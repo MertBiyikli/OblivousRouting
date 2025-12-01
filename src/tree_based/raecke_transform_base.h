@@ -12,7 +12,8 @@
 
 using EdgeDemandMap = std::unordered_map<
     std::pair<int,int>,
-    std::unordered_map<std::pair<int,int>, double>
+    std::unordered_map<std::pair<int,int>, double>, 
+    PairHash
 >;
 
 template<typename Tree>
