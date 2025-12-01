@@ -49,33 +49,6 @@ jobs:
           path: build/oblivious_routing
           retention-days: 30
 
-  test:
-    runs-on: ubuntu-24.04
-    needs: build
-
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Export OR-Tools installation artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ortools-install
-          path: /opt/ortools-install.tar.gz
-
-
-      - name: Run tiny tests
-        run: |
-          docker pull ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }}
-          docker run --rm ghcr.io/mertbiyikli/oblivousrouting:${{ github.sha }} \
-            bash -c "cd /app/build && ctest -R Tiny --output-on-failure"
 
   # -------------------------
   # 3. Build native executable

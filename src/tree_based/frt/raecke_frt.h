@@ -8,7 +8,6 @@
 
 #include <memory>
 #include <vector>
-#include <unordered_map>
 #include "mcct/mcct_derandomized_weighted_solver.h"
 #include "../../solver/solver.h"
 #include "../raecke_base.h"

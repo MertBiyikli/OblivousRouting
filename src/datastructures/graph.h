@@ -8,14 +8,15 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <numeric>
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
 #include <queue>
-#include <boost/container/flat_map.hpp>
 #include "Igraph.h"
+#include "../utils/hash.h"
 
 
 
@@ -30,7 +31,7 @@ class Graph : public IGraph {
 
     // this for also being able to use the edge based accessor
     std::vector<std::pair<int,int>> m_edgeList;                 // e -> (u, v)
-    boost::container::flat_map<Edge, int> m_uvToEdge;
+    std::unordered_map<Edge, int, PairHash> m_uvToEdge;
 
 public:
     Graph() = default;

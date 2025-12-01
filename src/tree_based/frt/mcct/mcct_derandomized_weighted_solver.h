@@ -27,7 +27,7 @@ class MCCT_Solver {
     double bestBeta;
     std::vector<int> verticesPermutation;
     std::unordered_map<int, std::unordered_map<int, double>> idVertex2idVertex2demand; // Set of demands
-    std::map<std::pair<int, int>, int> demand2levelIncluded; // Map of demands to their levels in the tree
+    std::unordered_map<Edge, int, PairHash> demand2levelIncluded; // Map of demands to their levels in the tree
     public:
 
 

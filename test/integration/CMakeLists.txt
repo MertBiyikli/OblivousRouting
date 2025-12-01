@@ -16,6 +16,7 @@ option(BUILD_TESTS "Build test targets" ON)
 # --------------------------------------------------
 # Fix RPATH issues on macOS for GTest dynamic libs
 # --------------------------------------------------
+set(CMAKE_PREFIX_PATH "")
 set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
@@ -28,7 +29,7 @@ file(GLOB INTEGRATION_SRC
         ${CMAKE_SOURCE_DIR}/src/utils/*.cpp
         ${CMAKE_SOURCE_DIR}/src/tree_based/frt/*.cpp
         ${CMAKE_SOURCE_DIR}/src/tree_based/frt/mcct/*.cpp
-        ${CMAKE_SOURCE_DIR}/src/graph/*.cpp
+        ${CMAKE_SOURCE_DIR}/src/datastructures/*.cpp
 )
 
 add_library(integration_core STATIC ${INTEGRATION_SRC})

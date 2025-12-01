@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_EFFICIENT_RAECKE_CKR_TRANSFORM_H
 #include <vector>
 #include <set>
+#include <optional>
 #include "../../../datastructures/graph_csr.h"
 #include "../../raecke_oracle_iteration.h"
 #include "../ckr_tree_decomposer.h"

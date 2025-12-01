@@ -13,7 +13,6 @@
 #include <iostream>
 #include <sstream>
 #include <queue>
-#include <boost/container/flat_set.hpp>
 #include "Igraph.h"
 #include <map>
 #include "../utils/priority_queue.h"

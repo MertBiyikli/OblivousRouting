@@ -18,19 +18,13 @@ using TerminalPair   = std::pair<int,int>;
 using DemandMap      = std::unordered_map<TerminalPair,double>;
 using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap>;
 
-// adjust this to support directed edge struct: struct Arc {int src, trg, cap, operator=()}
-namespace std {
-    template <>
-    struct hash<std::pair<int, int>> {
-        std::size_t operator()(const std::pair<int, int>& p) const {
-            std::size_t h1 = std::hash<int>{}(p.first);
-            std::size_t h2 = std::hash<int>{}(p.second);
-            return h1 ^ (h2 << 1); // Combine the hashes
-        }
-    };
-}
 
-
+struct PairHash {
+    size_t operator()(const std::pair<int,int>& p) const noexcept {
+        return ((size_t)p.first << 32) ^ (size_t)p.second;
+    }
+};
+// adjust this to support directed edge struct: struct Arc {int src, trg, cap, operator=(
 namespace std {
     template <>
     struct hash<std::tuple<int, int, int>> {

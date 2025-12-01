@@ -28,7 +28,7 @@ protected:
     std::vector<Graph> m_graphs;
 
     std::vector<Tree> m_trees;
-    std::vector< std::unordered_map<std::pair<int, int>, double> > m_idTree2edge2rload;
+    std::vector< std::unordered_map<std::pair<int, int>, double, PairHash> > m_idTree2edge2rload;
 
 public:
     std::vector<double> oracle_running_times; // TODO: remove this
@@ -123,7 +123,7 @@ public:
         constexpr double EPS = 1e-12;
 
         // --- 1) Compute totalrLoad for every edge and track max (for log-sum-exp) ---
-        std::unordered_map<std::pair<int,int>, double> total_r_by_edge;
+        std::unordered_map<std::pair<int,int>, double, PairHash> total_r_by_edge;
         total_r_by_edge.reserve(static_cast<size_t>(g.getNumEdges()) * 2);
 
         double max_total_r = -std::numeric_limits<double>::infinity();
@@ -166,7 +166,7 @@ public:
         // newDistance(u,v) = [exp(totalrLoad(u,v)) / cap(u,v)] / Σ_e exp(totalrLoad(e))
         //                  = [exp(totalrLoad(u,v) - M) / cap(u,v)] / Σ_e exp(totalrLoad(e) - M)
         //                  = safe, because both numerator and denominator are well-scaled.
-        std::unordered_map<std::pair<int,int>, double> edge2scaledDist;
+        std::unordered_map<std::pair<int,int>, double, PairHash> edge2scaledDist;
         edge2scaledDist.reserve(total_r_by_edge.size());
 
         for (int u = 0; u < g.getNumNodes(); ++u) {
@@ -197,7 +197,7 @@ public:
     }
 
 
-    virtual void normalizeDistance(Graph &_g, std::unordered_map<std::pair<int, int>, double> &edge2scaledDist) {
+    virtual void normalizeDistance(Graph &_g, std::unordered_map<std::pair<int, int>, double, PairHash> &edge2scaledDist) {
         double minDistance = std::numeric_limits<double>::infinity();
         for(int u = 0; u < _g.getNumNodes(); u++) {
             for (const auto& v : _g.neighbors(u)) {

@@ -8,11 +8,6 @@
 #include "../../../utils/hash.h"
 #include <cmath>
 
-struct PairHash {
-    std::size_t operator()(const std::pair<int,int>& p) const noexcept {
-        return std::hash<int>()(p.first) ^ (std::hash<int>()(p.second) << 1);
-    }
-};
 
 FRT_Tree MCCT_Solver::getBestTree(bool debug) {
     computeBestBetaAndPermutation();

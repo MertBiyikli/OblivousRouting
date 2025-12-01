@@ -30,7 +30,7 @@ void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, Graph &copyGraph) {
     if(m_idTree2edge2rload.size() <= treeIndex) {
         m_idTree2edge2rload.resize(treeIndex + 1);
     }
-    m_idTree2edge2rload[treeIndex] = std::unordered_map<std::pair<int, int>, double>();
+    m_idTree2edge2rload[treeIndex] = std::unordered_map<std::pair<int, int>, double, PairHash>();
     auto& edge2Load = m_idTree2edge2rload[treeIndex];
 
     while(!bfsQueue.empty()) {
