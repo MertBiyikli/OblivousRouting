@@ -8,16 +8,10 @@ cmake_minimum_required(VERSION 3.16)
 find_package(GTest REQUIRED)
 
 
- # Find Boost
-# only require what the main binary needs
-find_package(Boost REQUIRED COMPONENTS program_options serialization)
-
 # if you have tests that need unit_test_framework, guard it:
 option(BUILD_TESTS "Build test targets" ON)
 
-if(BUILD_TESTS)
-    find_package(Boost 1.70 REQUIRED COMPONENTS unit_test_framework)
-endif()
+
 
 # --------------------------------------------------
 # Fix RPATH issues on macOS for GTest dynamic libs
@@ -55,10 +49,6 @@ foreach(TEST_FILE ${INTEGRATION_TEST_FILES})
     add_executable(${TEST_NAME} ${TEST_FILE})
 
     target_link_libraries(${TEST_NAME} PRIVATE
-            Boost::boost
-            Boost::program_options
-            Boost::serialization
-            Boost::unit_test_framework
             integration_core
             GTest::gtest
             GTest::gtest_main
@@ -71,14 +61,6 @@ foreach(TEST_FILE ${INTEGRATION_TEST_FILES})
             # add boost source as well
     )
 
-    target_include_directories(integration_core PUBLIC
-            ${CMAKE_SOURCE_DIR}/src
-            ${Boost_INCLUDE_DIRS}     # <-- ADD THIS
-    )
-
-    target_link_libraries(integration_core PUBLIC
-            Boost::boost              # <-- ADD THIS
-    )
 
 
     gtest_discover_tests(${TEST_NAME})

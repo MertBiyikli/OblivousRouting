@@ -3,7 +3,7 @@
 //
 
 #include "efficient_raecke_ckr_transform.h"
-
+#include <optional>
 
 
 void EfficientTreeRoutingTable::init(const int numEdges) {
