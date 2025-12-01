@@ -25,7 +25,7 @@
 class LPSolver : public LP {
 private:
     std::unordered_map<std::tuple<int, int, int>, MPVariable*> p_e_ij;
-    std::unordered_map< std::pair<int, int>, MPVariable*> π_e_f;
+    std::unordered_map< std::pair<int, int>, MPVariable*, PairHash> π_e_f;
     std::unordered_map< std::tuple< int , std::pair<int, int> > , MPVariable*> m_var_f_e_; // st;
     double max_cong = 0;
 
