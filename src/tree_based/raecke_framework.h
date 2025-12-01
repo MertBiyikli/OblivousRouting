@@ -10,7 +10,7 @@
 #include <vector>
 #include <unordered_map>
 #include "../solver/solver.h"
-
+#include "../utils/hash.h"
 
 
 /**
@@ -84,7 +84,7 @@ public:
 
     void scaleDownFlow() {
         // scale the flow to meet unit flow
-        std::unordered_map<std::pair<int, int>, double > outgoingflow_per_commodity;
+        std::unordered_map<std::pair<int, int>, double , PairHash> outgoingflow_per_commodity;
 
         for ( const auto& [edge, flowMap]:f_e_st) {
             for (const auto& [com, flow_value]  : flowMap) {
