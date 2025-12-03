@@ -9,8 +9,14 @@ permissions:
   contents: read
   packages: write
 
+env:
+  ORTOOLS_IMAGE: ghcr.io/mertbiyikli/ortools:linux
+
 jobs:
 
+  ##################################################################
+  # (1) Build OR-Tools base image and cache it on GHCR
+  ##################################################################
   build-ortools-linux:
     runs-on: ubuntu-latest
 
@@ -25,24 +31,20 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute lowercase repo owner
-        id: vars
-        run: echo "owner_lc=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-
-      - name: Enable Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push OR-Tools base image (Linux)
+      - name: Build and push OR-Tools base image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ github.workspace }}
-          file: ${{ github.workspace }}/Dockerfile.ortools.linux
+          context: .
+          file: ./Dockerfile.ortools.linux
+          tags: ${{ env.ORTOOLS_IMAGE }}
           push: true
-          tags: ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
-          cache-from: type=registry,ref=ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
-          cache-to: type=registry,mode=max,ref=ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
+          cache-from: type=registry,ref=${{ env.ORTOOLS_IMAGE }}
+          cache-to: type=registry,ref=${{ env.ORTOOLS_IMAGE }},mode=max
 
 
+  ##################################################################
+  # (2) Build your C++ project using cached OR-Tools
+  ##################################################################
   build-linux:
     runs-on: ubuntu-latest
     needs: build-ortools-linux
@@ -55,26 +57,38 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: mertbiyikli
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build main project (using OR-tools cache)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          tags: local-build:latest
-          cache-from: type=registry,ref=ghcr.io/mertbiyikli/ortools:linux
+      - name: Pull cached OR-Tools base image
+        run: docker pull $ORTOOLS_IMAGE
 
-      - name: Extract executable
+      - name: Build project inside OR-Tools environment
         run: |
-          id=$(docker create local-build:latest)
-          docker cp $id:/app/build/oblivious_routing ./oblivious_routing
-          docker rm $id
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            -w /app \
+            $ORTOOLS_IMAGE \
+            bash -c "
+              cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DUSE_OPENMP=ON &&
+              cmake --build build -j\$(nproc)
+            "
+
+      - name: Debug build directory
+        run: ls -R build || true
+
+      - name: Extract built executable
+        run: |
+          if [ ! -f build/oblivious_routing ]; then
+            echo '❌ ERROR: build/oblivious_routing not found'
+            exit 1
+          fi
+          cp build/oblivious_routing ./oblivious_routing
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
           name: oblivious-routing-linux
-          path: oblivious_routing
+          path: ./oblivious_routing
