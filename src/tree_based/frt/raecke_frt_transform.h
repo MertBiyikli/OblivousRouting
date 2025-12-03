@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <utility>
 #include "../../utils/hash.h"
+#include <optional>
 
 class RaeckeFRTTransform :public RaeckeTransformBase<FRT_Tree> {
 public:
