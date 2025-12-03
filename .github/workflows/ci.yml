@@ -116,6 +116,7 @@ jobs:
   build-macos:
     name: Native macOS Build
     runs-on: macos-latest
+    needs: build-docker
 
     steps:
       - uses: actions/checkout@v4
@@ -143,19 +144,21 @@ jobs:
       # Build OR-Tools if cache missing or empty
       # ---------------------------------------------------
       - name: Build OR-Tools from source
-        if: steps.cache_ortools.outputs.cache-hit != 'true' || !steps.cache_ortools.outputs.cache-hit
+        if: steps.cache_ortools_macos.outputs.cache-hit != 'true'
         run: |
-          echo "Building OR-Tools from source..."
-          git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
+          git clone https://github.com/google/or-tools.git --depth 1
           mkdir ortools-build
           cd ortools-build
+
           cmake ../or-tools \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_DEPS=ON \
+            -DBUILD_DEPS=OFF \        # ← KEY FIX
             -DBUILD_TESTING=OFF \
             -DUSE_OPENMP=OFF
+
           cmake --build . --config Release -j$(sysctl -n hw.ncpu)
           cmake --install . --prefix ../ortools-install
+      
 
       # ---------------------------------------------------
       # Build your project
