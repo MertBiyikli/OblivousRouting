@@ -217,7 +217,7 @@ jobs:
           cd ortools-build
           cmake ../or-tools `
             -DCMAKE_BUILD_TYPE=Release `
-            -DBUILD_DEPS=ON `
+            -DBUILD_DEPS=OFF `
             -DBUILD_TESTING=OFF `
             -DUSE_OPENMP=OFF `
             -A x64
