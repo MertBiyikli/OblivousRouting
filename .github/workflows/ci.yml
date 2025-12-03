@@ -1,35 +1,36 @@
-name: Build OR-Tools base image (Linux only)
+name: CI (Linux Only With Cached OR-Tools)
 
 on:
-  workflow_dispatch:      # run manually only
   push:
-    paths:
-      - ".github/workflows/build-ortools.yml"
+    branches: [ master ]
+  pull_request:
 
 permissions:
   contents: read
-  packages: write
+  packages: read
 
 jobs:
-  build-ortools-linux:
+  build-linux:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout (not actually needed)
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull OR-Tools base image
+        run: |
+          docker pull ghcr.io/mertbiyikli/ortools:linux
 
-      - name: Build and push OR-Tools base image
-        uses: docker/build-push-action@v6
+      - name: Build project using cached OR-Tools image
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            -w /app \
+            ghcr.io/mertbiyikli/ortools:linux \
+            bash -c "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j$(nproc)"
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          file: ./Dockerfile.ortools.linux
-          push: true
-          tags: |
-            ghcr.io/mertbiyikli/ortools:linux
+          name: oblivious_routing-linux
+          path: build/oblivious_routing
