@@ -2,9 +2,9 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# -------------------------------------------------------------------
-# Stable APT mirror + retry logic + CA certificates for git HTTPS
-# -------------------------------------------------------------------
+# ------------------------------------------------------------
+# Install dependencies (with stable mirror + retries + certs)
+# ------------------------------------------------------------
 RUN set -eux; \
     sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list; \
     rm -rf /var/lib/apt/lists/*; \
@@ -24,17 +24,31 @@ RUN set -eux; \
     done; \
     rm -rf /var/lib/apt/lists/*
 
-# -------------------------------------------------------------------
-# Install OR-Tools from source (C++ only)
-# -------------------------------------------------------------------
+# ------------------------------------------------------------
+# Build minimal OR-Tools (NO Abseil, NO SCIP, NO Samples)
+# ------------------------------------------------------------
 RUN git clone --depth 1 -b v9.9 https://github.com/google/or-tools.git /opt/or-tools-src && \
     cd /opt/or-tools-src && \
-    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build -j"$(nproc)" && \
-    cmake --install build && \
-    rm -rf /opt/or-tools-src
+    cmake -S . -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_DEPS=ON \
+        -DBUILD_absl=ON \
+        -DBUILD_glog=ON \
+        -DBUILD_Protobuf=ON \
+        -DBUILD_re2=ON \
+        -DBUILD_Eigen3=OFF \
+        -DBUILD_flatzinc=OFF \
+        -DBUILD_CSharp=OFF \
+        -DBUILD_Python=OFF \
+        -DBUILD_Java=OFF \
+        -DBUILD_DOTNET=OFF \
+        -DBUILD_SAMPLES=OFF \
+        -DBUILD_EXAMPLES=OFF \
+    && cmake --build build -j"$(nproc)" \
+    && cmake --install build \
+    && rm -rf /opt/or-tools-src
 
-# -------------------------------------------------------------------
-# Package OR-Tools installation for caching
-# -------------------------------------------------------------------
+# ------------------------------------------------------------
+# Export OR-Tools install tree for caching
+# ------------------------------------------------------------
 RUN tar -czf /opt/ortools-install.tar.gz -C /usr/local .
