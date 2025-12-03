@@ -126,7 +126,11 @@ jobs:
       - name: Install deps
         run: |
           brew update
-          brew install cmake eigen boost git ninja libomp
+          brew install cmake eigen boost git ninja libomp \
+             abseil protobuf re2 scip \
+             coinutils osi clp cbc
+
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix)" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
           echo "LDFLAGS=-L/usr/local/opt/libomp/lib" >> $GITHUB_ENV
 
@@ -152,9 +156,10 @@ jobs:
 
           cmake ../or-tools \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_DEPS=OFF \        # ← KEY FIX
-            -DBUILD_TESTING=OFF \
-            -DUSE_OPENMP=OFF
+            -DBUILD_DEPS=OFF \
+            -DUSE_OPENMP=OFF \
+            -DPython3_EXECUTABLE=OFF \
+            -DBUILD_TESTING=OFF
 
           cmake --build . --config Release -j$(sysctl -n hw.ncpu)
           cmake --install . --prefix ../ortools-install
@@ -187,56 +192,81 @@ jobs:
   # 4) WINDOWS BUILD (.exe)
   # ================================================================
   build-windows:
-    name: Native Windows Build
     runs-on: windows-latest
-    needs: build-docker
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install C++ build tools
+      - name: Install vcpkg + deps
         shell: pwsh
         run: |
-          choco install cmake ninja git -y
+          $VCPKG = "$env:USERPROFILE/vcpkg"
+          git clone https://github.com/microsoft/vcpkg $VCPKG
+          & "$VCPKG/bootstrap-vcpkg.bat"
+
+          & "$VCPKG/vcpkg" install `
+              zlib:x64-windows-static `
+              bzip2:x64-windows-static `
+              abseil:x64-windows-static `
+              protobuf:x64-windows-static `
+              re2:x64-windows-static `
+              eigen3:x64-windows-static `
+              coin-or-tools:x64-windows-static `
+              scip:x64-windows-static `
+              highs:x64-windows-static `
+              glpk:x64-windows-static
 
       - name: Cache OR-Tools
         id: cache_ortools_win
         uses: actions/cache@v4
         with:
           path: ortools-install
-          key: ortools-windows-master-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ortools-win-static-v1
 
-      - name: Build OR-Tools from source
+      - name: Build OR-Tools
         if: steps.cache_ortools_win.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          git clone https://github.com/google/or-tools.git --depth 1  # ← master branch
+          $VCPKG = "$env:USERPROFILE/vcpkg"
+          git clone https://github.com/google/or-tools.git --depth 1
           mkdir ortools-build
           cd ortools-build
+
           cmake ../or-tools `
-            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
             -DBUILD_DEPS=OFF `
-            -DBUILD_TESTING=OFF `
             -DUSE_OPENMP=OFF `
+            -DBUILD_TESTING=OFF `
+            -DCMAKE_BUILD_TYPE=Release `
             -A x64
+
           cmake --build . --config Release -j4
           cmake --install . --prefix ../ortools-install
 
-      - name: Build your project
+      - name: Build project
         shell: pwsh
         run: |
-          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release `
-                -Dortools_DIR="$PWD\ortools-install\lib\cmake\ortools" `
-                -DUSE_OPENMP=OFF
-          cmake --build build --target oblivious_routing --config Release
+          $VCPKG = "$env:USERPROFILE/vcpkg"
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DCMAKE_BUILD_TYPE=Release `
+            -Dortools_DIR="$PWD/ortools-install/lib/cmake/ortools" `
+            -DUSE_OPENMP=OFF `
+            -A x64
+
+          cmake --build build --config Release
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
           name: oblivious_routing-windows
           path: build/Release/oblivious_routing.exe
+
 
 
 
