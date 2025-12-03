@@ -42,10 +42,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # ----------- FIX 1: Build the C++ project -----------
+      - name: Build project
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --target oblivious_routing -j4
+
+      # ----------- FIX 2: Upload correct artifact -----------
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: oblivious_routing-executable
+          name: oblivious_routing-linux
           path: build/oblivious_routing
           retention-days: 30
 
@@ -68,19 +75,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build git pkg-config libeigen3-dev libboost-all-dev
 
-      - name: Download OR-Tools installation
+      # -------- FIX 3: Download the correct artifact --------
+      - name: Download executable
         uses: actions/download-artifact@v4
         with:
-          name: ortools-install
-          path: ortools/
-
-      - name: Install OR-Tools into /usr/local
-        run: |
-          sudo tar -xzf ortools/ortools-install.tar.gz -C /usr/local
-            
+          name: oblivious_routing-linux
+          path: binary/
 
       - name: Build native binary
         run: |
-          cmake -S . -B build -G Ninja -DUSE_OPENMP=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 build-noomp
+          cmake -S . -B build -G Ninja -DUSE_OPENMP=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build -j$(nproc)
-
