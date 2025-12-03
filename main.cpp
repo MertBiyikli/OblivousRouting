@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    HandleDemandModel(argc, argv, cfg, g, solver);
+    //HandleDemandModel(argc, argv, cfg, g, solver);
 
 
 
