@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM ubuntu:24.04 AS base
+# 👉 Change 24.04 -> 22.04
+FROM ubuntu:22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -23,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt
 
+# OR-Tools from source (v9.8 tag)
 RUN git clone --depth=1 --branch v9.8 https://github.com/google/or-tools.git or-tools-src
 
 WORKDIR /opt/or-tools-src
@@ -36,9 +38,8 @@ RUN cmake -S . -B build -G Ninja \
     && cmake --build build -j"$(nproc)" \
     && cmake --install build
 
+# (optional: you no longer *need* this tar if you don't use it elsewhere)
 RUN tar -czf /opt/ortools-install.tar.gz -C /usr/local .
-
-
 
 ##############################
 # Build your application
