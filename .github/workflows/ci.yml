@@ -193,6 +193,7 @@ jobs:
   # ================================================================
   build-windows:
     runs-on: windows-latest
+    needs: build-docker
 
     steps:
       - uses: actions/checkout@v4
