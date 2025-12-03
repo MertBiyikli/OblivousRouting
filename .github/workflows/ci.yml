@@ -2,7 +2,7 @@ name: Linux CI with Cached OR-Tools
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
 
 permissions:
