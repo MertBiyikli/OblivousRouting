@@ -25,11 +25,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute lowercase repo owner
+        id: vars
+        run: echo "owner_lc=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+
       - name: Enable Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Debug workspace
-        run: ls -al ${{ github.workspace }}
 
       - name: Build and push OR-Tools base image (Linux)
         uses: docker/build-push-action@v5
@@ -37,9 +38,10 @@ jobs:
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/Dockerfile.ortools.linux
           push: true
-          tags: ghcr.io/${{ github.mertbiyikli }}/ortools:linux
-          cache-from: type=registry,ref=ghcr.io/${{ github.mertbiyikli }}/ortools:linux
-          cache-to: type=registry,mode=max,ref=ghcr.io/${{ github.mertbiyikli }}/ortools:linux
+          tags: ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
+          cache-from: type=registry,ref=ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
+          cache-to: type=registry,mode=max,ref=ghcr.io/${{ steps.vars.outputs.owner_lc }}/ortools:linux
+
 
   build-linux:
     runs-on: ubuntu-latest
