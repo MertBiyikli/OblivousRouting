@@ -12,18 +12,18 @@
 #include <utility>
 
 
-
-// Key types:
-using TerminalPair   = std::pair<int,int>;
-using DemandMap      = std::unordered_map<TerminalPair,double>;
-using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap>;
-
-
 struct PairHash {
     size_t operator()(const std::pair<int,int>& p) const noexcept {
         return ((size_t)p.first << 32) ^ (size_t)p.second;
     }
 };
+
+// Key types:
+using TerminalPair   = std::pair<int,int>;
+using DemandMap      = std::unordered_map<TerminalPair,double, PairHash>;
+using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap, PairHash>;
+
+
 // adjust this to support directed edge struct: struct Arc {int src, trg, cap, operator=(
 namespace std {
     template <>

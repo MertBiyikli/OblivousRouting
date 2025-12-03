@@ -140,7 +140,7 @@ void CMMF_Solver::PrintSolution(const Graph &graph) {
     // 3) (Optional) If you also want to see total load per undirected edge:
     //    sum over both directions
     std::cout << "Total load per undirected edge:\n";
-    std::map<std::pair<int,int>, double> und_load;
+    std::map<std::pair<int,int>, double, PairHash> und_load;
     for (int s = 0; s < n; s++) {
         for (int t = 0; t < graph.getNumNodes(); ++t) {
             if (s == t) continue;
@@ -164,5 +164,5 @@ void CMMF_Solver::PrintSolution(const Graph &graph) {
 }
 
 void CMMF_Solver::storeFlow() {
-
+    return;
 }

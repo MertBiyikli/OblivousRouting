@@ -8,6 +8,7 @@
 #include "raecke_random_mst.h"
 #include "raecke_mst_transform.h"
 #include "../raecke_framework.h"
+#include "../../utils/hash.h"
 
 
 /* * This class implements Räcke’s oblivious‐routing solver
@@ -41,7 +42,7 @@ public:
     void storeFlow() override {} // handled during run()
 
     void scaleDownFlow() {
-        std::unordered_map<std::pair<int,int>, double> total_outflow;
+        std::unordered_map<std::pair<int,int>, double, PairHash> total_outflow;
         auto routing = transform.getRoutingTable();
         for (const auto& [edge, dmap] : routing) {
             for (const auto& [dem, flow] : dmap) {

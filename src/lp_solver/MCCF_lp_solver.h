@@ -22,8 +22,8 @@ using namespace operations_research;
 
 class CMMF_Solver: public LP{
 private:
-    std::unordered_map<Demand, double> m_demands; // Flow variables for edges
-    std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>> map_vertex2edge;
+    std::unordered_map<Demand, double, PairHash> m_demands; // Flow variables for edges
+    std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>, PairHash> map_vertex2edge;
 public:
 
     virtual void CreateVariables(const Graph& graph) override;

@@ -396,7 +396,7 @@ double LPSolver::getCongestion(DemandMap& _demands, Graph& g) const{
     // compute for the given demands and the stored flow values in f_st_e the generated congestion
     double max_cong = 0.0;
 
-    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
+    std::unordered_map<std::pair<int, int>, double, PairHash> total_edge_congestion;
 
     for(const auto& [edge, flow_list] : f_e_st) {
 
@@ -448,14 +448,14 @@ double LPSolver::getCongestion(DemandMap& _demands, Graph& g) const{
 double LPSolver::getDemandWeightedCongestion(const Graph& graph,
                                              const DemandMap& demands) {
     // Accumulate demand-weighted absolute flow per undirected edge {u,v} (u<v).
-    std::unordered_map<std::pair<int,int>, double> undirected_load;
+    std::unordered_map<std::pair<int,int>, double, PairHash> undirected_load;
 
     auto canonical = [](int a, int b) {
         return std::make_pair(std::min(a, b), std::max(a, b));
     };
 
     // === Print the solution ===
-    std::vector<std::unordered_map<std::pair<int, int>, double> > total_flow_per_arc_per_commodity(edges.size());
+    std::vector<std::unordered_map<std::pair<int, int>, double, PairHash> > total_flow_per_arc_per_commodity(edges.size());
 
     for (const auto& [key, var] : m_var_f_e_) {
         if (!var) continue;

@@ -10,10 +10,7 @@
 #include <utility>
 #include "../utils/hash.h"
 
-using EdgeDemandMap = std::unordered_map<
-    std::pair<int,int>,
-    std::unordered_map<std::pair<int,int>, double>
->;
+
 
 template<typename Tree>
 class RaeckeTransformBase {
