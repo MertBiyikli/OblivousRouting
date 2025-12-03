@@ -31,6 +31,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx (container driver)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          install: true
+
       - name: Build and push OR-Tools base image
         uses: docker/build-push-action@v5
         with:
@@ -43,7 +52,7 @@ jobs:
 
 
   ##################################################################
-  # (2) Build your C++ project using cached OR-Tools
+  # (2) Build your C++ project using cached OR-Tools image
   ##################################################################
   build-linux:
     runs-on: ubuntu-latest
