@@ -1,36 +1,80 @@
-name: CI (Linux Only With Cached OR-Tools)
+name: Linux CI with Cached OR-Tools
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
 
 permissions:
   contents: read
-  packages: read
+  packages: write
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-24.04
+
+  ##################################################################
+  # (1) Build OR-Tools base image (Linux only)
+  ##################################################################
+  build-ortools-linux:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pull OR-Tools base image
-        run: |
-          docker pull ghcr.io/mertbiyikli/ortools:linux
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push OR-Tools base image (Linux)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.ortools.linux
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ortools:linux
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/ortools:linux
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/ortools:linux,mode=max
+
+  ##################################################################
+  # (2) Build main project using cached OR-Tools image
+  ##################################################################
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: build-ortools-linux
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull OR-Tools base image from GHCR
+        run: docker pull ghcr.io/${{ github.repository_owner }}/ortools:linux
 
       - name: Build project using cached OR-Tools image
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
-            ghcr.io/mertbiyikli/ortools:linux \
-            bash -c "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j$(nproc)"
+            ghcr.io/${{ github.repository_owner }}/ortools:linux \
+            bash -c "
+              cmake -S . -B build -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DUSE_OPENMP=ON \
+                    -DBUILD_TESTS=OFF &&
+              cmake --build build -j\$(nproc)
+            "
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: oblivious_routing-linux
+          name: oblivious-routing-linux
           path: build/oblivious_routing
