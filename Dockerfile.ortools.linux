@@ -1,54 +1,25 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ------------------------------------------------------------
-# Install dependencies (with stable mirror + retries + certs)
-# ------------------------------------------------------------
-RUN set -eux; \
-    sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list; \
-    rm -rf /var/lib/apt/lists/*; \
-    for i in 1 2 3; do \
-        apt-get update && \
-        apt-get install -y --no-install-recommends \
-            ca-certificates \
-            build-essential \
-            cmake \
-            git \
-            ninja-build \
-            zlib1g-dev \
-            libbz2-dev \
-            libeigen3-dev \
-        && update-ca-certificates \
-        && break || (echo "APT failed, retrying in 5s..." && sleep 5); \
-    done; \
-    rm -rf /var/lib/apt/lists/*
+# System packages needed for OR-Tools AND your C++ project
+RUN apt-get update && apt-get install -y \
+    git cmake build-essential ninja-build \
+    libz-dev libbz2-dev libeigen3-dev \
+    libgmp-dev \
+    libboost-all-dev \
+    libboost-program-options-dev \
+    libboost-serialization-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# ------------------------------------------------------------
-# Build minimal OR-Tools (NO Abseil, NO SCIP, NO Samples)
-# ------------------------------------------------------------
-RUN git clone --depth 1 -b v9.9 https://github.com/google/or-tools.git /opt/or-tools-src && \
-    cd /opt/or-tools-src && \
-    cmake -S . -B build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_DEPS=ON \
-        -DBUILD_absl=ON \
-        -DBUILD_glog=ON \
-        -DBUILD_Protobuf=ON \
-        -DBUILD_re2=ON \
-        -DBUILD_Eigen3=OFF \
-        -DBUILD_flatzinc=OFF \
-        -DBUILD_CSharp=OFF \
-        -DBUILD_Python=OFF \
-        -DBUILD_Java=OFF \
-        -DBUILD_DOTNET=OFF \
-        -DBUILD_SAMPLES=OFF \
-        -DBUILD_EXAMPLES=OFF \
-    && cmake --build build -j"$(nproc)" \
-    && cmake --install build \
-    && rm -rf /opt/or-tools-src
+# Build OR-Tools from source (stable release)
+RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
+RUN mkdir ortools-build && cd ortools-build && \
+    cmake ../or-tools -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_DEPS=ON \
+      -DBUILD_SAMPLES=OFF \
+    && cmake --build . -j"$(nproc)" \
+    && cmake --install . --prefix /usr/local
 
-# ------------------------------------------------------------
-# Export OR-Tools install tree for caching
-# ------------------------------------------------------------
-RUN tar -czf /opt/ortools-install.tar.gz -C /usr/local .
+RUN ls -R /usr/local/lib/cmake/ortools
