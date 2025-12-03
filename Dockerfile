@@ -1,25 +1,63 @@
-FROM ubuntu:24.04
+##############################
+# Stage 1 — Build OR-Tools
+##############################
+FROM ubuntu:24.04 AS ortools-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System packages needed for OR-Tools
 RUN apt-get update && apt-get install -y \
-    git cmake build-essential ninja-build \
+    git cmake ninja-build build-essential \
     libz-dev libbz2-dev libeigen3-dev \
     libgmp-dev libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Build OR-Tools from source (stable v9.6)
+# Build OR-Tools v9.6
 RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
 RUN mkdir ortools-build && cd ortools-build && \
     cmake ../or-tools -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_DEPS=ON \
       -DBUILD_SAMPLES=OFF \
+      -DBUILD_DEPS=ON \
     && cmake --build . -j"$(nproc)" \
-    && cmake --install . --prefix /usr/local
+    && cmake --install . --prefix /opt/ortools
 
-# Test installation
-RUN ls -R /usr/local/lib/cmake/ortools
 
-# Final image has OR-Tools only
+##############################
+# Stage 2 — Build your project
+##############################
+FROM ubuntu:24.04 AS cpp-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    cmake ninja-build build-essential \
+    libz-dev libbz2-dev libeigen3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ortools-builder /opt/ortools /opt/ortools
+ENV CMAKE_PREFIX_PATH=/opt/ortools
+
+WORKDIR /src
+COPY . .
+
+RUN cmake -S . -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUSE_OPENMP=ON \
+  && cmake --build build -j"$(nproc)"
+
+
+##############################
+# Stage 3 — Final tiny runtime
+##############################
+FROM ubuntu:24.04 AS runtime
+
+RUN apt-get update && apt-get install -y \
+    libz-dev libbz2-dev libeigen3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=cpp-builder /src/build/oblivious_routing /usr/local/bin/oblivious_routing
+COPY --from=ortools-builder /opt/ortools /opt/ortools
+
+ENV LD_LIBRARY_PATH=/opt/ortools/lib
+
+ENTRYPOINT ["/usr/local/bin/oblivious_routing"]
