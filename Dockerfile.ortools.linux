@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # -------------------------------------------------------------------
-# Stable APT mirror + retry logic for perfect reliability
+# Stable APT mirror + retry logic + CA certificates for git HTTPS
 # -------------------------------------------------------------------
 RUN set -eux; \
     sed -i 's|http://archive.ubuntu.com/ubuntu|http://azure.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list; \
@@ -11,6 +11,7 @@ RUN set -eux; \
     for i in 1 2 3; do \
         apt-get update && \
         apt-get install -y --no-install-recommends \
+            ca-certificates \
             build-essential \
             cmake \
             git \
@@ -18,6 +19,7 @@ RUN set -eux; \
             zlib1g-dev \
             libbz2-dev \
             libeigen3-dev \
+        && update-ca-certificates \
         && break || (echo "APT failed, retrying in 5s..." && sleep 5); \
     done; \
     rm -rf /var/lib/apt/lists/*
@@ -33,8 +35,6 @@ RUN git clone --depth 1 -b v9.9 https://github.com/google/or-tools.git /opt/or-t
     rm -rf /opt/or-tools-src
 
 # -------------------------------------------------------------------
-# Package OR-Tools installation into a tarball for reuse
+# Package OR-Tools installation for caching
 # -------------------------------------------------------------------
 RUN tar -czf /opt/ortools-install.tar.gz -C /usr/local .
-
-# This is only the OR-Tools base image; final build runs in CI.
