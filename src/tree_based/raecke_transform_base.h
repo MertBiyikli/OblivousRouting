@@ -11,7 +11,6 @@
 #include "../utils/hash.h"
 
 
-
 template<typename Tree>
 class RaeckeTransformBase {
 protected:
