@@ -68,35 +68,46 @@ jobs:
           sudo apt-get install -y build-essential cmake ninja-build git pkg-config \
                                    libboost-all-dev libeigen3-dev wget unzip
 
-      # --- Cache OR-Tools ---
-      - name: Cache OR-Tools
-        id: cache-ortools
+      # ----------------------------------------------------------
+      # OR-Tools cache
+      # ----------------------------------------------------------
+      - name: Cache OR-Tools build
+        id: cache_ortools
         uses: actions/cache@v4
         with:
           path: ortools-install
-          key: ortools-v9.6-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          key: ortools-linux-v9.6-${{ hashFiles('**/CMakeLists.txt') }}
 
-      - name: Install OR-Tools if cache miss
-        if: steps.cache-ortools.outputs.cache-hit != 'true'
+      - name: Build OR-Tools from source (if cache miss)
+        if: steps.cache_ortools.outputs.cache-hit != 'true'
         run: |
-          echo "Installing OR-Tools v9.6..."
-          wget --header="User-Agent: Mozilla/5.0" \
-          https://github.com/google/or-tools/releases/download/v9.6/or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534.zip
-          unzip or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534.zip
-          mv or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534 ortools-install
+          git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
+          mkdir ortools-build
+          cd ortools-build
+          cmake ../or-tools \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_DEPS=ON \
+            -DBUILD_TESTING=OFF \
+            -S ../or-tools \
+            -B ./
+          cmake --build . --config Release -j$(nproc)
+          cmake --install . --prefix ../ortools-install
 
-      - name: Build
+      # ----------------------------------------------------------
+      # Build your project!
+      # ----------------------------------------------------------
+      - name: Build your project
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-                -Dortools_DIR=ortools-install/lib/cmake/ortools
+                -Dortools_DIR=$GITHUB_WORKSPACE/ortools-install/lib/cmake/ortools
           cmake --build build --target oblivious_routing -j$(nproc)
 
-      - name: Upload Linux Binary
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
           name: oblivious_routing-linux
           path: build/oblivious_routing
-          retention-days: 30
+
 
 
   # ================================================================
@@ -115,7 +126,7 @@ jobs:
 
       - name: Install deps
         run: |
-          brew install cmake boost eigen or-tools
+          brew install cmake eigen boost git ninja libomp
 
       - name: Build
         run: |
@@ -134,42 +145,56 @@ jobs:
   # 4) WINDOWS BUILD (.exe)
   # ================================================================
   build-windows:
-    name: Windows Native Build
+    name: Native Windows Build
     runs-on: windows-latest
     needs: build-docker
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install vcpkg + deps
+      - name: Install base deps
         shell: pwsh
         run: |
-          $VCPKG = Join-Path $env:USERPROFILE "vcpkg"
-          git clone https://github.com/microsoft/vcpkg $VCPKG
-          & "$VCPKG\bootstrap-vcpkg.bat"
-          & "$VCPKG\vcpkg" install boost:x64-windows eigen3:x64-windows ortools:x64-windows
-      
+          choco install cmake ninja git -y
+          git --version
 
-      - name: Configure
-        shell: pwsh
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release `
-                -DCMAKE_TOOLCHAIN_FILE=$env:USERPROFILE/vcpkg/scripts/buildsystems/vcpkg.cmake
+      - name: Cache OR-Tools
+        id: cache_ortools_win
+        uses: actions/cache@v4
+        with:
+          path: ortools-install
+          key: ortools-windows-v9.6-${{ hashFiles('**/CMakeLists.txt') }}
 
-      - name: Build
+      - name: Build OR-Tools from source (if cache miss)
+        if: steps.cache_ortools_win.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          cmake --build build --target oblivious_routing --config Release -j4
+          git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
+          mkdir ortools-build
+          cd ortools-build
+          cmake ../or-tools `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_DEPS=ON `
+            -DBUILD_TESTING=OFF `
+            -A x64
+          cmake --build . --config Release -j4
+          cmake --install . --prefix ../ortools-install
+
+      - name: Build your project
+        shell: pwsh
+        run: |
+          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release `
+                -Dortools_DIR="$PWD\ortools-install\lib\cmake\ortools"
+          cmake --build build --target oblivious_routing --config Release
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
         with:
           name: oblivious_routing-windows
           path: build/Release/oblivious_routing.exe
-          retention-days: 30
+
 
 
   # ================================================================
