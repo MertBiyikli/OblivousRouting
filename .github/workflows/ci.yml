@@ -80,7 +80,8 @@ jobs:
         if: steps.cache-ortools.outputs.cache-hit != 'true'
         run: |
           echo "Installing OR-Tools v9.6..."
-          wget https://github.com/google/or-tools/releases/download/v9.6/or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534.zip
+          wget --header="User-Agent: Mozilla/5.0" \
+          https://github.com/google/or-tools/releases/download/v9.6/or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534.zip
           unzip or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534.zip
           mv or-tools_x86_64_ubuntu-22.04_cpp_v9.6.2534 ortools-install
 
@@ -114,7 +115,6 @@ jobs:
 
       - name: Install deps
         run: |
-          brew update
           brew install cmake boost eigen or-tools
 
       - name: Build
@@ -147,9 +147,11 @@ jobs:
       - name: Install vcpkg + deps
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg $env:USERPROFILE/vcpkg
-          $env:USERPROFILE/vcpkg/bootstrap-vcpkg.bat
-          $env:USERPROFILE/vcpkg/vcpkg install boost:x64-windows eigen3:x64-windows ortools:x64-windows
+          $VCPKG = Join-Path $env:USERPROFILE "vcpkg"
+          git clone https://github.com/microsoft/vcpkg $VCPKG
+          & "$VCPKG\bootstrap-vcpkg.bat"
+          & "$VCPKG\vcpkg" install boost:x64-windows eigen3:x64-windows ortools:x64-windows
+      
 
       - name: Configure
         shell: pwsh
