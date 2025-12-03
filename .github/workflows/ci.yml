@@ -37,9 +37,9 @@ jobs:
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/Dockerfile.ortools.linux
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/ortools:linux
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/ortools:linux
-          cache-to: type=registry,mode=max,ref=ghcr.io/${{ github.repository_owner }}/ortools:linux
+          tags: ghcr.io/${{ github.mertbiyikli }}/ortools:linux
+          cache-from: type=registry,ref=ghcr.io/${{ github.mertbiyikli }}/ortools:linux
+          cache-to: type=registry,mode=max,ref=ghcr.io/${{ github.mertbiyikli }}/ortools:linux
 
   build-linux:
     runs-on: ubuntu-latest
