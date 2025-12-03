@@ -16,10 +16,12 @@ struct PairHash {
     size_t operator()(const std::pair<int,int>& p) const noexcept {
         return ((size_t)p.first << 32) ^ (size_t)p.second;
     }
+
 };
 
 // Key types:
 using TerminalPair   = std::pair<int,int>;
+using Demand = std::pair<int, int>;
 using DemandMap      = std::unordered_map<TerminalPair,double, PairHash>;
 using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap, PairHash>;
 
@@ -51,27 +53,9 @@ namespace std {
     };
 }
 
-struct Demand {
-    int source;
-    int target;
-
-    bool operator<(const Demand& other) const {
-        return std::tie(source, target) < std::tie(other.source, other.target);
-    }
-    bool operator==(const Demand& other) const {
-        return source == other.source && target == other.target;
-    }
-};
 
 
-namespace std {
-    template<>
-    struct hash<Demand> {
-        std::size_t operator()(const Demand &d) const {
-            return std::hash<int>()(d.source) ^ (std::hash<int>()(d.target) << 1);
-        }
-    };
-}
+
 
 
 

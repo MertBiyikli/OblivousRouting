@@ -42,7 +42,7 @@ public:
     std::vector<double> bvec_buffer, x_buffer;
 
 
-    std::unordered_map<std::pair<int, int>, double> m_edge_weights; // Edge weights
+    std::unordered_map<std::pair<int, int>, double, PairHash> m_edge_weights; // Edge weights
 
     std::vector<std::vector<double>> adj_edge_weights; // Edge weights
 
@@ -58,7 +58,7 @@ public:
         }
     };
     std::unordered_map<indexKey, int, indexKeyHash> m_indexMap;
-    std::unordered_map<std::pair<int,int>, int> m_edgeIndexMap;
+    std::unordered_map<std::pair<int,int>, int, PairHash> m_edgeIndexMap;
     int findIndex(int r, int c) const {
         for (int k = m_row_ptr[r]; k < m_row_ptr[r + 1]; ++k)
             if (m_col_ind[k] == c) return k;
@@ -100,7 +100,7 @@ public:
         buildLaplacian_(g);
     }
 
-    void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false) {
+    void init(std::unordered_map<std::pair<int, int>, double, PairHash>& _edge_weights, int n, bool debug = false) {
         this->debug = debug;
         this->n = n;
         m_row_ptr.clear();
@@ -136,7 +136,7 @@ public:
         }
     }
 
-    void updateAllEdges(const std::unordered_map<std::pair<int, int>, double>& new_weights) {
+    void updateAllEdges(const std::unordered_map<std::pair<int, int>, double, PairHash>& new_weights) {
         for (const auto& [edge, weight] : new_weights) {
 
             int u = edge.first;

@@ -12,6 +12,7 @@
 #include "efficient_raecke_ckr_transform.h"
 #include <chrono>
 #include "../../../datastructures/graph_csr.h"
+#include "../../../utils/hash.h"
 
 class EfficientRaeckeCKR : public ObliviousRoutingSolver
 {
@@ -64,7 +65,7 @@ class EfficientRaeckeCKR : public ObliviousRoutingSolver
 
         void scaleDownFlow() {
             // scale the flow to meet unit flow
-            std::unordered_map<std::pair<int, int>, double > outgoingflow_per_commodity;
+            std::unordered_map<std::pair<int, int>, double, PairHash > outgoingflow_per_commodity;
 
             for ( const auto& [edge, flowMap]:f_e_st) {
                 for (const auto& [com, flow_value]  : flowMap) {

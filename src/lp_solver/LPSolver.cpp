@@ -29,7 +29,7 @@ void LPSolver::CreateVariables(const Graph &graph) {
         if (edges[id].first > edges[id].second) continue;
 
         for(Demand d : demands) {
-            p_e_ij[{id, d.source, d.target}] = solver->MakeNumVar(0.0, solver->infinity(), "p_" + std::to_string(id) + "_" + std::to_string(d.source) + "_" + std::to_string(d.target));
+            p_e_ij[{id, d.first, d.second}] = solver->MakeNumVar(0.0, solver->infinity(), "p_" + std::to_string(id) + "_" + std::to_string(d.first) + "_" + std::to_string(d.second));
         }
 
 
@@ -58,7 +58,7 @@ void LPSolver::CreateVariables(const Graph &graph) {
     // f_e_st variables
     for(int id = 0; id < edges.size(); id++) {
         for(const auto& d : demands) {
-            m_var_f_e_[{id, {d.source, d.target}}] = solver->MakeNumVar(0.0, solver->infinity(), "x_" + std::to_string(id) + "_" + std::to_string(d.source) + "_" + std::to_string(d.target));
+            m_var_f_e_[{id, {d.first, d.second}}] = solver->MakeNumVar(0.0, solver->infinity(), "x_" + std::to_string(id) + "_" + std::to_string(d.first) + "_" + std::to_string(d.second));
             // also t -> s
             // f_e_st[{id, {d.target, d.source}}] = solver->MakeNumVar(0.0, solver->infinity(), "x_" + std::to_string(id)+ "_" + std::to_string(d.target) + "_" + std::to_string(d.source));
         }
@@ -101,7 +101,7 @@ void LPSolver::CreateConstraints(const Graph &graph) {
         //std::cout << "Flow constraint for arc " << id << " (" << e.source << " → " << e.target << "):\n";
 
         for (const auto& d : demands) {
-            int s = d.source, t = d.target;
+            int s = d.first, t = d.second;
 
             constraint->SetCoefficient(m_var_f_e_[{id, {s, t}}], 1);
             constraint->SetCoefficient(p_e_ij[{id, s, t}], -graph.getEdgeCapacity(edges[id].first, edges[id].second));
@@ -344,11 +344,11 @@ void LPSolver::PrintCommoditiesPerEdge(const Graph& graph) {
 
         // Iterate over all demands for this edge
         for (const auto& d : demands) {
-            auto it = m_var_f_e_.find({edge_id, {d.source, d.target}});
+            auto it = m_var_f_e_.find({edge_id, {d.first, d.second}});
             if (it != m_var_f_e_.end() && it->second != nullptr) {
                 double flow_value = it->second->solution_value();
                 if (flow_value > 1e-9) { // print only non-zero flows
-                    std::cout << "  Commodity (" << d.source << " -> " << d.target
+                    std::cout << "  Commodity (" << d.first << " -> " << d.second
                               << "): " << flow_value << "\n";
                 }
             }
@@ -365,16 +365,16 @@ void LPSolver::storeFlow() {
 
         // Iterate over all demands for this edge
         for (const auto& d : demands) {
-            auto it = m_var_f_e_.find({edge_id, {d.source, d.target}});
+            auto it = m_var_f_e_.find({edge_id, {d.first, d.second}});
 
 
             if (it != m_var_f_e_.end() && it->second != nullptr) {
                 double flow_value = it->second->solution_value();
                 if (flow_value > 1e-9) { // print only non-zero flows
                     if(edge.first < edge.second) {
-                        f_e_st[edge][{d.source, d.target}] =  flow_value;
+                        f_e_st[edge][{d.first, d.second}] =  flow_value;
                     } else {
-                        f_e_st[{edge.second, edge.first}][{d.source, d.target}] =  -flow_value;
+                        f_e_st[{edge.second, edge.first}][{d.first, d.second}] =  -flow_value;
                     }
                 }
             }

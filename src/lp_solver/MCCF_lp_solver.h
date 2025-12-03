@@ -9,6 +9,7 @@
 #include "../solver/solver.h"
 #include "ortools/linear_solver/linear_solver.h"
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <tuple>
 #include "../utils/hash.h"
@@ -21,8 +22,8 @@
 using namespace operations_research;
 
 class CMMF_Solver: public LP{
-private:
-    std::unordered_map<Demand, double, PairHash> m_demands; // Flow variables for edges
+
+    std::unordered_map<std::pair<int, int>, double, PairHash> m_demands; // Flow variables for edges
     std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>, PairHash> map_vertex2edge;
 public:
 
@@ -31,7 +32,7 @@ public:
     virtual void SetObjective() override;
     void PrintSolution(const Graph& graph) override;
 
-    void AddDemands(const Demand& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
+    void AddDemands(const std::pair<int, int>& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
     virtual void storeFlow() override;
 };
 

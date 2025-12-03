@@ -2,7 +2,7 @@
 #include <iostream>
 #include <omp.h>
 #include <amgcl/backend/builtin_hybrid.hpp>
-
+#include "../../utils/hash.h"
 #include "amgcl/solver/precond_side.hpp"
 
 
@@ -21,7 +21,7 @@ void AMGSolverMT::buildLaplacian() {
     if (debug) std::cout << "Number of threads for AMG solver pool: " << num_threads_ << "\n";
 
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
-    std::unordered_map<std::pair<int,int>, double> L;
+    std::unordered_map<std::pair<int,int>, double, PairHash> L;
 
     for (const auto &kv : m_edge_weights) {
         int u = kv.first.first;

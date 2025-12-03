@@ -3,10 +3,10 @@
 //
 
 #include "LP_Oblivious_Ratio.h"
-
+#include "../../src/utils/hash.h"
 #include <fstream>
 
-void ObliviousRatio::init(Graph &g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double>>& routing) {
+void ObliviousRatio::init(Graph &g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing) {
 
     this->g = g;
     this->routing = routing;
@@ -33,7 +33,7 @@ double ObliviousRatio::solveWorstCaseDemandLPPerEdge(const std::pair<int, int> &
     assert(solver);
 
     // Create variables
-    std::unordered_map<std::pair<int, int>, MPVariable*> d_st;
+    std::unordered_map<std::pair<int, int>, MPVariable*,  PairHash> d_st;
     for (const auto& st : demands) {
         d_st[st] = solver->MakeNumVar(0.0, solver->infinity(), "d_" + std::to_string(st.first) + "_" + std::to_string(st.second));
     }

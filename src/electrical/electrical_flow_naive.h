@@ -51,7 +51,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
     double roh = 0.0;
     double alpha_local = 0.0;
     double inv_m = 0.0;
-    std::unordered_map<std::pair<int, int>, double> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
+    std::unordered_map<std::pair<int, int>, double, PairHash> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
     double cap_X = 0.0;
     //int number_of_iterations = 0;
 
@@ -85,7 +85,7 @@ public:
     std::unique_ptr<LaplacianSolver> amg;
 
     // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
-    std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x
+    std::unordered_map<std::pair<int, int>, double, PairHash> f_e_u; // store the flow of the edge u→x for a fixed vertex x
     int x_fixed;
     // store the flow as an weighted adjacency list
     // the first entry denotes the edge and the second
@@ -95,11 +95,11 @@ public:
     std::vector<std::pair<int,int>> edges; // u<v only
     void run();
 
-    std::unordered_map<std::pair<int, int>, double> getApproxLoad();
+    std::unordered_map<std::pair<int, int>, double, PairHash> getApproxLoad();
     void init(const Graph& g,bool debug = false,const std::string& solver_name = ("amg_cg"));
 
     Eigen::SparseMatrix<double> getFinalRoutingMatrix();
-    std::unordered_map<std::pair<int, int>, Eigen::VectorXd> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);
+    std::unordered_map<std::pair<int, int>, Eigen::VectorXd, PairHash> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);
 
 
     // TODO: remove these
@@ -109,7 +109,7 @@ public:
             const Eigen::VectorXd& edge_flow
     );
 
-    std::unordered_map<std::pair<int, int>, std::vector<FlowPath>>
+    std::unordered_map<std::pair<int, int>, std::vector<FlowPath>, PairHash>
     getRoutingPathsForCommodity(const std::vector<std::pair<int, int>>& _commodity);
     double getMaximumCongestion();
     double getCongestion(DemandMap& _demands);

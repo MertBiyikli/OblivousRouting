@@ -8,9 +8,9 @@
 
 
 
-void CMMF_Solver::AddDemands(const Demand& d, double demand) {
-    int u = d.source;
-    int v = d.target;
+void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
+    int u = d.first;
+    int v = d.second;
     if (u < 0 || v < 0
         || u >= n || v >= n) {
         throw std::invalid_argument("Vertex IDs out of range.");
@@ -140,7 +140,7 @@ void CMMF_Solver::PrintSolution(const Graph &graph) {
     // 3) (Optional) If you also want to see total load per undirected edge:
     //    sum over both directions
     std::cout << "Total load per undirected edge:\n";
-    std::map<std::pair<int,int>, double, PairHash> und_load;
+    std::unordered_map<std::pair<int,int>, double, PairHash> und_load;
     for (int s = 0; s < n; s++) {
         for (int t = 0; t < graph.getNumNodes(); ++t) {
             if (s == t) continue;

@@ -344,9 +344,9 @@ void ElectricalFlowNaive::run() {
 }
 
 
-std::unordered_map<std::pair<int, int>, double> ElectricalFlowNaive::getApproxLoad() {
+std::unordered_map<std::pair<int, int>, double, PairHash> ElectricalFlowNaive::getApproxLoad() {
 
-    std::unordered_map<std::pair<int, int>, double> approx_load;
+    std::unordered_map<std::pair<int, int>, double, PairHash> approx_load;
     // build the incidence matrix B and the weight vector w
     if(!B.nonZeros()) {
         buildIncidence();
@@ -718,8 +718,8 @@ Eigen::SparseMatrix<double> ElectricalFlowNaive::getFinalRoutingMatrix() {
 }
 
 
-std::unordered_map<std::pair<int, int>, Eigen::VectorXd> ElectricalFlowNaive::getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity) {
-    std::unordered_map<std::pair<int, int>, Eigen::VectorXd>  routing;
+std::unordered_map<std::pair<int, int>, Eigen::VectorXd, PairHash> ElectricalFlowNaive::getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity) {
+    std::unordered_map<std::pair<int, int>, Eigen::VectorXd, PairHash>  routing;
 
     for(const auto& f : _commodity) {
         Eigen::VectorXd commodity_routing = Eigen::VectorXd::Zero(m_graph.getNumNodes());
@@ -743,7 +743,7 @@ std::vector<FlowPath> ElectricalFlowNaive::decomposeFlowToPaths(
 
     // Step 1: Build adjacency list with positive flow edges
     std::unordered_map<int, std::vector<std::pair<int, int>>> adj;
-    std::unordered_map<std::pair<int, int>, double> flow_map;
+    std::unordered_map<std::pair<int, int>, double, PairHash> flow_map;
 
     for (int e = 0; e < m; ++e) {
         auto [u, v] = edges[e];
@@ -814,9 +814,9 @@ std::vector<FlowPath> ElectricalFlowNaive::decomposeFlowToPaths(
 }
 
 
-std::unordered_map<std::pair<int, int>, std::vector<FlowPath>>
+std::unordered_map<std::pair<int, int>, std::vector<FlowPath>, PairHash>
 ElectricalFlowNaive::getRoutingPathsForCommodity(const std::vector<std::pair<int, int>>& _commodity) {
-    std::unordered_map<std::pair<int, int>, std::vector<FlowPath>> routing_paths;
+    std::unordered_map<std::pair<int, int>, std::vector<FlowPath>, PairHash> routing_paths;
 
     for (const auto& f : _commodity) {
         // Set up unit demand vector for this commodity
@@ -880,7 +880,7 @@ double ElectricalFlowNaive::getCongForCommodity(int edge_id, int source, int tar
 double ElectricalFlowNaive::_getCongestion(const DemandMap& _demands) {
     double congestion = 0.0;
 
-    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
+    std::unordered_map<std::pair<int, int>, double, PairHash> total_edge_congestion;
 
     // compute via the f_e_u the congestion from the edges
     for(const auto& [demand, scaled_flow_value] : _demands) {
@@ -915,7 +915,7 @@ double ElectricalFlowNaive::_getCongestion(const DemandMap& _demands) {
 double ElectricalFlowNaive::getMaximumCongestion() {
     double max_cong = 0.0;
 
-    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
+    std::unordered_map<std::pair<int, int>, double, PairHash> total_edge_congestion;
 
     // also add the flow for the fixed vertex x_fixed
     for(int i = 0; i<n; i++) {
@@ -1004,7 +1004,7 @@ double ElectricalFlowNaive::getCongestion(DemandMap& demands) {
 
     double max_cong = 0.0;
 
-    std::unordered_map<std::pair<int, int>, double> total_edge_congestion;
+    std::unordered_map<std::pair<int, int>, double, PairHash> total_edge_congestion;
     // iterate over every commodity
     for (auto &[edge, flow_list]: f_e_st) {
 

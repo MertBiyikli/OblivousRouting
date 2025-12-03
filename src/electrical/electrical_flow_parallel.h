@@ -39,7 +39,7 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
     double cap_X = 0.0;
 
     // just for debugging purposes
-    std::unordered_map<std::pair<int, int>, double> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
+    std::unordered_map<std::pair<int, int>, double, PairHash> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
 
 
     // Preallocate as class members to avoid reallocs
@@ -71,7 +71,7 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
     double getFlowForCommodity(int edge_id, int source, int target);
 
     // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
-    std::unordered_map<std::pair<int, int>, double> f_e_u; // store the flow of the edge u→x for a fixed vertex x
+    std::unordered_map<std::pair<int, int>, double, PairHash> f_e_u; // store the flow of the edge u→x for a fixed vertex x
     int x_fixed;
 
     // maps (u,v) → edge_id, stores both orientations

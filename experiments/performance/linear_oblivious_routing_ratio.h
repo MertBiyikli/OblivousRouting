@@ -16,13 +16,13 @@ class LinearObliviousRatio{
     bool debug = false;
     Graph g;
     // This is the oblivious routing strategy for which the oblivious ratio should be computed for
-    std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double>> routing;
+    std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash> routing;
     // Worst case LP result
     double max_congestion = 0;
-    std::unordered_map<std::pair<int, int>, double> demand_vector;
+    std::unordered_map<std::pair<int, int>, double, PairHash> demand_vector;
 
 public:
-    void init(Graph& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double>>& routing);
+    void init(Graph& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing);
     double solve();
 
 };
