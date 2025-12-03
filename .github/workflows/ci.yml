@@ -59,14 +59,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull OR-Tools base image
-        run: docker pull ghcr.io/${{ github.repository_owner }}/ortools:linux
+        run: docker pull ghcr.io/mertbiyikli/ortools:linux
 
       - name: Build project using cached OR-Tools image
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
-            ghcr.io/${{ github.repository_owner }}/ortools:linux \
+            ghcr.io/mertbiyikli/ortools:linux \
             bash -c "
               cmake -S . -B build -G Ninja \
                     -DCMAKE_BUILD_TYPE=Release \
