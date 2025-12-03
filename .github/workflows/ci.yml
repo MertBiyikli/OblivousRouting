@@ -55,28 +55,26 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: mertbiyikli
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull OR-Tools base image
-        run: docker pull ghcr.io/mertbiyikli/ortools:linux
+      - name: Build main project (using OR-tools cache)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: local-build:latest
+          cache-from: type=registry,ref=ghcr.io/mertbiyikli/ortools:linux
 
-      - name: Build project using cached OR-Tools image
+      - name: Extract executable
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app \
-            ghcr.io/mertbiyikli/ortools:linux \
-            bash -c "
-              cmake -S . -B build -G Ninja \
-                    -DCMAKE_BUILD_TYPE=Release \
-                    -DUSE_OPENMP=ON \
-                    -DBUILD_TESTS=OFF &&
-              cmake --build build -j\$(nproc)
-            "
+          id=$(docker create local-build:latest)
+          docker cp $id:/app/build/oblivious_routing ./oblivious_routing
+          docker rm $id
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
           name: oblivious-routing-linux
-          path: build/oblivious_routing
+          path: oblivious_routing
