@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <numeric>
+#include <algorithm>
 
 
 #define INVALID_EDGE_ID -1
