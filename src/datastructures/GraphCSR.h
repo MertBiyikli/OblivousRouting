@@ -13,7 +13,7 @@
 #include <iostream>
 #include <sstream>
 #include <queue>
-#include "Igraph.h"
+#include "IGraph.h"
 #include <map>
 #include "../utils/priority_queue.h"
 
@@ -23,7 +23,7 @@
  * The idea is to have a graph class that uses CSR format internally
  * to store edges, capacities and distances for faster access.
  */
-class Graph_csr : public IGraph {
+class GraphCSR : public IGraph {
 public:
 
     // std::vector<std::pair<int, int>> edges;
@@ -43,9 +43,9 @@ public:
     mutable std::vector<int> parent_buf;
 
 
-    Graph_csr() = default;
+    GraphCSR() = default;
 
-    explicit Graph_csr(int num_nodes)
+    explicit GraphCSR(int num_nodes)
         : IGraph(num_nodes),
           from(),
           to(),
@@ -54,28 +54,11 @@ public:
           distance()
     {}
 
-    Graph_csr(const Graph_csr&)            = default;
-    Graph_csr(Graph_csr&&) noexcept        = default;
-    Graph_csr& operator=(const Graph_csr&) = default;
-    Graph_csr& operator=(Graph_csr&&) noexcept = default;
-    ~Graph_csr() override                  = default;
-
-
-/*
-    Graph_csr&& operator=(Graph_csr&& other) noexcept {
-        if (this != &other) {
-            n = other.n;
-            m = other.m;
-            vertices = std::move(other.vertices);
-            edges = std::move(other.edges);
-            head = std::move(other.head);
-            capacity = std::move(other.capacity);
-            distance = std::move(other.distance);
-            edgeSet = std::move(other.edgeSet);
-            //other.m = 0;
-        }
-        return std::move(*this);
-    }*/
+    GraphCSR(const GraphCSR&)            = default;
+    GraphCSR(GraphCSR&&) noexcept        = default;
+    GraphCSR& operator=(const GraphCSR&) = default;
+    GraphCSR& operator=(GraphCSR&&) noexcept = default;
+    ~GraphCSR() override                  = default;
 
 
     /*
@@ -147,7 +130,7 @@ public:
             for (int e = start; e < end - 1; e++) {
                 if (to[e] == to[e+1]) {
                     is_processed = false;
-                    throw std::runtime_error("Graph_csr::finalize: duplicate edges detected");
+                    throw std::runtime_error("GraphCSR::finalize: duplicate edges detected");
                 }
             }
         }
@@ -159,7 +142,7 @@ public:
     void addEdge(int u, int v, double cap, double dist = 1.0) override {
 
         if (u<0 || u>=n || v<0 || v>=n)
-            throw std::out_of_range("Graph_csr::addEdge: node index");
+            throw std::out_of_range("GraphCSR::addEdge: node index");
 
         // only allow undirected edges to be passed
         if (u > v) {return;};
@@ -179,11 +162,20 @@ public:
         is_processed = false;
     }
 
+    const int getAntiEdge(int e) const override {
+        const auto& [u, v] = edgeEndpoints(e);
+        int anti_e = getEdgeId(v, u);
+        if (anti_e == INVALID_EDGE_ID) {
+            throw std::runtime_error("getAntiEdge: reverse edge not found");
+        }
+        return anti_e;
+    }
+
 
     // returns edge id for (u,v), or -1 if not exists
     int getEdgeId(int u, int v) const override{
         if (!is_processed)
-            throw std::runtime_error("Graph_csr::getEdgeId: graph not finalized");
+            throw std::runtime_error("GraphCSR::getEdgeId: graph not finalized");
 
         int start = head[u];
         int end   = head[u+1];
@@ -194,7 +186,7 @@ public:
         return INVALID_EDGE_ID;
     }
 
-    std::pair<int,int> edgeEndpoints(int e) const {
+    virtual std::pair<int, int> edgeEndpoints(int e) const override {
         if (!is_processed) {
             throw std::runtime_error("edgeEndpoints: graph not finalized");
         }
@@ -251,7 +243,8 @@ public:
         throw std::runtime_error("Edge not found");
     }
 
-    void updateEdgeDistance(int e, double dist) override {
+    bool updateEdgeDistance(int e, double dist) override {
+        bool ok = false;
         if (e > m || e < 0) {
             throw std::out_of_range("Edge index out of range");
         }
@@ -266,15 +259,16 @@ public:
         int rev_edge_id = getEdgeId(a, b);
         if (rev_edge_id != INVALID_EDGE_ID) {
             distance[rev_edge_id] = dist;
+            ok = true;
         }else {
             throw std::runtime_error("Reverse edge not found");
         }
-
+        return ok;
     }
 
 
     // TODO: this function can be optimized && also should handle the case when u > v
-    void updateEdgeDistance(int u, int v, double dist) override {
+    bool updateEdgeDistance(int u, int v, double dist) override {
         int source = u;
         int target = v;
 
@@ -305,7 +299,7 @@ public:
                 throw std::runtime_error("Reverse edge not found");
             }
         }
-
+        return ok;
     }
 /*
     std::vector<int> getShortestPath(int src, int tgt = -1) const override {
@@ -372,7 +366,7 @@ public:
         const double INF = std::numeric_limits<double>::infinity();
 
         if (src < 0 || src >= n)
-            throw std::out_of_range("Graph_csr::getShortestPath: src or tgt out of range");
+            throw std::out_of_range("GraphCSR::getShortestPath: src or tgt out of range");
 
         // --- resize reusable buffers only if needed ---
         if ((int)dist_buf.size() != n) {
@@ -530,7 +524,7 @@ public:
     }
     IGraph::NeighborRange neighbors(int u) const override {
         if (!is_processed)
-            throw std::runtime_error("Graph_csr::neighbors: graph not finalized");
+            throw std::runtime_error("GraphCSR::neighbors: graph not finalized");
 
         int start = head[u];
         int end   = head[u+1];

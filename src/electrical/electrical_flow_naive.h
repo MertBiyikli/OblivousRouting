@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_ELECTRICAL_FLOW_NAIVE_H
 
 #include <algorithm>
-#include "../datastructures/graph.h"
+#include "../datastructures/GraphADJ.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
 #include "laplacian_solvers/AMGSolver.h"
@@ -81,7 +81,7 @@ class ElectricalFlowNaive : public ObliviousRoutingSolver{
 
 public:
     // LaplacianSolver solver;
-    Graph m_graph;
+    GraphADJ m_graph;
     std::unique_ptr<LaplacianSolver> amg;
 
     // std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_e_st;
@@ -96,7 +96,7 @@ public:
     void run();
 
     std::unordered_map<std::pair<int, int>, double, PairHash> getApproxLoad();
-    void init(const Graph& g,bool debug = false,const std::string& solver_name = ("amg_cg"));
+    void init(const GraphADJ& g,bool debug = false,const std::string& solver_name = ("amg_cg"));
 
     Eigen::SparseMatrix<double> getFinalRoutingMatrix();
     std::unordered_map<std::pair<int, int>, Eigen::VectorXd, PairHash> getRoutingForCommodity(const std::vector<std::pair<int, int> >& _commodity);
@@ -119,7 +119,7 @@ public:
     double getCongForCommodity(int edge_id, int source, int target);
 
     void runSolve(const IGraph& g_) override {
-        auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
+        auto g = dynamic_cast<const GraphADJ&>(g_); // cast to Graph
         this->init(g, debug);
         this->run();
     }

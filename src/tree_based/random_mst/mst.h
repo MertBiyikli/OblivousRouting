@@ -12,11 +12,11 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
-#include "../../datastructures/graph.h"
-#include "../../datastructures/graph_csr.h"
+#include "../../datastructures/GraphADJ.h"
+#include "../../datastructures/GraphCSR.h"
 
 
-class Graph_csr;
+class GraphCSR;
 /* Union find data structure to be used in the Kruskal's algorithm */
 // ---------- DSU ----------
 struct DSU {
@@ -65,7 +65,7 @@ public:
             for (int v : g.neighbors(u))
                 if (u < v) edges.emplace_back(u,v);
     }
-    void setGraph(const Graph& g) {
+    void setGraph(const GraphADJ& g) {
 
         // clear all first
         edges.clear();
@@ -79,7 +79,7 @@ public:
                 if (u < v) edges.emplace_back(u,v);
     }
 
-    void setGraph(const Graph_csr& g) {
+    void setGraph(const GraphCSR& g) {
         n = g.getNumNodes();
 
         keyed.reserve(g.getNumEdges());
@@ -119,7 +119,7 @@ public:
 
 
     // Turn MST edges into a rooted MSTTree (root at 0 by default)
-    MSTTree build_tree(const Graph& g,
+    MSTTree build_tree(const GraphADJ& g,
                               const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
         adj = std::vector<std::vector<int>>(n);

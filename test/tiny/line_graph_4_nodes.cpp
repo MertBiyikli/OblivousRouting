@@ -3,11 +3,11 @@
 //
 
 #include <gtest/gtest.h>
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 #include "../../src/tree_based/frt/raecke_frt_solver.h"
 
 TEST(TinyGraph, Line4BasicGraphSanity) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
@@ -17,7 +17,7 @@ TEST(TinyGraph, Line4BasicGraphSanity) {
 }
 
 TEST(TinyGraph, Line4GraphNeighbors) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
@@ -38,7 +38,7 @@ TEST(TinyGraph, Line4GraphNeighbors) {
 
 
 TEST(TinyGraph, Line4EdgeUpdates) {
-    Graph g(4);
+    GraphADJ g(4);
 
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
@@ -65,7 +65,7 @@ TEST(TinyGraph, Line4EdgeUpdates) {
 
 
 TEST(TinyGraph, Line4StressTestUpdateMethod) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
@@ -94,7 +94,7 @@ TEST(TinyGraph, Line4StressTestUpdateMethod) {
 
 
 TEST(TinyGraph, Line4ShortestPath) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,1.0);
     g.addEdge(1,2,1.0);
     g.addEdge(2,3,1.0);
@@ -113,7 +113,7 @@ TEST(TinyGraph, Line4ShortestPath) {
 }
 
 TEST(TinyGraph, Line4Diameter) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,1.0, 2.0);
     g.addEdge(1,2,1.0, 3.0);
     g.addEdge(2,3,1.0, 4.0);
@@ -145,7 +145,7 @@ TEST(TinyGraph, Line4Diameter) {
 
 
 TEST(TinyGraph, Line4RaeckeTree) {
-    Graph g(4);
+    GraphADJ g(4);
     g.addEdge(0,1,5);
     g.addEdge(1,2,0.5);
     g.addEdge(2,3,1);

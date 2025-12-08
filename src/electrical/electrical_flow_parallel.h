@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_ELECTRICAL_FLOW_PARALLEL_H
 
 #include <algorithm>
-#include "../datastructures/graph.h"
+#include "../datastructures/GraphADJ.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
 #include "laplacian_solvers/AMGSolverParallel.h"
@@ -19,7 +19,7 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
 
     int n, m;
     // LaplacianSolver solver;
-    Graph m_graph;
+    GraphADJ m_graph;
     std::unique_ptr<LaplacianSolver> amg;
     double roh = 0.0;
     double alpha_local = 0.0;
@@ -63,7 +63,7 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
     public:
 
     void runSolve(const IGraph& g_) override {
-        auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
+        auto g = dynamic_cast<const GraphADJ&>(g_); // cast to Graph
         this->init(g, debug);
         this->run();
     }
@@ -99,7 +99,7 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
     double recoverNorm(const std::vector<double>& diffs_u,
                                             const std::vector<double>& diffs_v);
 
-    void init(const Graph& g, bool debug = false, const std::string& solver_name = ("amg_parallel"));
+    void init(const GraphADJ& g, bool debug = false, const std::string& solver_name = ("amg_parallel"));
 
 /*
     std::vector<int> buildBFSTree(int root);

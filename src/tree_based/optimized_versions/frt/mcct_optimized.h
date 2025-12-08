@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_MCCT_OPTIMIZED_H
 
 
-#include "../../../datastructures/graph_csr.h"
+#include "../../../datastructures/GraphCSR.h"
 #include "../../frt/mcct/Tree.h"
 
 #include <map>
@@ -24,7 +24,7 @@ public:
 
     MCCT_optimized();
 
-    void setGraph(const Graph_csr& g);
+    void setGraph(const GraphCSR& g);
     void setSeed(uint64_t seed);
     void setMaxPairsForUnitDemands(int k);        // -1 => all s<t
     void clearDemands();                          // optional
@@ -35,7 +35,7 @@ public:
     FRT_Tree build(bool debug=false);
 
 private:
-    Graph_csr G;
+    GraphCSR G;
     std::mt19937_64 rng{0xC0FFEE};
     int max_pairs = -1;            // cap on #unit demands; -1 == all pairs
     std::vector<Demand> demands;

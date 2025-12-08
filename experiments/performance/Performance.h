@@ -7,7 +7,7 @@
 
 #include <chrono>
 #include <functional>
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 
 class Performance{
 public:
@@ -28,7 +28,7 @@ public:
         std::cout << message << " took " << duration << " seconds." << std::endl;
     }
 
-    void run(std::function<void()> func, Graph& g, std::string& message) {
+    void run(std::function<void()> func, GraphADJ& g, std::string& message) {
         TimePoint start = this->start();
         func();
         printElapsed(message, start);

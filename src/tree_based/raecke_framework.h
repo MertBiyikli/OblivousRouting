@@ -28,7 +28,7 @@ class RaeckeFramework : public ObliviousRoutingSolver{
 
 public:
     void runSolve(const IGraph & g_) override{
-        auto g = dynamic_cast<const Graph&>(g_); // cast to Graph
+        auto g = dynamic_cast<const GraphADJ&>(g_); // cast to Graph
         m_algorithm.setGraph(g);
         m_algorithm.run();
         // scale the flow to meet unit flow

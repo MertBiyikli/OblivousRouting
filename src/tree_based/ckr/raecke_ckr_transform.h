@@ -15,19 +15,19 @@
 #include "../../utils/hash.h"
 #include "../raecke_transform_base.h"
 #include "ckr_tree_decomposer.h"
-#include "../../datastructures/graph_csr.h"
+#include "../../datastructures/GraphCSR.h"
 #include "../raecke_oracle_iteration.h"
 
 class RaeckeCKRTransform : public RaeckeTransformBase<std::shared_ptr<TreeNode>> {
 public:
-    virtual EdgeDemandMap& addTree(std::shared_ptr<TreeNode>& root, double lambda, Graph& graph) override{
+    virtual EdgeDemandMap& addTree(std::shared_ptr<TreeNode>& root, double lambda, GraphADJ& graph) override{
         distributeDemands(root, graph, lambda);
         normalizeOldSolutionBasedOnNewLambda(lambda);
         removeCycles(graph);
         return arc2demand2cumulativeFraction;
     }
 
-    virtual EdgeDemandMap& addTree(std::shared_ptr<TreeNode>& root, double lambda, Graph_csr& graph) {
+    virtual EdgeDemandMap& addTree(std::shared_ptr<TreeNode>& root, double lambda, GraphCSR& graph) {
         distributeDemands(root, graph, lambda);
         normalizeOldSolutionBasedOnNewLambda(lambda);
         removeCycles(graph);
@@ -37,7 +37,7 @@ public:
 
 
 private:
-    void distributeDemands(const std::shared_ptr<TreeNode>& node, Graph& graph, double lambda) {
+    void distributeDemands(const std::shared_ptr<TreeNode>& node, GraphADJ& graph, double lambda) {
         if (!node) return;
 
         for (const auto& child : node->children) {
@@ -69,7 +69,7 @@ private:
         }
     }
 
-    void distributeDemands(const std::shared_ptr<TreeNode>& node, Graph_csr& graph, double lambda) {
+    void distributeDemands(const std::shared_ptr<TreeNode>& node, GraphCSR& graph, double lambda) {
         if (!node) return;
 
         for (const auto& child : node->children) {
@@ -118,7 +118,7 @@ private:
         }
     }
 
-    void removeCycles(Graph& graph) {
+    void removeCycles(GraphADJ& graph) {
         std::set<std::pair<int, int>> allD;
         for (auto& [e, dmap] : arc2demand2cumulativeFraction)
             for (auto& [d, _] : dmap)
@@ -148,7 +148,7 @@ private:
         }
     }
 
-    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d, Graph& graph) {
+    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d, GraphADJ& graph) {
         std::set<int> analyzed;
         for (int v : graph.getVertices()) {
             if (analyzed.count(v)) continue;
@@ -164,7 +164,7 @@ private:
         std::set<int>& analyzed,
         std::vector<int>& stack,
         const std::pair<int, int>& d,
-        Graph& graph) {
+        GraphADJ& graph) {
 
         if (std::find(stack.begin(), stack.end(), u) != stack.end())
             return std::vector<std::pair<int, int>>{};
@@ -191,7 +191,7 @@ private:
         return std::nullopt;
     }
 
-     void removeCycles(Graph_csr& graph) {
+     void removeCycles(GraphCSR& graph) {
         std::set<std::pair<int, int>> allD;
         for (auto& [e, dmap] : arc2demand2cumulativeFraction)
             for (auto& [d, _] : dmap)
@@ -221,7 +221,7 @@ private:
         }
     }
 
-    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d, Graph_csr& graph) {
+    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d, GraphCSR& graph) {
         std::set<int> analyzed;
         for (int v : graph.vertices) {
             if (analyzed.count(v)) continue;
@@ -237,7 +237,7 @@ private:
         std::set<int>& analyzed,
         std::vector<int>& stack,
         const std::pair<int, int>& d,
-        Graph_csr& graph) {
+        GraphCSR& graph) {
 
         if (std::find(stack.begin(), stack.end(), u) != stack.end())
             return std::vector<std::pair<int, int>>{};

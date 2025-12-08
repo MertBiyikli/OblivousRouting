@@ -6,7 +6,7 @@
 #include "../../src/utils/hash.h"
 #include <fstream>
 
-void ObliviousRatio::init(Graph &g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing) {
+void ObliviousRatio::init(GraphADJ &g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing) {
 
     this->g = g;
     this->routing = routing;

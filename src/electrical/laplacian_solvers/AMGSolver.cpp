@@ -34,7 +34,7 @@ void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weig
     buildLaplacian();
 }*/
 
-void AMGSolver::buildLaplacian_(const Graph& g) {
+void AMGSolver::buildLaplacian_(const GraphADJ& g) {
     check_openmp_runtime();
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
     struct pair_hash {

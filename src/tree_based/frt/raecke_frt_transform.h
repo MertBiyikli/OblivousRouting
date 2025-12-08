@@ -59,7 +59,7 @@ public:
     EdgeDemandMap& addTree(
             FRT_Tree& t,
             double           lambda,
-            Graph&    graph)
+            GraphADJ&    graph)
     {
         normalizeOldSolutionBasedOnNewLambda(lambda);
 
@@ -141,7 +141,7 @@ private:
     }
 
     // Remove cycles for each directed demand
-    void removeCycles(Graph& graph) {
+    void removeCycles(GraphADJ& graph) {
         // gather demands
         std::set<std::pair<int, int>> allD;
         for (auto& [e, dmap] : arc2demand2cumulativeFraction)
@@ -179,7 +179,7 @@ private:
     // Find one cycle carrying demand d (directed)
     std::vector<std::pair<int, int> > findCycle(
             const std::pair<int, int>&      d,
-            Graph&       graph)
+            GraphADJ&       graph)
     {
         std::set<int> analyzed;
         for (int v : graph.getVertices()) {
@@ -197,7 +197,7 @@ private:
             std::set<int>&       analyzed,
             std::vector<int>&    stack,
             const std::pair<int, int>&        d,
-            Graph&         graph)
+            GraphADJ&         graph)
     {
         if (std::find(stack.begin(), stack.end(), u) != stack.end())
             return std::vector<std::pair<int, int>>{};

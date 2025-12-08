@@ -10,7 +10,7 @@
 
 static constexpr int UNASSIGNED = -1;
 
-void CKRPartition::init(const Graph &g, bool debug) {
+void CKRPartition::init(const GraphADJ &g, bool debug) {
     this->m_graph = g;
 }
 
@@ -200,7 +200,7 @@ std::vector<int> CKRPartition::computePartition(const std::vector<int>& X_input,
 
 
  // namespace MendelScaling
-std::vector<int> CKRPartition::computePartition(const Graph_csr& g, const std::vector<int>& X_input, const double& Delta, CKRLevel& L) {
+std::vector<int> CKRPartition::computePartition(const GraphCSR& g, const std::vector<int>& X_input, const double& Delta, CKRLevel& L) {
     const size_t n = g.getNumNodes();
 
 

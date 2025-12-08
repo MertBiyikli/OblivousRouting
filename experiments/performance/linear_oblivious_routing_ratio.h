@@ -9,12 +9,12 @@
 #include <vector>
 #include <tuple>
 #include "../../src/utils/hash.h"
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 
 
 class LinearObliviousRatio{
     bool debug = false;
-    Graph g;
+    GraphADJ g;
     // This is the oblivious routing strategy for which the oblivious ratio should be computed for
     std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash> routing;
     // Worst case LP result
@@ -22,7 +22,7 @@ class LinearObliviousRatio{
     std::unordered_map<std::pair<int, int>, double, PairHash> demand_vector;
 
 public:
-    void init(Graph& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing);
+    void init(GraphADJ& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing);
     double solve();
 
 };

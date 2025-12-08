@@ -4,7 +4,7 @@
 
 #include "linear_oblivious_routing_ratio.h"
 
-void LinearObliviousRatio::init(Graph &g, const std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double, PairHash> , PairHash > &routing) {
+void LinearObliviousRatio::init(GraphADJ &g, const std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double, PairHash> , PairHash > &routing) {
     this->routing = routing;
     this->g = g;
     // Collect unique commodity pairs

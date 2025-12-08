@@ -10,7 +10,7 @@
 #include <vector>
 #include <tuple>
 #include "../../src/utils/hash.h"
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 #include "../../src/lp_solver/LP_Base.h"
 
 
@@ -21,7 +21,7 @@ class ObliviousRatio{
     bool debug = false;
     std::unordered_set< std::pair<int, int> , PairHash> demands;
     std::vector< std::pair<int, int> > edges;
-    Graph g;
+    GraphADJ g;
     // This is the oblivious routing strategy for which the oblivious ratio should be computed for
     std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash> routing;
 
@@ -30,7 +30,7 @@ class ObliviousRatio{
     std::unordered_map<std::pair<int, int>, double, PairHash> demand_vector;
 
     public:
-    void init(Graph& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing);
+    void init(GraphADJ& g, const std::unordered_map<std::pair<int,int>, std::unordered_map<std::pair<int,int>, double, PairHash>, PairHash>& routing);
     double solve();
     double solveWorstCaseDemandLPPerEdge(const std::pair<int, int>& edge);
 };

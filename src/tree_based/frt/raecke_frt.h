@@ -29,17 +29,17 @@ class RaeckeFRT : public RaeckeBase<FRT_Tree> {
     MCCT_Solver m_mcct;
 
 
-    void init(Graph& g);
+    void init(GraphADJ& g);
 public:
 
 
 
-    FRT_Tree getTree(Graph& g);
+    FRT_Tree getTree(GraphADJ& g);
     void computeRLoads(int treeIndex,
                        FRT_Tree& _t,
-                       Graph& copyGraph);
+                       GraphADJ& copyGraph);
 
-    void setRequirements(const Graph& g);
+    void setRequirements(const GraphADJ& g);
 
 };
 

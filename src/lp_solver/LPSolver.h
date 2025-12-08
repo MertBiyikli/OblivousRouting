@@ -29,8 +29,8 @@ private:
     std::unordered_map< std::tuple< int , std::pair<int, int> > , MPVariable*> m_var_f_e_; // st;
     double max_cong = 0;
 
-    virtual void CreateVariables(const Graph& graph) override;
-    virtual void CreateConstraints(const Graph& graph) override;
+    virtual void CreateVariables(const GraphCSR& graph) override;
+    virtual void CreateConstraints(const GraphCSR& graph) override;
     virtual void SetObjective() override;
 
     std::vector<int> sourceVertices;
@@ -40,18 +40,18 @@ public:
     LPSolver(){};
 
 
-    double getMaximumCongestion(const Graph& graph) const;
-    bool SolveOptimalObliviousRouting(const Graph& graph, bool AGGREGATE_CONGESTION = true);
+    double getMaximumCongestion(const GraphCSR& graph) const;
+    bool SolveOptimalObliviousRouting(const GraphCSR& graph, bool AGGREGATE_CONGESTION = true);
 
-    void PrintSolution(const Graph& graph) override;
-    void GetRoutingTable(const Graph& graph);
+    void PrintSolution(const GraphCSR& graph) override;
+    void GetRoutingTable(const GraphCSR& graph);
 
     virtual void storeFlow() override;
-    double getCongestion(DemandMap& demands, Graph& g) const;
+    double getCongestion(DemandMap& demands, GraphCSR& g) const;
 
-    void PrintCommoditiesPerEdge(const Graph& graph);
+    void PrintCommoditiesPerEdge(const GraphCSR& graph);
 
-    double getDemandWeightedCongestion(const Graph& graph,
+    double getDemandWeightedCongestion(const GraphCSR& graph,
                                                  const DemandMap& demands);
 };
 

@@ -3,12 +3,14 @@
 //
 
 #include "GravityModel.h"
+#include "../../src/datastructures/IGraph.h"
+#include <iostream>
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
 #include <random>
 
-DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin) {
+DemandMap GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin) {
     DemandMap demand2flow;
 
     std::unordered_set<int> nodes(g.getNumNodes());
@@ -60,7 +62,8 @@ DemandMap GravityModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
         const double flow = dist(rng)*(hi-lo)+lo;
         // TODO: change this back
 
-        demand2flow[{d.first, d.second}] = flow; // Add the demand to the edge
+        demand2flow.addDemand(d.first, d.second, flow);
+        //demand2flow[{d.first, d.second}] = flow; // Add the demand to the edge
     }
     return demand2flow;
 }

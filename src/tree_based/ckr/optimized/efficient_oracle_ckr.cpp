@@ -9,7 +9,7 @@
 #include <cassert>
 #include <random>
 
-#include "../../../datastructures/graph_csr.h"
+#include "../../../datastructures/GraphCSR.h"
 
 
 
@@ -76,15 +76,15 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
     // ---- (3) build hierarchical levels ----
     std::shared_ptr<TreeNode> root;
 
-    MendelScaling::QuotientConstruction<Graph_csr> qc;
-    qc.preprocessEdges(dynamic_cast<const Graph_csr &>(*g_ptr));
+    MendelScaling::QuotientConstruction<GraphCSR> qc;
+    qc.preprocessEdges(dynamic_cast<const GraphCSR &>(*g_ptr));
 
 
     // ---- (4) for each scale, build the CKR level and link to previous level ----
     for (double Delta : scales) {
-        MendelScaling::QuotientLevel<Graph_csr> Q;
+        MendelScaling::QuotientLevel<GraphCSR> Q;
 
-        Q = qc.constructQuotientGraph(ultrametric, Delta,dynamic_cast<Graph_csr &>(*g_ptr));
+        Q = qc.constructQuotientGraph(ultrametric, Delta,dynamic_cast<GraphCSR &>(*g_ptr));
         if (Q.Gq.getNumNodes() <= 1) {
             // if single cluster: make that the root once at the end
             continue;
@@ -130,7 +130,7 @@ void EfficientCKR::computeScales() {
 }
 
 
-void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel<Graph_csr> &Q, double Delta, CKRLevel &L) {
+void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel<GraphCSR> &Q, double Delta, CKRLevel &L) {
 
     auto start_time = std::chrono::high_resolution_clock::now();
     build_ckr_level(Q.Gq, Delta, L);
@@ -140,7 +140,7 @@ void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel<Graph_csr>
 }
 
 
-void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev_nodes, const MendelScaling::QuotientLevel<Graph_csr> &Q, const CKRLevel &L, const double Delta) {
+void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev_nodes, const MendelScaling::QuotientLevel<GraphCSR> &Q, const CKRLevel &L, const double Delta) {
     // parent nodes at this Δ-level
     std::unordered_map<int, std::shared_ptr<TreeNode>> center_to_parent;
     center_to_parent.reserve(L.centers.size()*2);
@@ -213,7 +213,7 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
 
 
 
-std::vector<int> EfficientCKR::build_ckr_level(const Graph_csr &g, double Delta, CKRLevel &L) {
+std::vector<int> EfficientCKR::build_ckr_level(const GraphCSR &g, double Delta, CKRLevel &L) {
     CKRPartition ckr;
 
     const int n = g.getNumNodes();

@@ -13,7 +13,7 @@ public:
     bool debug = false;
     GravityModel() = default;
     // Generate a gravity model demand matrix
-    virtual DemandMap generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0);
+    virtual DemandMap generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0);
 };
 
 #endif //OBLIVIOUSROUTING_GRAVITYMODEL_H

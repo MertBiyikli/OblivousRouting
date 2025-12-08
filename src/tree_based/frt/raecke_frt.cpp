@@ -8,12 +8,12 @@
 #include <cmath>
 #include <iostream>
 
-void RaeckeFRT::init(Graph &g) {
+void RaeckeFRT::init(GraphADJ &g) {
     this->m_mcct.setGraph(g);
 }
 
 
-FRT_Tree RaeckeFRT::getTree(Graph &g) {
+FRT_Tree RaeckeFRT::getTree(GraphADJ &g) {
     m_mcct.setGraph(g);
     setRequirements(g);
     computeNewDistances(g);
@@ -21,7 +21,7 @@ FRT_Tree RaeckeFRT::getTree(Graph &g) {
 }
 
 
-void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, Graph &copyGraph) {
+void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, GraphADJ &copyGraph) {
     std::queue<std::shared_ptr<FRT_Node>> bfsQueue;
     for(auto& node : _t.GetRoot()->getChildren()) {
         bfsQueue.push(node);
@@ -88,7 +88,7 @@ void RaeckeFRT::computeRLoads(int treeIndex, FRT_Tree &_t, Graph &copyGraph) {
 
 
 
-void RaeckeFRT::setRequirements(const Graph &g) {
+void RaeckeFRT::setRequirements(const GraphADJ &g) {
     for (const auto& u : g.getVertices()) {
         for (const auto& v : g.neighbors(u)) {
             double cap = g.getEdgeCapacity(u, v);

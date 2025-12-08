@@ -3,7 +3,7 @@
 //
 
 #include "gtest/gtest.h"
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 #include "../../src/solver/solver.h"
 #include "../../src/electrical/electrical_flow_optimized.h"
 #include <stdexcept>
@@ -14,7 +14,7 @@
 
 // * --- Testing solvers --- *
 TEST(SmokeTest, ElectricalFlowOptimizedBasicTest) {
-    Graph g(3);
+    GraphADJ g(3);
     g.addEdge(0, 1, 1.0);
     g.addEdge(1, 2, 1.0);
     g.addEdge(0, 2, 1.0);

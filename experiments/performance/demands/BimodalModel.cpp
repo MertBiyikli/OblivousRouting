@@ -3,15 +3,16 @@
 //
 
 #include "BimodalModel.h"
+#include "../../src/datastructures/IGraph.h"
 #include <random>
 
-DemandMap BimodalModel::generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin) {
+DemandMap BimodalModel::generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin) {
     DemandMap demand2flow;
 
     std::uint64_t seed = std::random_device{}();
     std::mt19937_64 rng(seed);
 
-    for(const auto& d : demands) {
+
         std::uniform_real_distribution<double> uniform(0.0, 1.0);
         std::normal_distribution<double> gaussian(0.0, 1.0);
 
@@ -26,8 +27,9 @@ DemandMap BimodalModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
             }
             if (flow < 0) flow = 0.0;
 
-            demand2flow[d]=flow;
+            demand2flow.addDemand(d.first, d.second, flow);
+            // demand2flow[d]=flow;
         }
-    }
+
     return demand2flow;
 }

@@ -4,8 +4,10 @@
 
 #include "UniformModel.h"
 #include <random>
+#include "../../src/datastructures/IGraph.h"
 
-DemandMap UniformModel::generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin) {
+
+DemandMap UniformModel::generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin) {
     DemandMap demand2flow;
 
     std::uint64_t seed = std::random_device{}();
@@ -23,7 +25,7 @@ DemandMap UniformModel::generate(Graph& g, std::vector<std::pair<int, int>>& dem
 
         }
 
-        demand2flow[d]=flow;
+        demand2flow.addDemand(d.first, d.second, flow);
     }
     return demand2flow;
 }

@@ -24,7 +24,7 @@
 
 
 
-#include "../../datastructures/graph.h"
+#include "../../datastructures/GraphADJ.h"
 #include <unordered_map>
 #include "../../utils/hash.h"
 #include "LaplacianSolver.h"
@@ -63,7 +63,7 @@ public:
     // Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
     void updateSolver() override;
     void buildLaplacian() override;
-    void buildLaplacian_(const Graph& g) override;
+    void buildLaplacian_(const GraphADJ& g) override;
 
     void updateAllEdges(const std::vector<double>& new_weights,
                         const std::vector<std::pair<int,int>>& edges) override {

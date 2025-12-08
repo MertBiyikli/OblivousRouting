@@ -7,7 +7,7 @@
 using namespace operations_research;
 
 
-void LPSolver::CreateVariables(const Graph &graph) {
+void LPSolver::CreateVariables(const GraphCSR &graph) {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
     if (!solver) throw std::runtime_error("GLOP solver unavailable.");
 
@@ -66,7 +66,7 @@ void LPSolver::CreateVariables(const Graph &graph) {
 
 }
 
-void LPSolver::CreateConstraints(const Graph &graph) {
+void LPSolver::CreateConstraints(const GraphCSR &graph) {
     // forall links l: sum_{m \in E} of cap(m)*π(l, m) <= alpha
     for(int id = 0; id<edges.size(); id++) {
         if ( edges[id].first > edges[id].second) continue;
@@ -232,7 +232,7 @@ void LPSolver::SetObjective()
 }
 
 
-double LPSolver::getMaximumCongestion(const Graph& graph) const {
+double LPSolver::getMaximumCongestion(const GraphCSR& graph) const {
     double max = 0;
     // === Print the solution ===
     std::unordered_map<int, double> total_flow_per_arc;
@@ -274,7 +274,7 @@ double LPSolver::getMaximumCongestion(const Graph& graph) const {
 }
 
 
-void LPSolver::GetRoutingTable(const Graph& graph) {
+void LPSolver::GetRoutingTable(const GraphCSR& graph) {
     std::cout << "\n=== Oblivious Routing Table ===\n";
 
     for (const auto& [key, var] : m_var_f_e_) {
@@ -293,7 +293,7 @@ void LPSolver::GetRoutingTable(const Graph& graph) {
     }
 }
 
-void LPSolver::PrintSolution(const Graph &graph) {
+void LPSolver::PrintSolution(const GraphCSR &graph) {
 
     double max_cong(0);
     // === Print the solution ===
@@ -334,7 +334,7 @@ void LPSolver::PrintSolution(const Graph &graph) {
     PrintCommoditiesPerEdge(graph);
 }
 
-void LPSolver::PrintCommoditiesPerEdge(const Graph& graph) {
+void LPSolver::PrintCommoditiesPerEdge(const GraphCSR& graph) {
     std::cout << "\n=== Commodities per Edge ===\n";
 
     // Iterate over all edges
@@ -392,7 +392,7 @@ void LPSolver::storeFlow() {
     }
 }
 
-double LPSolver::getCongestion(DemandMap& _demands, Graph& g) const{
+double LPSolver::getCongestion(DemandMap& _demands, GraphCSR& g) const{
     // compute for the given demands and the stored flow values in f_st_e the generated congestion
     double max_cong = 0.0;
 
@@ -445,7 +445,7 @@ double LPSolver::getCongestion(DemandMap& _demands, Graph& g) const{
 // - graph.getEdgeCapacity(u, v) returns capacity for the *undirected* edge {u,v}
 //   (we pass it with u < v)
 
-double LPSolver::getDemandWeightedCongestion(const Graph& graph,
+double LPSolver::getDemandWeightedCongestion(const GraphCSR& graph,
                                              const DemandMap& demands) {
     // Accumulate demand-weighted absolute flow per undirected edge {u,v} (u<v).
     std::unordered_map<std::pair<int,int>, double, PairHash> undirected_load;

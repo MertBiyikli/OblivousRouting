@@ -10,7 +10,7 @@
 #include <utility>
 #include <cmath>
 #include <stdexcept>
-#include "../datastructures/graph.h"
+#include "../datastructures/GraphADJ.h"
 #include "../utils/hash.h"
 
 
@@ -22,10 +22,10 @@ template<typename Tree>
 class RaeckeBase {
 protected:
     double m_lambdaSum;
-    Graph m_graph;
+    GraphADJ m_graph;
 
     std::vector<double> m_lambdas;
-    std::vector<Graph> m_graphs;
+    std::vector<GraphADJ> m_graphs;
 
     std::vector<Tree> m_trees;
     std::vector< std::unordered_map<std::pair<int, int>, double, PairHash> > m_idTree2edge2rload;
@@ -33,11 +33,11 @@ protected:
 public:
     std::vector<double> oracle_running_times; // TODO: remove this
     std::vector<double> pure_oracle_running_times; // TODO: remove this
-    virtual void init(Graph& g) = 0;
-    virtual Tree getTree(Graph& g) = 0;
+    virtual void init(GraphADJ& g) = 0;
+    virtual Tree getTree(GraphADJ& g) = 0;
     virtual void computeRLoads(int treeIndex,
                        Tree& _t,
-                       Graph& copyGraph) = 0;
+                       GraphADJ& copyGraph) = 0;
 
 
     void run() {
@@ -63,18 +63,18 @@ public:
         double delta = std::min(1/l, 1-m_lambdaSum);
         m_lambdas.push_back(delta);
 
-        m_graphs.push_back(Graph(m_graph));
+        m_graphs.push_back(GraphADJ(m_graph));
         return delta;
     }
 
 
 
 
-    Graph getGraph() const {return m_graph;}
-    void setGraph(const Graph& g) { m_graph = g; }
+    GraphADJ getGraph() const {return m_graph;}
+    void setGraph(const GraphADJ& g) { m_graph = g; }
     const std::vector<double>& getLambdas() const { return m_lambdas; }
-    const std::vector<Graph>& getGraphs() const { return m_graphs; }
-    std::vector<Graph> getGraphs() { return m_graphs; }
+    const std::vector<GraphADJ>& getGraphs() const { return m_graphs; }
+    std::vector<GraphADJ> getGraphs() { return m_graphs; }
     const std::vector<double>& getOracleTimes() const { return oracle_running_times; }
     const std::vector<Tree>& getTrees() const { return m_trees; }
     std::vector<Tree> getTrees() { return m_trees; }
@@ -93,7 +93,7 @@ public:
     }
 
 
-    virtual double getRloadAllEdges(const Graph& g) const{
+    virtual double getRloadAllEdges(const GraphADJ& g) const{
         double totalRLoadAllEdges = 0.0;
         for(int u = 0; u < g.getNumNodes(); u++) {
             for (const auto& v : g.neighbors(u)) {
@@ -119,7 +119,7 @@ public:
     }
 
 
-    virtual void computeNewDistances(Graph &g) {
+    virtual void computeNewDistances(GraphADJ &g) {
         constexpr double EPS = 1e-12;
 
         // --- 1) Compute totalrLoad for every edge and track max (for log-sum-exp) ---
@@ -197,7 +197,7 @@ public:
     }
 
 
-    virtual void normalizeDistance(Graph &_g, std::unordered_map<std::pair<int, int>, double, PairHash> &edge2scaledDist) {
+    virtual void normalizeDistance(GraphADJ &_g, std::unordered_map<std::pair<int, int>, double, PairHash> &edge2scaledDist) {
         double minDistance = std::numeric_limits<double>::infinity();
         for(int u = 0; u < _g.getNumNodes(); u++) {
             for (const auto& v : _g.neighbors(u)) {

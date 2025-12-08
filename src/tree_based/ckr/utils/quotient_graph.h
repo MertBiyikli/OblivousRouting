@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_QUOTIENT_GRAPH_H
 #define OBLIVIOUSROUTING_QUOTIENT_GRAPH_H
 
-#include "../../../datastructures/graph.h"
+#include "../../../datastructures/GraphADJ.h"
 #include "ultrametric_tree.h"
 #include <vector>
 
@@ -95,7 +95,7 @@ namespace MendelScaling {
 
         // find the interval of edges that are within the sliding window of size Delta
         // interval: [(left, right) = edges with weight in [Delta, Delta /2n]
-        Graph_csr Gq_(k);
+        GraphCSR Gq_(k);
         double w_low = Delta / (2.0 * original_n);
         double w_high = Delta;
         size_t left = 0, right = 0;;
@@ -141,7 +141,7 @@ namespace MendelScaling {
 
     // Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
     // Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
-    inline QuotientLevel<Graph> build_quotient_graph_with_map(const Graph& G, const UltrametricTree& ultra, double Delta) {
+    inline QuotientLevel<GraphADJ> build_quotient_graph_with_map(const GraphADJ& G, const UltrametricTree& ultra, double Delta) {
         const int n = G.getNumNodes();
 
         // 1) Map each original vertex to ancestor σΔ(v)
@@ -181,7 +181,7 @@ namespace MendelScaling {
         }
 
         // 5) Build quotient edges with min inter-edge weight
-        Graph Gq(k);
+        GraphADJ Gq(k);
         std::unordered_map<long long,std::pair<double, double>> min_w;
         min_w.reserve((size_t)G.getNumEdges());
         auto key = [](int a,int b){ return ((long long)a<<32) | (unsigned)b; };
@@ -218,7 +218,7 @@ namespace MendelScaling {
 
     // Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
     // Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
-    inline QuotientLevel<Graph_csr> build_quotient_graph_with_map(const Graph_csr& G, const UltrametricTree& ultra, double Delta) {
+    inline QuotientLevel<GraphCSR> build_quotient_graph_with_map(const GraphCSR& G, const UltrametricTree& ultra, double Delta) {
         const int n = G.getNumNodes();
 
         // 1) Map each original vertex to ancestor σΔ(v)
@@ -260,7 +260,7 @@ namespace MendelScaling {
 
 
         // 5) Build quotient edges with min inter-edge weight
-        Graph_csr Gq(k);
+        GraphCSR Gq(k);
         std::unordered_map<long long,std::pair<double, double>> min_w;
         min_w.reserve((size_t)G.getNumEdges());
         auto key = [](int a,int b){ return ((long long)a<<32) | (unsigned)b; };
@@ -298,7 +298,7 @@ namespace MendelScaling {
 
     // Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
     // Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
-    inline QuotientLevel<Graph_csr> build_quotient_graph_using_sliding_window(const Graph_csr& G, const UltrametricTree& ultra, double Delta) {
+    inline QuotientLevel<GraphCSR> build_quotient_graph_using_sliding_window(const GraphCSR& G, const UltrametricTree& ultra, double Delta) {
         const int n = G.getNumNodes();
 
         // 1) Map each original vertex to ancestor σΔ(v)
@@ -355,7 +355,7 @@ namespace MendelScaling {
 
         // find the interval of edges that are within the sliding window of size Delta
         // interval: [(left, right) = edges with weight in [Delta, Delta /2n]
-        Graph_csr Gq_(k);
+        GraphCSR Gq_(k);
         double w_low = Delta / (2.0 * n);
         double w_high = Delta;
         size_t left = 0, right = 0;;

@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_DEMANDMODEL_H
 
 #include "../../src/utils/hash.h"
-#include "../../../src/datastructures/graph.h"
+#include "../../../src/datastructures/IGraph.h"
 
 class DemandModel {
 public:
@@ -14,7 +14,7 @@ public:
     DemandModel() = default;
     virtual ~DemandModel() = default;
     // Generate a gravity model demand matrix
-    virtual DemandMap generate(Graph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) = 0;
+    virtual DemandMap generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) = 0;
 };
 
 

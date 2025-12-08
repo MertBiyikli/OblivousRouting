@@ -20,7 +20,7 @@ public:
     EdgeDemandMap& addTree(
             MSTTree& t,
             double         lambda,
-            Graph&   graph)
+            GraphADJ&   graph)
     {
         // normalizeOldSolutionBasedOnNewLambda(lambda);
 

@@ -11,7 +11,7 @@
 #include <cmath>
 #include <iostream>
 
-void RaeckeMST::init(Graph& _g) {
+void RaeckeMST::init(GraphADJ& _g) {
     this->mst.setGraph(_g);
     // Sample MST
     uint64_t seed = dist(rng);
@@ -41,7 +41,7 @@ double RaeckeMST::iterate(int treeIndex) {
 }*/
 
 
-MSTTree RaeckeMST::getTree(Graph &g) {
+MSTTree RaeckeMST::getTree(GraphADJ &g) {
     // Todo: maybe think of a more lets say clean approach of recomputing the distance
     computeNewDistances(g);
     mst.setGraph(g);
@@ -51,7 +51,7 @@ MSTTree RaeckeMST::getTree(Graph &g) {
 }
 
 // raecke_random_mst.cpp
-void RaeckeMST::computeRLoads(int treeIndex, MSTTree& _t, Graph& g) {
+void RaeckeMST::computeRLoads(int treeIndex, MSTTree& _t, GraphADJ& g) {
     if (m_idTree2edge2rload.size() <= treeIndex) {
         m_idTree2edge2rload.resize(treeIndex + 1);
     }

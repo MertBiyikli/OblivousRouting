@@ -15,12 +15,12 @@
 
 class CKRSolver : public RaeckeBase<std::shared_ptr<TreeNode>> {
 public:
-    void init(Graph& g) override {
+    void init(GraphADJ& g) override {
         m_graph = g;
     }
 
 
-    std::shared_ptr<TreeNode> getTree(Graph& g) override{
+    std::shared_ptr<TreeNode> getTree(GraphADJ& g) override{
         g.createDistanceMatrix();
         double delta = g.GetDiameter();
         TreeDecomposer decomposer;
@@ -36,7 +36,7 @@ public:
     }
 
 
-    void computeRLoads(int treeIndex, std::shared_ptr<TreeNode>& tree, Graph& copyGraph) override {
+    void computeRLoads(int treeIndex, std::shared_ptr<TreeNode>& tree, GraphADJ& copyGraph) override {
             // --- 1️⃣ Ensure enough space for r-load maps ---
         if (m_idTree2edge2rload.size() <= treeIndex)
             m_idTree2edge2rload.resize(treeIndex + 1);

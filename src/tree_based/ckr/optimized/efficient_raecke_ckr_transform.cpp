@@ -6,95 +6,12 @@
 #include <optional>
 
 
-void EfficientTreeRoutingTable::init(const int numEdges) {
-    adj_ids.resize(numEdges);
-    adj_vals.resize(numEdges);
-}
-
-std::vector<double> EfficientTreeRoutingTable::operator[](const int e) {
-    assert(e >= 0 && e < adj_vals.size());
-    return adj_vals[e];
-}
-
-void EfficientTreeRoutingTable::addFraction(const int e, const int s, const int t, const double fraction) {
-    assert(e >= 0 && e < adj_vals.size());
-    auto& ids  = adj_ids[e];
-    auto& vals = adj_vals[e];
-    int len = static_cast<int>(ids.size());
-
-    // first run linear scan
-    int linear_bound = 8;
-    for (int i = 0; i < std::min(len, linear_bound); ++i) {
-        if (ids[i] == std::make_pair(s, t)) {
-            vals[i] += fraction;
-            return;
-        }
-    }
-
-    // binary search to find s, t in ids
-    size_t lo = 0, hi = len;
-    while (lo < hi) {
-        const size_t mid = (lo + hi) >> 1;
-        const auto& mid_val = ids[mid];
-        if (mid_val < std::make_pair(s, t))
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-
-    if (lo < len && ids[lo] == std::make_pair(s, t)) {
-        vals[lo] += fraction;
-    } else {
-        // Usually append to the end and sort the ids w.r.t. to the terminals
-        if (lo == len) {
-            ids.emplace_back(s, t);
-            vals.push_back(fraction);
-        } else {
-            ids.insert(ids.begin() + static_cast<long>(lo), {s, t});
-            vals.insert(vals.begin() + static_cast<long>(lo), fraction);
-
-        }
-    }
-}
-
-double EfficientTreeRoutingTable::getFraction(int e , int s, int t) {
-    auto& ids  = adj_ids[e];
-    auto& vals = adj_vals[e];
-    int len = static_cast<int>(ids.size());
-
-
-    // first run linear scan
-    int linear_bound = 8;
-    for (int i = 0; i < std::min(len, linear_bound); ++i) {
-        if (ids[i] == std::make_pair(s, t)) {
-            return vals[i];
-        }
-    }
-
-    int lo = 0, hi = len;
-    while (lo < hi) {
-        const size_t mid = (lo + hi) >> 1;
-        const auto& mid_val = ids[mid];
-        if (mid_val < std::make_pair(s, t))
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-    if (lo < len && ids[lo] == std::make_pair(s, t)) {
-        return vals[lo];
-    } else {
-        return 0.0;
-    }
-}
-
-
 
 /*
  * EfficientCKRTransform methods
  */
-
 void EfficientRaeckeCKRTransform::init(IGraph& graph, std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>& _iters) {
-        auto& g_csr = dynamic_cast<Graph_csr&>(graph);
+        auto& g_csr = dynamic_cast<GraphCSR&>(graph);
         setGraph(g_csr);
         setIterations(_iters);
     }
@@ -107,7 +24,7 @@ void EfficientRaeckeCKRTransform::transform() {
 }
 
 
-void EfficientRaeckeCKRTransform::setGraph(Graph_csr& graph) {
+void EfficientRaeckeCKRTransform::setGraph(GraphCSR& graph) {
     g = &graph;
     table.init(g->getNumEdges());
 }
@@ -116,7 +33,7 @@ void EfficientRaeckeCKRTransform::setIterations(std::vector<OracleTreeIteration<
         this->iterations = &iterations;
 }
 
-EfficientTreeRoutingTable& EfficientRaeckeCKRTransform::addTree(OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >& iteration) {
+EfficientRoutingTable& EfficientRaeckeCKRTransform::addTree(OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >& iteration) {
     distributeDemands(iteration.getTree(), iteration.getLambda(), iteration.getDistance());
     normalizeOldSolutionBasedOnNewLambda(iteration.getLambda());
     removeCycles();
@@ -124,7 +41,7 @@ EfficientTreeRoutingTable& EfficientRaeckeCKRTransform::addTree(OracleTreeIterat
 }
 
 
-const EfficientTreeRoutingTable& EfficientRaeckeCKRTransform::getRoutingTable() const {
+const EfficientRoutingTable& EfficientRaeckeCKRTransform::getRoutingTable() const {
     return table;
 }
 

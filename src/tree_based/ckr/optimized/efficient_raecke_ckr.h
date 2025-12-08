@@ -11,13 +11,13 @@
 #include "efficient_oracle_ckr.h"
 #include "efficient_raecke_ckr_transform.h"
 #include <chrono>
-#include "../../../datastructures/graph_csr.h"
+#include "../../../datastructures/GraphCSR.h"
 #include "../../../utils/hash.h"
 
 class EfficientRaeckeCKR : public ObliviousRoutingSolver
 {
     public:
-        Graph_csr* g = nullptr;
+        GraphCSR* g = nullptr;
 
         EfficientCKR ckr_algo;
         EfficientRaeckeCKRTransform transform;
@@ -26,7 +26,7 @@ class EfficientRaeckeCKR : public ObliviousRoutingSolver
 
         void runSolve(const IGraph &g_) override {
 
-            auto& graph = this->graphAs<Graph_csr>();     // CLEAN
+            auto& graph = this->graphAs<GraphCSR>();     // CLEAN
             g = &graph;
             ckr_algo.setGraph(graph);
 
@@ -40,7 +40,7 @@ class EfficientRaeckeCKR : public ObliviousRoutingSolver
 
 
         void storeFlow() override {
-            auto& graph = this->graphAs<Graph_csr>();     // CLEAN
+            auto& graph = this->graphAs<GraphCSR>();     // CLEAN
             transform.init(graph, ckr_algo.getIterations());
             transform.transform();
 

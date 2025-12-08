@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include "../../src/datastructures/graph_csr.h"
-#include "../../src/datastructures/graph.h"
+#include "../../src/datastructures/GraphADJ.h"
 
 
 template<typename T>
@@ -56,7 +56,7 @@ TEST(StressTest, CSR_LargeGraphEdgeAddition) {
 TEST(StressTest, LargeGraphEdgeAddition) {
     const int num_nodes = 100000;
     const int num_edges = 1000000;
-    Graph g(num_nodes);
+    GraphADJ g(num_nodes);
 
     std::vector<double> run_times = measureEdgeAdditionTime(g, num_nodes, num_edges);
     double total_time = 0.0;
@@ -120,7 +120,7 @@ TEST(StressTest, LargeGraphEdgeUpdate) {
     const int num_nodes = 10000;
     const int num_edges = 100000;
     constexpr int num_updates = 1000000;
-    Graph g(num_nodes);
+    GraphADJ g(num_nodes);
 
     // First add edges
     measureEdgeAdditionTime(g, num_nodes, num_edges);

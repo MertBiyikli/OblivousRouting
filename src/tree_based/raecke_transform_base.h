@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_RAECKE_TRANSFORM_BASE_H
 #define OBLIVIOUSROUTING_RAECKE_TRANSFORM_BASE_H
 
-#include "../datastructures/graph.h"
+#include "../datastructures/GraphADJ.h"
 #include <unordered_map>
 #include <utility>
 #include "../utils/hash.h"
@@ -31,7 +31,7 @@ public:
     virtual EdgeDemandMap& addTree(
         Tree& tree,   // generic pointer, concrete subclasses cast appropriately
         double lambda,
-        Graph& g) = 0;
+        GraphADJ& g) = 0;
 };
 
 #endif //OBLIVIOUSROUTING_RAECKE_TRANSFORM_BASE_H

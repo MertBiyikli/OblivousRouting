@@ -28,9 +28,9 @@ class RaeckeMST : public RaeckeBase<MSTTree> {
 public:
     RaeckeMST() = default;
     virtual ~RaeckeMST() = default;
-    void init(Graph& g);
-    MSTTree getTree(Graph& g);
-    void computeRLoads(int idx, MSTTree& t, Graph& g);
+    void init(GraphADJ& g);
+    MSTTree getTree(GraphADJ& g);
+    void computeRLoads(int idx, MSTTree& t, GraphADJ& g);
 
     // new version
     template <typename Transform>

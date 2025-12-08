@@ -6,8 +6,8 @@
 #define OBLIVIOUSROUTING_CKR_PARTITION_H
 
 
-#include "../../datastructures/graph.h"
-#include "../../datastructures/graph_csr.h"
+#include "../../datastructures/GraphADJ.h"
+#include "../../datastructures/GraphCSR.h"
 
 
 struct CKRLevel {
@@ -18,13 +18,13 @@ struct CKRLevel {
 };
 
 class CKRPartition {
-    Graph m_graph;
+    GraphADJ m_graph;
 public:
-    void init(const Graph &g, bool debug=false);
+    void init(const GraphADJ &g, bool debug=false);
 
     std::vector<int> computePartition(const std::vector<int>& _X, const double& delta);
     std::vector<int> computePartition(const std::vector<int>& X, const double& delta, CKRLevel& L);
-    std::vector<int> computePartition(const Graph_csr& g, const std::vector<int>& X, const double& delta, CKRLevel& L);
+    std::vector<int> computePartition(const GraphCSR& g, const std::vector<int>& X, const double& delta, CKRLevel& L);
 };
 
 #endif //OBLIVIOUSROUTING_CKR_PARTITION_H

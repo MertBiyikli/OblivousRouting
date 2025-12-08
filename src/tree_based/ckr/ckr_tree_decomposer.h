@@ -26,7 +26,7 @@ struct TreeNode : public std::enable_shared_from_this<TreeNode> {
 
 class TreeDecomposer {
 public:
-    std::shared_ptr<TreeNode> decompose(Graph& G, double delta, const std::vector<int>& global_node_ids, int level = 0) {
+    std::shared_ptr<TreeNode> decompose(GraphADJ& G, double delta, const std::vector<int>& global_node_ids, int level = 0) {
         const int n = G.getNumNodes();
         if (n == 1) {
             auto leaf = std::make_shared<TreeNode>();
@@ -61,7 +61,7 @@ public:
                 local_to_global.push_back(global_node_ids[nodes[i]]);
             }
 
-            Graph subgraph(nodes.size());
+            GraphADJ subgraph(nodes.size());
             for (int u : nodes) {
                 for (int v : G.neighbors(u)) {
                     if (index_map.count(v)) {

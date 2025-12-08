@@ -1,14 +1,14 @@
 #include <vector>
 
-#include "graph_csr.h"
+#include "GraphCSR.h"
 
 std::vector<int>
-Graph_csr::getShortestPath(int src, int tgt, const std::vector<double>& dist_e) const {
+GraphCSR::getShortestPath(int src, int tgt, const std::vector<double>& dist_e) const {
     using P = std::pair<double, int>;
     const double INF = std::numeric_limits<double>::infinity();
 
     if (src < 0 || src >= n || tgt < 0 || tgt >= n) {
-        throw std::out_of_range("Graph_csr::getShortestPath(IDistance): node index out of range");
+        throw std::out_of_range("GraphCSR::getShortestPath(IDistance): node index out of range");
     }
 
     // Ensure reusable buffers have correct size

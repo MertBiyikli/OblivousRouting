@@ -14,7 +14,7 @@
 #include <absl/strings/str_format.h>
 #include <absl/strings/internal/str_format/extension.h>
 
-#include "../../datastructures/graph.h"
+#include "../../datastructures/GraphADJ.h"
 #include "../../datastructures/graph_csr.h"
 #include "../../solver/solver.h"
 #include "frt/raecke_frt_transform_opt.h"
@@ -53,7 +53,7 @@ public:
                        Graph_csr& copyGraph) = 0;
 
 
-    void solve(const Graph & g) override{
+    void solve(const GraphADJ & g) override{
         this->init(g);
         this->run();
         // scale the flow to meet unit flow
@@ -104,7 +104,7 @@ public:
         }
     }
 
-    void init(const Graph& g) {
+    void init(const GraphADJ& g) {
         // initialize the base graph
         // convert to csr
         Graph_csr csr_g;

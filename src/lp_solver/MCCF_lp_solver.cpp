@@ -13,6 +13,7 @@ void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
     int v = d.second;
     if (u < 0 || v < 0
         || u >= n || v >= n) {
+        std::cout << "Invalid vertex IDs in demand: (" << u << ", " << v << ")\n";
         throw std::invalid_argument("Vertex IDs out of range.");
     }
     if (u == v) {
@@ -29,7 +30,7 @@ void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
 
 
 // C++
-void CMMF_Solver::CreateVariables(const Graph &graph) {
+void CMMF_Solver::CreateVariables(const GraphCSR &graph) {
     // α: maximum congestion
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
 
@@ -49,7 +50,7 @@ void CMMF_Solver::CreateVariables(const Graph &graph) {
     }
 }
 
-void CMMF_Solver::CreateConstraints(const Graph &graph) {
+void CMMF_Solver::CreateConstraints(const GraphCSR &graph) {
     // 1) Flow conservation: for each commodity t and node v != t
     //    sum_out f(v->w, t) - sum_in f(w->v, t) = demand(v, t)
     for (int s = 0; s < n; ++s) {
@@ -108,7 +109,7 @@ void CMMF_Solver::SetObjective() {
 }
 
 
-void CMMF_Solver::PrintSolution(const Graph &graph) {
+void CMMF_Solver::PrintSolution(const GraphCSR &graph) {
     // 1) Print the congestion factor
     std::cout << "α = " << alpha->solution_value() << "\n\n";
 

@@ -15,12 +15,12 @@
 #include <algorithm>
 #include <stdexcept>
 #include <queue>
-#include "Igraph.h"
+#include "IGraph.h"
 #include "../utils/hash.h"
 
 
 
-class Graph : public IGraph {
+class GraphADJ : public IGraph {
     // int m = 0; // Number of edges
     // std::vector<int> m_vertices; // List of vertices
     std::vector<std::vector<int>> m_adj;
@@ -34,9 +34,9 @@ class Graph : public IGraph {
     std::unordered_map<Edge, int, PairHash> m_uvToEdge;
 
 public:
-    Graph() = default;
+    GraphADJ() = default;
 
-    explicit Graph(int num_nodes)
+    explicit GraphADJ(int num_nodes)
         : IGraph(num_nodes),
           m_adj(num_nodes),
           m_adj_capacities(num_nodes),
@@ -45,27 +45,36 @@ public:
         // distanceMatrix / m_next can be built lazily
     }
 
-    Graph(const Graph&)            = default;
-    Graph(Graph&&) noexcept        = default;
-    Graph& operator=(const Graph&) = default;
-    Graph& operator=(Graph&&) noexcept = default;
-    ~Graph() override              = default;
+    GraphADJ(const GraphADJ&)            = default;
+    GraphADJ(GraphADJ&&) noexcept        = default;
+    GraphADJ& operator=(const GraphADJ&) = default;
+    GraphADJ& operator=(GraphADJ&&) noexcept = default;
+    ~GraphADJ() override              = default;
 
 
     // derived methods
     IGraph::NeighborRange neighbors(int u) const override;
-    void addEdge(int u , int v, double capacity, double distance = 1.0) override ;
+    void addEdge(int u , int v, double capacity, double distance = 1.0) override;
+
+    // Edge based indexing
+    int getEdgeId(int u, int v) const override;
+    std::pair<int,int> edgeEndpoints(int e) const override;
+    const int getAntiEdge(int e) const override;
+
     double getEdgeCapacity(int u, int v) const override;
     double getEdgeDistance(int u, int v) const override;
-    void updateEdgeDistance(int u, int v, double distance) override;
+    bool updateEdgeDistance(int u, int v, double distance) override;
+    bool updateEdgeCapacity(int u, int v, double capacity);
+
     double getEdgeCapacity(int e) const override;
     double getEdgeDistance(int e) const override;
-    void updateEdgeDistance(int e, double dist) override;
-    const double GetDiameter() const override;
-    std::vector<int> getShortestPath(int u, int v) const override;
+    bool updateEdgeDistance(int e, double dist) override;
+
     void InitializeMemberByParser(int maxNodeIdSeen) override;
 
     // Shortest path computations
+    const double GetDiameter() const override;
+    std::vector<int> getShortestPath(int u, int v) const override;
     std::vector<double> getDistances(int u) const;
     const double& getShortestDistance(int u, int v) const;
     std::vector<int> getPrecomputedShortestPath(int u, int v) const;
@@ -73,17 +82,13 @@ public:
     void createDistanceMatrix();
 
 
-    // Edge based indexing
-    int getEdgeId(int u, int v) const override;
-    std::pair<int,int> edgeEndpoints(int e) const ;
 
-    void updateEdgeCapacity(int u, int v, double capacity);
 
     void print() const;
     void readGraph(const std::string &filename);
 
 
-    // TODO: need to implement tjis for the adjacency list based distances
+    // TODO: need to implement this for the adjacency list based distances
     std::vector<int>
         getShortestPath(int s, int t, const std::vector<double>& dist_e) const override {
         return {};

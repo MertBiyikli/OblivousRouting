@@ -14,7 +14,7 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowParallelOnTheFly::init(const Graph &g, bool debug, const std::string& solver_name)
+void ElectricalFlowParallelOnTheFly::init(const GraphADJ &g, bool debug, const std::string& solver_name)
 {
     // print how many threads are running
 #ifdef  _OPENMP

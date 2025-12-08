@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 #define OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 
-#include "../../datastructures/graph.h"
+#include "../../datastructures/GraphADJ.h"
 #include "../../utils/hash.h"
 #include <vector>
 #include <unordered_map>
@@ -25,7 +25,7 @@ public:
     virtual Eigen::VectorXd solve(const Eigen::VectorXd& b) = 0;
     virtual void updateSolver() = 0;
     virtual void buildLaplacian() = 0;
-    virtual void buildLaplacian_(const Graph& g) = 0;
+    virtual void buildLaplacian_(const GraphADJ& g) = 0;
 /*
     virtual bool updateEdge(int u, int v, double new_weight) = 0;
 
@@ -87,7 +87,7 @@ public:
         buildLaplacian();
     }
 
-    void init(std::vector<std::vector<double>>& _adj_edge_weights, int n, const Graph& g, bool debug = false) {
+    void init(std::vector<std::vector<double>>& _adj_edge_weights, int n, const GraphADJ& g, bool debug = false) {
         this->debug = debug;
         this->n = n;
         m_row_ptr.clear();
@@ -115,7 +115,7 @@ public:
     virtual void updateAllEdges(const std::vector<double>& new_weights,
                     const std::vector<std::pair<int,int>>& edges) = 0;
 
-    virtual void updateAllEdges(const std::vector<std::vector<double>>& new_weights, const Graph& G) {
+    virtual void updateAllEdges(const std::vector<std::vector<double>>& new_weights, const GraphADJ& G) {
         for (int u = 0; u < n; ++u) {
             for (int idx = 0; idx < G.neighbors(u).size(); ++idx) {
                 int v = G.neighbors(u)[idx];

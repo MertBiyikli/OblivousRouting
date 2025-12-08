@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_MCCT_DERANDOMIZED_WEIGHTED_SOLVER_H
 
 
-#include "../../../datastructures/graph.h"
+#include "../../../datastructures/GraphADJ.h"
 #include "Tree.h"
 
 #include <map>
@@ -22,7 +22,7 @@
 class MCCT_Solver {
     bool debug = false;
     FRT_Tree tree;
-    std::shared_ptr<Graph> graph;
+    std::shared_ptr<GraphADJ> graph;
     std::unordered_set<double> betas;
     double bestBeta;
     std::vector<int> verticesPermutation;
@@ -65,15 +65,15 @@ class MCCT_Solver {
         tree = t;
     }
 
-    Graph& getGraph() const {
+    GraphADJ& getGraph() const {
         if(!graph) {
             throw std::runtime_error("Graph is not set.");
         }
         return *graph;
     }
 
-    void setGraph(Graph& g) {
-        graph = std::make_shared<Graph>(g);
+    void setGraph(GraphADJ& g) {
+        graph = std::make_shared<GraphADJ>(g);
     }
 
     void reset() {

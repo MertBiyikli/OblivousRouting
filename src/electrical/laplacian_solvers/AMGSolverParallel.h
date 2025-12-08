@@ -119,7 +119,7 @@ public:
         }
     }
 
-    void buildLaplacian_(const Graph&) override {};
+    void buildLaplacian_(const GraphADJ&) override {};
 
     std::vector<Eigen::VectorXd> solve_multi(const std::vector<Eigen::VectorXd>& rhs_batch) {
         if (rhs_batch.empty()) return {};

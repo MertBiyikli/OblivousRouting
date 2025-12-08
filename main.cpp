@@ -1,15 +1,18 @@
 #include <iostream>
-#include "src/datastructures/graph.h"
-#include "src/lp_solver/LPSolver.h"
+#include "src/datastructures/GraphADJ.h"
+#include "src/electrical/electrical_flow_optimized.h"
+#include "src/datastructures/GraphCSR.h"
+#include "src/parse_parameter.h"
+
+/*
 #include "src/lp_solver/MCCF_lp_solver.h"
+#include "src/lp_solver/LPSolver.h"
 #include "src/tree_based/frt/raecke_frt_solver.h"
 #include "src/tree_based/random_mst/raecke_mst_solver.h"
 #include "src/electrical/electrical_flow_naive.h"
-#include "src/electrical/electrical_flow_optimized.h"
 #include "src/electrical/electrical_flow_parallel.h"
 #include "experiments/performance/LP_Oblivious_Ratio.h"
 #include "experiments/performance/linear_oblivious_routing_ratio.h"
-#include "src/parse_parameter.h"
 #include "src/electrical/electrical_flow_parallel_on_the_fly.h"
 #include "src/tree_based/ckr/ckr_partition.h"
 #include "src/tree_based/ckr/ckr_tree_decomposer.h"
@@ -20,10 +23,9 @@
 // #include "src/tree_based/optimized_versions/frt/raecke_frt_opt.h"
 #include "src/tree_based/optimized_versions/frt/mcct_optimized.h"
 // #include "src/tree_based/optimized_versions/raecke_optimized_base.h"
-#include "src/datastructures/graph_csr.h"
 #include "src/tree_based/ckr/utils/ultrametric_tree.h"
 #include "src/tree_based/ckr/optimized/efficient_raecke_ckr.h"
-
+*/
 
 
 int main(int argc, char **argv) {
@@ -35,54 +37,59 @@ int main(int argc, char **argv) {
     auto cfg = parse_parameter(argc, argv, &err);
     if (!cfg) { std::cerr << err; return -1; } // EX_USAGE
 
-    Graph g;
-    g.readLGFFile(cfg->filename, /*undirected?*/ true);
-    std::cout << "Graph loaded: " << g.getNumNodes() << " nodes, " << g.getNumEdges() << " edges.\n";
+    std::unique_ptr<IGraph> g = std::make_unique<GraphADJ>();
+    readLGFFile(*g, cfg->filename, /*undirected?*/ true);
+    std::cout << "Graph loaded: " << g->getNumNodes() << " nodes, " << g->getNumEdges() << " edges.\n";
     //g.print();
 
-    Graph_csr g_csr;
-    g_csr.readLGFFile(cfg->filename,  true);
+    GraphCSR g_csr;// = std::make_unique<GraphCSR>();
+    readLGFFile(g_csr, cfg->filename,  true);
     g_csr.finalize();
 
     std::unique_ptr<ObliviousRoutingSolver> solver;
     switch (cfg->solver) {
+        /*
         case SolverType::ELECTRICAL_NAIVE:
             std::cout << "Running Electrical Flow (naive)...\n";
             solver = std::make_unique<ElectricalFlowNaive>();
             break;
         case SolverType::RAECKE_FRT:
             std::cout << "Running Tree-based (Raecke/FRT)...\n";
-            solver = std::make_unique<RaeckeFRTSolver>();
+            solver = std::make_unique<RaeckeFRTSolver>(g_csr);
             break;
         case SolverType::LP_APPLEGATE_COHEN:
             std::cout << "Running LP (Applegate–Cohen)...\n";
-            solver = std::make_unique<LPSolver>();
+            solver = std::make_unique<LPSolver>(g_csr);
             break;
         case SolverType::RAECKE_RANDOM_MST:
             std::cout << "Running Tree-based (Raecke/MST)...\n";
             solver = std::make_unique<RaeckeMSTSolver>();
             break;
+            */
+
         case SolverType::ELECTRICAL_OPTIMIZED:
             std::cout << "Running Electrical Flow (optimized)...\n";
-            solver = std::make_unique<ElectricalFlowOptimized>();
+            solver = std::make_unique<ElectricalFlowOptimized>(g_csr, 0, false);
             break;
+            /*
         case SolverType::ELECTRICAL_PARALLEL_BATCHES:
             std::cout << "Running Electrical Flow (parallel - batches)...\n";
-            solver = std::make_unique<ElectricalFlowParallel>();
+            solver = std::make_unique<ElectricalFlowParallel>(g_csr);
             break;
         case SolverType::ELECTRICAL_PARALLEL_ONTHEFLY:
             std::cout << "Running Electrical Flow (parallel - on the fly)...\n";
-            solver = std::make_unique<ElectricalFlowParallelOnTheFly>();
+            solver = std::make_unique<ElectricalFlowParallelOnTheFly>(g_csr);
             break;
         case SolverType::RAECKE_CKR:
             std::cout << "Running Tree-based (Raecke/CKR)... \n";
-            solver = std::make_unique<RaeckeCKRSolver>();
+            solver = std::make_unique<RaeckeCKRSolver>(g_csr);
             break;
 
         case SolverType::RAECKE_CKR_OPTIMIZED:
             std::cout << "Running Tree-based (Raecke/CKR Optimized)... \n";
-            solver = std::make_unique<EfficientRaeckeCKR>();
+            solver = std::make_unique<EfficientRaeckeCKR>(g_csr);
             break;
+            */
 
 /*
         case SolverType::OPTIMIZED_RAECKE_FRT:
@@ -101,17 +108,31 @@ int main(int argc, char **argv) {
     // run the solver
     start_time = std::chrono::high_resolution_clock::now();
     // solver->debug = true;
-    solver->setGraph(g_csr);
-    solver->solve();
+    //solver->(*g_csr);
+    auto scheme = solver->solve();
     end_time = std::chrono::high_resolution_clock::now();
     std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
 
+    DemandMap demand_map;
+    for (int s = 0; s < g_csr.getNumNodes(); ++s) {
+        for (int t = 0; t < g_csr.getNumNodes(); ++t) {
+            if (s >= t) continue;
+            demand_map.addDemand(s, t, 1.0);
+        }
+    }
+
+    std::vector<double> outflow;
+    scheme->routeDemands(outflow, demand_map);
+
+    for (int e = 0; e < g_csr.getNumEdges(); ++e) {
+        std::cout << "Edge " << e << " outflow: " << outflow[e] << std::endl;
+    }
 
 
     // TODO: this store flow is a major bottleneck for the tree based experiments.
 /*
     solver->storeFlow();
-    solver->printFlow_();
+    solver->printFlow();
 */
 
     // verify flow conservation
@@ -129,10 +150,10 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    //HandleDemandModel(argc, argv, cfg, g, solver);
+    HandleDemandModel(argc, argv, cfg, g_csr, solver);
 
 
-
+/*
     if (cfg->solver != SolverType::LP_APPLEGATE_COHEN) {
         std::cout << "MWU number of iterations: " << solver->GetIterationCount() << std::endl;
 
@@ -152,7 +173,7 @@ int main(int argc, char **argv) {
         pure_mean /= solver->pure_oracle_running_times.size();
         std::cout << "Average pure oracle time: " << pure_mean << " [milliseconds]" << std::endl;
     }
-
+*/
 
     /* Developing the efficient ckr raecke shit
      *

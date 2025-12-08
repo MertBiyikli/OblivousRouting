@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_EFFICIENT_RAECKE_BASE_H
 
 
-#include "../datastructures/Igraph.h"
+#include "../datastructures/IGraph.h"
 #include "raecke_oracle_iteration.h"
 #include <cassert>
 #include <chrono>

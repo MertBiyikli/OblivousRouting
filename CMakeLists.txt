@@ -46,9 +46,12 @@ find_package(Eigen3 REQUIRED)
 
 
 # ---- Your target ----
+#[===[
+
+
 set(SRC_FILES
         main.cpp
-        src/datastructures/graph.cpp
+        src/datastructures/GraphADJ.cpp
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
         src/tree_based/random_mst/raecke_mst_solver.cpp
@@ -99,8 +102,8 @@ set(SRC_FILES
         src/tree_based/optimized_versions/frt/raecke_frt_opt.h
         src/tree_based/optimized_versions/frt/raecke_frt_transform_opt.h
         # src/tree_based/optimized_versions/frt/raecke_frt_opt.cpp
-        src/datastructures/graph_csr.h
-        src/datastructures/graph_csr.cpp
+        src/datastructures/GraphCSR.h
+        src/datastructures/GraphCSR.cpp
         # src/tree_based/optimized_versions/frt/mcct_optimized.cpp
         # src/tree_based/optimized_versions/frt/mcct_optimized.h
         src/tree_based/ckr/utils/ultrametric_tree.h
@@ -110,7 +113,31 @@ set(SRC_FILES
         src/tree_based/ckr/optimized/efficient_raecke_ckr.h
         src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.h
         src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.cpp
-
+)
+]===]
+# ---- Your target ----
+set(SRC_FILES
+        main.cpp
+        src/datastructures/GraphADJ.cpp
+        src/electrical/electrical_flow_optimized.cpp
+        src/electrical/electrical_flow_optimized.h
+        src/electrical/laplacian_solvers/AMGSolver.cpp
+        src/electrical/laplacian_solvers/AMGSolver.h
+        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
+        src/electrical/laplacian_solvers/AMGSolverParallel.h
+        src/electrical/laplacian_solvers/LaplacianSolver.h
+        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
+        src/utils/my_math.cpp
+        src/datastructures/GraphCSR.h
+        src/datastructures/GraphCSR.cpp
+        experiments/performance/demands/GravityModel.cpp
+        experiments/performance/demands/GravityModel.h
+        experiments/performance/demands/BimodalModel.cpp
+        experiments/performance/demands/BimodalModel.h
+        experiments/performance/demands/GaussianModel.cpp
+        experiments/performance/demands/GaussianModel.h
+        experiments/performance/demands/UniformModel.cpp
+        experiments/performance/demands/UniformModel.h
 )
 
 

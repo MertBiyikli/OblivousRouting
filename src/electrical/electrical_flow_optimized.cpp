@@ -9,16 +9,18 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init(const Graph_csr &g, bool debug, const std::string& solver_name)
+void ElectricalFlowOptimized::init(bool debug, const std::string& solver_name)
 {
-    m_graph = &g;
+    // m_graph = &g;
 
-    n = m_graph->getNumNodes();
-    m = m_graph->getNumEdges()/2;
+    n = graph.getNumNodes();
+    m = graph.getNumEdges()/2;
 
+    /*
     adj_f_e_u_id.resize(m);
     adj_f_e_u.resize(m);
     this->debug = debug;
+    */
 
     // set algorithm parameters
     roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
@@ -68,7 +70,7 @@ void ElectricalFlowOptimized::initEdgeDistances() {
     edge_weights.resize(m);
 
     for (int e = 0; e < m; ++e) {
-        double cap = m_graph->getEdgeCapacity(e);      // undirected capacity accessor
+        double cap = graph.getEdgeCapacity(e);      // undirected capacity accessor
         edge_capacities[e]  = cap;
         edge_probabilities[e] = edge_distances[e] / cap_X;
         edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);
@@ -84,8 +86,8 @@ void ElectricalFlowOptimized::extract_edge_list() {
 
     // -> for the adjacency version we may not need an extra vector edges anymore...
     edges.reserve(m);
-    for (int e = 0; e < m_graph->getNumEdges(); e++) {
-        auto [u, v] = m_graph->edgeEndpoints(e);
+    for (int e = 0; e < graph.getNumEdges(); e++) {
+        auto [u, v] = graph.edgeEndpoints(e);
         if (u < v) {
             edges.emplace_back(u,v);
         }
@@ -196,7 +198,7 @@ void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& loa
 
 
 
-void ElectricalFlowOptimized::run() {
+void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
     // Sparse RHS with only two nonzeros per demand (+1 at u, -1 at x_fixed)
     Eigen::SparseVector<double> rhs(n);
     rhs.reserve(2);
@@ -219,7 +221,7 @@ void ElectricalFlowOptimized::run() {
             auto start_pure = std::chrono::high_resolution_clock::now();
             Eigen::VectorXd x = amg->solve(rhs);
             auto end_pure = std::chrono::high_resolution_clock::now();
-            pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end_pure-start_pure).count());
+            // pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end_pure-start_pure).count());
 
             // accumulate edge flows for commodity (u -> x_fixed):
             // f_e(u) = w_e * (x[u]-x[v])
@@ -228,55 +230,120 @@ void ElectricalFlowOptimized::run() {
 
                 if (u == edges[e].first)      div_accum[u] += fval;
                 else if (u == edges[e].second) div_accum[u] -= fval;
-                if (std::abs(fval) > 1e-32) {
-                    addFlow(e, u, fval); // per-adjacency list version
-                    //f_e_u[{e, u}] += fval;
+                if (std::abs(fval) > EPS) {
+                    // if value is negative, we push along the anti-edge
+                    const auto& [head, tail] = edges[e];
+                    const int& original_edge_id = graph.getEdgeId(head, tail);
+
+
+                    std::cout << "electrical e: " << e << "\n";
+                    if (fval < 0) {
+                        int anti_edge = graph.getAntiEdge(original_edge_id);
+                        if (anti_edge) {
+                            std::cout << "anti_e= " << anti_edge << " head=" << head << " tail=" << tail << "\n";
+                            std::cout << "found anti edge adding: " << std::abs(fval) << " for source " << u << "\n";
+                        }
+                        table.addFlow(anti_edge, u, std::abs(fval));
+                    }else {
+                        if (original_edge_id) {
+                            std::cout << "orig_e= " << original_edge_id << " head=" << head << " tail=" << tail << "\n";
+                            std::cout << "found anti edge adding: " << fval << " for source " << u << "\n";
+                        }
+                        table.addFlow(original_edge_id, u, std::abs(fval));
+                    }
                 }
             }
+
+            for (int e = 0; e < m; ++e) {
+                double fval = edge_weights[e] * (x[edges[e].second] - x[edges[e].first]);
+
+                if (u == edges[e].second)      div_accum[u] += fval;
+                else if (u == edges[e].first) div_accum[u] -= fval;
+                if (std::abs(fval) > EPS) {
+
+                    // if value is negative, we push along the anti-edge
+                    auto [head, tail] = edges[e];
+                    std::swap(head, tail);
+                    const int& original_edge_id = graph.getEdgeId(head, tail);
+                    std::cout << "electrical e: " << e << "\n";
+                    if (fval < 0) {
+                        int anti_edge = graph.getAntiEdge(original_edge_id);
+                        if (anti_edge) {
+                            std::cout << "anti_e= " << anti_edge << " head=" << head << " tail=" << tail << "\n";
+                            std::cout << "found anti edge adding: " << std::abs(fval) << " for source " << u << "\n";
+                        }
+                        table.addFlow(anti_edge, u, std::abs(fval));
+                    }else {
+                        if (original_edge_id) {
+                            std::cout << "orig_e= " << original_edge_id << " head=" << head << " tail=" << tail << "\n";
+                            std::cout << "found anti edge adding: " << fval << " for source " << u << "\n";
+                        }
+                        table.addFlow(original_edge_id, u, std::abs(fval));
+                    }
+
+                }
+            }
+
+            // for debugging purposes, print the flows
+            for (int i = 0; i<table.src_ids.size(); i++) {
+                for (int j = 0; j<table.src_ids[i].size(); j++) {
+                    int source = table.src_ids[i][j];
+                    double flow = table.src_flows[i][j];
+                    if (flow != 0.0) {
+                        auto [head, tail] = graph.edgeEndpoints(i);
+                        std::cout << "Edge " << head << " / " << tail << " has flow " << flow / iteration_count << " for source " << source << "\n";
+                    }
+                }
+            }
+
         }
 
         // (Optional) debug: print flows per (edge, source)
+/*
         if (debug) {
             printFlow();
         }
+*/
 
         getApproxLoad(load);
         updateEdgeDistances(load); // keeps 'weights' vector in sync
 
         auto end = std::chrono::high_resolution_clock::now();
+/*
         oracle_running_times.push_back(
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
         );
+        */
     }
 
 
-    scaleFlowDown();
+    // scaleFlowDown();
     // enforceConservation();
-    if (debug) printFlow();
+    // if (debug) printFlow();
 }
 
 
-void ElectricalFlowOptimized::scaleFlowDown() {
+void ElectricalFlowOptimized::scaleFlowDown(LinearRoutingTable& table) {
 
     // scale the flow from the adjacency list flow
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
-        for (int e = 0; e < m; ++e)
-            for (double &val : adj_f_e_u[e]) val *= inv_iters;
+        for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
+            for (double &val : table.src_flows[e]) val *= inv_iters;
     }
 
 
     if ( debug ) {
-        printFlow();
+        //printFlow();
     }
-
+/*
     // do the recaling for the adjacency matrix as well
     std::vector<double> outgoingflow_f_s_x_fixed(n, 0);
     for (int e = 0; e < m; ++e) {
         const int u = edges[e].first;
         const int v = edges[e].second;
-        const auto &ids  = adj_f_e_u_id[e];
-        const auto &vals = adj_f_e_u[e];
+        const auto &ids  = table.src_ids[e];
+        const auto &vals = table.src_flows[e];
         const int L = static_cast<int>(ids.size());
 
         for (int k = 0; k < L; ++k) {
@@ -316,8 +383,8 @@ void ElectricalFlowOptimized::scaleFlowDown() {
     // After this, each commodity s should have unit net outflow at s.
     constexpr double EPS = 1e-12;
     for (int e = 0; e < m; ++e) {
-        auto &ids  = adj_f_e_u_id[e];
-        auto &vals = adj_f_e_u[e];
+        auto &ids  = table.src_ids[e];
+        auto &vals = table.src_flows[e];
         const int L = static_cast<int>(ids.size());
 
         for (int k = 0; k < L; ++k) {
@@ -340,7 +407,7 @@ void ElectricalFlowOptimized::scaleFlowDown() {
             // The map key is (edge_id, source).
             //f_e_u[{e, s}] = scaled;
         }
-    }
+    }*/
 }
 
 void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
@@ -359,7 +426,7 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
         auto start = std::chrono::high_resolution_clock::now();
         sol = amg->solve(rhs);  // prefer in-place if available
         auto end = std::chrono::high_resolution_clock::now();
-        pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
+        // pure_oracle_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
 
         const double* __restrict psol = sol.data();
 
@@ -409,7 +476,7 @@ double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
     return abs_diffs[mid];
 }
 
-
+/*
 void ElectricalFlowOptimized::storeFlow(){
     // adjacency list version
     for (int e = 0; e<adj_f_e_u_id.size(); e++) {
@@ -445,9 +512,9 @@ void ElectricalFlowOptimized::storeFlow(){
         }
     }
 }
+*/
 
-
-
+/*
 double ElectricalFlowOptimized::getFlowForCommodity(int edge_id, int source, int target) {
 
 
@@ -463,7 +530,7 @@ double ElectricalFlowOptimized::getFlowForCommodity(int edge_id, int source, int
         return f_t - f_s;
     }
 }
-
+*/
 Eigen::SparseMatrix<double> ElectricalFlowOptimized::getSketchMatrix(int _m, int _n, double eps) {
     double c = 1.1;
     double delta = NegativeExponent(_n, 10); // Set delta to a small value or a default value

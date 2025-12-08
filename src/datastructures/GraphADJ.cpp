@@ -3,7 +3,7 @@
 //
 
 
-#include "graph.h"
+#include "GraphADJ.h"
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
@@ -16,7 +16,7 @@
 //////////////////////////////////
 // Base class methods
 //////////////////////////////////
-std::vector<double> Graph::getDistances(int u) const {
+std::vector<double> GraphADJ::getDistances(int u) const {
     if(u < 0 || u >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
     }
@@ -24,7 +24,7 @@ std::vector<double> Graph::getDistances(int u) const {
 }
 
 
-IGraph::NeighborRange Graph::neighbors(int u) const {
+IGraph::NeighborRange GraphADJ::neighbors(int u) const {
     const auto& row = m_adj[u];
     return NeighborRange{
         row.data(),
@@ -34,7 +34,7 @@ IGraph::NeighborRange Graph::neighbors(int u) const {
 
 
 
-void Graph::addEdge(int u , int v, double capacity, double distance) {
+void GraphADJ::addEdge(int u , int v, double capacity, double distance) {
     if(u >= m_adj.size() || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
     }
@@ -65,7 +65,7 @@ void Graph::addEdge(int u , int v, double capacity, double distance) {
     m++;
 }
 
-int Graph::getEdgeId(int u, int v) const {
+int GraphADJ::getEdgeId(int u, int v) const {
     auto it = m_uvToEdge.find({u, v});
     if (it == m_uvToEdge.end()) {
         return INVALID_EDGE_ID; // or INVALID_EDGE_ID if you use that macro
@@ -73,8 +73,18 @@ int Graph::getEdgeId(int u, int v) const {
     return it->second;
 }
 
+const int GraphADJ::getAntiEdge(int e) const {
+    const auto& [u, v] = edgeEndpoints(e);
+    int anti_e = getEdgeId(v, u);
+    if (anti_e == INVALID_EDGE_ID) {
+        throw std::runtime_error("getAntiEdge: reverse edge not found");
+    }
+    return anti_e;
+}
 
-std::pair<int,int> Graph::edgeEndpoints(int e) const {
+
+
+std::pair<int,int> GraphADJ::edgeEndpoints(int e) const {
     if (e < 0 || e >= static_cast<int>(m_edgeList.size())) {
         throw std::out_of_range("edgeEndpoints: edge id out of range");
     }
@@ -82,7 +92,7 @@ std::pair<int,int> Graph::edgeEndpoints(int e) const {
 }
 
 
-double Graph::getEdgeCapacity(int u, int v) const {
+double GraphADJ::getEdgeCapacity(int u, int v) const {
     double capacity = 0.0;
     if(u >= m_adj.size() || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
@@ -98,7 +108,7 @@ double Graph::getEdgeCapacity(int u, int v) const {
 }
 
 
-double Graph::getEdgeDistance(int u, int v) const {
+double GraphADJ::getEdgeDistance(int u, int v) const {
     double distance = 0.0;
     if(u >= m_adj.size() || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
@@ -113,7 +123,8 @@ double Graph::getEdgeDistance(int u, int v) const {
     return distance;
 }
 
-void Graph::updateEdgeDistance(int u, int v, double distance) {
+bool GraphADJ::updateEdgeDistance(int u, int v, double distance) {
+    bool ok = false;
     if(u >= m_adj.size() || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
     }
@@ -126,13 +137,16 @@ void Graph::updateEdgeDistance(int u, int v, double distance) {
         if(anti_edge != m_adj[v].end()) {
             int anti_index = std::distance(m_adj[v].begin(), anti_edge);
             m_adj_distances[v][anti_index] = distance; // Assuming undirected graph, update both directions
+            ok = true;
         }
     } else {
         throw std::runtime_error("Edge not found");
     }
+    return ok;
 }
 
-void Graph::updateEdgeCapacity(int u, int v, double capacity) {
+bool GraphADJ::updateEdgeCapacity(int u, int v, double capacity) {
+    bool ok = false;
     if(u >= m_adj.size() || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
     }
@@ -145,33 +159,35 @@ void Graph::updateEdgeCapacity(int u, int v, double capacity) {
         auto anti_edge = std::find(m_adj[v].begin(), m_adj[v].end(), u);
         int anti_index = std::distance(m_adj[v].begin(), anti_edge);
         m_adj_capacities[v][anti_index] = capacity; // Assuming undirected graph, update both directions
+        ok = true;
     } else {
         throw std::runtime_error("Edge not found");
     }
+    return ok;
 }
 
-double Graph::getEdgeCapacity(int e) const {
+double GraphADJ::getEdgeCapacity(int e) const {
     auto [u, v] = edgeEndpoints(e);
     return getEdgeCapacity(u, v);
 }
 
-double Graph::getEdgeDistance(int e) const {
+double GraphADJ::getEdgeDistance(int e) const {
     auto [u, v] = edgeEndpoints(e);
     return getEdgeDistance(u, v);
 }
 
-void Graph::updateEdgeDistance(int e, double dist) {
+bool GraphADJ::updateEdgeDistance(int e, double dist) {
     auto [u, v] = edgeEndpoints(e);
-    updateEdgeDistance(u, v, dist);
+    return updateEdgeDistance(u, v, dist);
 }
 
 
-const double& Graph::getShortestDistance(int u, int v) const {
+const double& GraphADJ::getShortestDistance(int u, int v) const {
     return m_distanceMatrix[u][v];
 }
 
 // maybe think of a way better/faster way of computin the diameter
-const double Graph::GetDiameter() const {
+const double GraphADJ::GetDiameter() const {
     if (m_distanceMatrix.empty()) {
         throw std::runtime_error("Distance matrix is not initialized. Call createDistanceMatrix() first.");
     }
@@ -190,7 +206,7 @@ const double Graph::GetDiameter() const {
 
 
 
-std::vector<int> Graph::getShortestPath(int u, int v) const {
+std::vector<int> GraphADJ::getShortestPath(int u, int v) const {
     if (u < 0 || u >= m_adj.size() || v < 0 || v >= m_adj.size()) {
         throw std::out_of_range("Node index out of range");
     }
@@ -240,7 +256,7 @@ std::vector<int> Graph::getShortestPath(int u, int v) const {
     return path; // NRVO ensures no copy
 }
 
-void Graph::InitializeMemberByParser(int maxNodeIdSeen) {
+void GraphADJ::InitializeMemberByParser(int maxNodeIdSeen) {
     IGraph::n = maxNodeIdSeen + 1;
     IGraph::m = 0;
     m_adj.clear();
@@ -252,7 +268,7 @@ void Graph::InitializeMemberByParser(int maxNodeIdSeen) {
     std::iota(IGraph::vertices.begin(), IGraph::vertices.end(), 0); // fill vertices with 0, 1, ..., maxNodeIdSeen
 }
 
-void Graph::print() const {
+void GraphADJ::print() const {
     for (size_t i = 0; i < m_adj.size(); ++i) {
         std::cout << "Node " << i << ": ";
         for (size_t j = 0; j < m_adj[i].size(); ++j) {
@@ -263,11 +279,11 @@ void Graph::print() const {
 }
 
 
-bool Graph::IsDistanceMatrixComputed() const {
+bool GraphADJ::IsDistanceMatrixComputed() const {
     return !m_distanceMatrix.empty();
 }
 
-void Graph::createDistanceMatrix() {
+void GraphADJ::createDistanceMatrix() {
     int n = getNumNodes();
     const double INF = std::numeric_limits<double>::infinity();
 
@@ -312,7 +328,7 @@ void Graph::createDistanceMatrix() {
 }
 
 
-std::vector<int> Graph::getPrecomputedShortestPath(int u, int v) const {
+std::vector<int> GraphADJ::getPrecomputedShortestPath(int u, int v) const {
     std::vector<int> path;
     if (m_next.empty() || m_next[u][v] == -1) return path; // no path
     path.push_back(u);
@@ -324,7 +340,7 @@ std::vector<int> Graph::getPrecomputedShortestPath(int u, int v) const {
     return path;
 }
 
-void Graph::readGraph(const std::string &filename) {
+void GraphADJ::readGraph(const std::string &filename) {
     std::ifstream infile(filename);
     std::cout << "Reading graph from file: " << filename << std::endl;
     if (!infile) {

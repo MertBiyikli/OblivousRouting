@@ -78,7 +78,7 @@ void diagnose_csr_laplacian(
 
 
 
-void ElectricalFlowNaive::init(const Graph &g,bool debug,const std::string& solver_name) {
+void ElectricalFlowNaive::init(const GraphADJ &g,bool debug,const std::string& solver_name) {
     m_graph = g;
 
     n = m_graph.getNumNodes();
