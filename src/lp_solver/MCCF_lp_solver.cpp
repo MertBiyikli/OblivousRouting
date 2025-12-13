@@ -30,7 +30,7 @@ void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
 
 
 // C++
-void CMMF_Solver::CreateVariables(const GraphCSR &graph) {
+void CMMF_Solver::CreateVariables(const IGraph &graph) {
     // α: maximum congestion
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
 
@@ -50,7 +50,7 @@ void CMMF_Solver::CreateVariables(const GraphCSR &graph) {
     }
 }
 
-void CMMF_Solver::CreateConstraints(const GraphCSR &graph) {
+void CMMF_Solver::CreateConstraints(const IGraph &graph) {
     // 1) Flow conservation: for each commodity t and node v != t
     //    sum_out f(v->w, t) - sum_in f(w->v, t) = demand(v, t)
     for (int s = 0; s < n; ++s) {
@@ -109,7 +109,7 @@ void CMMF_Solver::SetObjective() {
 }
 
 
-void CMMF_Solver::PrintSolution(const GraphCSR &graph) {
+void CMMF_Solver::PrintSolution(const IGraph &graph) {
     // 1) Print the congestion factor
     std::cout << "α = " << alpha->solution_value() << "\n\n";
 
@@ -164,6 +164,22 @@ void CMMF_Solver::PrintSolution(const GraphCSR &graph) {
     }
 }
 
-void CMMF_Solver::storeFlow() {
-    return;
+void CMMF_Solver::storeFlow(EfficientRoutingTable& table) {
+    // store the flow for each commodity in f_st_e
+    for (int s = 0; s < n; s++) {
+        for (int t = 0; t < n; ++t) {
+            if (s == t) continue;
+            auto &edge2var = map_vertex2edge[{s, t}];
+            for (auto &kv : edge2var) {
+                int arcId    = kv.first;
+                MPVariable* v= kv.second;
+                double f     = v->solution_value();
+                if (std::abs(f) > EPS) {
+                    const auto &e = edges[arcId];
+                    int edge_id = g->getEdgeId(e.first, e.second);
+                    table.addFlow(edge_id, s, t, f);
+                }
+            }
+        }
+    }
 }

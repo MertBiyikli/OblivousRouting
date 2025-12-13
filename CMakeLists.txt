@@ -138,6 +138,31 @@ set(SRC_FILES
         experiments/performance/demands/GaussianModel.h
         experiments/performance/demands/UniformModel.cpp
         experiments/performance/demands/UniformModel.h
+
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.h
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.cpp
+
+        src/tree_based/frt/efficient_frt.h
+        src/tree_based/frt/efficient_frt.cpp
+
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.h
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.cpp
+
+        src/tree_based/ckr/ckr_partition.cpp
+        src/tree_based/ckr/ckr_partition.h
+
+        src/tree_based/ckr/ckr_tree_decomposer.cpp
+        src/tree_based/ckr/ckr_tree_decomposer.h
+
+        src/tree_based/ckr/utils/ultrametric_tree.h
+        src/tree_based/ckr/utils/ultrametric_tree.cpp
+
+        src/tree_based/raecke_linear_routing.h
+        src/tree_based/raecke_linear_routing.cpp
+
+
+        src/lp_solver/LPSolver.cpp
+        src/lp_solver/MCCF_lp_solver.cpp
 )
 
 

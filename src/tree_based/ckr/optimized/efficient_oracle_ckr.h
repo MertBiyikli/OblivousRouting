@@ -13,6 +13,7 @@
 #include "../utils/ultrametric_tree.h"
 #include "../ckr_tree_decomposer.h"
 #include "../utils/quotient_graph.h"
+#include "../../raecke_tree.h"
 #include "../../efficient_raecke_base.h"
 #include <chrono>
 
@@ -22,30 +23,36 @@
     * - use the precomputed MST as preprocessing
     * - embrace LCA DS for better performance and Quotient Graph Generating
  */
-class EfficientCKR : public EfficientRaeckeBase<std::shared_ptr<TreeNode>, std::vector<double>> {
+class EfficientCKR{
 public:
 
     std::vector<double> scales;
     MendelScaling::UltrametricTree ultrametric;
 
-
+    double diameter = 0.0;
     bool debug = false;
 
     std::vector<CKRLevel> m_levels;          // from finest (0) upward
 
-    std::shared_ptr<TreeNode> getTree() override;
+    std::shared_ptr<TreeNode> getTree();
+
+    EfficientCKR(IGraph& _g): g(_g) {
+    }
+
+    void updateEdgeDistances(const std::vector<double>& distances);
 private:
-    std::vector<int> build_ckr_level(const GraphCSR& g, double Delta, CKRLevel& L);
+    IGraph& g;
+    std::vector<int> build_ckr_level(const IGraph& g, double Delta, CKRLevel& L);
     void preprocess();
 
     void computeScales();
     void computeLevelPartition(
-        MendelScaling::QuotientLevel<GraphCSR>& Q,
+        MendelScaling::QuotientLevel& Q,
         double Delta,
         CKRLevel& L);
     void buildTreeLevel(
         std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
-        const MendelScaling::QuotientLevel<GraphCSR> &Q,
+        const MendelScaling::QuotientLevel &Q,
         const CKRLevel& L,
         const double Delta);
     void finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode>>& prev_nodes);

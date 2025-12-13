@@ -12,6 +12,100 @@
 
 constexpr static double EPS = 1e-16;
 
+
+
+
+
+struct EfficientRoutingTable {
+    // store the flows for each commodity
+    std::vector<std::vector<std::pair<int, int>>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
+    std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
+
+    void init(const int numEdges) {
+        adj_ids.assign(numEdges, {});
+        adj_vals.assign(numEdges, {});
+    }
+
+    std::vector<double> operator[](const int e) {
+        assert(e >= 0 && e < adj_vals.size());
+        return adj_vals[e];
+    }
+
+    void addFlow(const int e, const int s, const int t, const double fraction) {
+        assert(e >= 0 && e < adj_vals.size());
+        auto& ids  = adj_ids[e];
+        auto& vals = adj_vals[e];
+        int len = static_cast<int>(ids.size());
+
+        // first run linear scan
+        int linear_bound = 8;
+        for (int i = 0; i < std::min(len, linear_bound); ++i) {
+            if (ids[i] == std::make_pair(s, t)) {
+                vals[i] += fraction;
+                return;
+            }
+        }
+
+        // binary search to find s, t in ids
+        size_t lo = 0, hi = len;
+        while (lo < hi) {
+            const size_t mid = (lo + hi) >> 1;
+            const auto& mid_val = ids[mid];
+            if (mid_val < std::make_pair(s, t))
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+
+        if (lo < len && ids[lo] == std::make_pair(s, t)) {
+            vals[lo] += fraction;
+        } else {
+            // Usually append to the end and sort the ids w.r.t. to the terminals
+            if (lo == len) {
+                ids.emplace_back(s, t);
+                vals.push_back(fraction);
+            } else {
+                ids.insert(ids.begin() + static_cast<long>(lo), {s, t});
+                vals.insert(vals.begin() + static_cast<long>(lo), fraction);
+
+            }
+        }
+    }
+
+    double getFlow(int e , int s, int t) const {
+        assert(e >= 0 && e < adj_vals.size());
+        auto& ids  = adj_ids[e];
+        auto& vals = adj_vals[e];
+        int len = static_cast<int>(ids.size());
+
+
+        // first run linear scan
+        int linear_bound = 8;
+        for (int i = 0; i < std::min(len, linear_bound); ++i) {
+            if (ids[i] == std::make_pair(s, t)) {
+                return vals[i];
+            }
+        }
+
+        int lo = 0, hi = len;
+        while (lo < hi) {
+            const size_t mid = (lo + hi) >> 1;
+            const auto& mid_val = ids[mid];
+            if (mid_val < std::make_pair(s, t))
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+        if (lo < len && ids[lo] == std::make_pair(s, t)) {
+            return vals[lo];
+        } else {
+            return 0.0;
+        }
+    }
+
+};
+
+
 // For each edge e: list of (s → flow_e(s,x))
 struct LinearRoutingTable {
     int n = 0; // number of nodes
@@ -71,7 +165,7 @@ struct LinearRoutingTable {
     }
 
     // return flow for unit demand s→x on edge e, or 0 if not present
-    double getFlow(int e, int s) const {
+    const double getFlow(int e, int s) const {
         assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
         const auto& ids  = src_ids[e];
         const auto& vals = src_flows[e];
@@ -118,6 +212,16 @@ public:
     RoutingScheme& operator=(const RoutingScheme&) = delete;
 
     virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const = 0;
+
+    virtual double getMaxCongestion(const std::vector<double>& congestion) const {
+        double max_cong = 0.0;
+        for (const auto& cong : congestion) {
+            if (cong > max_cong) {
+                max_cong = cong;
+            }
+        }
+        return max_cong;
+    }
 };
 
 
@@ -127,6 +231,10 @@ public:
     LinearRoutingTable routing_table;
     int root_x = 0;
     explicit LinearRoutingScheme(const IGraph& _g, int _root_x, LinearRoutingTable&& table) : RoutingScheme(_g), root_x(_root_x), routing_table(std::move(table)) {
+    }
+
+    void initRoutingTable() {
+        routing_table.init(g);
     }
 
     // Since we store the oblivious routing as a linear routing table w.r.t. root_x,
@@ -210,98 +318,64 @@ public:
             }
         }
     }
+
 };
 
 
 
-
-struct EfficientRoutingTable {
-    // store the flows for each commodity
-    std::vector<std::vector<std::pair<int, int>>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
-    std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
-
-    void init(const int numEdges) {
-        adj_ids.resize(numEdges);
-        adj_vals.resize(numEdges);
+class NonLinearRoutingScheme : public RoutingScheme {
+public:
+    EfficientRoutingTable routing_table;
+    // to be implemented
+    explicit NonLinearRoutingScheme(const IGraph& _g, EfficientRoutingTable&& table) : RoutingScheme(_g), routing_table(std::move(table)) {
     }
 
-    std::vector<double> operator[](const int e) {
-        assert(e >= 0 && e < adj_vals.size());
-        return adj_vals[e];
+    double getFlow(int e, int s, int t) const{
+        int e_orig = e;
+        return routing_table.getFlow(e_orig, s, t);
     }
 
-    void addFraction(const int e, const int s, const int t, const double fraction) {
-        assert(e >= 0 && e < adj_vals.size());
-        auto& ids  = adj_ids[e];
-        auto& vals = adj_vals[e];
-        int len = static_cast<int>(ids.size());
-
-        // first run linear scan
-        int linear_bound = 8;
-        for (int i = 0; i < std::min(len, linear_bound); ++i) {
-            if (ids[i] == std::make_pair(s, t)) {
-                vals[i] += fraction;
-                return;
-            }
-        }
-
-        // binary search to find s, t in ids
-        size_t lo = 0, hi = len;
-        while (lo < hi) {
-            const size_t mid = (lo + hi) >> 1;
-            const auto& mid_val = ids[mid];
-            if (mid_val < std::make_pair(s, t))
-                lo = mid + 1;
-            else
-                hi = mid;
-        }
-
-        if (lo < len && ids[lo] == std::make_pair(s, t)) {
-            vals[lo] += fraction;
-        } else {
-            // Usually append to the end and sort the ids w.r.t. to the terminals
-            if (lo == len) {
-                ids.emplace_back(s, t);
-                vals.push_back(fraction);
-            } else {
-                ids.insert(ids.begin() + static_cast<long>(lo), {s, t});
-                vals.insert(vals.begin() + static_cast<long>(lo), fraction);
-
-            }
-        }
+    void addFlow(int e, int s, int t, double flow_sx) {
+        routing_table.addFlow(e, s,t, flow_sx);
     }
 
-    double getFraction(int e , int s, int t) {
-        assert(e >= 0 && e < adj_vals.size());
-        auto& ids  = adj_ids[e];
-        auto& vals = adj_vals[e];
-        int len = static_cast<int>(ids.size());
+    virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const {
+        const int m = g.getNumEdges(); // undirected edges
+        std::vector<double> total_flow;
+        total_flow.resize(m, 0.0);
 
-
-        // first run linear scan
-        int linear_bound = 8;
-        for (int i = 0; i < std::min(len, linear_bound); ++i) {
-            if (ids[i] == std::make_pair(s, t)) {
-                return vals[i];
+        for (int e = 0; e < m; ++e) {
+            double flow = 0.0;
+            // only consider sorted orientation for undirected flows
+            if (g.edgeEndpoints(e).first > g.edgeEndpoints(e).second) {
+                continue;
             }
+            for (int d = 0; d<demands.size(); ++d) {
+                const auto& [s, t] = demands.getDemandPair(d);
+                const double coeff = demands.getDemandValue(d);
+                if (coeff == 0.0) continue;
+
+                flow += coeff * std::abs(routing_table.getFlow(e, s, t));
+            }
+            total_flow[e] = flow;
         }
 
-        int lo = 0, hi = len;
-        while (lo < hi) {
-            const size_t mid = (lo + hi) >> 1;
-            const auto& mid_val = ids[mid];
-            if (mid_val < std::make_pair(s, t))
-                lo = mid + 1;
-            else
-                hi = mid;
-        }
-        if (lo < len && ids[lo] == std::make_pair(s, t)) {
-            return vals[lo];
-        } else {
-            return 0.0;
+        // now convert the directed flows into undirected congestion
+        congestion.assign(m, 0.0);
+        for (int e = 0; e<m; e++) {
+            if (g.edgeEndpoints(e).first < g.edgeEndpoints(e).second) {
+                congestion[e] += total_flow[e];
+                congestion[e] /= g.getEdgeCapacity(e);
+
+                int anti_e = g.getAntiEdge(e);
+                if (anti_e != INVALID_EDGE_ID) {
+                    congestion[anti_e] = congestion[e];
+                }
+            }
         }
     }
 
 };
+
 
 #endif //OBLIVIOUSROUTING_ROUTING_TABLE_H

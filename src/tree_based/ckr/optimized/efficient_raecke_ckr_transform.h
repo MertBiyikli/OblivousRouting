@@ -16,29 +16,33 @@
 /*
  * The efficient Raecke CKR Transform class should
  */
-class EfficientRaeckeCKRTransform {
+class EfficientRaeckeTransform {
 protected:
+    int root = 0;
     EfficientRoutingTable table;
-    const GraphCSR* g = nullptr;
-    std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>* iterations = nullptr;
+    IGraph& g;
+    std::vector<OracleTreeIteration>& iterations;
 public:
-    virtual ~EfficientRaeckeCKRTransform() = default;
+    virtual ~EfficientRaeckeTransform() = default;
 
-    void init(IGraph& graph, std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>& _iters);
+    EfficientRaeckeTransform(IGraph& _g, std::vector<OracleTreeIteration>& _iter):g(_g), iterations(_iter) {
+        table.init((g.getNumEdges()));
+        linear_tb.init(g);
+    };
 
+    LinearRoutingTable linear_tb;
 
     void transform();
-    virtual EfficientRoutingTable& addTree(OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >& iteration);
+    virtual void addTree(OracleTreeIteration &iteration);
 
 
     const EfficientRoutingTable& getRoutingTable() const;
 
 private:
-    void setGraph(GraphCSR& graph);
-    void setIterations(std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>& iterations);
-    void distributeDemands(const std::shared_ptr<TreeNode> &node, double lambda, const std::vector<double>& distance);
 
-    std::set<int> collectSubtreeVertices(const std::shared_ptr<TreeNode>& node);
+    void distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance);
+
+    std::set<int> collectSubtreeVertices(const std::shared_ptr<ITreeNode> &node);
     void normalizeOldSolutionBasedOnNewLambda(double lambda);
 
     void removeCycles();

@@ -10,15 +10,58 @@
 #include <set>
 #include <algorithm>
 
-class FRT_Node {
+#include "../../raecke_oracle_iteration.h"
+
+class EfficientFRTTreeNode : public ITreeNode {
+public:
+    int center = -1;
+    int id = -1;
+    std::vector<int> members; // original graph nodes
+    std::weak_ptr<EfficientFRTTreeNode> parent;
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> children;
+
+    virtual std::shared_ptr<ITreeNode> getParent() const override {
+        return parent.lock();
+    }
+
+    std::vector<std::shared_ptr<ITreeNode>> getChildren() override {
+        std::vector<std::shared_ptr<ITreeNode>> child_ptrs;
+        for (std::shared_ptr<EfficientFRTTreeNode>& child : children) {
+            child_ptrs.push_back(child);
+        }
+        return child_ptrs;
+    }
+
+    const std::vector<int> &getMembers() const override {
+        return members;
+    }
+
+};
+/*
+class FRT_Node :public ITreeNode{
 public:
     int id;
     std::weak_ptr<FRT_Node> parent;
-    std::vector<std::shared_ptr<FRT_Node>> children;
+    std::vector<std::shared_ptr<FRT_Node>> children_;
     std::set<int> vertices;
     int center;
 
     FRT_Node() : id(-1), center(-1) {}
+
+    ITreeNode* getParent() const override {
+        return parent.lock().get();
+    }
+    const std::vector<int>& getMembers() const override {
+        return std::vector<int>(vertices.begin(), vertices.end());
+    }
+
+     std::vector<ITreeNode*> getChildren() override {
+        std::vector<ITreeNode*> child_ptrs;
+        for (std::shared_ptr<FRT_Node>& child : children_) {
+            child_ptrs.push_back(child.get());
+        }
+        return child_ptrs;
+    }
 
     void addVertex(int vertex) {
         vertices.insert(vertex);
@@ -44,20 +87,16 @@ public:
         return center;
     }
 
-    std::shared_ptr<FRT_Node> getParent() const {
-        return parent.lock();
-    }
-
     void setParent(std::shared_ptr<FRT_Node> p) {
         parent = p;
     }
 
     void addChild(std::shared_ptr<FRT_Node> child) {
-        children.push_back(child);
+        children_.push_back(child);
     }
 
     const std::vector<std::shared_ptr<FRT_Node>>& getChildren() const {
-        return children;
+        return children_;
     }
 
     std::string toString(int levels = 0) const {
@@ -68,7 +107,7 @@ public:
         }
         result += "\n";
 
-        for (const auto& child : children) {
+        for (const auto& child : children_) {
             result += child->toString(levels + 1);
         }
 
@@ -187,7 +226,7 @@ public:
             }
             return result;
         }
-};
+};*/
 
 
 #endif //OBLIVIOUSROUTING_NODE_H

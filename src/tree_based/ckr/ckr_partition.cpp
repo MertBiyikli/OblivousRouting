@@ -200,7 +200,7 @@ std::vector<int> CKRPartition::computePartition(const std::vector<int>& X_input,
 
 
  // namespace MendelScaling
-std::vector<int> CKRPartition::computePartition(const GraphCSR& g, const std::vector<int>& X_input, const double& Delta, CKRLevel& L) {
+std::vector<int> CKRPartition::computePartition(const IGraph& g, const std::vector<int>& X_input, const double& Delta, CKRLevel& L) {
     const size_t n = g.getNumNodes();
 
 

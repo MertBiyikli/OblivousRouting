@@ -46,7 +46,7 @@ MSTTree RaeckeMST::getTree(GraphADJ &g) {
     computeNewDistances(g);
     mst.setGraph(g);
     std::vector<std::pair<int,int>> mst_edges = mst.build_mst();
-    MSTTree t = mst.build_tree(g, mst_edges, 0);
+    MSTTree t = mst.build_tree(mst_edges, 0);
     return t;
 }
 

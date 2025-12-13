@@ -24,7 +24,7 @@ public:
 
     std::vector<int> computePartition(const std::vector<int>& _X, const double& delta);
     std::vector<int> computePartition(const std::vector<int>& X, const double& delta, CKRLevel& L);
-    std::vector<int> computePartition(const GraphCSR& g, const std::vector<int>& X, const double& delta, CKRLevel& L);
+    std::vector<int> computePartition(const IGraph& g, const std::vector<int>& X, const double& delta, CKRLevel& L);
 };
 
 #endif //OBLIVIOUSROUTING_CKR_PARTITION_H

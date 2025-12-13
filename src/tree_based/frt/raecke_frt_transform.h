@@ -71,7 +71,7 @@ public:
         // BFS on decomposition tree
         std::queue<std::shared_ptr<FRT_Node>> q;
         for (auto& c : t.GetRoot()->getChildren())
-            q.push(c);
+            q.<push(c);
 
         while (!q.empty()) {
             auto node   = q.front(); q.pop();

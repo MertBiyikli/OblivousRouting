@@ -68,6 +68,7 @@ public:
     };
 
     virtual NeighborRange neighbors(int node) const = 0;
+    virtual int getNumDirectedEdges() const = 0;
 
     // node index based access
     virtual double getEdgeCapacity(int u, int v) const = 0;
@@ -86,6 +87,14 @@ public:
     virtual std::vector<int> getShortestPath(int source, int target) const = 0;
     virtual const double GetDiameter() const = 0;
 
+    double getShortestPathDistance(int s, int t) const {
+        auto path = getShortestPath(s, t);
+        double total_dist = 0.0;
+        for (size_t i = 0; i + 1 < path.size(); ++i) {
+            total_dist += getEdgeDistance(path[i], path[i + 1]);
+        }
+        return total_dist;
+    }
 /*
  *The following methods are for the parameterized shortest path computations.
  *These methods can be overridden in derived classes if needed.

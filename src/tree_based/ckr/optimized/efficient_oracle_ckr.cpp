@@ -8,7 +8,7 @@
 #include "../../random_mst/mst.h"
 #include <cassert>
 #include <random>
-
+#include "../../raecke_tree.h"
 #include "../../../datastructures/GraphCSR.h"
 
 
@@ -22,8 +22,8 @@
  */
 void EfficientCKR::preprocess() {
     // -- compute MST using Kruskals Algo
-    RandomMST mst_oracle;
-    mst_oracle.setGraph(*g_ptr);
+    RandomMST mst_oracle(g);
+    //mst_oracle.setGraph(g);
     auto mst = mst_oracle.build_mst();
 
 
@@ -31,10 +31,10 @@ void EfficientCKR::preprocess() {
     std::vector<double> mst_weights;
     mst_weights.reserve(mst.size());
     for (auto [u,v] : mst) {
-        mst_weights.push_back(g_ptr->getEdgeDistance(u,v));
+        mst_weights.push_back(g.getEdgeDistance(u,v));
     }
 
-    ultrametric.buildFromMST(g_ptr->getNumNodes(), mst, mst_weights);
+    ultrametric.buildFromMST(g.getNumNodes(), mst, mst_weights);
 
     assert(ultrametric.root != -1);
 }
@@ -51,11 +51,11 @@ void EfficientCKR::preprocess() {
  * 2) Instead of naive O(diameter) scales, we use logarithmic number of scales based on Mendel and Schwob's theoretical results.
  */
 std::shared_ptr<TreeNode> EfficientCKR::getTree() {
-    if (g_ptr == nullptr)
-        throw std::runtime_error("CKR: graph pointer is null");
 
-    const int n = g_ptr->getNumNodes();
+    const int n = g.getNumNodes();
     if (n == 0) return nullptr;
+
+    diameter = g.GetDiameter();
 
     m_levels.clear();
     // --- (0) preprocess ultrametric from MST ---
@@ -76,16 +76,16 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
     // ---- (3) build hierarchical levels ----
     std::shared_ptr<TreeNode> root;
 
-    MendelScaling::QuotientConstruction<GraphCSR> qc;
-    qc.preprocessEdges(dynamic_cast<const GraphCSR &>(*g_ptr));
+    MendelScaling::QuotientConstruction qc;
+    qc.preprocessEdges(g);
 
 
     // ---- (4) for each scale, build the CKR level and link to previous level ----
     for (double Delta : scales) {
-        MendelScaling::QuotientLevel<GraphCSR> Q;
+        MendelScaling::QuotientLevel Q;
 
-        Q = qc.constructQuotientGraph(ultrametric, Delta,dynamic_cast<GraphCSR &>(*g_ptr));
-        if (Q.Gq.getNumNodes() <= 1) {
+        Q = qc.constructQuotientGraph(ultrametric, Delta,g);
+        if (Q.Gq->getNumNodes() <= 1) {
             // if single cluster: make that the root once at the end
             continue;
         }
@@ -106,12 +106,12 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
 
 
 void EfficientCKR::computeScales() {
-    const int n = g_ptr->getNumNodes();
+    const int n = g.getNumNodes();
     scales.clear();
     if (n == 0) return;
     double min_weight = std::numeric_limits<double>::max();
-    for (int e = 0; e<g_ptr->getNumEdges(); e++) {
-        double w = g_ptr->getEdgeDistance(e);
+    for (int e = 0; e< g.getNumEdges(); e++) {
+        double w = g.getEdgeDistance(e);
         if (w < min_weight) {
             min_weight = w;
         }
@@ -130,17 +130,16 @@ void EfficientCKR::computeScales() {
 }
 
 
-void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel<GraphCSR> &Q, double Delta, CKRLevel &L) {
-
+void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel &Q, double Delta, CKRLevel &L) {
     auto start_time = std::chrono::high_resolution_clock::now();
-    build_ckr_level(Q.Gq, Delta, L);
+    build_ckr_level(*Q.Gq, Delta, L);
     auto end_time = std::chrono::high_resolution_clock::now();
-    this->pure_oracle_running_times.emplace_back(std::chrono::duration<double, std::milli>(end_time - start_time).count());
+    //this->pure_oracle_running_times.emplace_back(std::chrono::duration<double, std::milli>(end_time - start_time).count());
 
 }
 
 
-void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev_nodes, const MendelScaling::QuotientLevel<GraphCSR> &Q, const CKRLevel &L, const double Delta) {
+void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev_nodes, const MendelScaling::QuotientLevel &Q, const CKRLevel &L, const double Delta) {
     // parent nodes at this Δ-level
     std::unordered_map<int, std::shared_ptr<TreeNode>> center_to_parent;
     center_to_parent.reserve(L.centers.size()*2);
@@ -186,15 +185,13 @@ void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev
 
 
 void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode> > &prev_nodes) {
-    if (!g_ptr) {
-        return;
-    }
+
     // Final root: if multiple parents remain, wrap them under one root; else take the only one.
     if (prev_nodes.empty()) {
         // Degenerate case: all collapsed early → build a single root that contains all vertices
         root = std::make_shared< TreeNode>();
         root->id = 0;
-        root->members.resize(g_ptr->getNumNodes());
+        root->members.resize(g.getNumNodes());
         std::iota(root->members.begin(), root->members.end(), 0);
     } else if (prev_nodes.size() == 1) {
         root = prev_nodes.front();
@@ -213,7 +210,7 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
 
 
 
-std::vector<int> EfficientCKR::build_ckr_level(const GraphCSR &g, double Delta, CKRLevel &L) {
+std::vector<int> EfficientCKR::build_ckr_level(const IGraph &g, double Delta, CKRLevel &L) {
     CKRPartition ckr;
 
     const int n = g.getNumNodes();
@@ -225,138 +222,8 @@ std::vector<int> EfficientCKR::build_ckr_level(const GraphCSR &g, double Delta, 
 }
 
 
-/*
-
-void EfficientCKR::computeRLoads(std::shared_ptr<TreeNode> t) {
-        assert(t != nullptr);
-        assert(g_ptr != nullptr);
-        // clear current rloads
-
-    std::fill(rload_current.begin(), rload_current.end(), 0.0);
-        // --- 2️⃣ BFS or DFS traversal (we'll use queue for clarity) ---
-        // iterate through the tree and store the rloads into the adjacency list
-        std::queue<std::shared_ptr<TreeNode>> q;
-        q.push(t);
-        while (!q.empty()) {
-            std::shared_ptr<TreeNode> node = q.front();
-            q.pop();
-
-            // --- 3️⃣ Process each child: represents a cut S_child | V\S_child ---
-            for (auto child : node->children) {
-                // Add child to traversal queue
-                q.push(child);
-
-
-                // if node has the same nodes as child, skip
-                if (node->members.size() == child->members.size()) {
-                    continue;
-                }
-                const std::vector<int>& clusterVertices = child->members;
-                if (clusterVertices.empty()) continue;
-
-                // Build set for fast lookup
-                std::vector<char> S(g_ptr->getNumNodes(), 0);
-                for (int v : clusterVertices) S[v] = 1;
-
-
-                // --- 4️⃣ Compute total cut capacity of this child cluster ---
-                double cut = 0.0;
-                for (int u : clusterVertices) {
-                    for (auto&  v : g_ptr->neighbors(u)) {
-                        if (!S[v])  // boundary edge
-                            cut += g_ptr->getEdgeCapacity(u, v);
-                    }
-                }
-                if (cut <= 1e-12) cut = 1e-12;  // avoid zero-division
-
-                // --- 5️⃣ Choose representative vertices (simple heuristic) ---
-                int repParent = node->members.empty() ? clusterVertices[0] : node->members[0];
-                int repChild  = clusterVertices[0];
-
-                // --- 6️⃣ Compute shortest path between parent and child reps ---
-                auto path = g_ptr->getShortestPath(repParent, repChild);
-                if (path.size() < 2) continue;
-
-                // --- 7️⃣ Update edge r-loads along that path ---
-                for (size_t i = 0; i + 1 < path.size(); ++i) {
-                    int u = path[i];
-                    int v = path[i + 1];
-
-                    int e = g_ptr->getEdgeId(u, v);
-                    double rload = rload_current[e];
-                    double cap = g_ptr->getEdgeCapacity(u, v);
-                    if (cap <= 1e-12) cap = 1e-12;
-
-                    rload += cut / cap;
-                    rload_current[e] = rload;
-
-                    int anti_e = g_ptr->getEdgeId(v, u);
-                    rload_current[anti_e] = rload;
-
-                }
-            }
-        }
-    }
-
-
-
-
-double EfficientCKR::getMaxRload() const {
-    assert(rload_current.size() > 0);
-
-    double max_load = 0.0;
-    for (const auto& load : rload_current) {
-        if (load > max_load) {
-            max_load = load;
-        }
-    }
-    return max_load;
-}
-
-
-void EfficientCKR::computeNewDistances(double lambda) {
-    assert(g_ptr != nullptr);
-    constexpr double EPS = 1e-12;
-
-    addCurrentLoad(lambda);
-
-    double max_r = 0.0;
-    for (auto& r : rload_total) max_r = std::max(max_r, r);
-
-    double sumExp = 0.0;
-    for (auto& r : rload_total) sumExp += std::exp(r - max_r);
-    if (sumExp <= 0.0 || !std::isfinite(sumExp)) sumExp = 1.0;
-
-    // 3) distances
-    double min_d = std::numeric_limits<double>::infinity();
-    std::vector<double> newDist;
-    newDist.reserve(rload_total.size());
-
-    for (int e = 0; e < g_ptr->getNumEdges(); ++e) {
-        double r = rload_total[e];
-
-        double cap = g_ptr->getEdgeCapacity(e);
-        if (cap < EPS) cap = EPS;
-        double d = (std::exp(r - max_r) / cap) / sumExp;
-        newDist[e] = d;
-        if (d < min_d) min_d = d;
-    }
-    if (min_d < EPS) min_d = EPS;
-
-    for (int e = 0; e < g_ptr->getNumEdges(); ++e) {
-        double d = newDist[e];
-        double norm = d / min_d;
-        if (norm < 1.0) norm = 1.0;
-        g_ptr->updateEdgeDistance(e, norm);
-        //g.updateEdgeDistance(b,a, norm); // mirror, if your graph stores both arcs
-    }
-
-}
-
-void EfficientCKR::addCurrentLoad(double lambda) {
-    assert(g_ptr != nullptr);
-    for (int e = 0; e < g_ptr->getNumEdges(); ++e) {
-        rload_total[e] += rload_current[e] * lambda;
+void EfficientCKR::updateEdgeDistances(const std::vector<double> &distances) {
+    for (int e = 0; e < g.getNumEdges(); ++e) {
+        g.updateEdgeDistance(e, distances[e]);
     }
 }
-*/

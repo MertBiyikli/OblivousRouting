@@ -27,7 +27,7 @@ class LinearObliviousSolverBase : public ObliviousRoutingSolver {
 public:
 
     // 🔧 FIXED: constructor correctly assigns root
-    LinearObliviousSolverBase(const IGraph& _g, int _root)
+    LinearObliviousSolverBase(IGraph& _g, int _root)
         : graph(_g), root(_root) {}
 
     // 🔧 FIXED: pass table into LinearRoutingScheme
@@ -45,7 +45,7 @@ public:
     }
 
 protected:
-    const IGraph& graph;
+    IGraph& graph;
     int root;
 
     // Subclasses implement this:

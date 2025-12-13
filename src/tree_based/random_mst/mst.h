@@ -14,6 +14,30 @@
 #include <limits>
 #include "../../datastructures/GraphADJ.h"
 #include "../../datastructures/GraphCSR.h"
+#include "../raecke_tree.h"
+
+
+class MSTTreeNode : public ITreeNode {
+public:
+    int id = -1;
+    std::weak_ptr<MSTTreeNode> parent;
+    std::vector<std::shared_ptr<MSTTreeNode>> children;
+    std::vector<int> members; // original graph nodes
+    virtual std::shared_ptr<ITreeNode> getParent() const override {
+        return parent.lock();
+    }
+    std::vector<std::shared_ptr<ITreeNode>> getChildren() override {
+        std::vector<std::shared_ptr<ITreeNode>> child_ptrs;
+        for (std::shared_ptr<MSTTreeNode>& child : children) {
+            child_ptrs.push_back(child);
+        }
+        return child_ptrs;
+    }
+    const std::vector<int>& getMembers() const override {
+        return members;
+    }
+
+};
 
 
 class GraphCSR;
@@ -45,7 +69,11 @@ struct MSTTree {
 // ---------- Random MST oracle ----------
 class RandomMST {
 public:
-    RandomMST() = default;
+    RandomMST(IGraph& g) : graph(g) {
+        setGraph(g);
+    }
+    IGraph& graph;
+
 
     int n;
     std::vector<std::pair<int,int>> edges;
@@ -61,28 +89,6 @@ public:
 
         n = g.getNumNodes();
 
-        for (int u : g.getVertices())
-            for (int v : g.neighbors(u))
-                if (u < v) edges.emplace_back(u,v);
-    }
-    void setGraph(const GraphADJ& g) {
-
-        // clear all first
-        edges.clear();
-        keyed.clear();
-        weights.clear();
-
-        n = g.getNumNodes();
-
-        for (int u : g.getVertices())
-            for (int v : g.neighbors(u))
-                if (u < v) edges.emplace_back(u,v);
-    }
-
-    void setGraph(const GraphCSR& g) {
-        n = g.getNumNodes();
-
-        keyed.reserve(g.getNumEdges());
         for (int u = 0; u < n; ++u) {
             for (int v : g.neighbors(u)) {
                 edges.emplace_back(u, v);
@@ -92,6 +98,15 @@ public:
     }
 
 
+void updateEdgeDistances(const std::vector<double>& distances) {
+        keyed.clear();
+        for (const auto& [u,v] : edges) {
+            int e = graph.getEdgeId(u,v);
+            double w = distances[e];
+            keyed.emplace_back(w, u, v);
+            this->graph.updateEdgeDistance(e, w);
+        }
+    }
 
     // Build a random MST edge set using Kruskal with random priorities
     std::vector<std::pair<int,int>> build_mst() {
@@ -119,8 +134,7 @@ public:
 
 
     // Turn MST edges into a rooted MSTTree (root at 0 by default)
-    MSTTree build_tree(const GraphADJ& g,
-                              const std::vector<std::pair<int,int>>& mst_edges,
+    MSTTree build_tree(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
         adj = std::vector<std::vector<int>>(n);
         for (auto [u,v] : mst_edges) {
@@ -146,6 +160,48 @@ public:
         }
         MSTTree t = {root, parent, children};
         return t;
+    }
+
+    std::shared_ptr<MSTTreeNode> buildRaeckeTree(const std::vector<std::pair<int,int>>& mst_edges,
+                              int root=0) {
+        auto mst_tree = build_tree(mst_edges, root);
+        std::vector<std::shared_ptr<MSTTreeNode>> cluster(n);
+        for (int v = 0; v < n; ++v) {
+            cluster[v] = std::make_shared<MSTTreeNode>();
+            cluster[v]->id = v;
+            cluster[v]->members = {v};
+        }
+
+        // build Raecke Tree given the original MST tree
+        DSU dsu(n);
+
+        for (auto& [w, u, v] : keyed) {
+            // if ( u >= v) continue; // process each edge once
+            int pu = dsu.find(u);
+            int pv = dsu.find(v);
+            if (pu == pv) continue;
+
+            auto parent = std::make_shared<MSTTreeNode>();
+            parent->children = {cluster[pu], cluster[pv]};
+            cluster[pu]->parent = parent;
+            cluster[pv]->parent = parent;
+
+            // merge members
+            parent->members = cluster[pu]->members;
+            parent->members.insert(
+                parent->members.end(),
+                cluster[pv]->members.begin(),
+                cluster[pv]->members.end()
+            );
+
+            dsu.unite(pu, pv);
+            int new_rep = dsu.find(pu);
+            cluster[new_rep] = parent;
+        }
+        int rep = dsu.find(root);
+        assert(cluster[dsu.find(root)] != nullptr);
+        assert(cluster[dsu.find(root)]->children.size() > 0);
+        return cluster[rep];
     }
 
 

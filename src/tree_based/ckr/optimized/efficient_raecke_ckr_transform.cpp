@@ -10,81 +10,69 @@
 /*
  * EfficientCKRTransform methods
  */
-void EfficientRaeckeCKRTransform::init(IGraph& graph, std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>& _iters) {
-        auto& g_csr = dynamic_cast<GraphCSR&>(graph);
-        setGraph(g_csr);
-        setIterations(_iters);
-    }
 
 
-void EfficientRaeckeCKRTransform::transform() {
-    for (auto& iteration : *iterations) {
+
+void EfficientRaeckeTransform::transform() {
+    for (auto& iteration : iterations) {
         addTree(iteration);
     }
 }
 
 
-void EfficientRaeckeCKRTransform::setGraph(GraphCSR& graph) {
-    g = &graph;
-    table.init(g->getNumEdges());
-}
-
-void EfficientRaeckeCKRTransform::setIterations(std::vector<OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >>& iterations) {
-        this->iterations = &iterations;
-}
-
-EfficientRoutingTable& EfficientRaeckeCKRTransform::addTree(OracleTreeIteration<std::shared_ptr<TreeNode>, std::vector<double> >& iteration) {
+void EfficientRaeckeTransform::addTree(OracleTreeIteration& iteration) {
     distributeDemands(iteration.getTree(), iteration.getLambda(), iteration.getDistance());
-    normalizeOldSolutionBasedOnNewLambda(iteration.getLambda());
     removeCycles();
-    return table;
 }
 
 
-const EfficientRoutingTable& EfficientRaeckeCKRTransform::getRoutingTable() const {
+const EfficientRoutingTable& EfficientRaeckeTransform::getRoutingTable() const {
     return table;
 }
 
-void EfficientRaeckeCKRTransform::distributeDemands(const std::shared_ptr<TreeNode> &node, double lambda, const std::vector<double>& distance) {
+void EfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) {
     if (!node) return;
 
-    for (const auto& child : node->children) {
+    for (const auto& child : node->getChildren()) {
+        if (child->getMembers().size() == node->getMembers().size()) {
+            distributeDemands(child, lambda, distance);
+            continue;
+        }
         std::set<int> A = collectSubtreeVertices(child);
         std::set<int> B;
-        for (int v : g->getVertices()) {
+        for (int v : g.getVertices()) {
             if (!A.count(v)) B.insert(v);
         }
 
         for (int src : A) {
             for (int dst : B) {
                 if (src == dst) continue;
-                auto path = g->getShortestPath(src, dst, distance);
+                auto path = g.getShortestPath(src, dst, distance);
 
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
                     std::pair<int, int> arc{path[i], path[i+1]};
 
-                    int edgeId = g->getEdgeId(arc.first, arc.second);
-                    int antiEdgeId = g->getEdgeId(arc.second, arc.first);
-                    table.addFraction(edgeId, src, dst, lambda);
-                    table.addFraction(antiEdgeId, dst, src, lambda);
+                    int edgeId = g.getEdgeId(arc.first, arc.second);
+                    int antiEdgeId = g.getEdgeId(arc.second, arc.first);
+                    table.addFlow(edgeId, src, dst, lambda);
+                    table.addFlow(antiEdgeId, dst, src, lambda);
                 }
             }
         }
-
         distributeDemands(child, lambda, distance);
     }
 }
 
-std::set<int> EfficientRaeckeCKRTransform::collectSubtreeVertices(const std::shared_ptr<TreeNode>& node) {
-    std::set<int> result(node->members.begin(), node->members.end());
-    for (const auto& child : node->children) {
+std::set<int> EfficientRaeckeTransform::collectSubtreeVertices(const std::shared_ptr<ITreeNode> &node) {
+    std::set<int> result(node->getMembers().begin(), node->getMembers().end());
+    for (const auto& child : node->getChildren()) {
         auto sub = collectSubtreeVertices(child);
         result.insert(sub.begin(), sub.end());
     }
     return result;
 }
 
-void EfficientRaeckeCKRTransform::normalizeOldSolutionBasedOnNewLambda(double lambda) {
+void EfficientRaeckeTransform::normalizeOldSolutionBasedOnNewLambda(double lambda) {
     for (auto& vals : table.adj_vals) {
         for (auto& frac : vals) {
             frac *= (1.0 - lambda);
@@ -93,7 +81,7 @@ void EfficientRaeckeCKRTransform::normalizeOldSolutionBasedOnNewLambda(double la
 }
 
 
-void EfficientRaeckeCKRTransform::removeCycles() {
+void EfficientRaeckeTransform::removeCycles() {
     std::set<std::pair<int, int>> all;
     for (int e = 0; e<table.adj_ids.size(); e++) {
         const auto& ids  = table.adj_ids[e];
@@ -109,13 +97,13 @@ void EfficientRaeckeCKRTransform::removeCycles() {
 
             double minF = std::numeric_limits<double>::infinity();
             for (auto e : cycle) {
-                int e_id = g->getEdgeId(e.first, e.second);
-                double frac = table.getFraction(e_id, d.first, d.second);
+                int e_id = g.getEdgeId(e.first, e.second);
+                double frac = table.getFlow(e_id, d.first, d.second);
                 minF = std::min(minF,frac);
             }
 
             for (auto e : cycle) {
-                int e_id = g->getEdgeId(e.first, e.second);
+                int e_id = g.getEdgeId(e.first, e.second);
                 auto& dmap = table.adj_vals[e_id];
                 // find index of (d.first, d.second) in table.adj_ids[e_id]
                 const auto& ids = table.adj_ids[e_id];
@@ -141,7 +129,7 @@ void EfficientRaeckeCKRTransform::removeCycles() {
                 }
 
                 // also erase for the anti edge
-                int anti_e_id = g->getEdgeId(e.second, e.first);
+                int anti_e_id = g.getEdgeId(e.second, e.first);
                 auto& rmap = table.adj_vals[anti_e_id];
                 const auto& rids = table.adj_ids[anti_e_id];
                 size_t rlen = rids.size();
@@ -170,7 +158,7 @@ void EfficientRaeckeCKRTransform::removeCycles() {
     }
 }
 
-std::optional<std::vector<std::pair<int, int>>> EfficientRaeckeCKRTransform::findCycleRec(
+std::optional<std::vector<std::pair<int, int>>> EfficientRaeckeTransform::findCycleRec(
         int u,
         std::set<int>& analyzed,
         std::vector<int>& stack,
@@ -183,9 +171,9 @@ std::optional<std::vector<std::pair<int, int>>> EfficientRaeckeCKRTransform::fin
     analyzed.insert(u);
     stack.push_back(u);
 
-    for (int w : g->neighbors(u)) {
-        int e_id = g->getEdgeId(u, w);
-        double frac = table.getFraction(e_id, d.first, d.second);
+    for (int w : g.neighbors(u)) {
+        int e_id = g.getEdgeId(u, w);
+        double frac = table.getFlow(e_id, d.first, d.second);
         if (frac <= 0) continue;
 
         if (auto child = findCycleRec(w, analyzed, stack, d)) {
@@ -199,9 +187,9 @@ std::optional<std::vector<std::pair<int, int>>> EfficientRaeckeCKRTransform::fin
     return std::nullopt;
 }
 
-std::vector<std::pair<int, int>> EfficientRaeckeCKRTransform::findCycle(const std::pair<int, int>& d) {
+std::vector<std::pair<int, int>> EfficientRaeckeTransform::findCycle(const std::pair<int, int>& d) {
     std::set<int> analyzed;
-    for (int v : g->getVertices()) {
+    for (int v : g.getVertices()) {
         if (analyzed.count(v)) continue;
         std::vector<int> stack;
         if (auto maybe = findCycleRec(v, analyzed, stack, d))

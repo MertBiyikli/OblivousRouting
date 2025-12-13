@@ -9,7 +9,8 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
-
+#include "../../raecke_oracle_iteration.h"
+/*
 class FRT_Tree {
     std::shared_ptr<FRT_Node> root;
     std::map<int, std::vector<std::shared_ptr<FRT_Node>>> idLayer2nodes;
@@ -50,6 +51,7 @@ public:
     }
 
     void print() {
+        return;
         // print the tree in a BFS fashion starting from the root
         if (!root) {
             std::cout << "Tree is empty." << std::endl;
@@ -77,8 +79,9 @@ public:
             }
             std::cout << std::endl;
 
+            // TODO: FIX THIS
             for (const auto& child : node->getChildren()) {
-                q.push(child);
+                //q.push(dynamic_cast<FRT_Node>(child));
             }
         }
     }
@@ -248,7 +251,7 @@ public:
         file.close();
     }
 
-};
+};*/
 
 
 

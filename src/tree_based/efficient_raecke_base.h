@@ -22,7 +22,7 @@ public:
     std::vector<double> rload_current;
     std::vector<double> rload_total;
 
-    std::vector<OracleTreeIteration<Tree, DistanceType>> iteration;
+    std::vector<OracleTreeIteration> iteration;
     std::vector<double> oracle_running_times;
     std::vector<double> pure_oracle_running_times;
 
@@ -61,10 +61,8 @@ public:
         lambdaSum += lambda;
         computeNewDistances(lambda);
 
-        OracleTreeIteration<Tree, DistanceType> iter;
-        iter.setTree(t);
-        iter.setLambda(lambda);
-        iter.setDistance(g_ptr->getDistanceVector<DistanceType>());
+        OracleTreeIteration iter(lambda, t, g_ptr->getDistanceVector<DistanceType>());
+
         iteration.push_back(iter);
 
         return lambda;
@@ -226,7 +224,7 @@ public:
     }
 
 
-    std::vector<OracleTreeIteration<Tree, DistanceType>>& getIterations() {
+    std::vector<OracleTreeIteration>& getIterations() {
         return iteration;
     }
 

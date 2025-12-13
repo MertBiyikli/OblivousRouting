@@ -7,7 +7,7 @@
 using namespace operations_research;
 
 
-void LPSolver::CreateVariables(const GraphCSR &graph) {
+void LPSolver::CreateVariables(const IGraph &graph) {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
     if (!solver) throw std::runtime_error("GLOP solver unavailable.");
 
@@ -66,7 +66,7 @@ void LPSolver::CreateVariables(const GraphCSR &graph) {
 
 }
 
-void LPSolver::CreateConstraints(const GraphCSR &graph) {
+void LPSolver::CreateConstraints(const IGraph &graph) {
     // forall links l: sum_{m \in E} of cap(m)*π(l, m) <= alpha
     for(int id = 0; id<edges.size(); id++) {
         if ( edges[id].first > edges[id].second) continue;
@@ -232,7 +232,7 @@ void LPSolver::SetObjective()
 }
 
 
-double LPSolver::getMaximumCongestion(const GraphCSR& graph) const {
+double LPSolver::getMaximumCongestion(const IGraph& graph) const {
     double max = 0;
     // === Print the solution ===
     std::unordered_map<int, double> total_flow_per_arc;
@@ -274,7 +274,7 @@ double LPSolver::getMaximumCongestion(const GraphCSR& graph) const {
 }
 
 
-void LPSolver::GetRoutingTable(const GraphCSR& graph) {
+void LPSolver::GetRoutingTable(const IGraph& graph) {
     std::cout << "\n=== Oblivious Routing Table ===\n";
 
     for (const auto& [key, var] : m_var_f_e_) {
@@ -293,7 +293,7 @@ void LPSolver::GetRoutingTable(const GraphCSR& graph) {
     }
 }
 
-void LPSolver::PrintSolution(const GraphCSR &graph) {
+void LPSolver::PrintSolution(const IGraph &graph) {
 
     double max_cong(0);
     // === Print the solution ===
@@ -334,7 +334,7 @@ void LPSolver::PrintSolution(const GraphCSR &graph) {
     PrintCommoditiesPerEdge(graph);
 }
 
-void LPSolver::PrintCommoditiesPerEdge(const GraphCSR& graph) {
+void LPSolver::PrintCommoditiesPerEdge(const IGraph& graph) {
     std::cout << "\n=== Commodities per Edge ===\n";
 
     // Iterate over all edges
@@ -356,7 +356,7 @@ void LPSolver::PrintCommoditiesPerEdge(const GraphCSR& graph) {
     }
 }
 
-void LPSolver::storeFlow() {
+void LPSolver::storeFlow(EfficientRoutingTable& table) {
     // store the flow for each commodity in f_st_e
     // f_st_e.resize(edges.size()/2); // note that in vector edges, edges are stored two directed arcs, thus for outputting we only need one direction
 
@@ -371,10 +371,16 @@ void LPSolver::storeFlow() {
             if (it != m_var_f_e_.end() && it->second != nullptr) {
                 double flow_value = it->second->solution_value();
                 if (flow_value > 1e-9) { // print only non-zero flows
+                    int e = g->getEdgeId(edges[edge_id].first, edges[edge_id].second);
                     if(edge.first < edge.second) {
-                        f_e_st[edge][{d.first, d.second}] =  flow_value;
+
+                        table.addFlow(e, d.first, d.second, flow_value);
+                        //f_e_st[edge][{d.first, d.second}] =  flow_value;
                     } else {
-                        f_e_st[{edge.second, edge.first}][{d.first, d.second}] =  -flow_value;
+                        //f_e_st[{edge.second, edge.first}][{d.first, d.second}] =  -flow_value;
+
+                        int anti_edge = g->getAntiEdge(e);;
+                        table.addFlow(anti_edge, d.first, d.second, -flow_value);
                     }
                 }
             }
@@ -382,29 +388,39 @@ void LPSolver::storeFlow() {
     }
     if(debug) {
         // Print the stored flow for each edge
-        for (auto &[edge, flow_list]: f_e_st) {
-            std::cout << "Edge (" << edge.first << ", " << edge.second << "):\n";
-            for (const auto &[commodity, flow]: flow_list) {
-                std::cout << "  Commodity (" << commodity.first << " -> " << commodity.second
-                          << "): Flow = " << flow << "\n";
+        for (int edge_id = 0; edge_id < edges.size(); edge_id++) {
+            const auto& edge = edges[edge_id];
+            std::cout << "Edge (" << edge.first << " -> " << edge.second << "):\n";
+
+            for (const auto& d : demands) {
+                double flow_value = table.getFlow(edge_id, d.first, d.second);
+                if (std::abs(flow_value) > 1e-9) {
+                    std::cout << "  Commodity (" << d.first << " -> " << d.second
+                              << "): " << flow_value << "\n";
+                }
             }
         }
     }
 }
 
-double LPSolver::getCongestion(DemandMap& _demands, GraphCSR& g) const{
+double LPSolver::getCongestion(DemandMap& _demands, IGraph& g) const{
     // compute for the given demands and the stored flow values in f_st_e the generated congestion
     double max_cong = 0.0;
 
     std::unordered_map<std::pair<int, int>, double, PairHash> total_edge_congestion;
 
-    for(const auto& [edge, flow_list] : f_e_st) {
+    for(int id = 0; id<_demands.size(); id++) {
+        auto [source, target] = _demands.getDemandPair(id);
+        double value = _demands.getDemandValue(id);
 
+        for (int id = 0; id < edges.size(); id++) {
+            if (edges[id].first > edges[id].second) continue; // Skip anti-parallel arcs
 
-        for (const auto& [commodity, flow_value] : flow_list) {
-            // Find the corresponding demand
-            double scaled_flow = _demands[commodity];
-            total_edge_congestion[edge] += ((std::abs(flow_value)* scaled_flow) / g.getEdgeCapacity(edge.first, edge.second)); // Sum the absolute flow values for each edge
+            auto it = m_var_f_e_.find({id, {source, target}});
+            if (it != m_var_f_e_.end() && it->second != nullptr) {
+                double flow = it->second->solution_value();
+                total_edge_congestion[{edges[id].first, edges[id].second}] += std::abs(flow)*value; // Sum the absolute flow values for each edge
+            }
         }
     }
 
@@ -438,103 +454,3 @@ double LPSolver::getCongestion(DemandMap& _demands, GraphCSR& g) const{
     return max_cong;*/
 }
 
-// Assumes:
-// - f_e_st: map keyed by a tuple (arc_id, s, t) -> GRBVar* (or similar)
-// - edges[arc_id] gives the directed arc (u, v)
-// - DemandMap: std::unordered_map<std::pair<int,int>, double, PairHash>
-// - graph.getEdgeCapacity(u, v) returns capacity for the *undirected* edge {u,v}
-//   (we pass it with u < v)
-
-double LPSolver::getDemandWeightedCongestion(const GraphCSR& graph,
-                                             const DemandMap& demands) {
-    // Accumulate demand-weighted absolute flow per undirected edge {u,v} (u<v).
-    std::unordered_map<std::pair<int,int>, double, PairHash> undirected_load;
-
-    auto canonical = [](int a, int b) {
-        return std::make_pair(std::min(a, b), std::max(a, b));
-    };
-
-    // === Print the solution ===
-    std::vector<std::unordered_map<std::pair<int, int>, double, PairHash> > total_flow_per_arc_per_commodity(edges.size());
-
-    for (const auto& [key, var] : m_var_f_e_) {
-        if (!var) continue;
-        double val = var->solution_value();
-        int arc_id = std::get<0>(key);
-        int s = std::get<1>(key).first, t = std::get<1>(key).second;
-        total_flow_per_arc_per_commodity[arc_id][{s, t}] += val;
-    }
-/*
-    for (int edge_id = 0; edge_id<edges.size(); edge_id++) {
-        int u = edges[edge_id].first, v = edges[edge_id].second;
-        if (u > v) continue;
-
-        int rev_edge = 0;
-        auto rev_it = std::find(edges.begin(), edges.end(), std::make_pair(v, u));
-        if (rev_it != edges.end()) {
-            rev_edge = std::distance(edges.begin(), rev_it);
-        }
-
-
-        for (const auto&[dst , flow_value] : demands) {
-
-            if (dst.first > dst.second && flow_value > 0) {
-                std::cout << "ERROR: this shouldnt happen that the demands are unsorted with positive demands" << std::endl;
-            }
-            double flow = total_flow_per_arc_per_commodity[edge_id].contains({dst}) ? total_flow_per_arc_per_commodity[edge_id][{dst}] : 0.0;
-            double flow_rev = total_flow_per_arc_per_commodity[rev_edge].contains({dst}) ? total_flow_per_arc_per_commodity[rev_edge][{dst}] : 0.0;
-
-            undirected_load[{u, v}] += flow_value * (flow + flow_rev);
-        }
-    }
-
-*/
-    // 1) Sum |f_e^{s,t}| * demand(s,t) onto the undirected edge of arc_id
-    for (const auto& [key, var] : m_var_f_e_) {
-        if (!var) continue;
-
-        const int arc_id = std::get<0>(key);
-        const int s      = std::get<1>(key).first;
-        const int t      = std::get<1>(key).second;
-
-        // Demand weight for this commodity (s,t); accept reverse if only that exists.
-        double d = 0.0;
-        if (auto it = demands.find({s, t}); it != demands.end()) {
-            d = it->second;
-        }else{
-            continue; // no demand => no contribution
-        }
-
-        if(s > t && d != 0.0) {
-            bool wellwefindsomething = true;
-        }
-        if (d == 0.0) continue;
-
-        const double flow_abs = std::abs(var->solution_value());
-
-        if(flow_abs == 0.0) continue;
-
-        const auto& dir = edges[arc_id];      // (u, v) directed
-        const auto und = canonical(dir.first, dir.second); // {u,v} with u<v
-        if(und.first == 0 && und.second == 4) {
-            bool stop = true;
-            std::cout << "edge: " << und.first << " / " << und.second << " com: " << s << " -> " << t << " : d = " << d << " flow : " << flow_abs << std::endl;
-        }
-
-        undirected_load[und] += flow_abs * d;
-    }
-
-    // 2) For each undirected edge, divide by capacity and take the maximum.
-    double max_cong = 0.0;
-    for (const auto& [uv, load] : undirected_load) {
-        const int u = uv.first;
-        const int v = uv.second;
-
-        const double cap = graph.getEdgeCapacity(u, v);
-        if (cap <= 0.0) continue; // or handle as error
-
-        max_cong = std::max(max_cong, load / cap);
-    }
-
-    return max_cong;
-}

@@ -14,15 +14,24 @@
 #include "../../../datastructures/GraphCSR.h"
 #include "../../../utils/hash.h"
 
-class EfficientRaeckeCKR : public ObliviousRoutingSolver
+class EfficientRaeckeCKR : public LinearObliviousSolverBase
 {
     public:
         GraphCSR* g = nullptr;
 
         EfficientCKR ckr_algo;
         EfficientRaeckeCKRTransform transform;
-        EfficientRaeckeCKR() = default;
-        ~EfficientRaeckeCKR() = default;
+
+    EfficientRaeckeCKR(const IGraph& g, int root, bool debug = false):LinearObliviousSolverBase(g, root) {}
+
+    void computeBasisFlows(LinearRoutingTable &table) override {
+        init(debug, "amg_cg");
+
+        run(table);
+        scaleFlowDown(table);
+    }
+
+
 
         void runSolve(const IGraph &g_) override {
 

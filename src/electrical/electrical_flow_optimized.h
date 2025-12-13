@@ -9,12 +9,13 @@
 #include "../datastructures/GraphADJ.h"
 #include "../utils/hash.h"
 #include "../solver/solver.h"
+#include "../solver/mwu_framework.h"
 #include "laplacian_solvers/AMGSolver.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
 #include "../datastructures/GraphCSR.h"
-#include "../tree_based/frt/raecke_frt_transform.h"
+// #include "../tree_based/frt/raecke_frt_transform.h"
 #include "laplacian_solvers/LaplacianSolverFactory.h"
 
 struct WeightedEdge {
@@ -22,7 +23,7 @@ struct WeightedEdge {
     double weight;
 };
 
-class ElectricalFlowOptimized : public LinearObliviousSolverBase {
+class ElectricalFlowOptimized : public MWUFramework {
     private:
 
     int n, m;
@@ -42,7 +43,7 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase {
 
     //std::vector<std::vector<double>> x_edge_distance, p_edge_probability, w_edge_weight, c_edge_capacity;
     double cap_X = 0.0;
-    int iteration_count = 0;
+    // int iteration_count = 0;
     bool debug = false;
     int x_fixed = 0; // fixed node
 
@@ -70,7 +71,7 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase {
 
     public:
 
-    ElectricalFlowOptimized(const IGraph& g, int root, bool debug = false):LinearObliviousSolverBase(g, root) {}
+    ElectricalFlowOptimized(IGraph& g, int root, bool debug = false):MWUFramework(g, root) {}
 
     void computeBasisFlows(LinearRoutingTable &table) override {
         init(debug, "amg_cg");

@@ -9,18 +9,32 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include "../raecke_oracle_iteration.h"
+#include "../raecke_tree.h"
 
-struct TreeNode; // Forward declaration
+void print_tree(std::shared_ptr<ITreeNode> node, int indent = 0);
 
-void print_tree(std::shared_ptr<TreeNode> node, int indent = 0);
-
-struct TreeNode : public std::enable_shared_from_this<TreeNode> {
-
+class TreeNode : public std::enable_shared_from_this<TreeNode>, public ITreeNode {
+public:
     int id{};
     std::vector<int> members; // original graph nodes
     std::vector<std::shared_ptr<TreeNode>> children;
     std::weak_ptr<TreeNode> parent;
     double radius = 0.0;
+
+    virtual std::vector<std::shared_ptr<ITreeNode>> getChildren() override{
+        std::vector<std::shared_ptr<ITreeNode>> child_ptrs;
+        for (const auto& child : children) {
+            child_ptrs.push_back(child);
+        }
+        return child_ptrs;
+    }
+    virtual std::shared_ptr<ITreeNode> getParent() const override{
+        return parent.lock();
+    }
+    virtual const std::vector<int>& getMembers() const override {
+        return members;
+    }
 };
 
 

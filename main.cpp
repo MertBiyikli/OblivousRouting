@@ -26,7 +26,25 @@
 #include "src/tree_based/ckr/utils/ultrametric_tree.h"
 #include "src/tree_based/ckr/optimized/efficient_raecke_ckr.h"
 */
+#include "src/lp_solver/LPSolver.h"
+#include "src/lp_solver/MCCF_lp_solver.h"
+#include "src/tree_based/ckr/raecke_mwu_ckr.h"
+#include "src/tree_based/ckr/raecke_oracle_ckr.h"
+#include "src/tree_based/frt/raecke_mwu_frt.h"
+#include "src/tree_based/frt/raecke_oracle_frt.h"
+#include "src/tree_based/random_mst/raecke_mwu_random.h"
 
+typedef std::chrono::high_resolution_clock::time_point TimeVar;
+
+#define duration(a) std::chrono::duration_cast<std::chrono::milliseconds>(a).count()
+#define timeNow() std::chrono::high_resolution_clock::now()
+
+template<typename F, typename... Args>
+double funcTime(F func, Args&&... args){
+    TimeVar t1= timeNow();
+    func(std::forward<Args>(args)...);
+    return duration(timeNow()-t1);
+}
 
 int main(int argc, char **argv) {
 
@@ -109,9 +127,9 @@ int main(int argc, char **argv) {
     start_time = std::chrono::high_resolution_clock::now();
     // solver->debug = true;
     //solver->(*g_csr);
-    auto scheme = solver->solve();
+    auto electrical_scheme = solver->solve();
     end_time = std::chrono::high_resolution_clock::now();
-    std::cout << "Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+    std::cout << "Electrical Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
 
     DemandMap demand_map;
     for (int s = 0; s < g_csr.getNumNodes(); ++s) {
@@ -121,12 +139,87 @@ int main(int argc, char **argv) {
         }
     }
 
-    std::vector<double> outflow;
-    scheme->routeDemands(outflow, demand_map);
+    std::vector<double> cong_electrical;
+    electrical_scheme->routeDemands(cong_electrical, demand_map);
 
+
+    double max_congestion_electrical = electrical_scheme->getMaxCongestion(cong_electrical);
+    std::cout << "Max congestion (electrical): " << max_congestion_electrical << std::endl;
+
+
+    // std::unique_ptr<RaeckeOracle> ckrOracle = std::make_unique<CKROracle>(g_csr);
+    auto ckrsolver = std::make_unique<RaeckeMWU_CKR>(g_csr, 0);//, std::move(ckrOracle));
+    start_time = std::chrono::high_resolution_clock::now();
+    auto ckr_scheme = ckrsolver->solve();
+    end_time = std::chrono::high_resolution_clock::now();
+    std::cout << "CKR Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+
+
+    std::vector<double> congestion_ckr;
+    ckr_scheme->routeDemands(congestion_ckr, demand_map);
+
+    double max_congestion_ckr = ckr_scheme->getMaxCongestion(congestion_ckr);
+    std::cout << "Max congestion (ckr): " << max_congestion_ckr << std::endl;
+
+    auto frtsolver = std::make_unique<RaeckeMWU_FRT>(g_csr, 0);//, std::move(ckrOracle));
+    start_time = std::chrono::high_resolution_clock::now();
+    auto frt_scheme = frtsolver->solve();
+    end_time = std::chrono::high_resolution_clock::now();
+    std::cout << "FRT Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+
+    std::vector<double> frt_congestion;
+    frt_scheme->routeDemands(frt_congestion, demand_map);
+
+
+    double max_congestion_frt = frt_scheme->getMaxCongestion(frt_congestion);
+    std::cout << "Max congestion (frt): " << max_congestion_frt << std::endl;
+
+
+
+    auto randomTreeSolver = std::make_unique<RaeckeMWU_Random>(g_csr, 0);//, std::move(ckrOracle));
+    start_time = std::chrono::high_resolution_clock::now();
+    auto random_scheme = randomTreeSolver->solve();
+    end_time = std::chrono::high_resolution_clock::now();
+    std::cout << "Random MST Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+
+    std::vector<double> random_congestion;
+    random_scheme->routeDemands(random_congestion, demand_map);
     for (int e = 0; e < g_csr.getNumEdges(); ++e) {
-        std::cout << "Edge " << e << " outflow: " << outflow[e] << std::endl;
+        //std::cout << "Edge " << e << " outflow: " << frt_congestion[e] << std::endl;
     }
+
+    double max_congestion_random = random_scheme->getMaxCongestion(random_congestion);
+    std::cout << "Max congestion (random): " << max_congestion_random << std::endl;
+
+
+    // LP Applegate and Cohen
+    auto lp_solver = std::make_unique<LPSolver>(g_csr);
+    start_time = std::chrono::high_resolution_clock::now();
+    auto lp_scheme = lp_solver->solve();
+    end_time = std::chrono::high_resolution_clock::now();
+    std::cout << "LP  Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+
+    std::vector<double> lp_congestion;
+    lp_scheme->routeDemands(lp_congestion, demand_map);
+    double max_congestion_lp = lp_scheme->getMaxCongestion(lp_congestion);
+    std::cout << "Max congestion (lp-applegate & cohen): " << max_congestion_lp << std::endl;
+
+
+    // LP offline optimal solution
+    auto offline_lp_solver = std::make_unique<CMMF_Solver>(g_csr);
+    for (int i = 0; i < demand_map.size(); ++i) {
+        offline_lp_solver->AddDemands(demand_map.getDemandPair(i), demand_map.getDemandValue(i));
+    }
+    start_time = std::chrono::high_resolution_clock::now();
+    auto offline_scheme = offline_lp_solver->solve();
+    end_time = std::chrono::high_resolution_clock::now();
+
+    std::cout << "Offline LP Running time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_time-start_time).count() << " [milliseconds]" << std::endl;
+
+    std::vector<double> offline_congestion_vector;
+    offline_scheme->routeDemands(offline_congestion_vector, demand_map);
+    double offline_congestion = offline_scheme->getMaxCongestion(offline_congestion_vector);
+    std::cout << "Max congestion (lp-offline): " << offline_congestion << std::endl;
 
 
     // TODO: this store flow is a major bottleneck for the tree based experiments.
@@ -150,7 +243,7 @@ int main(int argc, char **argv) {
     std::cout << "Worst case demand congestion: " << OR.solve() << std::endl;
 */
     // if a demand model is provided, compute the oblivious ratio for that demand model
-    HandleDemandModel(argc, argv, cfg, g_csr, solver);
+    // HandleDemandModel(argc, argv, cfg, g_csr, solver);
 
 
 /*

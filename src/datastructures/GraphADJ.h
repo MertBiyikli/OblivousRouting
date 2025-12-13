@@ -51,6 +51,9 @@ public:
     GraphADJ& operator=(GraphADJ&&) noexcept = default;
     ~GraphADJ() override              = default;
 
+    int getNumDirectedEdges() const override {
+        return 2*m;
+    }
 
     // derived methods
     IGraph::NeighborRange neighbors(int u) const override;

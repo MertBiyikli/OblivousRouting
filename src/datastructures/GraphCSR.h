@@ -138,6 +138,9 @@ public:
         is_processed = true;
     }
 
+    int getNumDirectedEdges() const override {
+        return m;
+    }
 
     void addEdge(int u, int v, double cap, double dist = 1.0) override {
 
