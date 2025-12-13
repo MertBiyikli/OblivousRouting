@@ -5,7 +5,7 @@
 #include "efficient_frt.h"
 
 #include <list>
-
+#include <cmath>
 
 void EfficientFRT::updateEdgeDistances(const std::vector<double> &distances) {
     for (int e = 0; e < graph.getNumEdges(); ++e) {
