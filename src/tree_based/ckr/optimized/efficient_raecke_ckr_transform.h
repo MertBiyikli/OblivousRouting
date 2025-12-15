@@ -42,6 +42,8 @@ private:
 
     void distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance);
 
+    void distributeLinearDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance);
+
     std::set<int> collectSubtreeVertices(const std::shared_ptr<ITreeNode> &node);
     void normalizeOldSolutionBasedOnNewLambda(double lambda);
 

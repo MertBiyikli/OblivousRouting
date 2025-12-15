@@ -8,6 +8,8 @@
 #include "../../random_mst/mst.h"
 #include <cassert>
 #include <random>
+#include <google/protobuf/arena_cleanup.h>
+
 #include "../../raecke_tree.h"
 #include "../../../datastructures/GraphCSR.h"
 
@@ -68,13 +70,14 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
         prev_nodes[v] = std::make_shared<TreeNode>();
         prev_nodes[v]->id = v;
         prev_nodes[v]->members = {v};  // keep original vertex IDs here
+        prev_nodes[v]->center = v;
     }
 
     // ---- (2) choose logarithmic set of Δ-scales ----
     computeScales();
 
     // ---- (3) build hierarchical levels ----
-    std::shared_ptr<TreeNode> root;
+    std::shared_ptr<TreeNode> root = std::make_shared<TreeNode>();
 
     MendelScaling::QuotientConstruction qc;
     qc.preprocessEdges(g);
@@ -132,54 +135,150 @@ void EfficientCKR::computeScales() {
 
 void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel &Q, double Delta, CKRLevel &L) {
     auto start_time = std::chrono::high_resolution_clock::now();
-    build_ckr_level(*Q.Gq, Delta, L);
+    CKRPartition ckr;
+    build_ckr_level(ckr, *Q.Gq, Delta, L);
+    auto qid = ckr.build_qid_to_rep(Q, g.getNumNodes(), Q.Gq->getNumNodes());
+    ckr.build_cluster_of_qid(Q, qid, L);
+
     auto end_time = std::chrono::high_resolution_clock::now();
     //this->pure_oracle_running_times.emplace_back(std::chrono::duration<double, std::milli>(end_time - start_time).count());
 
 }
 
 
-void EfficientCKR::buildTreeLevel( std::vector<std::shared_ptr<TreeNode> > &prev_nodes, const MendelScaling::QuotientLevel &Q, const CKRLevel &L, const double Delta) {
-    // parent nodes at this Δ-level
-    std::unordered_map<int, std::shared_ptr<TreeNode>> center_to_parent;
-    center_to_parent.reserve(L.centers.size()*2);
+std::shared_ptr<TreeNode>
+EfficientCKR::buildTreeLevel(
+std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
+        const MendelScaling::QuotientLevel& Q,
+        const CKRLevel& L,
+        const double Delta
+) {
+    // ------------------------------------------------------------------
+    // Step 0: Map quotient nodes → representative original vertex
+    // ------------------------------------------------------------------
+    const int nq = Q.Gq->getNumNodes();
+    std::vector<int> qid_to_rep(nq, -1);
 
-
-    // Efficiently map each prev_node (cluster from previous finer step) to a quotient vertex id
-    // We use the first original member of that cluster as representative:
-    for (const auto& childCluster : prev_nodes) {
-        if (!childCluster) continue;
-        int rep = childCluster->members.empty() ? -1 : childCluster->members[0];
-        if (rep < 0) continue;
-
-        // find qid for representative and then its owner center c
-        int qid = Q.sigma_compact_of_v[rep];
-        int c = L.owner[qid];
-        if (c == -1) continue;  // should be rare; skip if not assigned (due to R cutoff)
-
-        // parent TreeNode for this center
-        std::shared_ptr<TreeNode> parent;
-        auto it = center_to_parent.find(c);
-        if (it == center_to_parent.end()) {
-            parent = std::make_shared<TreeNode>();
-            parent->id = L.centers[c];
-            parent->radius = Delta;
-            center_to_parent[c] = parent;
-        } else parent = it->second;
-
-        // Attach childCluster under parent; merge members
-        parent->children.push_back(childCluster);
-        childCluster->parent = parent;
-        parent->members.insert(parent->members.end(),
-                               childCluster->members.begin(),
-                               childCluster->members.end());
+    for (int v = 0; v < g.getNumNodes(); ++v) {
+        int qid = Q.sigma_compact_of_v[v];
+        if (qid >= 0 && qid < nq && qid_to_rep[qid] == -1)
+            qid_to_rep[qid] = v;
     }
 
-    // Prepare for next iteration (finer scale): current parents become the "prev_nodes"
-    prev_nodes.clear();
-    prev_nodes.reserve(center_to_parent.size());
-    for (auto& [_, node] : center_to_parent)
-        prev_nodes.push_back(node);
+    // ------------------------------------------------------------------
+    // Step 1: Create parent nodes (one per CKR cluster)
+    // ------------------------------------------------------------------
+    std::vector<std::shared_ptr<TreeNode>> parents(L.centers.size());
+
+    for (size_t c = 0; c < L.centers.size(); ++c) {
+        auto parent = std::make_shared<TreeNode>();
+
+        const int center_qid = L.centers[c];
+        int center_rep = -1;
+
+        if (center_qid >= 0 && center_qid < nq)
+            center_rep = qid_to_rep[center_qid];
+
+        // Fallback (should almost never happen)
+        if (center_rep == -1 && !prev_nodes.empty())
+            center_rep = prev_nodes.front()->center;
+
+        parent->center = center_rep;
+        parent->parent.reset();
+        parent->children.clear();
+        parent->members.clear();
+
+        parents[c] = parent;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 2: Attach lower-level nodes to parents
+    //         (according to CKR assignment)
+    // ------------------------------------------------------------------
+    for (const auto& child : prev_nodes) {
+        if (!child) continue;
+
+        int child_center = child->center;
+        int qid = Q.sigma_compact_of_v[child_center];
+        int cluster = L.cluster_of_qid[qid];
+
+        auto& parent = parents[cluster];
+
+        child->parent = parent;
+        parent->children.push_back(child);
+
+        // merge members upward
+        parent->members.insert(
+            parent->members.end(),
+            child->members.begin(),
+            child->members.end()
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Step 3: Deduplicate members (important!)
+    // ------------------------------------------------------------------
+    for (auto& p : parents) {
+        auto& M = p->members;
+        std::sort(M.begin(), M.end());
+        M.erase(std::unique(M.begin(), M.end()), M.end());
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4: If this is the topmost level, return virtual root
+    // ------------------------------------------------------------------
+    if (L.R == scales.front()) {
+        auto root = std::make_shared<TreeNode>();
+        root->parent.reset();
+        root->children.clear();
+        root->members.clear();
+
+        // Choose a stable center
+        root->center = parents.front()->center;
+
+        for (auto& p : parents) {
+            p->parent = root;
+            root->children.push_back(p);
+            root->members.insert(
+                root->members.end(),
+                p->members.begin(),
+                p->members.end()
+            );
+        }
+
+        std::sort(root->members.begin(), root->members.end());
+        root->members.erase(
+            std::unique(root->members.begin(), root->members.end()),
+            root->members.end()
+        );
+
+        return root;
+    }
+
+    // Otherwise return a dummy aggregator node (used by caller)
+    auto aggregator = std::make_shared<TreeNode>();
+    aggregator->parent.reset();
+    aggregator->children = parents;
+    aggregator->members.clear();
+
+    aggregator->center = parents.front()->center;
+
+    for (auto& p : parents) {
+        p->parent = aggregator;
+        aggregator->members.insert(
+            aggregator->members.end(),
+            p->members.begin(),
+            p->members.end()
+        );
+    }
+
+    std::sort(aggregator->members.begin(), aggregator->members.end());
+    aggregator->members.erase(
+        std::unique(aggregator->members.begin(), aggregator->members.end()),
+        aggregator->members.end()
+    );
+
+    return aggregator;
 }
 
 
@@ -193,30 +292,73 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
         root->id = 0;
         root->members.resize(g.getNumNodes());
         std::iota(root->members.begin(), root->members.end(), 0);
+        root->center = (!root->members.empty() ? root->members[0] : -1 );
     } else if (prev_nodes.size() == 1) {
         root = prev_nodes.front();
     } else {
         root =std::make_shared< TreeNode>();
-        root->id = -1;
+        //root->id = -1;
         root->radius = (scales.empty()? 0.0 : scales.front());
+        root->center = prev_nodes.front()->center;
         for (auto ch : prev_nodes) {
             root->children.push_back(ch);
             ch->parent = root;
             root->members.insert(root->members.end(), ch->members.begin(), ch->members.end());
         }
     }
+
+    cleanUpTree(root);
+}
+
+
+static bool same_members(const std::vector<int>& a, const std::vector<int>& b) {
+    if (a.size() != b.size()) return false;
+    std::vector<int> aa = a, bb = b;
+    std::sort(aa.begin(), aa.end());
+    std::sort(bb.begin(), bb.end());
+    return aa == bb;
+}
+
+void EfficientCKR::cleanUpTree(std::shared_ptr<TreeNode>& node) {
+    if (!node) return;
+
+    // first clean children
+    for (auto& ch : node->children) cleanUpTree(ch);
+
+    // then rebuild children list safely
+    std::vector<std::shared_ptr<TreeNode>> new_children;
+    new_children.reserve(node->children.size());
+
+    for (auto& child : node->children) {
+        if (!child) continue;
+
+        if (same_members(node->members, child->members)) {
+            // absorb child: adopt grandchildren
+            for (auto& gc : child->children) {
+                if (!gc) continue;
+                gc->parent = node;
+                new_children.push_back(gc);
+            }
+            child->children.clear();
+            // child gets dropped
+        } else {
+            new_children.push_back(child);
+        }
+    }
+
+    node->children.swap(new_children);
 }
 
 
 
 
-std::vector<int> EfficientCKR::build_ckr_level(const IGraph &g, double Delta, CKRLevel &L) {
-    CKRPartition ckr;
+std::vector<int> EfficientCKR::build_ckr_level( CKRPartition& ckr, const IGraph &g, double Delta, CKRLevel &L) {
 
     const int n = g.getNumNodes();
     std::vector<int> X(n);
     std::iota(X.begin(), X.end(), 0);
     auto clusters = ckr.computePartition(g, X, Delta, L);
+
 
     return clusters;
 }

@@ -122,7 +122,7 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
     for (int v = 0; v < graph.getNumNodes(); ++v) {
         root->members.push_back(v);
     }
-    root->center = verticesPermutation.front();
+    root->center = verticesPermutation[0];
     level2nodes[i].push_back(root);
 
     i--;

@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
     std::cout << "Max congestion (frt): " << max_congestion_frt << std::endl;
 
 
-
+/*
     auto randomTreeSolver = std::make_unique<RaeckeMWU_Random>(g_csr, 0);//, std::move(ckrOracle));
     start_time = std::chrono::high_resolution_clock::now();
     auto random_scheme = randomTreeSolver->solve();
@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
     offline_scheme->routeDemands(offline_congestion_vector, demand_map);
     double offline_congestion = offline_scheme->getMaxCongestion(offline_congestion_vector);
     std::cout << "Max congestion (lp-offline): " << offline_congestion << std::endl;
-
+*/
 
     // TODO: this store flow is a major bottleneck for the tree based experiments.
 /*

@@ -12,7 +12,7 @@
 #include "../raecke_oracle_iteration.h"
 #include "../raecke_tree.h"
 
-void print_tree(std::shared_ptr<ITreeNode> node, int indent = 0);
+void print_tree(const std::shared_ptr<ITreeNode>& node, int indent = 0);
 
 class TreeNode : public std::enable_shared_from_this<TreeNode>, public ITreeNode {
 public:
@@ -47,6 +47,7 @@ public:
             leaf->id = level;
             leaf->members.push_back(global_node_ids[0]);
             leaf->radius = 0.0;
+            leaf->center = global_node_ids[0];
             return leaf;
         }
 
@@ -66,6 +67,9 @@ public:
 
         std::shared_ptr<TreeNode> root = std::make_shared<TreeNode>();
         root->radius = delta;
+        // take the first node of the permutation X as center
+        root->center = global_node_ids[X[0]];
+        root->id = level;
 
         for (auto& [cid, nodes] : cluster_to_nodes) {
             std::unordered_map<int, int> index_map;
@@ -95,6 +99,8 @@ public:
             std::shared_ptr<TreeNode> child = decompose(subgraph, delta * 0.5, local_to_global, level + 1);
             child->members = local_to_global;  // These are now true original graph node IDs
             child->radius = delta * 0.5;
+            child->parent = root;
+            // child->center = global_node_ids[X[0]];
             root->children.push_back(std::move(child));
         }
 

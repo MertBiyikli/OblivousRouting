@@ -4,7 +4,12 @@
 
 #include "efficient_raecke_ckr_transform.h"
 #include <optional>
+#include <queue>
+#include <unordered_set>
 
+#include "../ckr_tree_decomposer.h"
+#include <typeinfo>
+#include "../../frt/frt_node.h"
 
 
 /*
@@ -33,33 +38,86 @@ const EfficientRoutingTable& EfficientRaeckeTransform::getRoutingTable() const {
 void EfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) {
     if (!node) return;
 
-    for (const auto& child : node->getChildren()) {
-        if (child->getMembers().size() == node->getMembers().size()) {
-            distributeDemands(child, lambda, distance);
-            continue;
-        }
-        std::set<int> A = collectSubtreeVertices(child);
-        std::set<int> B;
-        for (int v : g.getVertices()) {
-            if (!A.count(v)) B.insert(v);
-        }
+    // print the tree as well
+    //print_tree(node);
+    std::queue<std::shared_ptr<ITreeNode>> q;
+    q.push(node);
 
-        for (int src : A) {
-            for (int dst : B) {
-                if (src == dst) continue;
-                auto path = g.getShortestPath(src, dst, distance);
+    while (!q.empty()) {
+        const auto& current = q.front();
+        q.pop();
 
-                for (size_t i = 0; i + 1 < path.size(); ++i) {
-                    std::pair<int, int> arc{path[i], path[i+1]};
+        for (const auto& child : current->getChildren()) {
+            if (child->getMembers().size() == current->getMembers().size()) {
+                q.push(child);
+            }else {
+                // child and node have differnt members size -> there is a cut induced by the tree edge
+                // take the representative of each cluster and push the flow induced by the cut
+                // along the shortest path parent_representative -> child_representative
+                int parentCenter = current->center;
+                int childCenter = child->center;
 
-                    int edgeId = g.getEdgeId(arc.first, arc.second);
-                    int antiEdgeId = g.getEdgeId(arc.second, arc.first);
-                    table.addFlow(edgeId, src, dst, lambda);
-                    table.addFlow(antiEdgeId, dst, src, lambda);
+                assert(parentCenter != -1
+                    && childCenter != -1);
+
+                if (parentCenter == childCenter) {
+                    /*
+                    // iterate through the parent until you find another center
+                    std::unordered_set<int> childrenMembersSet(
+                        child->getMembers().begin(),
+                        child->getMembers().end()
+                    );
+
+                    int it = 0;
+                    while (childrenMembersSet.find(parentCenter) != childrenMembersSet.end()
+                        && (it < current->getMembers().size())){
+                        parentCenter = current->getMembers()[it];
+                        it++;
+                    }
+*/
+                    q.push(child);
+                    continue;
                 }
+                std::set<int> A;
+                std::set<int> B;
+                // TODO: this is nasty, but it might get the job done...
+                if ( dynamic_pointer_cast<TreeNode>(node) != nullptr) {
+                    A=std::set<int>(child->getMembers().begin(), child->getMembers().end());
+                    // B must be relative to current, not whole graph
+                    for (int v : current->getMembers()) {
+                        if (!A.count(v)) B.insert(v);
+                    }
+                } else if
+                 ( dynamic_pointer_cast<EfficientFRTTreeNode>(node) != nullptr) {
+                    A = collectSubtreeVertices(child);
+                    for (int v : g.getVertices()) {
+                        if (!A.count(v)) B.insert(v);
+                    }
+                }else {
+                    throw std::runtime_error("Unknown tree node type in EfficientRaeckeTransform::distributeDemands");
+                }
+
+
+                int fromVertex = parentCenter;
+                int toVertex = childCenter;
+                auto path = g.getShortestPath(parentCenter, childCenter, distance);
+                if (path.size() < 2) continue;
+
+                for (int src : A) {
+                    for (int dst : B) {
+                        if (src == dst) continue;
+                        for (size_t i = 0; i + 1 < path.size(); ++i) {
+                            std::pair<int, int> arc{path[i], path[i+1]};
+                            int edgeId = g.getEdgeId(arc.first, arc.second);
+                            int antiEdgeId = g.getEdgeId(arc.second, arc.first);
+                            table.addFlow(edgeId, src, dst, lambda);
+                            table.addFlow(antiEdgeId, dst, src, lambda);
+                        }
+                    }
+                }
+                q.push(child);
             }
         }
-        distributeDemands(child, lambda, distance);
     }
 }
 

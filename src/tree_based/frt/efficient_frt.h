@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_set>
 #include "../../datastructures/IGraph.h"
-#include "mcct/Node.h"
+#include "frt_node.h"
 
 class EfficientFRT {
 public:

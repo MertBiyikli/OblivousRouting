@@ -8,6 +8,7 @@
 // Tree interface, abstract base class
 class ITreeNode {
 public:
+    int center = -1;
     virtual ~ITreeNode() = default;
     virtual std::vector<std::shared_ptr<ITreeNode>> getChildren() = 0;
     virtual std::shared_ptr<ITreeNode> getParent() const = 0;

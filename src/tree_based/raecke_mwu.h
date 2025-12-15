@@ -47,7 +47,7 @@ public:
                 double flow = table.src_flows[e][j];
                 if (flow != 0.0) {
                     auto [head, tail] = graph.edgeEndpoints(e);
-                    // std::cout << "Edge " << head << " / " << tail << " has flow " << flow << " for source " << source << "\n";
+                    std::cout << "Edge " << head << " / " << tail << " has flow " << flow << " for source " << source << "\n";
                 }
             }
         }
@@ -131,6 +131,21 @@ public:
 
                 // This writes f_e(s, root) into the LinearRoutingTable
                 table.addFlow(e, s, flow_sR);
+            }
+        }
+
+        // print out tree table
+        for (int e = 0; e < graph.getNumEdges(); ++e) {
+            for (int j = 0; j < tree_table.adj_ids[e].size(); ++j) {
+                int source = tree_table.adj_ids[e][j].first;
+                int target = tree_table.adj_ids[e][j].second;
+                double flow = tree_table.adj_vals[e][j];
+                if ( source == 0 && target == 1) {
+                    if (flow != 0.0) {
+                        auto [head, tail] = graph.edgeEndpoints(e);
+                        std::cout << "Edge " << head << " / " << tail << " has flow " << flow << " for source " << source << " to target " << target << "\n";
+                    }
+                }
             }
         }
     }

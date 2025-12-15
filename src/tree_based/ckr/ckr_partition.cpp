@@ -285,5 +285,6 @@ std::vector<int> CKRPartition::computePartition(const IGraph& g, const std::vect
         labels[k] = (P_dense[v] ? P_dense[v] - 1 : UNASSIGNED);
 
     }
+
     return labels;
 }

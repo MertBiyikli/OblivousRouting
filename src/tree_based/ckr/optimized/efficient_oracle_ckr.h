@@ -42,7 +42,7 @@ public:
     void updateEdgeDistances(const std::vector<double>& distances);
 private:
     IGraph& g;
-    std::vector<int> build_ckr_level(const IGraph& g, double Delta, CKRLevel& L);
+    std::vector<int> build_ckr_level(CKRPartition& ckr,const IGraph& g, double Delta, CKRLevel& L);
     void preprocess();
 
     void computeScales();
@@ -50,12 +50,13 @@ private:
         MendelScaling::QuotientLevel& Q,
         double Delta,
         CKRLevel& L);
-    void buildTreeLevel(
+    std::shared_ptr<TreeNode> buildTreeLevel(
         std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
         const MendelScaling::QuotientLevel &Q,
         const CKRLevel& L,
         const double Delta);
     void finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode>>& prev_nodes);
+    void cleanUpTree(std::shared_ptr<TreeNode>& root);
 
 };
 
