@@ -6,17 +6,20 @@
 #define OBLIVIOUSROUTING_ROUTING_TABLE_H
 #include <cassert>
 #include <vector>
+#include <iostream>
 
 #include "../datastructures/IGraph.h"
 #include "../utils/hash.h"
 
 constexpr static double EPS = 1e-16;
+constexpr static double SOFT_EPS = 1e-3;
 
 
 
 
 
-struct EfficientRoutingTable {
+
+struct EfficientRoutingTable  {
     // store the flows for each commodity
     std::vector<std::vector<std::pair<int, int>>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
     std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
@@ -103,6 +106,44 @@ struct EfficientRoutingTable {
         }
     }
 
+    bool isValid(IGraph& g) const {
+        const int m = adj_ids.size();
+        for (int e = 0; e < m; ++e) {
+            const auto& ids = adj_ids[e];
+            for (size_t i = 1; i < ids.size(); ++i) {
+                if (ids[i] <= ids[i-1]) {
+                    return false;
+                }
+            }
+        }
+
+        // check flow conservation constraint
+        const int n = g.getNumNodes();
+        std::vector<double> net_flow(n, 0.0);
+        for (int e = 0; e < m; ++e) {
+            // get the orientation of the flow
+            const auto& [u, v] = g.edgeEndpoints(e);
+            // int sign = (u < v) ? 1 : -1;
+            for (int s = 0; s < n; ++s) { // By default the root node is 0
+                for ( int t = 0; t < n; ++t ) {
+                    if ( s == t ) continue;
+                    if ( u == s ) {
+                        double flow = getFlow(e, s, t);
+                        net_flow[s] -= flow;
+                    }
+                }
+            }
+        }
+
+        bool all_unit_flow = true;
+        for (int s = 1; s < n; ++s) {
+            if (std::abs(net_flow[s] - 1.0) > SOFT_EPS) {
+                all_unit_flow &= false;
+                std::cout << "Node " << s << " has net flow " << net_flow[s] << " (expected 1.0)\n";
+            }
+        }
+        return all_unit_flow;
+    }
 };
 
 
@@ -193,6 +234,59 @@ struct LinearRoutingTable {
             return vals[lo];
         } else {
             return 0.0;
+        }
+    }
+
+
+
+
+    bool isValid(IGraph& g) const {
+        const int m = src_ids.size();
+        for (int e = 0; e < m; ++e) {
+            const auto& ids = src_ids[e];
+            for (size_t i = 1; i < ids.size(); ++i) {
+                if (ids[i] <= ids[i-1]) {
+                    return false;
+                }
+            }
+        }
+
+        // check flow conservation constraint
+        std::vector<double> net_flow(n, 0.0);
+        for (int e = 0; e < m; ++e) {
+            // get the orientation of the flow
+            const auto& [u, v] = g.edgeEndpoints(e);
+            // int sign = (u < v) ? 1 : -1;
+            for (int s = 1; s < n; ++s) { // By default the root node is 0
+                if ( v == s) {
+                    double flow = getFlow(e, s);
+                    net_flow[s] += flow;
+                }
+            }
+        }
+
+        bool all_unit_flow = true;
+        for (int s = 1; s < n; ++s) {
+            if (std::abs(net_flow[s] - 1.0) > SOFT_EPS) {
+                all_unit_flow &= false;
+                std::cout << "Node " << s << " has net flow " << net_flow[s] << " (expected 1.0)\n";
+            }
+        }
+        return all_unit_flow;
+    }
+
+
+
+    void printFlows(const IGraph& g) {
+        for (int s = 0; s < n; ++s) {
+            std::cout << "Flows for source " << s << ":\n";
+            for (int e = 0; e < g.getNumEdges(); ++e) {
+                double flow = getFlow(e, s);
+                if (std::abs(flow) > EPS) {
+                    auto [u, v] = g.edgeEndpoints(e);
+                    std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
+                }
+            }
         }
     }
 };

@@ -22,9 +22,41 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTree() {
     }
     computeBestBetaAndPermutation();
     auto tree = getBestTree();
+
+    cleanUpTree(tree);
     return tree;
 }
 
+
+void EfficientFRT::cleanUpTree(std::shared_ptr<EfficientFRTTreeNode>& node) {
+    if (!node) return;
+
+    // first clean children
+    for (auto& ch : node->children) cleanUpTree(ch);
+
+    // then rebuild children list safely
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> new_children;
+    new_children.reserve(node->children.size());
+
+    for (auto& child : node->children) {
+        if (!child) continue;
+
+        if (same_members(node->members, child->members)) {
+            // absorb child: adopt grandchildren
+            for (auto& gc : child->children) {
+                if (!gc) continue;
+                gc->parent = node;
+                new_children.push_back(gc);
+            }
+            child->children.clear();
+            // child gets dropped
+        } else {
+            new_children.push_back(child);
+        }
+    }
+
+    node->children.swap(new_children);
+}
 
 void EfficientFRT::computeBetas() {
     const auto& nodes = graph.getVertices();
@@ -153,7 +185,19 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
 
                 if (!childNode->members.empty()
                     && !(childNode->getMembers().size() == 1 && node->getMembers().size() == 1)) {
-                    childNode->center = v;
+
+
+                    // TODO: this needs to be fixed..., but for now
+                    if (std::find(childNode->members.begin(), childNode->members.end(), v) == childNode->members.end()) {
+                        childNode->center = childNode->members[0];
+                    } else {
+                        childNode->center = v;
+                    }
+
+                    if (node->members.size() == childNode->members.size()) {
+                        childNode->center = node->center;
+                    }
+                    //childNode->center = v;
                     childNode->id = static_cast<int>(level2nodes[i].size());
                     childNode->parent = node;
                     node->children.push_back(childNode);

@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
 
     double max_congestion_electrical = electrical_scheme->getMaxCongestion(cong_electrical);
     std::cout << "Max congestion (electrical): " << max_congestion_electrical << std::endl;
-
+/*
 
     // std::unique_ptr<RaeckeOracle> ckrOracle = std::make_unique<CKROracle>(g_csr);
     auto ckrsolver = std::make_unique<RaeckeMWU_CKR>(g_csr, 0);//, std::move(ckrOracle));
@@ -173,9 +173,9 @@ int main(int argc, char **argv) {
 
     double max_congestion_frt = frt_scheme->getMaxCongestion(frt_congestion);
     std::cout << "Max congestion (frt): " << max_congestion_frt << std::endl;
+*/
 
 
-/*
     auto randomTreeSolver = std::make_unique<RaeckeMWU_Random>(g_csr, 0);//, std::move(ckrOracle));
     start_time = std::chrono::high_resolution_clock::now();
     auto random_scheme = randomTreeSolver->solve();
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
     double max_congestion_random = random_scheme->getMaxCongestion(random_congestion);
     std::cout << "Max congestion (random): " << max_congestion_random << std::endl;
 
-
+/*
     // LP Applegate and Cohen
     auto lp_solver = std::make_unique<LPSolver>(g_csr);
     start_time = std::chrono::high_resolution_clock::now();

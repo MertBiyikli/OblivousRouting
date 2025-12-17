@@ -14,6 +14,11 @@ public:
         : RaeckeMWU(g, root, std::make_unique<CKROracle>(g)) {}
 
 
+    virtual void transformSolution(LinearRoutingTable& table) {
+        LinearEfficientRaeckeTransform linear_transform(graph, iteration);
+        linear_transform.transform();
+        table = linear_transform.getRoutingTable();
+    }
 };
 
 

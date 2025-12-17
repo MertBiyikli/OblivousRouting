@@ -170,6 +170,7 @@ void updateEdgeDistances(const std::vector<double>& distances) {
             cluster[v] = std::make_shared<MSTTreeNode>();
             cluster[v]->id = v;
             cluster[v]->members = {v};
+            cluster[v]->center = v;
         }
 
         // build Raecke Tree given the original MST tree
@@ -196,6 +197,7 @@ void updateEdgeDistances(const std::vector<double>& distances) {
 
             dsu.unite(pu, pv);
             int new_rep = dsu.find(pu);
+            parent->center = cluster[pu]->center; // arbitrary
             cluster[new_rep] = parent;
         }
         int rep = dsu.find(root);

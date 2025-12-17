@@ -40,6 +40,8 @@ public:
     double computeExpectation(double beta, std::unordered_set<int>& allVertices, const std::vector<int>& currentPermutation);
     void removeDemands(double beta, int v);
     void addDemands(int u, int v, double demand);
+
+    void cleanUpTree(std::shared_ptr<EfficientFRTTreeNode>& node);
 };
 
 #endif //OBLIVIOUSROUTING_EFFICIENT_FRT_H

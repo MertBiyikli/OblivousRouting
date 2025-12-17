@@ -311,14 +311,6 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
 }
 
 
-static bool same_members(const std::vector<int>& a, const std::vector<int>& b) {
-    if (a.size() != b.size()) return false;
-    std::vector<int> aa = a, bb = b;
-    std::sort(aa.begin(), aa.end());
-    std::sort(bb.begin(), bb.end());
-    return aa == bb;
-}
-
 void EfficientCKR::cleanUpTree(std::shared_ptr<TreeNode>& node) {
     if (!node) return;
 

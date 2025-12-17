@@ -43,12 +43,14 @@ public:
         L.cluster_of_qid.assign(nq, -1);
 
         for (int q = 0; q < nq; ++q) {
-            int rep = qid_to_rep[q];           // original vertex representative of quotient node q
-            int owner_center = L.owner[rep];   // owner of that rep at this CKR level
-
+            int owner_center = L.owner[q];
+            if (owner_center == -1) {
+                // make it its own cluster OR throw; but do NOT lookup -1
+                throw std::runtime_error("build_cluster_of_qid: unassigned quotient node");
+            }
             auto it = center_to_cluster.find(owner_center);
             if (it == center_to_cluster.end()) {
-                throw std::runtime_error("build_cluster_of_qid: owner center not found in centers[]");
+                throw std::runtime_error("build_cluster_of_qid: owner center not in centers");
             }
             L.cluster_of_qid[q] = it->second;
         }
