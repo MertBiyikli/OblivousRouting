@@ -31,6 +31,9 @@ public:
 
     std::shared_ptr<EfficientFRTTreeNode> getTree();
 
+    std::shared_ptr<EfficientFRTTreeNode> getTreeBottomUp();
+    void computeCurrentPartition(std::vector<int>& centers, std::vector<int>& clusters, const double scale);
+
     std::shared_ptr<EfficientFRTTreeNode> getBestTree();
     void updateEdgeDistances(const std::vector<double>& distances);
 
@@ -42,6 +45,8 @@ public:
     void addDemands(int u, int v, double demand);
 
     void cleanUpTree(std::shared_ptr<EfficientFRTTreeNode>& node);
+
+
 };
 
 #endif //OBLIVIOUSROUTING_EFFICIENT_FRT_H

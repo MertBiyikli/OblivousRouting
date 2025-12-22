@@ -304,66 +304,7 @@ public:
         }
         return ok;
     }
-/*
-    std::vector<int> getShortestPath(int src, int tgt = -1) const override {
-        using P = std::pair<double, int>; // (distance, node)
-        const double INF = std::numeric_limits<double>::infinity();
 
-        // 🔧 Ensure reusable buffers are the right size
-        if ((int)dist_buf.size() != n) {
-            dist_buf.resize(n);
-            parent_buf.resize(n);
-        }
-
-        // 🔁 Reset only what’s needed
-        std::fill(dist_buf.begin(), dist_buf.end(), INF);
-        std::fill(parent_buf.begin(), parent_buf.end(), -1);
-
-        auto &dist = dist_buf;
-        auto &parent = parent_buf;
-
-        dist[src] = 0.0;
-
-        // min-heap priority queue
-        std::priority_queue<P, std::vector<P>, std::greater<>> pq;
-        pq.emplace(0.0, src);
-
-        while (!pq.empty()) {
-            auto [du, u] = pq.top();
-            pq.pop();
-
-            if (du > dist[u]) continue;     // outdated entry
-            if (u == tgt) break;            // early stop when target reached
-
-            // ✅ early stop only if target reached
-            if (tgt >= 0 && u == tgt)
-                break;
-
-            // iterate over neighbors via CSR
-            for (int e = head[u]; e < head[u + 1]; ++e) {
-                int v = to[e];
-                double w = distance[e];
-                double nd = du + w;
-                if (nd < dist[v]) {
-                    dist[v] = nd;
-                    parent[v] = u;
-                    pq.emplace(nd, v);
-                }
-            }
-        }
-        // If we don't have a specific target, skip reconstruction
-        if (tgt < 0)
-            return {};
-        // reconstruct path (if reachable)
-        std::vector<int> path;
-        if (dist[tgt] == INF) return path; // no path
-
-        for (int v = tgt; v != -1; v = parent[v])
-            path.push_back(v);
-        std::reverse(path.begin(), path.end());
-        return path;
-    }
-*/
 
     std::vector<int> getShortestPath(int src, int tgt = -1) const override {
         const double INF = std::numeric_limits<double>::infinity();
@@ -542,8 +483,6 @@ public:
         IGraph::vertices.resize(this->n);
         std::iota(IGraph::vertices.begin(), IGraph::vertices.end(), 0);
     }
-
-
 
 };
 

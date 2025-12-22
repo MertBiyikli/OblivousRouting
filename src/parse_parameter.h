@@ -14,19 +14,28 @@
 #include "../experiments/performance/demands/GaussianModel.h"
 #include "../experiments/performance/demands/GravityModel.h"
 #include "../experiments/performance/demands/UniformModel.h"
+#include "lp_solver/LPSolver.h"
 #include "lp_solver/MCCF_lp_solver.h"
+#include "tree_based/ckr/raecke_mwu_ckr.h"
+#include "tree_based/frt/raecke_mwu_frt.h"
+#include "tree_based/random_mst/raecke_mwu_random.h"
+
+std::vector<std::string> solverNames ={
+    "electrical",
+    "raecke_frt",
+    "raecke_ckr",
+    "raecke_random_mst",
+    "lp_applegate_cohen",
+    "electrical_parallel_batches"
+};
 
 enum class SolverType {
-    ELECTRICAL_NAIVE,
+    ELECTRICAL,
     RAECKE_FRT,            // tree-based
-    LP_APPLEGATE_COHEN,
-    RAECKE_RANDOM_MST,
-    ELECTRICAL_OPTIMIZED,
-    ELECTRICAL_PARALLEL_BATCHES,
-    ELECTRICAL_PARALLEL_ONTHEFLY,
     RAECKE_CKR,
-    RAECKE_CKR_OPTIMIZED,
-    OPTIMIZED_RAECKE_FRT,
+    RAECKE_RANDOM_MST,
+    LP_APPLEGATE_COHEN,
+    ELECTRICAL_PARALLEL_BATCHES
 };
 
 enum class DemandModelType {
@@ -38,10 +47,38 @@ enum class DemandModelType {
 };
 
 struct Config {
-    SolverType  solver;
+    std::vector<SolverType>  solvers;
     std::string filename;
     DemandModelType demand_model; // either "gravity" or "binomial" if a third argument is given
 };
+
+std::unique_ptr<ObliviousRoutingSolver>
+makeSolver(SolverType type, IGraph& g_csr) {
+    switch (type) {
+        case SolverType::ELECTRICAL:
+            return std::make_unique<ElectricalFlowOptimized>(g_csr, 0);
+
+        case SolverType::RAECKE_FRT:
+            return std::make_unique<RaeckeMWU_FRT>(g_csr);
+
+        case SolverType::RAECKE_CKR:
+            return std::make_unique<RaeckeMWU_CKR>(g_csr);
+
+        case SolverType::RAECKE_RANDOM_MST:
+            return std::make_unique<RaeckeMWU_Random>(g_csr);
+
+        case SolverType::LP_APPLEGATE_COHEN:
+            return std::make_unique<LPSolver>(g_csr);
+
+        case SolverType::ELECTRICAL_PARALLEL_BATCHES:
+            // return std::make_unique<ElectricalFlowParallelBatches>(g_csr);
+            throw std::runtime_error("Parallel batches solver not implemented.");
+
+        default:
+            throw std::runtime_error("Unknown solver type.");
+    }
+}
+
 
 inline std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
@@ -52,40 +89,29 @@ inline std::string to_lower(std::string s) {
 inline std::optional<SolverType> parse_solver_token(std::string s) {
     s = to_lower(std::move(s));
     // electrical
-    if (s == "electrical" || s == "electrical_naive" || s == "ef" || s == "e")
-        return SolverType::ELECTRICAL_NAIVE;
+    if (s == "electrical" || s == "elec" || s == "ef" || s == "e")
+        return SolverType::ELECTRICAL;
     // tree / Räcke–FRT
-    if (s == "tree" || s == "raecke" || s == "frt" || s == "r" || s == "t")
+    if (s == "raecke_frt" || s == "frt" || s == "f")
         return SolverType::RAECKE_FRT;
+    if (s == "raecke_ckr" || s == "ckr" || s == "c")
+        return SolverType::RAECKE_CKR;
+    if (s == "raecke_mst" || s == "random_mst" || s == "rmst")
+        return SolverType::RAECKE_RANDOM_MST;
     // LP (Applegate–Cohen)
     if (s == "cohen" || s == "lp" || s == "applegate" || s == "ac" || s == "l")
         return SolverType::LP_APPLEGATE_COHEN;
-    if (s == "mst" || s == "random_mst" || s == "raecke_mst" || s == "rmst")
-        return SolverType::RAECKE_RANDOM_MST;
-    if (s == "electrical_optimized" || s == "electricalopt" || s == "eo")
-        return SolverType::ELECTRICAL_OPTIMIZED;
-    if (s == "electrical_parallel_batches" || s == "electrical_batches" || s == "e_bacthes")
+    if (s == "electrical_parallel" || s == "elec_par" || s == "e_par")
         return SolverType::ELECTRICAL_PARALLEL_BATCHES;
-    if (s == "electrical_parallel_onthefly" || s == "electrical_onthefly" || s == "e_onthefly")
-        return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
-    if (s == "ckr" || s == "ckr_partition" || s == "raecke_ckr")
-        return SolverType::RAECKE_CKR;
-    if (s == "ckr_optimized" || s == "ckropt" || s == "raecke_ckr_optimized")
-        return SolverType::RAECKE_CKR_OPTIMIZED;
-    if (s == "optimized_raecke_frt" || s == "raecke_frt_opt" || s == "oref")
-        return SolverType::OPTIMIZED_RAECKE_FRT;
 
 
-    if (s == "0") return SolverType::ELECTRICAL_NAIVE;
+
+    if (s == "0") return SolverType::ELECTRICAL;
     if (s == "1") return SolverType::RAECKE_FRT;
-    if (s == "2") return SolverType::LP_APPLEGATE_COHEN;
+    if (s == "2") return SolverType::RAECKE_CKR;
     if (s == "3") return SolverType::RAECKE_RANDOM_MST;
-    if (s == "4") return SolverType::ELECTRICAL_OPTIMIZED;
+    if (s == "4") return SolverType::LP_APPLEGATE_COHEN;
     if (s == "5") return SolverType::ELECTRICAL_PARALLEL_BATCHES;
-    if (s == "6") return SolverType::ELECTRICAL_PARALLEL_ONTHEFLY;
-    if (s == "7") return SolverType::RAECKE_CKR;
-    if (s == "8") return SolverType::RAECKE_CKR_OPTIMIZED;
-    if (s == "9") return SolverType::OPTIMIZED_RAECKE_FRT;
 
     return std::nullopt;
 }
@@ -114,15 +140,12 @@ inline std::string usage(const char* prog) {
        << "  " << prog << " <solver> <graph_file>\n\n"
        << "Solvers (case-insensitive):\n"
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
-       << "  tree | raecke | frt | r | t   -> Tree-based (Raecke/FRT)\n"
-       << "  cohen | lp | applegate | ac   -> Tree-based (Raecke/MST)\n"
+       << "  raecke_frt | frt | f   -> Tree-based (Raecke/FRT)\n"
+        << " raecke_ckr | ckr | c -> Tree-based (Raecke/CKR)\n"
+       << "  cohen | lp | applegate | ac   -> Tree-based (LP/Applegate and Cohen)\n"
        << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n"
-       << "  electrical_optimized | electricalopt | eo -> Electrical Flow (optimized)\n"
-        << "  electrical_parallel_batches | electricalpar_batches | e_batches -> Electrical Flow (parallel)\n"
-        << "  electrical_parallel_onthefly | electricalpar_onthefly | e_onthefly -> Electrical Flow (parallel)\n"
-        << "  ckr | ckr_partition | raecke_ckr | -> Tree-based (Raecke/CKR)\n"
-        << "  ckr_optimized | ckropt | raecke_ckr_optimized -> Tree-based (Raecke/CKR Optimized)\n\n"
-       << "Numeric shortcuts: 0=electric, 1=tree, 2=cohen, 3=mst, 4=electrical_optimized_seq, 5=electrical_optimized_par_batches, 6=electrical_optimized_par_onthefly\n"
+        << "  electrical_parallel | elec_par | e_par -> Electrical Flow (parallel)\n"
+       << "Numeric shortcuts: 0=electric, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel\n"
        << "[Optional] demand model (case-insensitive):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"
        << "  binomial | binomial_model     -> Binomial Model\n"
@@ -133,56 +156,83 @@ inline std::string usage(const char* prog) {
     return os.str();
 }
 
+
+inline std::optional<std::vector<SolverType>>
+parse_solver_list(std::string s) {
+    std::vector<SolverType> result;
+
+    size_t start = 0;
+    while (true) {
+        size_t pos = s.find(',', start);
+        std::string token = (pos == std::string::npos)
+                                ? s.substr(start)
+                                : s.substr(start, pos - start);
+
+        auto solver = parse_solver_token(token);
+        if (!solver) return std::nullopt;
+
+        result.push_back(*solver);
+
+        if (pos == std::string::npos) break;
+        start = pos + 1;
+    }
+
+    if (result.empty()) return std::nullopt;
+    return result;
+}
+
+
 // Returns Config on success; prints an error to `err` string on failure.
 inline std::optional<Config> parse_parameter(int argc, char** argv, std::string* err) {
     if (argc < 3) {
         if (err) *err = usage(argv[0]);
         return std::nullopt;
     }
+
+    auto solvers_opt = parse_solver_list(argv[1]);
+    if (!solvers_opt) {
+        if (err) *err = "Unknown solver list: " + std::string(argv[1]) + "\n" + usage(argv[0]);
+        return std::nullopt;
+    }
+
     if (argc == 3) {
-        auto solver_opt = parse_solver_token(argv[1]);
-        if (!solver_opt) {
-            if (err) *err = "Unknown solver: " + std::string(argv[1]) + "\n" + usage(argv[0]);
-            return std::nullopt;
-        }
-
-        Config cfg{*solver_opt, std::string(argv[2]), DemandModelType::NONE}; // default demand model
-
+        Config cfg{
+            *solvers_opt,
+            std::string(argv[2]),
+            DemandModelType::NONE
+        };
         return cfg;
     }
 
-    // if a third argument is given we use this to compare the solver to compare the oblivious ratio to
-    // to one of the demand model, e.g. Gravity/Binomial model
-    if ( argc == 4) {
-        auto solver_opt = parse_solver_token(argv[1]);
-        if (!solver_opt) {
-            if (err) *err = "Unknown solver: " + std::string(argv[1]) + "\n" + usage(argv[0]);
-            return std::nullopt;
-        }
-
+    if (argc == 4) {
         auto demand_model_opt = parse_demand_model_token(argv[3]);
         if (!demand_model_opt) {
             if (err) *err = "Unknown demand model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
             return std::nullopt;
         }
 
-        Config cfg{*solver_opt, std::string(argv[2]), (demand_model_opt ? *demand_model_opt : DemandModelType::NONE)};
+        Config cfg{
+            *solvers_opt,
+            std::string(argv[2]),
+            *demand_model_opt
+        };
         return cfg;
-    }else{
-        if (err) *err = usage(argv[0]);
-        return std::nullopt;
     }
+
+    if (err) *err = usage(argv[0]);
+    return std::nullopt;
 }
+
 
 inline std::pair<double, double> HandleDemandModel(int argc,
                               char** argv,
                               const std::optional<Config>& cfg,
                               GraphCSR& _g,
-                              std::unique_ptr<ObliviousRoutingSolver>& _solver)
+                              const std::unique_ptr<RoutingScheme>& routing_scheme)
 {
     if (argc < 4 || !cfg) { return {}; }
 
-    std::cout << "Computing oblivious ratio for demand model: " << (argv[3] ? argv[3] : "<empty>") << std::endl;
+    std::cout << "Demand model: " << (argv[3] ? argv[3] : "<empty>") << std::endl;
 
     // if a demand model is provided, compute the oblivious ratio for that demand model
     if (cfg->demand_model != DemandModelType::NONE) {
@@ -214,62 +264,30 @@ inline std::pair<double, double> HandleDemandModel(int argc,
             default:
                 std::cerr << "Unknown demand model type.\n";
         }
-        // TODO: uncomment this
-        /*
-        std::cout << "Number of nodes: " << _g.getNumNodes() << std::endl;
+
         auto demand_map = demand_model->generate(_g, demands,  1.0);
         double total_demand = 0.0;
-        for (const auto& [_, d] : demand_map) {
-            total_demand += d;
+        for (int i = 0; i < demand_map.size(); ++i) {
+            total_demand += demand_map.getDemandValue(i);
         }
 
         // compute maximum congestion generated by demand
-        std::vector congestion_per_edge(_g.getNumEdges()/2, 0.0); // undirected edges
-        for (const auto& [edge, flow_map] : _solver->f_e_st) {
-            double edge_cong = 0.0;
-            for (const auto& [commodity, value] : flow_map) {
-                edge_cong += std::abs(value * demand_map[commodity]);
-            }
+        std::vector congestion_per_edge(_g.getNumEdges(), 0.0); // undirected edges
 
-            edge_cong /= _g.getEdgeCapacity(edge.first, edge.second);
-            int undirected_edge = INVALID_EDGE_ID;
-            if (edge.first > edge.second) {
-                // find the reverse edge
-                undirected_edge = _g.getEdgeId(edge.second, edge.first);
-            }else {
-                undirected_edge = _g.getEdgeId(edge.first, edge.second);
-            }
-            if (undirected_edge != INVALID_EDGE_ID) {
-                congestion_per_edge[undirected_edge] += edge_cong;
-            }else {
-                throw std::runtime_error("Anti edge not found in graph.");
-            }
-        }
-
-        double max_cong = 0.0;
-        for (const auto& cong : congestion_per_edge) {
-            if (cong > max_cong) {
-                max_cong = cong;
-            }
-        }
-
-
-        std::cout << "Worst case congestion for " << (argv[3] ? argv[3] : "<empty>") << " model demand: " << max_cong << std::endl;
+        routing_scheme->routeDemands(congestion_per_edge, demand_map);
+        double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
 
 
 
         // compute the Maximum Commodity flow for the given demand set
-        CMMF_Solver mccf;
-        mccf.setGraph(_g);
+        CMMF_Solver mccf(_g);
         mccf.init(_g);
-        for (const auto& [d, value] : demand_map) {
-            mccf.AddDemands({d.first, d.second}, value);
-        }
-        mccf.solve();
-        double offline = mccf.getCongestion();
+        mccf.AddDemandMap(demand_map);
+        auto offline_scheme = mccf.solve();
 
-        return {offline, max_cong};
-*/
+        double offline_congestion = mccf.getCongestion();
+        return {offline_congestion, max_cong};
+
     }
     return {};
 }

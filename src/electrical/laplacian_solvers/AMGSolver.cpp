@@ -19,8 +19,6 @@ void AMGSolver::check_openmp_runtime() {
             std::cout << omp_get_num_threads() << "\n";
         }
     }
-#else
-    std::cout << "OpenMP is NOT enabled (compiled without -fopenmp).\n";
 #endif
 }/*
 void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug) {

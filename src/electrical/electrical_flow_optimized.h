@@ -23,7 +23,7 @@ struct WeightedEdge {
     double weight;
 };
 
-class ElectricalFlowOptimized : public MWUFramework {
+class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFramework {
     private:
 
     int n, m;
@@ -71,13 +71,14 @@ class ElectricalFlowOptimized : public MWUFramework {
 
     public:
 
-    ElectricalFlowOptimized(IGraph& g, int root, bool debug = false):MWUFramework(g, root) {}
+    ElectricalFlowOptimized(IGraph& g, int root, bool debug = false):LinearObliviousSolverBase(g, root) {}
 
     void computeBasisFlows(LinearRoutingTable &table) override {
         init(debug, "amg_cg");
 
         run(table);
         scaleFlowDown(table);
+
     }
 
 

@@ -39,18 +39,6 @@ public:
         return tree;
     }
 
-    // ---- tree ----
-    /*
-    void setTree(std::shared_ptr<ITreeNode> t) noexcept {
-        assert(t != nullptr);
-        tree = t;
-    }*/
-/*
-    const ITreeType*& getTree() const {
-        assert(tree != nullptr);
-        return tree;
-    }*/
-
     std::shared_ptr<ITreeNode> getTree() {
         assert(tree != nullptr);
         return tree;

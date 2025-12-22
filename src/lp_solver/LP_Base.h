@@ -17,10 +17,10 @@
 
 using namespace operations_research;
 
-class LP : public ObliviousRoutingSolver{
+class LP : public AllPairObliviousSolverBase {
 public:
 
-    const IGraph* g = nullptr;
+
     bool debug = false;
     int n, m;
     std::unique_ptr<MPSolver> solver;
@@ -28,8 +28,8 @@ public:
     std::vector<Demand> demands;
     std::vector<std::pair<int, int> > edges;
 
-    LP() : solver(nullptr), alpha(nullptr) {}
-    LP(IGraph& graph) {
+    // LP() : solver(nullptr), alpha(nullptr) {}
+    LP(IGraph& graph):AllPairObliviousSolverBase(graph), solver(nullptr), alpha(nullptr) {
         init(graph);
     }
     virtual ~LP() = default;
@@ -44,7 +44,6 @@ public:
         edges.clear();
         n = graph.getNumNodes();
         m = graph.getNumDirectedEdges(); // *2 , Not here
-        g = &graph;
 
         if (!solver) {
             solver.reset(MPSolver::CreateSolver("GLOP"));
@@ -66,28 +65,23 @@ public:
         });
     }
 
-    std::unique_ptr<RoutingScheme> solve() override {
-        assert(g != nullptr);
-        EfficientRoutingTable table;
-        table.init(g->getNumDirectedEdges());
+    void computeBasisFlows(AllPairRoutingTable &table) override {
+        //table.init(graph);
 
-        // solver must fill table via computeBasisFlows
-        if (Run(*g, table)) {
+        if (Run(graph, table)) {
             if (debug) {
-                this->PrintSolution(*g);
+                this->PrintSolution(graph);
+                table.printFlows(graph);
             }
         } else {
             std::cout << "ERROR: Failed to complete LP." << std::endl;
         }
 
-
-        return std::make_unique<NonLinearRoutingScheme>(
-      *g,
-      std::move(table));
     }
 
 
-    bool Run(const IGraph& graph, EfficientRoutingTable& table) {
+
+    bool Run(const IGraph& graph, AllPairRoutingTable& table) {
 
         init(graph);
         CreateVariables(graph);
@@ -114,7 +108,7 @@ public:
 
     void setDebug(bool debug) {this->debug = debug;}
 
-    virtual void storeFlow(EfficientRoutingTable& table) = 0;
+    virtual void storeFlow(AllPairRoutingTable& table) = 0;
 
 };
 

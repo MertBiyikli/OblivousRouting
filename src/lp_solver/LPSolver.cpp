@@ -356,31 +356,30 @@ void LPSolver::PrintCommoditiesPerEdge(const IGraph& graph) {
     }
 }
 
-void LPSolver::storeFlow(EfficientRoutingTable& table) {
+void LPSolver::storeFlow(AllPairRoutingTable& table) {
     // store the flow for each commodity in f_st_e
     // f_st_e.resize(edges.size()/2); // note that in vector edges, edges are stored two directed arcs, thus for outputting we only need one direction
 
     for (int edge_id = 0; edge_id < edges.size(); edge_id++) {
-        const auto& edge = edges[edge_id];
 
         // Iterate over all demands for this edge
         for (const auto& d : demands) {
             auto it = m_var_f_e_.find({edge_id, {d.first, d.second}});
 
 
-            if (it != m_var_f_e_.end() && it->second != nullptr) {
+            if (it != m_var_f_e_.end()
+                && it->second != nullptr) {
+
                 double flow_value = it->second->solution_value();
-                if (flow_value > 1e-9) { // print only non-zero flows
-                    int e = g->getEdgeId(edges[edge_id].first, edges[edge_id].second);
-                    if(edge.first < edge.second) {
+                if (std::abs(flow_value) > SOFT_EPS) { // print only non-zero flows
+                    int e = graph.getEdgeId(edges[edge_id].first, edges[edge_id].second);
 
+                    if (flow_value < 0) {
+                        // push flow into anti-edge direction
+                        int anti_e = graph.getAntiEdge(e);
+                        table.addFlow(anti_e, d.first, d.second, flow_value);
+                    }else {
                         table.addFlow(e, d.first, d.second, flow_value);
-                        //f_e_st[edge][{d.first, d.second}] =  flow_value;
-                    } else {
-                        //f_e_st[{edge.second, edge.first}][{d.first, d.second}] =  -flow_value;
-
-                        int anti_edge = g->getAntiEdge(e);;
-                        table.addFlow(anti_edge, d.first, d.second, -flow_value);
                     }
                 }
             }

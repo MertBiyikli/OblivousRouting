@@ -16,12 +16,6 @@
 using Edge = std::pair<int, int>; // (u, v)
 
 
-// Optionally, define a custom comparator to enforce u < v ordering
-struct EdgeCompare {
-    bool operator()(const Edge& a, const Edge& b) const {
-        return (a.first == b.first) ? (a.second < b.second) : (a.first < b.first);
-    }
-};
 
 
 

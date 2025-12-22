@@ -5,16 +5,16 @@
 #ifndef OBLIVIOUSROUTING_EFFICIENT_CKR_H
 #define OBLIVIOUSROUTING_EFFICIENT_CKR_H
 
-#include "../../../solver/solver.h"
-#include "../../../datastructures/GraphCSR.h"
-#include "../ckr_tree_decomposer.h"
-#include "../raecke_ckr_transform.h"
-#include "../../raecke_oracle_iteration.h"
-#include "../utils/ultrametric_tree.h"
-#include "../ckr_tree_decomposer.h"
-#include "../utils/quotient_graph.h"
-#include "../../raecke_tree.h"
-#include "../../efficient_raecke_base.h"
+#include "../../solver/solver.h"
+#include "../../datastructures/GraphCSR.h"
+#include "ckr_tree_decomposer.h"
+#include "../raecke_transform.h"
+#include "../raecke_oracle_iteration.h"
+#include "utils/ultrametric_tree.h"
+#include "ckr_tree_decomposer.h"
+#include "utils/quotient_graph.h"
+#include "../raecke_tree.h"
+
 #include <chrono>
 
 /*
@@ -50,12 +50,12 @@ private:
         MendelScaling::QuotientLevel& Q,
         double Delta,
         CKRLevel& L);
-    std::shared_ptr<TreeNode> buildTreeLevel(
+    std::vector<std::shared_ptr<TreeNode>> buildTreeLevel(
         std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
         const MendelScaling::QuotientLevel &Q,
         const CKRLevel& L,
         const double Delta);
-    void finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode>>& prev_nodes);
+    void finishTree(std::shared_ptr<TreeNode>& root, std::vector<std::shared_ptr<TreeNode>>& prev_nodes);
     void cleanUpTree(std::shared_ptr<TreeNode>& root);
 
 };

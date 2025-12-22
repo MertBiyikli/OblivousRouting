@@ -34,8 +34,11 @@ public:
     virtual void SetObjective() override;
     void PrintSolution(const IGraph& graph) override;
 
+    void AddDemandMap(const DemandMap& d_map);
     void AddDemands(const std::pair<int, int>& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
-    virtual void storeFlow(EfficientRoutingTable& table) override;
+    virtual void storeFlow(AllPairRoutingTable& table) override;
+
+    double getCongestion();
 
 };
 

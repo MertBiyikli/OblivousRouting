@@ -3,15 +3,15 @@
 //
 
 #include "efficient_oracle_ckr.h"
-#include "../utils/quotient_graph.h"
-#include "../utils/ultrametric_tree.h"
-#include "../../random_mst/mst.h"
+#include "utils/quotient_graph.h"
+#include "utils/ultrametric_tree.h"
+#include "../random_mst/mst.h"
 #include <cassert>
 #include <random>
 #include <google/protobuf/arena_cleanup.h>
 
-#include "../../raecke_tree.h"
-#include "../../../datastructures/GraphCSR.h"
+#include "../raecke_tree.h"
+#include "../../datastructures/GraphCSR.h"
 
 
 
@@ -82,6 +82,10 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
     MendelScaling::QuotientConstruction qc;
     qc.preprocessEdges(g);
 
+    std::vector<std::shared_ptr<TreeNode>> current_tree_nodes;
+    for (int v = 0; v < n; ++v) {
+        current_tree_nodes.push_back(prev_nodes[v]);
+    }
 
     // ---- (4) for each scale, build the CKR level and link to previous level ----
     for (double Delta : scales) {
@@ -97,11 +101,20 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
         CKRLevel& L = m_levels.back();
         computeLevelPartition(Q, Delta, L);
 
-        buildTreeLevel(prev_nodes, Q, L, Delta);
 
+        auto current_level = buildTreeLevel(prev_nodes, Q, L, Delta);
+        if (current_level.size() == g.getNumNodes()) {
+            // no clustering happened at this level; skip
+            m_levels.pop_back();
+            continue;
+        }
+        for (auto& node : current_level) {
+            current_tree_nodes.push_back(node);
+        }
+        prev_nodes = current_level;
     }
 
-    finishTree(root, prev_nodes);
+    finishTree(root, current_tree_nodes);
     // sanity: all original vertices must be present exactly once
     // (you can add a debug assert that counts coverage here)
     return root;
@@ -146,7 +159,7 @@ void EfficientCKR::computeLevelPartition(MendelScaling::QuotientLevel &Q, double
 }
 
 
-std::shared_ptr<TreeNode>
+std::vector<std::shared_ptr<TreeNode>>
 EfficientCKR::buildTreeLevel(
 std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
         const MendelScaling::QuotientLevel& Q,
@@ -224,66 +237,27 @@ std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
         M.erase(std::unique(M.begin(), M.end()), M.end());
     }
 
-    // ------------------------------------------------------------------
-    // Step 4: If this is the topmost level, return virtual root
-    // ------------------------------------------------------------------
-    if (L.R == scales.front()) {
-        auto root = std::make_shared<TreeNode>();
-        root->parent.reset();
-        root->children.clear();
-        root->members.clear();
-
-        // Choose a stable center
-        root->center = parents.front()->center;
-
-        for (auto& p : parents) {
-            p->parent = root;
-            root->children.push_back(p);
-            root->members.insert(
-                root->members.end(),
-                p->members.begin(),
-                p->members.end()
-            );
-        }
-
-        std::sort(root->members.begin(), root->members.end());
-        root->members.erase(
-            std::unique(root->members.begin(), root->members.end()),
-            root->members.end()
-        );
-
-        return root;
-    }
-
-    // Otherwise return a dummy aggregator node (used by caller)
-    auto aggregator = std::make_shared<TreeNode>();
-    aggregator->parent.reset();
-    aggregator->children = parents;
-    aggregator->members.clear();
-
-    aggregator->center = parents.front()->center;
-
-    for (auto& p : parents) {
-        p->parent = aggregator;
-        aggregator->members.insert(
-            aggregator->members.end(),
-            p->members.begin(),
-            p->members.end()
-        );
-    }
-
-    std::sort(aggregator->members.begin(), aggregator->members.end());
-    aggregator->members.erase(
-        std::unique(aggregator->members.begin(), aggregator->members.end()),
-        aggregator->members.end()
-    );
-
-    return aggregator;
+    return parents;
 }
 
 
 
-void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector<std::shared_ptr<TreeNode> > &prev_nodes) {
+void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, std::vector<std::shared_ptr<TreeNode> > &prev_nodes) {
+
+    for (int i = 0; i < prev_nodes.size(); ++i) {
+        auto& node = prev_nodes[i];
+        if (node->members.size() == 0) {
+            // remove the node from its parent
+            auto parent = node->parent.lock();
+            if (parent) {
+                auto& siblings = parent->children;
+                siblings.erase(std::remove(siblings.begin(), siblings.end(), node), siblings.end());
+            }
+
+            // also remove node from the prev nodes vector
+            prev_nodes.erase(prev_nodes.begin() + i);
+        }
+    }
 
     // Final root: if multiple parents remain, wrap them under one root; else take the only one.
     if (prev_nodes.empty()) {
@@ -293,19 +267,25 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
         root->members.resize(g.getNumNodes());
         std::iota(root->members.begin(), root->members.end(), 0);
         root->center = (!root->members.empty() ? root->members[0] : -1 );
-    } else if (prev_nodes.size() == 1) {
-        root = prev_nodes.front();
     } else {
-        root =std::make_shared< TreeNode>();
-        //root->id = -1;
-        root->radius = (scales.empty()? 0.0 : scales.front());
-        root->center = prev_nodes.front()->center;
-        for (auto ch : prev_nodes) {
-            root->children.push_back(ch);
-            ch->parent = root;
-            root->members.insert(root->members.end(), ch->members.begin(), ch->members.end());
+        root = std::make_shared< TreeNode>();
+        root->members.resize(g.getNumNodes());
+        std::iota(root->members.begin(), root->members.end(), 0);
+        root->center = prev_nodes.back()->center;
+
+        std::set<int> members_set;
+        for (int i = prev_nodes.size()-1; i >= 0; --i) {
+            auto& node = prev_nodes[i];
+            for (auto& v : node->members) {
+                members_set.insert(v);
+            }
+            root->children.push_back(node);
+            if (members_set.size() == g.getNumNodes()) {
+                break;
+            }
         }
     }
+
 
     cleanUpTree(root);
 }
@@ -313,6 +293,21 @@ void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, const std::vector
 
 void EfficientCKR::cleanUpTree(std::shared_ptr<TreeNode>& node) {
     if (!node) return;
+
+    if (node->members.size() == 0) {
+        // drop empty nodes
+        auto parent = node->parent.lock();
+        if (parent) {
+            auto& siblings = parent->children;
+            siblings.erase(std::remove(siblings.begin(), siblings.end(), node), siblings.end());
+        }
+        return;
+    }
+
+    if (node->members.size() == 1) {
+        node->center = node->members[0];
+        node->children.clear();
+    }
 
     // first clean children
     for (auto& ch : node->children) cleanUpTree(ch);

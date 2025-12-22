@@ -12,10 +12,9 @@
 #include "raecke_oracle.h"
 #include "raecke_oracle_iteration.h"
 #include "raecke_tree.h"
-#include "ckr/optimized/efficient_raecke_ckr_transform.h"
-#include "raecke_linear_routing.h"
+#include "raecke_transform.h"
 
-class RaeckeMWU : public MWUFramework {
+class RaeckeMWU : public AllPairObliviousSolverBase, public MWUFramework {
 public:
     std::unique_ptr<RaeckeOracle> oracle;
     double lambdaSum;
@@ -27,8 +26,8 @@ public:
 
     std::vector<double> current_distances;
 
-    RaeckeMWU(IGraph& g, int root,
-              std::unique_ptr<RaeckeOracle> _oracle):MWUFramework(g, root),
+    RaeckeMWU(IGraph& g,
+              std::unique_ptr<RaeckeOracle> _oracle):AllPairObliviousSolverBase(g),
     oracle(std::move(_oracle)),
           lambdaSum(0.0) {
 
@@ -37,16 +36,17 @@ public:
         rload_total.assign(graph.getNumEdges(), 0.0);
     }
 
-    // Each Racke Variant has to implement its own transformSolution method
-    virtual void transformSolution(LinearRoutingTable& table) = 0;
 
-    void computeBasisFlows(LinearRoutingTable &table) override {
+    virtual void transformSolution(AllPairRoutingTable& table) {
+        EfficientRaeckeTransform transform(graph, iteration);
+        transform.transform();
+        table = transform.getRoutingTable();
+    }
+
+    void computeBasisFlows(AllPairRoutingTable &table) override {
         run();
         normalizeLambdas();
         transformSolution(table);
-        //table.printFlows(graph);
-        assert(table.isValid(graph));
-        // print out the linear routing table
 
     }
 
@@ -210,194 +210,6 @@ public:
             current_distances[e] = norm;
         }
     }
-
-    void addTree(const OracleTreeIteration& iter, LinearRoutingTable& table) {
-        distributeDemands(iter.getTree(), iter, table);
-        removeCycles(table);
-    }
-
-    void distributeDemands(const std::shared_ptr<ITreeNode> node, const OracleTreeIteration& iter, LinearRoutingTable& table) {
-        if (!node) return;
-
-        const double& lambda = iter.getLambda();
-        const auto& distance = iter.getDistance();
-        for (const auto& child : node->getChildren()) {
-            std::set<int> A = collectSubtreeVertices(child);
-            std::set<int> B;
-            for (int v : graph.getVertices()) {
-                if (!A.count(v)) B.insert(v);
-            }
-
-            for (int src : A) {
-                for (int dst : B) {
-                    if (src == dst) continue;
-                    auto path = graph.getShortestPath(src, dst, iter.getDistance());
-
-                    pushFlowAlongPath(path, src, dst, lambda, table);
-                }
-            }
-
-            distributeDemands(child, iter, table);
-        }
-    }
-
-    void pushFlowAlongPath(const std::vector<int>& p,
-                           int s,
-                           int t,
-                           double lambda,
-                           LinearRoutingTable& table) {
-        for (size_t i = 0; i + 1 < p.size(); ++i) {
-            int u = p[i];
-            int v = p[i + 1];
-
-            // first, identify the orientation of the flow
-            // we have to push lambda amount of f_st flow along the path
-            int flow_sign = +1;
-            if (u < v) {
-                // forward direction
-                int e = graph.getEdgeId(u, v);
-                table.addFlow(e, s, lambda);
-                table.addFlow(e, t, -lambda);
-            } else {
-                // backward direction
-                // push positive flow along the anti-edge
-                flow_sign *= -1;
-
-                int anti_e = graph.getEdgeId(v, u);
-                table.addFlow(anti_e, s, flow_sign*lambda);
-                table.addFlow(anti_e, t, -(flow_sign*lambda));
-            }
-        }
-    }
-
-    std::set<int> collectSubtreeVertices(std::shared_ptr<ITreeNode> node) {
-        std::set<int> result(node->getMembers().begin(), node->getMembers().end());
-        for (const auto& child : node->getChildren()) {
-            auto sub = collectSubtreeVertices(child);
-            result.insert(sub.begin(), sub.end());
-        }
-        return result;
-    }
-
-
-    void removeCycles(LinearRoutingTable& table) {
-        std::set<std::pair<int, int>> all;
-        for (int e = 0; e<table.src_ids.size(); e++) {
-            const auto& ids  = table.src_ids[e];
-            for (const auto& id : ids) {
-                all.insert({id, root});
-            }
-        }
-
-        for (const auto& d:all) {
-            while (true) {
-                auto cycle = findCycle(d, table);
-                if (cycle.empty()) break;
-
-                double minF = std::numeric_limits<double>::infinity();
-                for (auto e : cycle) {
-                    int e_id = graph.getEdgeId(e.first, e.second);
-                    double frac = table.getFlow(e_id, d.first);
-                    minF = std::min(minF,frac);
-                }
-
-                for (auto e : cycle) {
-                    int e_id = graph.getEdgeId(e.first, e.second);
-                    auto& dmap = table.src_ids[e_id];
-                    // find index of (d.first, d.second) in table.adj_ids[e_id]
-                    const auto& ids = table.src_ids[e_id];
-                    size_t len = ids.size();
-                    size_t lo = 0, hi = len;
-                    while (lo < hi) {
-                        const size_t mid = (lo + hi) >> 1;
-                        const auto& mid_val = ids[mid];
-                        if (mid_val < d.first)
-                            lo = mid + 1;
-                        else
-                            hi = mid;
-                    }
-
-                    // if found, decrease the fraction
-                    if (lo < len && ids[lo] == d.first) {
-                        dmap[lo] -= minF;
-                        if (dmap[lo] <= 0) {
-                            // remove the entry
-                            dmap.erase(dmap.begin() + static_cast<long>(lo));
-                            table.src_flows[e_id].erase(table.src_flows[e_id].begin() + static_cast<long>(lo));
-                        }
-                    }
-
-                    // also erase for the anti edge
-                    int anti_e_id = graph.getEdgeId(e.second, e.first);
-                    auto& rmap = table.src_ids[anti_e_id];
-                    const auto& rids = table.src_ids[anti_e_id];
-                    size_t rlen = rids.size();
-                    size_t rlo = 0, rhi = rlen;
-                    while (rlo < rhi) {
-                        const size_t mid = (rlo + rhi) >> 1;
-                        const auto& mid_val = rids[mid];
-                        if (mid_val < d.second)
-                            rlo = mid + 1;
-                        else
-                            rhi = mid;
-                    }
-
-                    // if found, decrease the fraction
-                    if (rlo < rlen && rids[rlo] == d.second) {
-                        rmap[rlo] -= minF;
-                        if (rmap[rlo] <= 0) {
-                            // remove the entry
-                            rmap.erase(rmap.begin() + static_cast<long>(rlo));
-                            table.src_flows[anti_e_id].erase(table.src_flows[anti_e_id].begin() + static_cast<long>(rlo));
-                        }
-                    }
-                }
-
-            }
-        }
-    }
-
-    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d, LinearRoutingTable& table) {
-        std::set<int> analyzed;
-        for (int v : graph.getVertices()) {
-            if (analyzed.count(v)) continue;
-            std::vector<int> stack;
-            if (auto maybe = findCycleRec(v, analyzed, stack, d, table))
-                return *maybe;
-        }
-        return {};
-    }
-
-    std::optional<std::vector<std::pair<int, int>>> findCycleRec(
-        int u,
-        std::set<int>& analyzed,
-        std::vector<int>& stack,
-        const std::pair<int, int>& d,
-        LinearRoutingTable& table) {
-        if (std::find(stack.begin(), stack.end(), u) != stack.end())
-            return std::vector<std::pair<int, int>>{};
-        if (analyzed.count(u))
-            return std::nullopt;
-
-        analyzed.insert(u);
-        stack.push_back(u);
-
-        for (int w : graph.neighbors(u)) {
-            int e_id = graph.getEdgeId(u, w);
-            double frac = table.getFlow(e_id, d.first);
-            if (frac <= 0) continue;
-
-            if (auto child = findCycleRec(w, analyzed, stack, d, table)) {
-                auto cycle = *child;
-                cycle.insert(cycle.begin(), {u, w});
-                return cycle;
-            }
-        }
-
-        stack.pop_back();
-        return std::nullopt;
-    }
-
 
 };
 

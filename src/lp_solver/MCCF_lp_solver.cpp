@@ -6,6 +6,14 @@
 #include "../utils/hash.h"
 
 
+void CMMF_Solver::AddDemandMap(const DemandMap &d_map) {
+     for (int i = 0; i < static_cast<int>(d_map.size()); ++i) {
+         const auto& d = d_map.getDemandPair(i);
+         const double& value = d_map.getDemandValue(i);
+         AddDemands({d.first, d.second}, value);
+     }
+}
+
 
 
 void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
@@ -108,6 +116,14 @@ void CMMF_Solver::SetObjective() {
     obj->SetMinimization();
 }
 
+double CMMF_Solver::getCongestion() {
+    assert(alpha);
+    if (alpha) {
+        return alpha->solution_value();
+    }
+}
+
+
 
 void CMMF_Solver::PrintSolution(const IGraph &graph) {
     // 1) Print the congestion factor
@@ -164,7 +180,7 @@ void CMMF_Solver::PrintSolution(const IGraph &graph) {
     }
 }
 
-void CMMF_Solver::storeFlow(EfficientRoutingTable& table) {
+void CMMF_Solver::storeFlow(AllPairRoutingTable& table) {
     // store the flow for each commodity in f_st_e
     for (int s = 0; s < n; s++) {
         for (int t = 0; t < n; ++t) {
@@ -176,7 +192,7 @@ void CMMF_Solver::storeFlow(EfficientRoutingTable& table) {
                 double f     = v->solution_value();
                 if (std::abs(f) > EPS) {
                     const auto &e = edges[arcId];
-                    int edge_id = g->getEdgeId(e.first, e.second);
+                    int edge_id = graph.getEdgeId(e.first, e.second);
                     table.addFlow(edge_id, s, t, f);
                 }
             }

@@ -7,11 +7,7 @@
 
 #include "solver.h"
 
-class MWUFramework : public LinearObliviousSolverBase{
-public:
-    MWUFramework(IGraph& g, int root)
-        : LinearObliviousSolverBase(g, root) {}
-
+class MWUFramework{
 protected:
     std::vector<double> oracle_running_times;
     std::vector<double> pure_oracles_running_times;

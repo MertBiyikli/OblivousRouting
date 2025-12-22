@@ -7,7 +7,7 @@
 
 #include "../raecke_oracle.h"
 #include "../raecke_tree.h"
-#include "optimized/efficient_oracle_ckr.h"
+#include "efficient_oracle_ckr.h"
 
 class CKROracle : public RaeckeOracle {
 public:

@@ -35,7 +35,7 @@ private:
 
 public:
     //std::unordered_map<std::pair<int, int>, std::unordered_map<std::pair<int, int>, double>> f_st_e;
-    LPSolver(){};
+
     LPSolver(IGraph& graph):LP(graph){};
 
 
@@ -45,7 +45,7 @@ public:
     void PrintSolution(const IGraph& graph) override;
     void GetRoutingTable(const IGraph& graph);
 
-    virtual void storeFlow(EfficientRoutingTable& table) override;
+    virtual void storeFlow(AllPairRoutingTable& table) override;
     double getCongestion(DemandMap& demands, IGraph& g) const;
 
     void PrintCommoditiesPerEdge(const IGraph& graph);

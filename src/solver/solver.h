@@ -38,6 +38,7 @@ public:
         // solver must fill table via computeBasisFlows
         computeBasisFlows(table);
 
+        assert(table.isValid(graph));
         return std::make_unique<LinearRoutingScheme>(
             graph,
             root,
@@ -51,6 +52,29 @@ protected:
     // Subclasses implement this:
     // Must call table.addFlow(e, s, flow_sx)
     virtual void computeBasisFlows(LinearRoutingTable& table) = 0;
+};
+
+class AllPairObliviousSolverBase : public ObliviousRoutingSolver {
+public:
+    AllPairObliviousSolverBase(IGraph& _g):
+        graph(_g) {}
+
+    // 🔧 FIXED: pass table into LinearRoutingScheme
+    std::unique_ptr<RoutingScheme> solve() override {
+        AllPairRoutingTable table;
+        table.init(graph);
+
+        // solver must fill table via computeBasisFlows
+        computeBasisFlows(table);
+
+        return std::make_unique<AllPairRoutingScheme>(
+            graph,
+            std::move(table));
+    }
+
+protected:
+    IGraph& graph;
+    virtual void computeBasisFlows(AllPairRoutingTable& table) = 0;
 };
 
 #endif //OBLIVOUSROUTING_SOLVER_H

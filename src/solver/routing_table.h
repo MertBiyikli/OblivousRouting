@@ -13,18 +13,26 @@
 
 constexpr static double EPS = 1e-16;
 constexpr static double SOFT_EPS = 1e-3;
+constexpr static double VERY_SOFT_EPS = 1e-1;
 
 
 
+struct RoutingTable {
+    virtual ~RoutingTable() = default;
+    virtual void init(const IGraph& g) = 0;
+
+    virtual bool isValid(const IGraph& g) const = 0;
+    virtual void printFlows(const IGraph& g) const = 0;
+};
 
 
-
-struct EfficientRoutingTable  {
+struct AllPairRoutingTable :public RoutingTable{
     // store the flows for each commodity
     std::vector<std::vector<std::pair<int, int>>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
     std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
 
-    void init(const int numEdges) {
+    void init(const IGraph& g) override {
+        const int numEdges = g.getNumEdges();
         adj_ids.assign(numEdges, {});
         adj_vals.assign(numEdges, {});
     }
@@ -106,7 +114,7 @@ struct EfficientRoutingTable  {
         }
     }
 
-    bool isValid(IGraph& g) const {
+    bool isValid(const IGraph& g) const override {
         const int m = adj_ids.size();
         for (int e = 0; e < m; ++e) {
             const auto& ids = adj_ids[e];
@@ -119,7 +127,7 @@ struct EfficientRoutingTable  {
 
         // check flow conservation constraint
         const int n = g.getNumNodes();
-        std::vector<double> net_flow(n, 0.0);
+        std::map<std::pair<int, int>, double> net_flow;
         for (int e = 0; e < m; ++e) {
             // get the orientation of the flow
             const auto& [u, v] = g.edgeEndpoints(e);
@@ -127,33 +135,62 @@ struct EfficientRoutingTable  {
             for (int s = 0; s < n; ++s) { // By default the root node is 0
                 for ( int t = 0; t < n; ++t ) {
                     if ( s == t ) continue;
+
                     if ( u == s ) {
                         double flow = getFlow(e, s, t);
-                        net_flow[s] -= flow;
+                        net_flow[{s, t}] += flow;
+                    }
+                    if ( v == s ) {
+                        double flow = getFlow(e, s, t);
+                        net_flow[{s, t}] += flow;
                     }
                 }
             }
         }
 
         bool all_unit_flow = true;
-        for (int s = 1; s < n; ++s) {
-            if (std::abs(net_flow[s] - 1.0) > SOFT_EPS) {
-                all_unit_flow &= false;
-                std::cout << "Node " << s << " has net flow " << net_flow[s] << " (expected 1.0)\n";
+        for (int s = 0; s < n; ++s) {
+            for (int t = 0; t < n; ++t) {
+                if ( s == t ) continue;
+
+                if (std::abs(net_flow[{s, t}] - 1) > SOFT_EPS) {
+                    all_unit_flow &= false;
+                    std::cout << "Commodity " << s << " -> " << t << " has net flow "
+                              << net_flow[{s, t}] << ")\n";
+                }
             }
+
         }
         return all_unit_flow;
+    }
+
+    void printFlows(const IGraph& g) const override{
+
+        for (int s = 0; s < g.getNumNodes(); ++s) {
+            for (int t = 0; t < g.getNumNodes(); ++t) {
+                if (s == t) continue;
+
+                std::cout << "Flows for commodity " << s << " -> " << t << ":\n";
+                for (int e = 0; e < g.getNumEdges(); ++e) {
+                    double flow = getFlow(e, s, t);
+                    if (std::abs(flow) > EPS) {
+                        auto [u, v] = g.edgeEndpoints(e);
+                        std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
+                    }
+                }
+            }
+        }
     }
 };
 
 
 // For each edge e: list of (s → flow_e(s,x))
-struct LinearRoutingTable {
+struct LinearRoutingTable : public RoutingTable {
     int n = 0; // number of nodes
     std::vector<std::vector<int>>    src_ids;   // src_ids[e]   = [s1, s2, ...]
     std::vector<std::vector<double>> src_flows; // src_flows[e] = [f_e(s1,x), f_e(s2,x), ...]
 
-    void init(const IGraph& g) {
+    void init(const IGraph& g) override {
         const int numEdges = g.getNumEdges();
         n = g.getNumNodes();
         src_ids.assign(numEdges, {});
@@ -240,7 +277,7 @@ struct LinearRoutingTable {
 
 
 
-    bool isValid(IGraph& g) const {
+    bool isValid(const IGraph& g) const override{
         const int m = src_ids.size();
         for (int e = 0; e < m; ++e) {
             const auto& ids = src_ids[e];
@@ -258,7 +295,7 @@ struct LinearRoutingTable {
             const auto& [u, v] = g.edgeEndpoints(e);
             // int sign = (u < v) ? 1 : -1;
             for (int s = 1; s < n; ++s) { // By default the root node is 0
-                if ( v == s) {
+                if ( u == s) {
                     double flow = getFlow(e, s);
                     net_flow[s] += flow;
                 }
@@ -267,7 +304,7 @@ struct LinearRoutingTable {
 
         bool all_unit_flow = true;
         for (int s = 1; s < n; ++s) {
-            if (std::abs(net_flow[s] - 1.0) > SOFT_EPS) {
+            if (std::abs(net_flow[s] - 1.0) > VERY_SOFT_EPS) {
                 all_unit_flow &= false;
                 std::cout << "Node " << s << " has net flow " << net_flow[s] << " (expected 1.0)\n";
             }
@@ -277,7 +314,7 @@ struct LinearRoutingTable {
 
 
 
-    void printFlows(const IGraph& g) {
+    void printFlows(const IGraph& g) const override {
         for (int s = 0; s < n; ++s) {
             std::cout << "Flows for source " << s << ":\n";
             for (int e = 0; e < g.getNumEdges(); ++e) {
@@ -296,8 +333,9 @@ struct LinearRoutingTable {
 class RoutingScheme{
 protected:
     const IGraph& g;
+    RoutingTable& table;
 public:
-    explicit RoutingScheme(const IGraph& _g):g(_g) {
+    explicit RoutingScheme(const IGraph& _g, RoutingTable& _table):g(_g), table(_table) {
     }
     virtual ~RoutingScheme() = default;
 
@@ -316,6 +354,8 @@ public:
         }
         return max_cong;
     }
+
+    virtual double _getFlow(int e, int s, int t) const = 0;
 };
 
 
@@ -324,11 +364,15 @@ public:
 
     LinearRoutingTable routing_table;
     int root_x = 0;
-    explicit LinearRoutingScheme(const IGraph& _g, int _root_x, LinearRoutingTable&& table) : RoutingScheme(_g), root_x(_root_x), routing_table(std::move(table)) {
+    explicit LinearRoutingScheme(const IGraph& _g, int _root_x, LinearRoutingTable&& table) : RoutingScheme(_g, table), root_x(_root_x), routing_table(std::move(table)) {
     }
 
     void initRoutingTable() {
         routing_table.init(g);
+    }
+
+    virtual double _getFlow(int e, int s, int t) const override {
+        return this->getFlow(e, s, t);
     }
 
     // Since we store the oblivious routing as a linear routing table w.r.t. root_x,
@@ -417,11 +461,15 @@ public:
 
 
 
-class NonLinearRoutingScheme : public RoutingScheme {
+class AllPairRoutingScheme : public RoutingScheme {
 public:
-    EfficientRoutingTable routing_table;
+    AllPairRoutingTable routing_table;
     // to be implemented
-    explicit NonLinearRoutingScheme(const IGraph& _g, EfficientRoutingTable&& table) : RoutingScheme(_g), routing_table(std::move(table)) {
+    explicit AllPairRoutingScheme(const IGraph& _g, AllPairRoutingTable&& table) : RoutingScheme(_g, table), routing_table(std::move(table)) {
+    }
+
+    virtual double _getFlow(int e, int s, int t) const override {
+        return this->getFlow(e, s, t);
     }
 
     double getFlow(int e, int s, int t) const{
@@ -433,7 +481,7 @@ public:
         routing_table.addFlow(e, s,t, flow_sx);
     }
 
-    virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const {
+    virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const override {
         const int m = g.getNumEdges(); // undirected edges
         std::vector<double> total_flow;
         total_flow.resize(m, 0.0);

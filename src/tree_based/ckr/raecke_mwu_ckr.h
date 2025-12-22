@@ -10,15 +10,10 @@
 
 class RaeckeMWU_CKR : public RaeckeMWU {
 public:
-    RaeckeMWU_CKR(IGraph& g, int root)
-        : RaeckeMWU(g, root, std::make_unique<CKROracle>(g)) {}
+    RaeckeMWU_CKR(IGraph& g)
+        : RaeckeMWU(g,  std::make_unique<CKROracle>(g)) {}
 
 
-    virtual void transformSolution(LinearRoutingTable& table) {
-        LinearEfficientRaeckeTransform linear_transform(graph, iteration);
-        linear_transform.transform();
-        table = linear_transform.getRoutingTable();
-    }
 };
 
 
