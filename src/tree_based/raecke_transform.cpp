@@ -15,7 +15,7 @@ void IRaeckeTransform::transform() {
     for (auto& iteration : iterations) {
         addTree(iteration);
     }
-    removeCycles();
+    // removeCycles();
 }
 
 
@@ -39,12 +39,12 @@ const AllPairRoutingTable& EfficientRaeckeTransform::getRoutingTable() const {
     return table;
 }
 
+bool EfficientRaeckeTransform::routingTableIsValid() const {
+    return table.isValid(g);
+}
+
 void EfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) {
     if (!node) return;
-
-
-    int watch_u = 2, watch_v = 3;
-
     // print the tree as well
     // print_tree(node);
     std::queue<std::shared_ptr<ITreeNode>> q;
@@ -88,108 +88,53 @@ void EfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode
                     for (int dst : B) {
 
                         if (src == dst) continue;
-/*
-                        if( (src == watch_u && dst == watch_v)
-                        || (src == watch_v && dst == watch_u)) {
-                            std::cout << "Child member: ";
-                            for (auto v : A) {
-                                std::cout << v << " ";
-                            }
-                            std::cout << "\n";
-                            std::cout << "Parent member: ";
-                            for (auto v : B) {
-                                std::cout << v << " ";
-                            }
-                            std::cout << "\n";
-                            std::cout << "Pushing flow for demand pair (" << src << ", " << dst << ") along path: ";
-                            for (auto v : path) {
-                                std::cout << v << " ";
-                            }
-                            std::cout << "\n";
-                            std::cout << "Lambda : " << lambda << "\n";
-                        }*/
+
                         for (size_t i = 0; i + 1 < path.size(); ++i) {
 
                             int e = g.getEdgeId(path[i], path[i+1]);
                             int anti_e = g.getEdgeId(path[i+1], path[i]);
 
-                            assert(e != INVALID_EDGE_ID && anti_e != INVALID_EDGE_ID);
+                            assert(e != INVALID_EDGE_ID
+                            && anti_e != INVALID_EDGE_ID);
                             table.addFlow(anti_e, src, dst, lambda);
                             table.addFlow(e, dst, src, lambda);
-/*
-                            auto& forward = edge2demand2flow[e];
-                            auto& reverse = edge2demand2flow[anti_e];
 
-
-                            if (forward.count({src, dst}) == 0) {
-                                forward[{src, dst}] = 0.0;
-                            }
-                            if (reverse.count({dst, src}) == 0) {
-                                reverse[{dst, src}] = 0.0;
-                            }
-
-                            forward[{src, dst}] += lambda;
-                            reverse[{dst, src}] += lambda;
-*/
                         }
                     }
                 }
                 q.push(child);
         }
     }
+    removeCycles();
 }
 
-
-bool EfficientRaeckeTransform::routingTableIsValid() {
-    // check the flow conservation and net flow = 1 for each commodity
-    // check the map DS
-    std::map<std::pair<int, int>, double> net_flow;
-    for (int e = 0; e<g.getNumEdges(); e++) {
-        const auto& demand2flow = edge2demand2flow[e];
-        for (const auto& [d, f] : demand2flow) {
-            if (d.first == g.edgeEndpoints(e).first
-                || d.first == g.edgeEndpoints(e).second) {
-                net_flow[d] += f;
-            }
-        }
-    }
-    bool all_unit_flow = true;
-    for (const auto& [d, f] : net_flow) {
-        if (std::abs(f - 1.0) > SOFT_EPS) {
-            all_unit_flow = false;
-            std::cout << "Commodity " << d.first << " -> " << d.second << " has net flow "
-                      << f << ")\n";
-        }
-    }
-    return all_unit_flow;
-}
 
 
 
 
 
 void EfficientRaeckeTransform::removeCycles() {
-    std::set<std::pair<int, int>> all;
+    std::set<std::pair<int, int> > all;
     for (int e = 0; e<table.adj_ids.size(); e++) {
         const auto& ids  = table.adj_ids[e];
         for (const auto& id : ids) {
-            all.insert(id);
+            int s = id / g.getNumNodes();
+            int t = id % g.getNumNodes();
+            all.insert({s, t});
         }
     }
 
     for (auto d : all) {
         while (true) {
             bool debug = false;
-            if (d.first == 2 && d.second == 3) {
-                debug = true;
-            }
+
             auto cycle = findCycle(d);
             if (cycle.empty()) break;
 
             double minF = std::numeric_limits<double>::infinity();
             for (auto e : cycle) {
                 int e_id = g.getEdgeId(e.first, e.second);
-                double frac = table.getFlow(e_id, d.first, d.second);
+                double frac = (table.getFlow(e_id, d.first, d.second));
                 minF = std::min(minF,frac);
             }
 
@@ -203,14 +148,14 @@ void EfficientRaeckeTransform::removeCycles() {
                 while (lo < hi) {
                     const size_t mid = (lo + hi) >> 1;
                     const auto& mid_val = ids[mid];
-                    if (mid_val < std::make_pair(d.first, d.second))
+                    if (mid_val < getCommodityID(g.getNumNodes(), d.first, d.second))
                         lo = mid + 1;
                     else
                         hi = mid;
                 }
 
                 // if found, decrease the fraction
-                if (lo < len && ids[lo] == std::make_pair(d.first, d.second)) {
+                if (lo < len && ids[lo] == getCommodityID(g.getNumNodes(), d.first, d.second)) {
                     dmap[lo] -= minF;
                     if (dmap[lo] <= 0) {
                         // remove the entry
@@ -218,7 +163,7 @@ void EfficientRaeckeTransform::removeCycles() {
                         table.adj_ids[e_id].erase(table.adj_ids[e_id].begin() + static_cast<long>(lo));
                     }
                 }
-
+/*
                 // also erase for the anti edge
                 int anti_e_id = g.getEdgeId(e.second, e.first);
                 auto& rmap = table.adj_vals[anti_e_id];
@@ -242,7 +187,7 @@ void EfficientRaeckeTransform::removeCycles() {
                         rmap.erase(rmap.begin() + static_cast<long>(rlo));
                         table.adj_ids[anti_e_id].erase(table.adj_ids[anti_e_id].begin() + static_cast<long>(rlo));
                     }
-                }
+                }*/
             }
 
         }
@@ -307,110 +252,106 @@ const LinearRoutingTable& LinearEfficientRaeckeTransform::getRoutingTable() cons
     return linear_tb;
 }
 
-void LinearEfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode> &tree, double lambda, const std::vector<double>& distance)  {
-    if (!tree) return;
-
+void LinearEfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance)  {
+    if (!node) return;
     // print the tree as well
-    //print_tree(tree);
+    // print_tree(node);
     std::queue<std::shared_ptr<ITreeNode>> q;
-    for (const auto& child : tree->getChildren()) {
-        q.push(child);
-    }
+    q.push(node);
 
     while (!q.empty()) {
         const auto& current = q.front();
-        const auto& parent = current->getParent();
-        assert(current != nullptr);
-        assert(parent != nullptr);
         q.pop();
 
-
-
-
-        // child and node have different members size -> there is a cut induced by the tree edge
-        // take the representative of each cluster and push the flow induced by the cut
-        // along the shortest path parent_representative -> child_representative
-        int parentCenter = parent->center;
-        int childCenter = current->center;
-
-        assert(parentCenter != -1
-            && childCenter != -1);
-
-        if (parentCenter == childCenter) {
-            for (const auto& child : current->getChildren()) {
-                q.push(child);
-            }
-            continue;
-        }
-        // IMPORTANT: A must be the CHILD SUBTREE (as in your Efficient version)
-        // Using only child->getMembers() is wrong if members are not subtree-closed.
-        std::set<int> A = collectSubtreeVertices(current);
-        if (A.empty()) continue;
-
-        // print A
-        std::cout << "Subtree vertices (A) for child center " << childCenter << ": ";
-        for (const auto& v : A) {
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-
-        // shortest path between the representatives in the ORIGINAL graph metric
-        auto path = g.getShortestPath(childCenter, parentCenter, distance);
-        if (path.size() < 2) continue;
-
-        // print path
-        std::cout << "Shortest path from " << childCenter << " to " << parentCenter << ": ";
-        for (const auto& v : path) {
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-
-        // Update the linear operator: for each u in A, add +lambda along the path
-        for (int u : A) {
-            if ( u == root) continue;
-            for (size_t i = 0; i + 1 < path.size(); ++i) {
-                const int a = path[i];
-                const int b = path[i + 1];
-                const int e = g.getEdgeId(a, b);
-                if (e < 0) continue;
-
-                std::cout << "Pushing flow along edge: " << a << " -> " << b
-                          << " for demand to " << u << " with lambda " << lambda << "\n";
-
-                // Column update: M[e, u] += lambda
-                linear_tb.addFlow(e, u, lambda);
-            }
-        }
-
         for (const auto& child : current->getChildren()) {
-            q.push(child);
+            if (child->getMembers().size() == current->getMembers().size()) {
+                q.push(child);
+                continue;
+            }
+                // child and node have differnt members size -> there is a cut induced by the tree edge
+                // take the representative of each cluster and push the flow induced by the cut
+                // along the shortest path parent_representative -> child_representative
+                int parentCenter = current->center;
+                int childCenter = child->center;
+
+                assert(parentCenter != -1
+                    && childCenter != -1);
+
+                if (parentCenter == childCenter) {
+                    q.push(child);
+                    continue;
+                }
+                std::set<int> A;
+                std::set<int> B;
+                A = std::set(child->getMembers().begin(), child->getMembers().end());
+                for (int v : g.getVertices()) {
+                    if (!A.count(v)) B.insert(v);
+                }
+
+
+
+                auto path = g.getShortestPath(parentCenter, childCenter, distance);
+                if (path.size() < 2) continue;
+
+                for (int src : A) {
+                    for (int dst : B) {
+                        if (src == dst) continue;
+                        // we only care about the flow from src to root
+                        if (dst == root) {
+                            for (size_t i = 0; i + 1 < path.size(); ++i) {
+
+                                // int e = g.getEdgeId(path[i], path[i+1]);
+                                int anti_e = g.getEdgeId(path[i+1], path[i]);
+
+                                assert(anti_e != INVALID_EDGE_ID);
+                                linear_tb.addFlow(anti_e, src, lambda);
+                                //linear_tb.addFlow(e, dst, src, lambda);
+
+                            }
+                        }
+/*
+                        if ( src == root) {
+                            for (size_t i = 0; i + 1 < path.size(); ++i) {
+
+                                int e = g.getEdgeId(path[i], path[i+1]);
+                                // int anti_e = g.getEdgeId(path[i+1], path[i]);
+
+                                assert(e != INVALID_EDGE_ID);
+                                linear_tb.addFlow(e, dst, lambda);
+                                //linear_tb.addFlow(e, dst, src, lambda);
+
+                            }
+                        }*/
+                    }
+                }
+                q.push(child);
         }
     }
-    // linear_tb.printFlows(g);
-    removeCycles();
 }
 
 
 
 
 void LinearEfficientRaeckeTransform::removeCycles() {
-    std::set<std::pair<int, int>> all;
+    std::set<int> all;
     for (int e = 0; e<linear_tb.src_ids.size(); e++) {
         const auto& ids  = linear_tb.src_ids[e];
         for (const auto& id : ids) {
-            all.insert({id, root});
+            all.insert(id);
         }
     }
 
     for (auto d : all) {
         while (true) {
+            bool debug = false;
+
             auto cycle = findCycle(d);
             if (cycle.empty()) break;
 
             double minF = std::numeric_limits<double>::infinity();
             for (auto e : cycle) {
                 int e_id = g.getEdgeId(e.first, e.second);
-                double frac = linear_tb.getFlow(e_id, d.first);
+                double frac = linear_tb.getFlow(e_id, d);
                 minF = std::min(minF,frac);
             }
 
@@ -424,14 +365,14 @@ void LinearEfficientRaeckeTransform::removeCycles() {
                 while (lo < hi) {
                     const size_t mid = (lo + hi) >> 1;
                     const auto& mid_val = ids[mid];
-                    if (mid_val < d.first)
+                    if (mid_val < d)
                         lo = mid + 1;
                     else
                         hi = mid;
                 }
 
                 // if found, decrease the fraction
-                if (lo < len && ids[lo] == d.first) {
+                if (lo < len && ids[lo] == d) {
                     dmap[lo] -= minF;
                     if (dmap[lo] <= 0) {
                         // remove the entry
@@ -440,6 +381,30 @@ void LinearEfficientRaeckeTransform::removeCycles() {
                     }
                 }
 
+                // also erase for the anti edge
+                int anti_e_id = g.getEdgeId(e.second, e.first);
+                auto& rmap = linear_tb.src_flows[anti_e_id];
+                const auto& rids = linear_tb.src_ids[anti_e_id];
+                size_t rlen = rids.size();
+                size_t rlo = 0, rhi = rlen;
+                while (rlo < rhi) {
+                    const size_t mid = (rlo + rhi) >> 1;
+                    const auto& mid_val = rids[mid];
+                    if (mid_val < d)
+                        rlo = mid + 1;
+                    else
+                        rhi = mid;
+                }
+
+                // if found, decrease the fraction
+                if (rlo < rlen && rids[rlo] == d) {
+                    rmap[rlo] -= minF;
+                    if (rmap[rlo] <= 0) {
+                        // remove the entry
+                        rmap.erase(rmap.begin() + static_cast<long>(rlo));
+                        linear_tb.src_ids[anti_e_id].erase(linear_tb.src_ids[anti_e_id].begin() + static_cast<long>(rlo));
+                    }
+                }
             }
 
         }
@@ -450,9 +415,9 @@ std::optional<std::vector<std::pair<int, int>>> LinearEfficientRaeckeTransform::
         int u,
         std::set<int>& analyzed,
         std::vector<int>& stack,
-        const std::pair<int, int>& d) {
+        const int& d) {
     if (std::find(stack.begin(), stack.end(), u) != stack.end())
-        return std::vector<std::pair<int, int>>{};
+        return {};
     if (analyzed.count(u))
         return std::nullopt;
 
@@ -461,7 +426,7 @@ std::optional<std::vector<std::pair<int, int>>> LinearEfficientRaeckeTransform::
 
     for (int w : g.neighbors(u)) {
         int e_id = g.getEdgeId(u, w);
-        double frac = linear_tb.getFlow(e_id, d.first);
+        double frac = linear_tb.getFlow(e_id, d);
         if (frac <= 0) continue;
 
         if (auto child = findCycleRec(w, analyzed, stack, d)) {
@@ -475,7 +440,7 @@ std::optional<std::vector<std::pair<int, int>>> LinearEfficientRaeckeTransform::
     return std::nullopt;
 }
 
-std::vector<std::pair<int, int>> LinearEfficientRaeckeTransform::findCycle(const std::pair<int, int>& d) {
+std::vector<std::pair<int, int>> LinearEfficientRaeckeTransform::findCycle(const int& d) {
     std::set<int> analyzed;
     for (int v : g.getVertices()) {
         if (analyzed.count(v)) continue;

@@ -15,6 +15,8 @@ constexpr static double EPS = 1e-16;
 constexpr static double SOFT_EPS = 1e-3;
 constexpr static double VERY_SOFT_EPS = 1e-1;
 
+constexpr static int INVALID_COMMODITY_ID = -1;
+
 
 
 struct RoutingTable {
@@ -26,74 +28,144 @@ struct RoutingTable {
 };
 
 
+inline int getCommodityID(const int& n, const int& s, const int& t) {
+    if (s >= t) return INVALID_COMMODITY_ID;
+    return (s*n+t);
+}
+
+
 struct AllPairRoutingTable :public RoutingTable{
+
     // store the flows for each commodity
-    std::vector<std::vector<std::pair<int, int>>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
+    std::vector<std::vector<int>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
     std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
+    int n;
+    std::vector<int> anti_edge; // anti_edge[e] = id of the anti-edge of e
 
     void init(const IGraph& g) override {
         const int numEdges = g.getNumEdges();
+        n = g.getNumNodes();
         adj_ids.assign(numEdges, {});
         adj_vals.assign(numEdges, {});
+        anti_edge.resize(numEdges, INVALID_EDGE_ID);
+        for (int e = 0; e < numEdges; ++e) {
+            const int& anti_e = g.getAntiEdge(e);
+            anti_edge[e] = anti_e;
+        }
     }
 
-    std::vector<double> operator[](const int e) {
-        assert(e >= 0 && e < adj_vals.size());
-        return adj_vals[e];
+    const std::vector<double>& operator[](int e) const { return adj_vals[e]; }
+    std::vector<double>& operator[](int e) { return adj_vals[e]; }
+
+    void addFlow(const int& e, const int& s, const int& t, double fraction) {
+        assert(e >= 0 && e < (int)adj_vals.size());
+        if (s >= t) return;
+
+        const int commodity_id = getCommodityID(n, s, t);
+        if (commodity_id == INVALID_COMMODITY_ID) return;
+
+        // cancel against anti-edge first
+        cancel2Cycle(e, s, t, fraction);
+        if (std::abs(fraction) <= SOFT_EPS) return;
+
+        addFlowNo2Cycle(e, commodity_id, fraction);
     }
 
-    void addFlow(const int e, const int s, const int t, const double fraction) {
-        assert(e >= 0 && e < adj_vals.size());
+    bool cancel2Cycle(const int e, const int s, const int t, double& fraction) {
+        const int anti_e = anti_edge[e];
+        if (anti_e == INVALID_EDGE_ID) return false;
+
+        const int commodity_id = getCommodityID(n, s, t);
+        auto& idsA  = adj_ids[anti_e];
+        auto& valsA = adj_vals[anti_e];
+
+        int idx = findIndexSorted(idsA, commodity_id);
+        if (idx < 0) return false;
+
+        const double anti_flow = valsA[idx]; // since s<t stored
+        if (anti_flow <= SOFT_EPS) return false;
+
+        const double cancel = std::min(anti_flow, fraction);
+        valsA[idx] -= cancel;
+        fraction   -= cancel;
+
+        if (std::abs(valsA[idx]) <= SOFT_EPS) {
+            eraseAt(anti_e, idx); // erases both ids and vals
+        }
+        return cancel > 0.0;
+    }
+
+    void addFlowNo2Cycle(const int e, const int commodity_id, const double delta) {
         auto& ids  = adj_ids[e];
         auto& vals = adj_vals[e];
-        int len = static_cast<int>(ids.size());
+        const int len = (int)ids.size();
 
-        // first run linear scan
-        int linear_bound = 8;
-        for (int i = 0; i < std::min(len, linear_bound); ++i) {
-            if (ids[i] == std::make_pair(s, t)) {
-                vals[i] += fraction;
-                return;
+        int idx = findIndexSorted(ids, commodity_id);
+        if (idx >= 0) {
+            vals[idx] += delta;
+            if (std::abs(vals[idx]) <= SOFT_EPS) {
+                eraseAt(e, idx);
             }
+            return;
         }
 
-        // binary search to find s, t in ids
-        size_t lo = 0, hi = len;
+        // insert
+        int lo = 0, hi = len;
         while (lo < hi) {
-            const size_t mid = (lo + hi) >> 1;
-            const auto& mid_val = ids[mid];
-            if (mid_val < std::make_pair(s, t))
-                lo = mid + 1;
-            else
-                hi = mid;
+            int mid = (lo + hi) >> 1;
+            if (ids[mid] < commodity_id) lo = mid + 1;
+            else hi = mid;
         }
-
-        if (lo < len && ids[lo] == std::make_pair(s, t)) {
-            vals[lo] += fraction;
-        } else {
-            // Usually append to the end and sort the ids w.r.t. to the terminals
-            if (lo == len) {
-                ids.emplace_back(s, t);
-                vals.push_back(fraction);
-            } else {
-                ids.insert(ids.begin() + static_cast<long>(lo), {s, t});
-                vals.insert(vals.begin() + static_cast<long>(lo), fraction);
-
-            }
+        ids.insert(ids.begin() + lo, commodity_id);
+        vals.insert(vals.begin() + lo, delta);
+        if (std::abs(delta) <= SOFT_EPS) { // don't keep near-zero
+            eraseAt(e, lo);
         }
     }
+
+    int findIndexSorted(const std::vector<int>& ids, int commodity_id) const {
+        const int len = (int)ids.size();
+        int linear_bound = 8;
+        for (int i = 0; i < std::min(len, linear_bound); ++i)
+            if (ids[i] == commodity_id) return i;
+
+        int lo = 0, hi = len;
+        while (lo < hi) {
+            int mid = (lo + hi) >> 1;
+            if (ids[mid] < commodity_id) lo = mid + 1;
+            else hi = mid;
+        }
+        return (lo < len && ids[lo] == commodity_id) ? lo : -1;
+    }
+
+    void eraseAt(int e, int idx) {
+        auto& ids  = adj_ids[e];
+        auto& vals = adj_vals[e];
+        ids.erase(ids.begin() + idx);
+        vals.erase(vals.begin() + idx);
+    }
+
+
+
+
 
     double getFlow(int e , int s, int t) const {
+        if ( s== t ) return 0.0;
+        if (s > t) {
+            return (-getFlow(e, t, s));
+        }
         assert(e >= 0 && e < adj_vals.size());
         auto& ids  = adj_ids[e];
         auto& vals = adj_vals[e];
         int len = static_cast<int>(ids.size());
 
 
+        int commodity_id = getCommodityID(n, s, t);
+        assert(commodity_id != INVALID_COMMODITY_ID);
         // first run linear scan
         int linear_bound = 8;
         for (int i = 0; i < std::min(len, linear_bound); ++i) {
-            if (ids[i] == std::make_pair(s, t)) {
+            if (ids[i] == commodity_id) {
                 return vals[i];
             }
         }
@@ -102,12 +174,12 @@ struct AllPairRoutingTable :public RoutingTable{
         while (lo < hi) {
             const size_t mid = (lo + hi) >> 1;
             const auto& mid_val = ids[mid];
-            if (mid_val < std::make_pair(s, t))
+            if (mid_val < commodity_id)
                 lo = mid + 1;
             else
                 hi = mid;
         }
-        if (lo < len && ids[lo] == std::make_pair(s, t)) {
+        if (lo < len && ids[lo] == commodity_id) {
             return vals[lo];
         } else {
             return 0.0;
@@ -168,7 +240,7 @@ struct AllPairRoutingTable :public RoutingTable{
 
         for (int s = 0; s < g.getNumNodes(); ++s) {
             for (int t = 0; t < g.getNumNodes(); ++t) {
-                if (s == t) continue;
+                if (s >= t) continue;
 
                 std::cout << "Flows for commodity " << s << " -> " << t << ":\n";
                 for (int e = 0; e < g.getNumEdges(); ++e) {

@@ -12,6 +12,17 @@
 #include <utility>
 #include <cassert>
 
+struct PairHash {
+    size_t operator()(const std::pair<int,int>& p) const noexcept {
+        return ((size_t)p.first << 32) ^ (size_t)p.second;
+    }
+
+};
+
+
+using Demand = std::pair<int, int>;
+using DemandMap_      = std::unordered_map<Demand,double, PairHash>;
+using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap_, PairHash>;
 
 
 struct DemandMap {
@@ -32,7 +43,7 @@ struct DemandMap {
         assert(demand_values.size() == target.size());
         return demand_values.size();
     }
-    std::pair<int, int> getDemandPair(size_t idx) const {
+    Demand getDemandPair(size_t idx) const {
         return {source[idx], target[idx]};
     }
     double getDemandValue(size_t idx) const {
@@ -40,20 +51,7 @@ struct DemandMap {
     }
 };
 
-struct PairHash {
-    size_t operator()(const std::pair<int,int>& p) const noexcept {
-        return ((size_t)p.first << 32) ^ (size_t)p.second;
-    }
 
-};
-
-
-// TODO: This is used in the RaeckeTransform and try to avoid using these
-// Key types:
-using TerminalPair   = std::pair<int,int>;
-using Demand = std::pair<int, int>;
-using DemandMap_      = std::unordered_map<Demand,double, PairHash>;
-using EdgeDemandMap  = std::unordered_map<std::pair<int, int>, DemandMap_, PairHash>;
 
 
 // adjust this to support directed edge struct: struct Arc {int src, trg, cap, operator=(

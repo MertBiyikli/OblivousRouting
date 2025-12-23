@@ -121,6 +121,7 @@ double CMMF_Solver::getCongestion() {
     if (alpha) {
         return alpha->solution_value();
     }
+    return -1.0;
 }
 
 

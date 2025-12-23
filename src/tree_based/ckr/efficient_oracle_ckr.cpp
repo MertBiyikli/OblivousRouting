@@ -50,7 +50,7 @@ void EfficientCKR::preprocess() {
  *
  * There are two major efficiency improvements here:
  * 1) We use the ultrametric tree efficiently build the subgraphs that are partitioned on each level.
- * 2) Instead of naive O(diameter) scales, we use logarithmic number of scales based on Mendel and Schwob's theoretical results.
+ * 2) Instead of naive O(diameter) scales, we use logarithmic number of scales based on Mendel and Schwob's results.
  */
 std::shared_ptr<TreeNode> EfficientCKR::getTree() {
 
@@ -115,6 +115,7 @@ std::shared_ptr<TreeNode> EfficientCKR::getTree() {
     }
 
     finishTree(root, current_tree_nodes);
+    // print_tree(root);
     // sanity: all original vertices must be present exactly once
     // (you can add a debug assert that counts coverage here)
     return root;
@@ -237,27 +238,27 @@ std::vector<std::shared_ptr<TreeNode>>& prev_nodes,
         M.erase(std::unique(M.begin(), M.end()), M.end());
     }
 
-    return parents;
+    // ------------------------------------------------------------------
+    // Step 4: Clean empty nodes
+    // ------------------------------------------------------------------
+    std::vector<std::shared_ptr<TreeNode>> cleaned_parents;
+    for (int i = 0; i < parents.size(); ++i) {
+        auto& p = parents[i];
+        if (p->members.size() == 0) {
+            // skip empty nodes
+            // std::cout << "Removed empty node at level with Delta " << Delta << "\n";
+        } else {
+            cleaned_parents.push_back(p);
+        }
+    }
+
+    return cleaned_parents;
 }
 
 
 
 void EfficientCKR::finishTree(std::shared_ptr<TreeNode>& root, std::vector<std::shared_ptr<TreeNode> > &prev_nodes) {
 
-    for (int i = 0; i < prev_nodes.size(); ++i) {
-        auto& node = prev_nodes[i];
-        if (node->members.size() == 0) {
-            // remove the node from its parent
-            auto parent = node->parent.lock();
-            if (parent) {
-                auto& siblings = parent->children;
-                siblings.erase(std::remove(siblings.begin(), siblings.end(), node), siblings.end());
-            }
-
-            // also remove node from the prev nodes vector
-            prev_nodes.erase(prev_nodes.begin() + i);
-        }
-    }
 
     // Final root: if multiple parents remain, wrap them under one root; else take the only one.
     if (prev_nodes.empty()) {

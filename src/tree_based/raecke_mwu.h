@@ -41,12 +41,15 @@ public:
         EfficientRaeckeTransform transform(graph, iteration);
         transform.transform();
         table = transform.getRoutingTable();
+        // table.printFlows(graph);
+
     }
 
     void computeBasisFlows(AllPairRoutingTable &table) override {
         run();
         normalizeLambdas();
         transformSolution(table);
+        //table.printFlows(graph);
 
     }
 

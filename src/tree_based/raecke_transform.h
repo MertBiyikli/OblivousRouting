@@ -30,16 +30,10 @@ public:
     virtual void distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) = 0;
 
     virtual void removeCycles() = 0;
-    virtual std::optional<std::vector<std::pair<int, int>>> findCycleRec(
-        int u,
-        std::set<int>& analyzed,
-        std::vector<int>& stack,
-        const std::pair<int, int>& d) = 0;
 
-    virtual std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d) = 0;
     void transform();
 
-    virtual bool routingTableIsValid() = 0;
+    virtual bool routingTableIsValid() const = 0;
 protected:
 
 
@@ -57,25 +51,27 @@ protected:
 public:
     virtual ~EfficientRaeckeTransform() = default;
 
-    std::vector<std::unordered_map<std::pair<int, int>, double, PairHash>> edge2demand2flow;
+    // std::vector<std::unordered_map<std::pair<int, int>, double, PairHash>> edge2demand2flow;
     EfficientRaeckeTransform(IGraph& _g, std::vector<OracleTreeIteration>& _iter):IRaeckeTransform(_g, _iter) {
         table.init((g));
-        edge2demand2flow.resize(g.getNumEdges());
+        //edge2demand2flow.resize(g.getNumEdges());
     };
 
-    virtual bool routingTableIsValid() override;
+
     const AllPairRoutingTable& getRoutingTable() const;
+
+    virtual bool routingTableIsValid() const override;
 
     void distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) override;
 
     virtual void removeCycles() override;
-    virtual std::optional<std::vector<std::pair<int, int>>> findCycleRec(
+    std::optional<std::vector<std::pair<int, int>>> findCycleRec(
         int u,
         std::set<int>& analyzed,
         std::vector<int>& stack,
-        const std::pair<int, int>& d) override;
+        const std::pair<int, int>& d);
 
-    virtual std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d) override;
+    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d);
 
 };
 
@@ -96,7 +92,7 @@ public:
 
     const LinearRoutingTable& getRoutingTable() const;
 
-    virtual bool routingTableIsValid() override {
+    virtual bool routingTableIsValid() const override {
         return linear_tb.isValid(g);
     }
 private:
@@ -104,14 +100,13 @@ private:
     void distributeDemands(const std::shared_ptr<ITreeNode> &node, double lambda, const std::vector<double>& distance) override;
 
     virtual void removeCycles() override;
-    virtual std::optional<std::vector<std::pair<int, int>>> findCycleRec(
+    std::optional<std::vector<std::pair<int, int>>> findCycleRec(
         int u,
         std::set<int>& analyzed,
         std::vector<int>& stack,
-        const std::pair<int, int>& d) override;
+        const int& d);
 
-    virtual std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d) override;
+    std::vector<std::pair<int, int>> findCycle(const int& d);
 };
-
 
 #endif //OBLIVIOUSROUTING_EFFICIENT_RAECKE_CKR_TRANSFORM_H

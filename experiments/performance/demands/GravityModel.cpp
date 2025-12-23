@@ -60,10 +60,9 @@ DemandMap GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& de
                       << baseFlow << ", lo: " << lo << ", hi: " << hi << "\n";
         }
         const double flow = dist(rng)*(hi-lo)+lo;
-        // TODO: change this back
+
 
         demand2flow.addDemand(d.first, d.second, flow);
-        //demand2flow[{d.first, d.second}] = flow; // Add the demand to the edge
     }
     return demand2flow;
 }

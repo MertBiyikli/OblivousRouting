@@ -23,7 +23,7 @@ using namespace operations_research;
 
 class CMMF_Solver: public LP{
 private:
-    std::unordered_map<std::pair<int, int>, double, PairHash> m_demands; // Flow variables for edges
+    std::unordered_map<Demand, double, PairHash> m_demands; // Flow variables for edges
     std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>, PairHash> map_vertex2edge;
 public:
 
@@ -35,7 +35,7 @@ public:
     void PrintSolution(const IGraph& graph) override;
 
     void AddDemandMap(const DemandMap& d_map);
-    void AddDemands(const std::pair<int, int>& d, double value); // TODO: use here the Demand struct as defined in LPSolver.h
+    void AddDemands(const Demand& d, double value);
     virtual void storeFlow(AllPairRoutingTable& table) override;
 
     double getCongestion();
