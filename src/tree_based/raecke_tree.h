@@ -5,6 +5,7 @@
 #ifndef OBLIVIOUSROUTING_RAECKE_TREE_H
 #define OBLIVIOUSROUTING_RAECKE_TREE_H
 #include <memory>
+#include <algorithm>
 // Tree interface, abstract base class
 class ITreeNode {
 public:
