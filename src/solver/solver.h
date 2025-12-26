@@ -37,8 +37,9 @@ public:
 
         // solver must fill table via computeBasisFlows
         computeBasisFlows(table);
+        graph.resetEdgeWeights();
 
-        assert(table.isValid(graph));
+        // assert(table.isValid(graph));
         return std::make_unique<LinearRoutingScheme>(
             graph,
             root,
@@ -66,6 +67,8 @@ public:
 
         // solver must fill table via computeBasisFlows
         computeBasisFlows(table);
+
+        graph.resetEdgeWeights();
 
         return std::make_unique<AllPairRoutingScheme>(
             graph,

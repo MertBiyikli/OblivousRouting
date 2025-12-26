@@ -22,12 +22,10 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTree() {
         }
     }
     computeBestBetaAndPermutation();
-    auto tree = getBestTree();
+   // auto tree = getBestTree();
 
     auto bottom_up = getTreeBottomUp();
-    // print_tree(bottom_up);
 
-    //cleanUpTree(tree);
     return bottom_up;
 }
 

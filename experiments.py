@@ -37,16 +37,14 @@ def guess_exe():
             return str(p.resolve())
     return "./oblivious_routing" + suf
 
+# Mapping of solver tokens to canonical names
+# 0 = electrical, 1 = frt, 2 = ckr, 3 = mst, 4 = lp
 CANON = {
-    "electrical": "electrical", "electrical_naive": "electrical", "ef": "electrical", "e": "electrical", "0": "electrical",
-    "tree": "tree", "raecke": "tree", "frt": "tree", "r": "tree", "t": "tree", "1": "tree",
-    "cohen": "cohen", "lp": "cohen", "applegate": "cohen", "ac": "cohen", "l": "cohen", "2": "cohen",
-    "mst": "mst", "random_mst": "mst", "raecke_mst": "mst", "m": "mst", "3": "mst",
-    "electrical_optimized": "electrical_optimized", "ef_opt": "electrical_optimized", "eo": "electrical_optimized", "4": "electrical_optimized",
-    "electrical_parallel_batches": "electrical_parallel_batches", "ef_par_batches": "electrical_parallel_batches", "5": "electrical_parallel_batches",
-    "electrical_parallel_onthefly": "electrical_parallel_onthefly", "ef_par_onthefly": "electrical_parallel_onthefly", "6": "electrical_parallel_onthefly",
-    "ckr": "ckr", "raecke_ckr": "ckr", "ckr_partition": "ckr", "7": "ckr",
-    "ckr_optimized": "ckr_optimized", "ckr_opt": "ckr_optimized", "8": "ckr_optimized",
+    "0": "electrical", "electrical": "electrical",
+    "1": "frt", "raecke_frt": "frt",
+    "2": "ckr", "raecke_ckr": "ckr",
+    "3": "mst", "raecke_mst": "mst",
+    "4": "lp", "cohen": "lp",
 }
 
 CANON_DEMAND = {

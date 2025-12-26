@@ -27,7 +27,7 @@ public:
     // instead of nested maps , try to keep an adjacency list representation for the demands
     std::vector<std::vector<int>> vertex2vertex; // demand from u to v: vertex2vertex2demand[u][v]
     std::vector<std::vector<double>> vertex2vertex_value;
-    std::unordered_map<Edge, int, PairHash> demand2levelIncluded; // Map of demands to their levels in the tree
+    std::unordered_map<std::pair<int, int>, int, PairHash> demand2levelIncluded; // Map of demands to their levels in the tree
 
     std::shared_ptr<EfficientFRTTreeNode> getTree();
 

@@ -15,18 +15,17 @@
 #include <Eigen/Dense>
 
 #include "../datastructures/GraphCSR.h"
-// #include "../tree_based/frt/raecke_frt_transform.h"
 #include "laplacian_solvers/LaplacianSolverFactory.h"
 
-struct WeightedEdge {
-    std::pair<int, int> edge; // (u,v) with u<v
-    double weight;
-};
 
 class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFramework {
-    private:
+    public:
 
     int n, m;
+    double K = 0; // this is used as an approximation errror for the Laplacian Solver( see. Paper for details)
+
+    double epsilon = 0.5; // sketching parameter
+    double epsilon_L = EPS; // Laplacian solving accuracy
     // LaplacianSolver solver;
     // const GraphCSR* m_graph = nullptr;
     std::unique_ptr<LaplacianSolver> amg;
@@ -43,12 +42,9 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFram
 
     //std::vector<std::vector<double>> x_edge_distance, p_edge_probability, w_edge_weight, c_edge_capacity;
     double cap_X = 0.0;
-    // int iteration_count = 0;
     bool debug = false;
     int x_fixed = 0; // fixed node
 
-    // just for debugging purposes
-    std::unordered_map<std::pair<int, int>, double, PairHash> x_edge2distance, p_edge2probability, w_edges2weights, c_edges2capacities;
 
 
     // Preallocate as class members to avoid reallocs
@@ -75,7 +71,6 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFram
 
     void computeBasisFlows(LinearRoutingTable &table) override {
         init(debug, "amg_cg");
-
         run(table);
         scaleFlowDown(table);
 

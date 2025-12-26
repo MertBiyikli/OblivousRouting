@@ -11,6 +11,11 @@
 #include <unordered_map>
 #include <utility>
 #include <cassert>
+#include <chrono>
+
+
+#define duration(a) std::chrono::duration_cast<std::chrono::milliseconds>(a).count()
+#define timeNow() std::chrono::high_resolution_clock::now()
 
 struct PairHash {
     size_t operator()(const std::pair<int,int>& p) const noexcept {

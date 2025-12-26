@@ -21,7 +21,7 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 //#include <amgcl/adapter/crs.hpp>
-
+#include "../../solver/routing_table.h"
 
 
 #include "../../datastructures/GraphADJ.h"
@@ -30,21 +30,28 @@
 #include "LaplacianSolver.h"
 #include <iostream>
 
+
+struct AMGSolveParams {
+    double tol = 1e-8;
+    int max_iter = 1000;
+    bool verbose = false;
+};
+
+
+
+
 class AMGSolver : public LaplacianSolver {
 private:
 
-    // AMG Solver define types
-    typedef amgcl::make_solver<
-            amgcl::amg<
-                    amgcl::backend::builtin<double>,
-                    amgcl::coarsening::smoothed_aggregation,
-                    amgcl::relaxation::spai0
-            >,
-            amgcl::solver::cg<amgcl::backend::builtin<double>>
-    > Solver;
+    using Backend = amgcl::backend::builtin<double>;
 
+    using AMG = amgcl::amg<
+        Backend,
+        amgcl::coarsening::smoothed_aggregation,
+        amgcl::relaxation::spai0
+    >;
 
-    std::unique_ptr<Solver> solver;
+    std::unique_ptr<AMG> hierarchy;   // BUILT ONCE
 
 
 public:
@@ -58,12 +65,12 @@ public:
  //   void init(std::unordered_map<std::pair<int, int>, double>& _edge_weights, int n, bool debug = false);
  //   void buildLaplacian();
     // void buildReducedLaplacian();
-    std::vector<double> solve(const std::vector<double> &b) override;
-    Eigen::VectorXd solve(const Eigen::VectorXd &b) override;
+    std::vector<double> solve(const std::vector<double> &b, double eps = EPS) override;
+    Eigen::VectorXd solve(const Eigen::VectorXd &b, double eps = EPS) override;
     // Eigen::VectorXd solve_reduced(const Eigen::VectorXd &b_full);
     void updateSolver() override;
     void buildLaplacian() override;
-    void buildLaplacian_(const GraphADJ& g) override;
+    // void buildLaplacian_(const GraphADJ& g) override;
 
     void updateAllEdges(const std::vector<double>& new_weights,
                         const std::vector<std::pair<int,int>>& edges) override {
@@ -78,7 +85,16 @@ public:
             double new_w = new_weights[e];
             double delta = new_w - old_w;
 
-            if (std::abs(delta) < 1e-18) continue;
+            if (std::abs(delta) < 1e-32) continue;
+
+            auto& index_uv = m_indexMap.at({u,v});
+            auto& index_vu = m_indexMap.at({v,u});
+            auto& index_uu = m_indexMap.at({u,u});
+            auto& index_vv = m_indexMap.at({v,v});
+
+            if (index_uv == -1 || index_vu == -1 || index_uu == -1 || index_vv == -1) {
+                throw std::runtime_error("updateAllEdges: missing matrix entry for edge update");
+            }
 
             // Keep map symmetric
             m_edge_weights[{u, v}] = new_w;
@@ -86,17 +102,17 @@ public:
 
             // --- Update CSR Laplacian entries ---
             // Diagonal contributions
-            m_values[m_indexMap[{u, u}]] += delta;
-            m_values[m_indexMap[{v, v}]] += delta;
+            m_values[index_uv] += delta;
+            m_values[index_vu] += delta;
 
             // Off-diagonal contributions
-            m_values[m_indexMap[{u, v}]] -= delta;
-            m_values[m_indexMap[{v, u}]] -= delta;
+            m_values[index_uv] -= delta;
+            m_values[index_vu] -= delta;
 
         }
     }
 
-    bool updateEdge(int u, int v, double new_weight);
+    //bool updateEdge(int u, int v, double new_weight);
 
     /*bool checkMatrix() const;*/
 

@@ -198,6 +198,8 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
     rhs.reserve(2);
     std::vector<double> load(m, 0.0);
 
+    auto t0 = timeNow();
+
     for (int t = 0; t < this->iteration_count; ++t) {
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -212,10 +214,9 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
 
             // Solve L x = b (solver returns dense potentials; that’s expected)
             // If your amg wrapper doesn't accept SparseVector, use: amg->solve(rhs.toDense())
-            auto start_pure = std::chrono::high_resolution_clock::now();
-            Eigen::VectorXd x = amg->solve(rhs);
-            auto end_pure = std::chrono::high_resolution_clock::now();
-            pure_oracles_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end_pure-start_pure).count());
+            // auto start_pure = timeNow();
+            Eigen::VectorXd x = amg->solve(rhs, epsilon_L);
+            // pure_oracles_running_times.push_back(duration(timeNow()-start_pure));
 
             // accumulate edge flows for commodity (u -> x_fixed):
             // f_e(u) = w_e * (x[u]-x[v])
@@ -299,20 +300,15 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
         getApproxLoad(load);
         updateEdgeDistances(load); // keeps 'weights' vector in sync
 
-        auto end = std::chrono::high_resolution_clock::now();
-
-        oracle_running_times.push_back(
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-        );
+        oracle_running_times.push_back(duration(timeNow() - start));
 
     }
 
-
+    this->solve_time = duration(timeNow() - t0);
 }
 
 
 void ElectricalFlowOptimized::scaleFlowDown(LinearRoutingTable& table) {
-
     // scale the flow from the adjacency list flow
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
@@ -334,10 +330,9 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
     for (int i = 0; i < ell; ++i) {
         rhs = X.col(i);
 
-        auto start = std::chrono::high_resolution_clock::now();
-        sol = amg->solve(rhs);  // prefer in-place if available
-        auto end = std::chrono::high_resolution_clock::now();
-        pure_oracles_running_times.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count());
+        // auto start = std::chrono::high_resolution_clock::now();
+        sol = amg->solve(rhs, epsilon_L);  // prefer in-place if available
+        // pure_oracles_running_times.push_back(duration(timeNow()-start));
 
         const double* __restrict psol = sol.data();
 
@@ -348,6 +343,9 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
         }
     }
 
+    // compute the approximaton error for the Laplacian Solver
+    epsilon_L = epsilon/(8*edges.size()*std::pow(n, 4)*K);
+
     // 3) Medians + load
     #pragma omp parallel for schedule(static)
     for (int e = 0; e < m; ++e) {
@@ -355,13 +353,6 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
         std::nth_element(arr, arr + (ell >> 1), arr + ell);
         const double med = arr[ell >> 1];
         load[e] = edge_weights[e] * med;
-    }
-
-    // Optional: debug after, not inside hot loops
-    if (debug) {
-        for (int e = 0; e < m; ++e) {
-            // print sampled edges only, or aggregate stats
-        }
     }
 }
 

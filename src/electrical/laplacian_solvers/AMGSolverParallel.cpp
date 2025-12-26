@@ -125,7 +125,7 @@ void AMGSolverMT::buildLaplacian() {
 
 }
 
-std::vector<double> AMGSolverMT::solve(const std::vector<double>& b) {
+std::vector<double> AMGSolverMT::solve(const std::vector<double>& b, double eps) {
     std::vector<double> x(b.size(), 0.0);
 #ifdef _OPENMP
     int tid = omp_get_thread_num() % pool_.size();
@@ -137,9 +137,9 @@ std::vector<double> AMGSolverMT::solve(const std::vector<double>& b) {
     return x;
 }
 
-Eigen::VectorXd AMGSolverMT::solve(const Eigen::VectorXd& b) {
+Eigen::VectorXd AMGSolverMT::solve(const Eigen::VectorXd& b, double eps) {
     std::vector<double> bv(b.data(), b.data() + b.size());
-    auto xv = solve(bv);
+    auto xv = solve(bv, eps);
     Eigen::VectorXd x(bv.size());
     for (int i = 0; i < b.size(); ++i) x[i] = xv[i];
     return x;

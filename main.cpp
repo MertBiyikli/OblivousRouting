@@ -6,36 +6,49 @@
 
 
 
-#define duration(a) std::chrono::duration_cast<std::chrono::milliseconds>(a).count()
-#define timeNow() std::chrono::high_resolution_clock::now()
+
 
 int main(int argc, char **argv) {
 
     std::string err;
     auto cfg = parse_parameter(argc, argv, &err);
-    if (!cfg) { std::cerr << err; return -1; } // EX_USAGE
+    if (!cfg) { std::cerr << err; return -1; }
 
 
-    GraphCSR g_csr;// = std::make_unique<GraphCSR>();
-    readLGFFile(g_csr, cfg->filename,  true);
-    g_csr.finalize();
-    std::cout << "Graph loaded: " << g_csr.getNumNodes() << " nodes, "
-              << g_csr.getNumEdges() << " edges.\n";
+    GraphCSR G;
+    readLGFFile(G, cfg->filename,  true);
+    G.finalize();
+    std::cout << "Graph loaded: " << G.getNumNodes() << " nodes, "
+              << G.getNumEdges() << " edges.\n";
 
     for (SolverType type : cfg->solvers) {
         std::cout << "\n=== Running solver: " << ::solverNames[static_cast<int>(type)] << " ===\n";
 
-        auto solver = makeSolver(type, g_csr);
+        auto solver = makeSolver(type, G);
 
         // --- solve ---
         auto t0 = timeNow();
         auto scheme = solver->solve();
         double solve_time = duration(timeNow() - t0);
 
-        std::cout << "Solve time: " << solve_time << " ms\n";
+        // scheme->printRoutingTable();
+
+        std::cout << "Total running time: " << solve_time << " ms\n";
+
+        // if the algorithm is an MWU framework, print iteration stats
+        if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
+            std::cout << "Solve time: " << mwu->solve_time << " ms\n";
+            std::cout << "Transformation time: " << (solve_time - mwu->solve_time) << " ms\n";
+            std::cout << "MWU iterations: " << mwu->iteration_count << "\n";
+            double average_oracle_time = 0.0;
+            for (double t : mwu->oracle_running_times) {
+                average_oracle_time += t;
+            }
+            std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(mwu->oracle_running_times.size())) << " ms\n";
+        }
 
         // --- optional: demand model evaluation ---
-        auto result = HandleDemandModel(argc, argv, cfg, g_csr, scheme);
+        auto result = HandleDemandModel(argc, argv, cfg, G, scheme);
         if (result.first > 0.0 && result.second > 0.0) {
             std::cout << "Ratio off the optimal offline solution "
                       << (argv[3] ? argv[3] : "<empty>")
@@ -45,8 +58,6 @@ int main(int argc, char **argv) {
                       << result.first << " / " << result.second
                       << ")\n";
         }
-
     }
-
     return 0;
 }

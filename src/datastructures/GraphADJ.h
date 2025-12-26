@@ -31,7 +31,7 @@ class GraphADJ : public IGraph {
 
     // this for also being able to use the edge based accessor
     std::vector<std::pair<int,int>> m_edgeList;                 // e -> (u, v)
-    std::unordered_map<Edge, int, PairHash> m_uvToEdge;
+    std::unordered_map<std::pair<int, int>, int, PairHash> m_uvToEdge;
 
 public:
     GraphADJ() = default;

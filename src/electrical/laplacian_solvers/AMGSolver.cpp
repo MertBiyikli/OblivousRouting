@@ -31,7 +31,7 @@ void AMGSolver::init(std::unordered_map<std::pair<int, int>, double>& _edge_weig
     m_edge_weights = _edge_weights;
     buildLaplacian();
 }*/
-
+/*
 void AMGSolver::buildLaplacian_(const GraphADJ& g) {
     check_openmp_runtime();
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
@@ -128,10 +128,6 @@ void AMGSolver::buildLaplacian_(const GraphADJ& g) {
         }
     }
 
-    Solver::params prm;
-    prm.solver.tol = 1e-6;  // relax tolerance slightly
-    prm.solver.maxiter = 500; // limit
-    prm.precond.coarsening.aggr.eps_strong = 0.08;
 
 
     if(debug) {
@@ -145,8 +141,9 @@ void AMGSolver::buildLaplacian_(const GraphADJ& g) {
     }
 
     // Construct solver
-    solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
-}
+    // solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
+    hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values));
+}*/
 
 
 void AMGSolver::buildLaplacian() {
@@ -219,7 +216,7 @@ void AMGSolver::buildLaplacian() {
     }
 
     // --- Step 5: Check diagonal entries ---
-    if(debug) {
+    if (debug ) {
         for (int i = 0; i < n; ++i) {
             auto it = m_indexMap.find({i, i});
             if (it == m_indexMap.end()) {
@@ -244,17 +241,6 @@ void AMGSolver::buildLaplacian() {
         }
     }
 
-    Solver::params prm;
-    prm.solver.tol = 1e-6;  // relax tolerance slightly
-    prm.solver.maxiter = 500; // limit
-    prm.precond.coarsening.aggr.eps_strong = 0.08;
-
-    // --- AMG hierarchy parameters ---
-    prm.precond.coarsening.aggr.block_size = 1;
-    prm.precond.coarsening.aggr.eps_strong = 0.08;  // weak coupling threshold (~0.05–0.1 works best)
-    prm.precond.npre = 1;                           // 1 pre-smooth
-    prm.precond.npost = 1;                          // 1 post-smooth
-
 
     if(debug) {
         std::cout << "row_ptr\n";
@@ -266,13 +252,18 @@ void AMGSolver::buildLaplacian() {
         std::cout << std::endl;
     }
 
+    assert(checkMatrix() && "Matrix structure is invalid during buildLaplacian");
+
+    hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values));
+
     // Construct solver
-    solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
+    // solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
+
 }
 
 
 
-std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
+std::vector<double> AMGSolver::solve(const std::vector<double> &b, double eps) {
     if (b.size() != n)
         throw std::runtime_error("RHS size mismatch");
 
@@ -286,14 +277,18 @@ std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
         val -= mean_bvec;
     }
 
+    amgcl::solver::cg<Backend>::params solver_params;
+    solver_params.tol = eps;
 
-    if (solver) {
+    amgcl::solver::cg<Backend> solver(n,solver_params);
+
+    if (true) {
         if(debug) {
-            const auto res = (*solver)(bvec_buffer, x_buffer);
+            const auto res = solver(*hierarchy, bvec_buffer, x_buffer);
             std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
                       << "  Error: " << std::get<1>(res) << std::endl;
         }else {
-            (*solver)(bvec_buffer, x_buffer);
+            solver(*hierarchy, bvec_buffer, x_buffer);
         }
         // --- Enforce zero-mean solution (orthogonal to nullspace) ---
         double mean_x = std::reduce( x_buffer.begin(), x_buffer.end()) / n;
@@ -307,7 +302,7 @@ std::vector<double> AMGSolver::solve(const std::vector<double> &b) {
     return x_buffer;
 }
 
-Eigen::VectorXd AMGSolver::solve(const Eigen::VectorXd& b) {
+Eigen::VectorXd AMGSolver::solve(const Eigen::VectorXd& b, double eps) {
     const int n = b.size();
     std::vector<double> bvec(n);
     std::memcpy(bvec.data(), b.data(), n * sizeof(double));
@@ -319,7 +314,7 @@ Eigen::VectorXd AMGSolver::solve(const Eigen::VectorXd& b) {
     return eigen_output;
 }
 
-
+/*
 bool AMGSolver::updateEdge(int u, int v, double new_weight) {
     auto it = m_edge_weights.find({u, v});
     if (it == m_edge_weights.end()) {
@@ -338,73 +333,15 @@ bool AMGSolver::updateEdge(int u, int v, double new_weight) {
 
         return true;
     }
-}
+}*/
 
 void AMGSolver::updateSolver() {
 /* BUG: In some iterations the AMGSolver outputs "Zero sum in skyline_lu factorization"
  *      The error is putput when the factorize method is called.
  *
 */
+    assert(checkMatrix() && "Matrix structure is invalid during updateSolver");
     // Update hierarchy numeric values (same structure)
-    solver->precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    hierarchy->rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
 }
 
-/*
-bool AMGSolver::checkMatrix() const {
-    bool ok = true;
-
-    // --- 1. Check for symmetry and duplicates ---
-    for (int row = 0; row < n; ++row) {
-        std::unordered_set<int> cols_in_row;
-        for (int idx = m_row_ptr[row]; idx < m_row_ptr[row + 1]; ++idx) {
-            int col = m_col_ind[idx];
-            double val = m_values[idx];
-
-            // Duplicates check:
-            if (!cols_in_row.insert(col).second) {
-                std::cerr << "Duplicate entry at row " << row << ", col " << col << "\n";
-                ok = false;
-            }
-
-            // Symmetry check:
-            if (col != row) {
-                int rev_index = findIndex(col, row);
-                if (rev_index == -1) {
-                    std::cerr << "Missing symmetric entry at (" << col << "," << row << ")\n";
-                    ok = false;
-                } else if (std::abs(m_values[rev_index] - val) > 1e-12) {
-                    std::cerr << "Matrix not symmetric at (" << row << "," << col
-                              << ") vs (" << col << "," << row << ")\n";
-                    ok = false;
-                }
-            }
-        }
-    }
-
-    // --- 2. Check diagonal entries ---
-    for (int i = 0; i < n; ++i) {
-        int diag_index = findIndex(i, i);
-        if (diag_index == -1) {
-            std::cerr << "Missing diagonal entry at (" << i << "," << i << ")\n";
-            ok = false;
-        } else if (std::abs(m_values[diag_index]) < 1e-14) {
-            std::cerr << "Zero diagonal entry at (" << i << "," << i << ")\n";
-            ok = false;
-        }
-    }
-
-    // --- 3. Check row sums (Laplacian property) ---
-    for (int row = 0; row < n; ++row) {
-        double sum = 0.0;
-        for (int idx = m_row_ptr[row]; idx < m_row_ptr[row + 1]; ++idx) {
-            sum += m_values[idx];
-        }
-        if (std::abs(sum) > 1e-10) {
-            std::cerr << "Row " << row << " does not sum to 0: sum = " << sum << "\n";
-            // not necessarily fatal, but unusual for Laplacian
-        }
-    }
-
-    return ok;
-}
-*/

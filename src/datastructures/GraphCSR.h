@@ -35,7 +35,7 @@ public:
     bool is_processed = false;
 
     // Temporary storage before finalize()
-    std::vector<Edge> tmp_edges;
+    std::vector<std::pair<int, int>> tmp_edges;
     std::vector<double> tmp_capacity;
     std::vector<double> tmp_distance;
 
@@ -159,7 +159,6 @@ public:
         tmp_capacity.push_back(cap);
         tmp_distance.push_back(dist);
         m+=2;
-
 
 
         is_processed = false;

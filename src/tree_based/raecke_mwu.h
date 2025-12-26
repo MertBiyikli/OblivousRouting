@@ -46,7 +46,9 @@ public:
     }
 
     void computeBasisFlows(AllPairRoutingTable &table) override {
+        auto t0 = timeNow();
         run();
+        this->solve_time = duration((timeNow()-t0));
         normalizeLambdas();
         transformSolution(table);
         //table.printFlows(graph);
@@ -56,19 +58,16 @@ public:
     void run() {
         lambdaSum = 0.0;
         while (lambdaSum < 1.0) {
-            auto start = std::chrono::high_resolution_clock::now();
             lambdaSum += treeOracle();
-            oracle_running_times.push_back(
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - start
-                ).count()
-            );
             iteration_count++;
         }
     }
 
     double treeOracle() {
+        auto start = timeNow();
         auto t = oracle->getTree(current_distances);
+        this->oracle_running_times.push_back(duration((timeNow()-start)));
+
         assert(t != nullptr);
         computeRLoads(t);
         double l = getMaxRload();

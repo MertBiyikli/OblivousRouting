@@ -428,6 +428,7 @@ public:
     }
 
     virtual double _getFlow(int e, int s, int t) const = 0;
+    virtual void printRoutingTable() const = 0;
 };
 
 
@@ -441,6 +442,10 @@ public:
 
     void initRoutingTable() {
         routing_table.init(g);
+    }
+
+    void printRoutingTable() const override{
+        routing_table.printFlows(g);
     }
 
     virtual double _getFlow(int e, int s, int t) const override {
@@ -542,6 +547,10 @@ public:
 
     virtual double _getFlow(int e, int s, int t) const override {
         return this->getFlow(e, s, t);
+    }
+
+    void printRoutingTable() const override{
+        routing_table.printFlows(g);
     }
 
     double getFlow(int e, int s, int t) const{

@@ -13,6 +13,7 @@
 #include <amgcl/amg.hpp>
 #include <Eigen/Dense>
 #include <memory>
+#include "../../solver/routing_table.h"
 
 
 template <class AMG>
@@ -71,8 +72,8 @@ public:
     ~AMGSolverMT() override = default;
 
 
-    std::vector<double> solve(const std::vector<double>& b) override;  // required
-    Eigen::VectorXd solve(const Eigen::VectorXd& b) override;          // convenience
+    std::vector<double> solve(const std::vector<double>& b, double eps = EPS) override;  // required
+    Eigen::VectorXd solve(const Eigen::VectorXd& b, double eps = EPS) override;          // convenience
     Eigen::MatrixXd solve_many(const Eigen::MatrixXd& B);
 
     void updateSolver() override;
@@ -119,7 +120,7 @@ public:
         }
     }
 
-    void buildLaplacian_(const GraphADJ&) override {};
+    // void buildLaplacian_(const GraphADJ&) override {};
 
     std::vector<Eigen::VectorXd> solve_multi(const std::vector<Eigen::VectorXd>& rhs_batch) {
         if (rhs_batch.empty()) return {};

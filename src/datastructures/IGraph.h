@@ -9,13 +9,11 @@
 #include <sstream>
 #include <numeric>
 #include <algorithm>
+#include <unordered_set>
+#include "../utils/hash.h"
 
 
 #define INVALID_EDGE_ID -1
-
-using Edge = std::pair<int, int>; // (u, v)
-
-
 
 
 
@@ -239,6 +237,7 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
         // 3) Second pass: scan for "@arcs", find header, then parse each arc line:
         inArcsSection = false;
         bool readHeader = false;
+        std::unordered_set<std::pair<int, int>, PairHash> existingEdges;
         for (size_t i = 0; i < allLines.size(); ++i) {
             const std::string &raw = allLines[i];
             std::string lower = raw;
@@ -316,11 +315,18 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
                 // invalid node Id ⇒ skip
                 continue;
             }
+
             // We only add each undirected edge once (u < v)
             if (u > v) {
-                continue;
+                std::swap(u, v);
             }
 
+            if (existingEdges.contains({u, v})) {
+                // edge already exists ⇒ skip
+                continue;
+            }else {
+                existingEdges.insert({u,v});
+            }
 
             // Determine capacity:
             double capacityValue = 1.0;
@@ -355,6 +361,7 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
             if (capacityValue == 0) {
                 capacityValue = 1;
             }
+
 
             // Finally, add the undirected edge (Graph::addEdge adds both directions)
             // add random edge capacities

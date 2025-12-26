@@ -21,11 +21,11 @@ public:
     // virtual void init(std::unordered_map<std::pair<int,int>, double>& edge_weights, int n, bool debug = false) = 0;
     // virtual void buildLaplacian() = 0;
 
-    virtual std::vector<double> solve(const std::vector<double>& b) = 0;
-    virtual Eigen::VectorXd solve(const Eigen::VectorXd& b) = 0;
+    virtual std::vector<double> solve(const std::vector<double>& b, double eps) = 0;
+    virtual Eigen::VectorXd solve(const Eigen::VectorXd& b, double eps) = 0;
     virtual void updateSolver() = 0;
     virtual void buildLaplacian() = 0;
-    virtual void buildLaplacian_(const GraphADJ& g) = 0;
+    //virtual void buildLaplacian_(const GraphADJ& g) = 0;
 /*
     virtual bool updateEdge(int u, int v, double new_weight) = 0;
 
@@ -86,7 +86,7 @@ public:
 
         buildLaplacian();
     }
-
+/*
     void init(std::vector<std::vector<double>>& _adj_edge_weights, int n, const GraphADJ& g, bool debug = false) {
         this->debug = debug;
         this->n = n;
@@ -109,12 +109,12 @@ public:
 
         m_edge_weights = _edge_weights;
         buildLaplacian();
-    }
+    }*/
 
 
     virtual void updateAllEdges(const std::vector<double>& new_weights,
                     const std::vector<std::pair<int,int>>& edges) = 0;
-
+/*
     virtual void updateAllEdges(const std::vector<std::vector<double>>& new_weights, const GraphADJ& G) {
         for (int u = 0; u < n; ++u) {
             for (int idx = 0; idx < G.neighbors(u).size(); ++idx) {
@@ -153,7 +153,7 @@ public:
             m_values[m_indexMap[{u,v}]] -= delta;
             m_values[m_indexMap[{v,u}]] -= delta;
         }
-    }
+    }*/
 
     bool updateEdge(int u, int v, double new_weight) {
         auto it = m_edge_weights.find({u, v});
