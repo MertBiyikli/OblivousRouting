@@ -8,7 +8,6 @@
 #include "../random_mst/mst.h"
 #include <cassert>
 #include <random>
-#include <google/protobuf/arena_cleanup.h>
 
 #include "../raecke_tree.h"
 #include "../../datastructures/GraphCSR.h"
