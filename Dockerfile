@@ -1,63 +1,50 @@
-##############################
-# Stage 1 — Build OR-Tools
-##############################
-FROM ubuntu:24.04 AS ortools-builder
+############################
+# Stage 1: Builder (amd64)
+############################
+FROM --platform=linux/amd64 ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    git cmake ninja-build build-essential \
-    libz-dev libbz2-dev libeigen3-dev \
-    libgmp-dev libboost-all-dev \
+    build-essential \
+    cmake \
+    wget \
+    ca-certificates \
+    libstdc++6 \
+    libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Build OR-Tools v9.6
-RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
-RUN mkdir ortools-build && cd ortools-build && \
-    cmake ../or-tools -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_SAMPLES=OFF \
-      -DBUILD_DEPS=ON \
-    && cmake --build . -j"$(nproc)" \
-    && cmake --install . --prefix /opt/ortools
+# Install OR-Tools (amd64)
+RUN wget -q https://github.com/google/or-tools/releases/download/v9.9/or-tools_amd64_ubuntu-22.04_cpp_v9.9.3963.tar.gz && \
+    tar -xzf or-tools_amd64_ubuntu-22.04_cpp_v9.9.3963.tar.gz && \
+    cp -r or-tools_*/* /usr/local/ && \
+    ldconfig && \
+    rm -rf or-tools_*
 
-
-##############################
-# Stage 2 — Build your project
-##############################
-FROM ubuntu:24.04 AS cpp-builder
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y \
-    cmake ninja-build build-essential \
-    libz-dev libbz2-dev libeigen3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=ortools-builder /opt/ortools /opt/ortools
-ENV CMAKE_PREFIX_PATH=/opt/ortools
-
-WORKDIR /src
+WORKDIR /build
 COPY . .
 
-RUN cmake -S . -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DUSE_OPENMP=ON \
-  && cmake --build build -j"$(nproc)"
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DUSE_OPENMP=OFF && \
+    cmake --build build -j$(nproc)
 
+############################
+# Stage 2: Runtime (amd64)
+############################
+FROM --platform=linux/amd64 ubuntu:22.04
 
-##############################
-# Stage 3 — Final tiny runtime
-##############################
-FROM ubuntu:24.04 AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    libz-dev libbz2-dev libeigen3-dev \
+    libstdc++6 \
+    libgomp1 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=cpp-builder /src/build/oblivious_routing /usr/local/bin/oblivious_routing
-COPY --from=ortools-builder /opt/ortools /opt/ortools
+# Copy OR-Tools runtime libs
+COPY --from=builder /usr/local/lib /usr/local/lib
+RUN ldconfig
 
-ENV LD_LIBRARY_PATH=/opt/ortools/lib
+WORKDIR /app
+COPY --from=builder /build/build/oblivious_routing .
 
-ENTRYPOINT ["/usr/local/bin/oblivious_routing"]
+ENTRYPOINT ["./oblivious_routing"]
