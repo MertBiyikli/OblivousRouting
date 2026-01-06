@@ -70,8 +70,10 @@ for g in "${GRAPHS[@]}"; do
    }
    solver = $4;
    total_time="NaN";
-   avg_oracle="NaN";
+   solve_time="NaN";
+   transformation_time="NaN";
    mwu="NaN";
+   avg_oracle="NaN";
    achieved="NaN";
    offline="NaN";
    next
@@ -83,22 +85,29 @@ for g in "${GRAPHS[@]}"; do
    next
  }
 
+  # Solve time: 1671 ms
+  match($0, /^Solve time: ([0-9.]+) ms$/, m) {
+    solve_time = m[1];
+    next
+  }
+
  # MWU iterations: 23
  match($0, /^MWU iterations: ([0-9]+)$/, m) {
    mwu = m[1];
    next
  }
 
- # Average oracle time: 65.4783 ms
- match($0, /^Average oracle time: ([0-9.]+) ms$/, m) {
-   avg_oracle = m[1];
-   next
- }
+  # Average oracle time: 65.4783 ms
+  match($0, /^Average oracle time: ([0-9.]+) ms$/, m) {
+    avg_oracle = m[1];
+    next
+  }
+
 
  # Ratio ... (1.84449 / 16.7927)
  match($0, /\(([0-9.]+) \/ ([0-9.]+)\)/, m) {
-   achieved = m[1];
-   offline = m[2];
+   offline = m[1];
+   achieved = m[2];
    next
  }
 
