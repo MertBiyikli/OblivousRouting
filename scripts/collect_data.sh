@@ -15,7 +15,8 @@ SOLVERS="$(echo "$SOLVERS_RAW" | tr -d '[:space:]')"
 mkdir -p "$OUT_DIR"
 
 # CSV schema expected by plot_experiments.py
-echo "solver,num_edges,total_time_ms,mwu_iterations,achieved_congestion,offline_opt_value,avg_oracle_time_ms" > "$CSV"
+echo "graph,solver,num_edges,total_time_ms,mwu_iterations,achieved_congestion,offline_opt_value,avg_oracle_time_ms" > "$CSV"
+
 
 shopt -s nullglob
 GRAPHS=("$DATASET_DIR"/*.lgf)
@@ -44,55 +45,71 @@ for g in "${GRAPHS[@]}"; do
   # ------------------------------------------------------------
   # Parse log: one CSV row per solver block
   # ------------------------------------------------------------
-  awk '
-  BEGIN {
-    solver="";
-    edges="NaN";
-  }
+ awk -v graph="$base" '
+ BEGIN {
+   solver="";
+   edges="NaN";
+   total_time="NaN";
+   avg_oracle="NaN";
+   mwu="NaN";
+   achieved="NaN";
+   offline="NaN";
+ }
 
-  # Graph header line:
-  # "Graph loaded: 18 nodes, 66 edges."
-  /^Graph loaded:/ {
-    edges=$6;
-    gsub(/,/, "", edges);
-    next
-  }
+ # Graph loaded: 18 nodes, 66 edges.
+ match($0, /^Graph loaded: [0-9]+ nodes, ([0-9]+) edges\./, m) {
+   edges = m[1];
+   next
+ }
 
-  # Start of solver block
-  /^=== Running solver:/ {
-    if (solver != "") {
-      printf "%s,%s,%s,%s,%s,%s,%s\n",
-        solver, edges, total_time, mwu, achieved, offline, avg_oracle
-    }
-    solver=$4;
-    total_time="NaN";
-    avg_oracle="NaN";
-    mwu="NaN";
-    achieved="NaN";
-    offline="NaN";
-    next
-  }
+ # Start of solver block
+ /^=== Running solver:/ {
+   if (solver != "") {
+     printf "%s,%s,%s,%s,%s,%s,%s,%s\n",
+       graph, solver, edges, total_time, mwu, achieved, offline, avg_oracle
+   }
+   solver = $4;
+   total_time="NaN";
+   avg_oracle="NaN";
+   mwu="NaN";
+   achieved="NaN";
+   offline="NaN";
+   next
+ }
 
-  /^Total running time:/      { total_time=$4; next }
-  /^MWU iterations:/          { mwu=$3; next }
-  /^Average oracle time:/     { avg_oracle=$5; next }
+ # Total running time: 1671 ms
+ match($0, /^Total running time: ([0-9.]+) ms$/, m) {
+   total_time = m[1];
+   next
+ }
 
-  /^Ratio off the optimal offline solution/ {
-    split($0, a, "[()/]");
-    achieved=a[2];
-    offline=a[3];
-    gsub(/^[ \t]+|[ \t]+$/, "", achieved);
-    gsub(/^[ \t]+|[ \t]+$/, "", offline);
-    next
-  }
+ # MWU iterations: 23
+ match($0, /^MWU iterations: ([0-9]+)$/, m) {
+   mwu = m[1];
+   next
+ }
 
-  END {
-    if (solver != "") {
-      printf "%s,%s,%s,%s,%s,%s,%s\n",
-        solver, edges, total_time, mwu, achieved, offline, avg_oracle
-    }
-  }
-  ' "$log" >> "$CSV"
+ # Average oracle time: 65.4783 ms
+ match($0, /^Average oracle time: ([0-9.]+) ms$/, m) {
+   avg_oracle = m[1];
+   next
+ }
+
+ # Ratio ... (1.84449 / 16.7927)
+ match($0, /\(([0-9.]+) \/ ([0-9.]+)\)/, m) {
+   achieved = m[1];
+   offline = m[2];
+   next
+ }
+
+ END {
+   if (solver != "") {
+     printf "%s,%s,%s,%s,%s,%s,%s,%s\n",
+       graph, solver, edges, total_time, mwu, achieved, offline, avg_oracle
+   }
+ }
+ ' "$log" >> "$CSV"
+
 
   echo "[DONE] $base"
 done
