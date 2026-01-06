@@ -50,8 +50,10 @@ for g in "${GRAPHS[@]}"; do
    solver="";
    edges="NaN";
    total_time="NaN";
-   avg_oracle="NaN";
+   solve_time="NaN";
+   transformation_time="NaN";
    mwu="NaN";
+   avg_oracle="NaN";
    achieved="NaN";
    offline="NaN";
  }
