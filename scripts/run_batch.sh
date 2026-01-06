@@ -2,8 +2,8 @@
 set -euo pipefail
 
 IMAGE="oblivious-routing:latest"
-DATASET_DIR="$(pwd)/experiments/datasets/Backbone"
-OUT_DIR="$(pwd)/results/backbone"
+DATASET_DIR="$(pwd)/experiments/datasets/Rocketfuel_Topologies"
+OUT_DIR="$(pwd)/results/rocketfuel_batch"
 SOLVERS_RAW="${1:-electrical, frt, ckr}"
 DEMAND="${2:-gravity}"
 
