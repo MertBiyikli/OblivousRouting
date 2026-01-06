@@ -9,13 +9,13 @@ CSV="$OUT_DIR/results.csv"
 SOLVERS_RAW="${1:-electrical, frt, ckr}"
 DEMAND="${2:-gravity}"
 
-# normalize solver list
+# normalize solver list (remove whitespace)
 SOLVERS="$(echo "$SOLVERS_RAW" | tr -d '[:space:]')"
 
 mkdir -p "$OUT_DIR"
 
-# CSV header
-echo "graph,solvers,demand,total_time_ms,avg_oracle_time_ms,mwu_iterations,oblivious_ratio_percent,ratio_num,ratio_den" > "$CSV"
+# CSV header expected by plot_experiments.py
+echo "solver,num_edges,total_time_ms,mwu_iterations,achieved_congestion,offline_opt_value,avg_oracle_time_ms" > "$CSV"
 
 shopt -s nullglob
 GRAPHS=("$DATASET_DIR"/*.lgf)
@@ -41,27 +41,30 @@ for g in "${GRAPHS[@]}"; do
     "$SOLVERS" "graphs/$base" "$DEMAND" \
     > "$log" 2>&1
 
-  # -------------------------------
+  # num_edges from LGF (common header line: "@edges <m>")
+  num_edges=$(grep -E "^@edges" "$g" | awk '{print $2}' | head -n 1)
+  num_edges=${num_edges:-NaN}
+
   # Parse metrics from log
-  # -------------------------------
   total_time=$(grep "Total running time:" "$log" | awk '{print $4}')
   avg_oracle=$(grep "Average oracle time:" "$log" | awk '{print $5}')
   mwu=$(grep "MWU iterations:" "$log" | awk '{print $3}')
 
-  ratio_line=$(grep "Ratio off the optimal offline solution" "$log" || true)
-  ratio_pct=$(echo "$ratio_line" | awk '{print $9}' | tr -d '%')
-  ratio_num=$(echo "$ratio_line" | awk -F'[()/]' '{print $2}')
-  ratio_den=$(echo "$ratio_line" | awk -F'[()/]' '{print $3}')
-
-  # fallback safety
   total_time=${total_time:-NaN}
   avg_oracle=${avg_oracle:-NaN}
   mwu=${mwu:-NaN}
-  ratio_pct=${ratio_pct:-NaN}
-  ratio_num=${ratio_num:-NaN}
-  ratio_den=${ratio_den:-NaN}
 
-  echo "$base,$SOLVERS,$DEMAND,$total_time,$avg_oracle,$mwu,$ratio_pct,$ratio_num,$ratio_den" >> "$CSV"
+  ratio_line=$(grep "Ratio off the optimal offline solution" "$log" || true)
+  achieved_congestion=$(echo "$ratio_line" | awk -F'[()/]' '{print $2}' | xargs)
+  offline_opt_value=$(echo "$ratio_line" | awk -F'[()/]' '{print $3}' | xargs)
+
+  achieved_congestion=${achieved_congestion:-NaN}
+  offline_opt_value=${offline_opt_value:-NaN}
+
+  # one row per solver
+  for solver in $(echo "$SOLVERS" | tr ',' ' '); do
+    echo "$solver,$num_edges,$total_time,$mwu,$achieved_congestion,$offline_opt_value,$avg_oracle" >> "$CSV"
+  done
 
   echo "[DONE] $base"
 done
