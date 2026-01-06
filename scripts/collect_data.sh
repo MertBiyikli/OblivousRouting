@@ -120,7 +120,7 @@ for g in "${GRAPHS[@]}"; do
  END {
    if (solver != "") {
      printf "%s,%s,%s,%s,%s,%s,%s,%s\n",
-       graph, solver, edges, total_time, mwu, achieved, offline, avg_oracle
+       graph, solver, edges, total_time,solve_time, transformation_time, mwu, avg_oracle, achieved, offline
    }
  }
  ' "$log" >> "$CSV"
