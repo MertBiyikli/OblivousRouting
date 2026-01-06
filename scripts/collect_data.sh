@@ -91,6 +91,12 @@ for g in "${GRAPHS[@]}"; do
     next
   }
 
+  # Transformation time: 1671 ms
+  match($0, /^Transformation time: ([0-9.]+) ms$/, m) {
+      transformation_time = m[1];
+      next
+   }
+
  # MWU iterations: 23
  match($0, /^MWU iterations: ([0-9]+)$/, m) {
    mwu = m[1];
