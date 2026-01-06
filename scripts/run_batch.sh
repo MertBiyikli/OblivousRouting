@@ -1,58 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_SOLVERS="electrical,frt,ckr"
-DEFAULT_DEMAND="gravity"
+IMAGE="oblivious-routing:latest"
+DATASET_DIR="$(pwd)/experiments/datasets/Backbone"
+OUT_DIR="$(pwd)/results/backbone"
+SOLVERS_RAW="${1:-electrical, frt, ckr}"
+DEMAND="${2:-gravity}"
 
-SOLVERS_RAW="${1:-$DEFAULT_SOLVERS}"
-DEMAND="${2:-$DEFAULT_DEMAND}"
-
-# Normalize solver list: "electrical, frt" → "electrical,frt"
+# normalize solver list: remove whitespace -> "electrical,frt,ckr"
 SOLVERS="$(echo "$SOLVERS_RAW" | tr -d '[:space:]')"
 
-# --------------------------------
-# Configuration
-# --------------------------------
-IMAGE="oblivious-routing"
-GRAPH_DIR="$(pwd)/experiments/datasets/Backbone"
-RESULT_DIR="$(pwd)/results/raw"
-mkdir -p "$RESULT_DIR"
+mkdir -p "$OUT_DIR"
 
-RUN_ID="$(date +%Y%m%d_%H%M%S)"
-
-# --------------------------------
-# Sanity checks
-# --------------------------------
-if [ ! -d "$GRAPH_DIR" ]; then
-  echo "ERROR: graphs/ directory not found"
-  exit 1
-fi
-
+# collect graphs
 shopt -s nullglob
-GRAPHS=("$GRAPH_DIR"/*.lgf)
-if [ ${#GRAPHS[@]} -eq 0 ]; then
-  echo "ERROR: no .lgf files found in graphs/"
-  exit 1
-fi
+GRAPHS=("$DATASET_DIR"/*.lgf)
 shopt -u nullglob
 
-# --------------------------------
-# Run experiments
-# --------------------------------
-for graph in "${GRAPHS[@]}"; do
-  graph_name="$(basename "$graph")"
+if [ ${#GRAPHS[@]} -eq 0 ]; then
+  echo "ERROR: No .lgf files found in $DATASET_DIR"
+  exit 1
+fi
 
-  echo "----------------------------------------------"
-  echo "Graph: $graph_name"
-  echo "----------------------------------------------"
+RUN_ID="$(date +%Y%m%d_%H%M%S)"
+MASTER_LOG="$OUT_DIR/run_${RUN_ID}_MASTER.log"
 
-  docker run --rm \
-    -e OMP_NUM_THREADS=1 \
-    -v "$GRAPH_DIR":/app/graphs \
-    -v "$RESULT_DIR":/app/results \
+echo "Dataset: $DATASET_DIR" | tee "$MASTER_LOG"
+echo "Solvers: $SOLVERS"     | tee -a "$MASTER_LOG"
+echo "Demand:  $DEMAND"      | tee -a "$MASTER_LOG"
+echo "Graphs:  ${#GRAPHS[@]}"| tee -a "$MASTER_LOG"
+echo "----------------------------------------" | tee -a "$MASTER_LOG"
+
+for g in "${GRAPHS[@]}"; do
+  base="$(basename "$g")"
+  log="$OUT_DIR/${base%.lgf}__${SOLVERS}__${DEMAND}__${RUN_ID}.log"
+
+  echo "[RUN] $base" | tee -a "$MASTER_LOG"
+
+  docker run --rm --runtime=runc \
+    -e OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
+    -v "$DATASET_DIR":/app/graphs \
     "$IMAGE" \
-    "$SOLVERS" "graphs/$graph_name" "$DEMAND" \
-    | tee "$RESULT_DIR/run_${RUN_ID}_${graph_name}.log"
+    "$SOLVERS" "graphs/$base" "$DEMAND" \
+    > "$log" 2>&1
+
+  echo "[DONE] $base -> $log" | tee -a "$MASTER_LOG"
 done
 
-echo "All experiments finished."
+echo "All runs finished. Master log: $MASTER_LOG"
