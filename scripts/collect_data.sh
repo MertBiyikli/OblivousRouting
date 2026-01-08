@@ -2,42 +2,54 @@
 set -euo pipefail
 
 IMAGE="oblivious-routing:latest"
-DATASET_DIR="$(pwd)/experiments/datasets/Rocketfuel_Topologies"   # <-- adjust if needed
-OUT_DIR="$(pwd)/results/Rocketfuel_Topologies"
+# NEW: iterate over *all* datasets recursively
+DATASET_ROOT="$(pwd)/experiments/datasets"
+OUT_DIR="$(pwd)/results/all_datasets"
 CSV="$OUT_DIR/results.csv"
 
-SOLVERS_RAW="${1:-electrical,frt,ckr,cohen}"
+SOLVERS_RAW="${1:-electrical,frt,ckr,random_mst,cohen}"
 DEMAND="${2:-gravity}"
 
 SOLVERS="$(echo "$SOLVERS_RAW" | tr -d '[:space:]')"
 
 mkdir -p "$OUT_DIR"
 
-# Updated CSV schema (now includes solve/transformation)
-echo "graph,solver,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value" > "$CSV"
+# Updated CSV schema (now includes solve/transformation) times separately
+# NEW: include dataset + relative graph path for better semantics/debugging
+echo "dataset,graph,solver,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value" > "$CSV"
 
-shopt -s nullglob
-GRAPHS=("$DATASET_DIR"/*.lgf)
-shopt -u nullglob
+# NEW: recursive find (deterministic order)
+mapfile -t GRAPHS < <(find "$DATASET_ROOT" -type f -name "*.lgf" | sort)
 
 if [ ${#GRAPHS[@]} -eq 0 ]; then
-  echo "ERROR: No .lgf files found in $DATASET_DIR"
+  echo "ERROR: No .lgf files found under $DATASET_ROOT"
   exit 1
 fi
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 
 for g in "${GRAPHS[@]}"; do
+  # relative path inside datasets/
+  rel_path="${g#$DATASET_ROOT/}"
+
+  # dataset name = first directory component (e.g., Backbone/..., Rocketfuel_Topologies/...)
+  dataset="${rel_path%%/*}"
+
+  # filename only (used for log name)
   base="$(basename "$g")"
-  log="$OUT_DIR/${base%.lgf}_${RUN_ID}.log"
 
-  echo "[RUN] $base"
+  # make log filename safe + unique
+  safe_rel="${rel_path//\//__}"
+  log="$OUT_DIR/${safe_rel%.lgf}_${RUN_ID}.log"
 
+  echo "[RUN] $rel_path"
+
+  # Mount the dataset root once; pass the relative path inside it
   docker run --rm --runtime=runc \
     -e OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
-    -v "$DATASET_DIR":/app/graphs \
+    -v "$DATASET_ROOT":/app/graphs \
     "$IMAGE" \
-    "$SOLVERS" "graphs/$base" "$DEMAND" \
+    "$SOLVERS" "graphs/$rel_path" "$DEMAND" \
     > "$log" 2>&1
 
   awk -v graph="$base" '
