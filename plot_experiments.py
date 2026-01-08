@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # CONFIG
 # ======================
 
-RESULTS_CSV = Path("results/results.csv")
+RESULTS_CSV = Path("results/results_rocketfuel.csv")
 OUT_DIR = Path("plots")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
