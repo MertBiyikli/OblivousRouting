@@ -64,12 +64,12 @@ You can also run the project using Docker. First, build the Docker image:
 
 For a simplified execution, you can run the Docker container with the following script
 ```bash
-    ./run_experiment.sh --solvers <algorithm> --dataset <graph> --demand <demand_model> --out <output_directory>
+    ./scripts/run_experiment.sh --solvers <algorithm> --dataset <graph> --demand <demand_model> --out <output_directory>
 ```
 ### Example smoke test
 To perform a quick smoke test, you can run the following command:
 ```bash
-    ./run_experiment.sh --solvers "electrical,frt,ckr,mst,cohen" --dataset /experiments/datasets/Backbone/1221.lgf --demand uniform --out results/test.csv
+    ./scripts/run_experiment.sh --solvers "electrical,frt,ckr,mst,cohen" --dataset /experiments/datasets/Backbone/1221.lgf --demand uniform --out results/test.csv
 ```
 
 
