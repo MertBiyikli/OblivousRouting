@@ -16,7 +16,6 @@ RESULTS_CSV = Path("results/results_rocketfuel.csv")
 OUT_DIR = Path("plots")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Fixed column name (matches stdout + CSV schema)
 ORACLE_TIME_COL = "avg_oracle_time_ms"
 
 # Typical LaTeX paper sizes
@@ -24,9 +23,14 @@ FIGSIZE_SINGLE = (3.35, 2.35)   # single-column
 FIGSIZE_DOUBLE = (6.9, 3.0)     # double-column
 
 EXPORT_PNG = True
-DPI_RASTER = 350
+DPI_RASTER = 450
+
 SHOW_ERROR_BARS = False
-LOG_EPS = 1e-3  # ms, safe lower bound for oracle time
+LOG_EPS = 1e-3  # ms, safe lower bound for log-plots
+
+# Legend control
+LEGEND_NCOL = 2
+LEGEND_OUTSIDE = True  # put legend above plot to avoid occluding data
 
 
 # ======================
@@ -35,14 +39,9 @@ LOG_EPS = 1e-3  # ms, safe lower bound for oracle time
 
 def set_paper_style():
     mpl.rcParams.update({
-        # ---------- Typography ----------
+        # Typography
         "font.family": "serif",
-        "font.serif": [
-            "Times New Roman",
-            "Times",
-            "STIXGeneral",
-            "DejaVu Serif",
-        ],
+        "font.serif": ["Times New Roman", "Times", "STIXGeneral", "DejaVu Serif"],
         "mathtext.fontset": "stix",
 
         "font.size": 7,
@@ -52,11 +51,11 @@ def set_paper_style():
         "xtick.labelsize": 6,
         "ytick.labelsize": 6,
 
-        # ---------- Lines ----------
-        "lines.linewidth": 0.7,
-        "lines.markersize": 2.5,
+        # Lines/markers (slightly smaller = cleaner)
+        "lines.linewidth": 0.75,
+        "lines.markersize": 2.2,
 
-        # ---------- Axes ----------
+        # Axes
         "axes.linewidth": 0.8,
         "xtick.major.width": 0.8,
         "ytick.major.width": 0.8,
@@ -65,13 +64,13 @@ def set_paper_style():
         "xtick.direction": "in",
         "ytick.direction": "in",
 
-        # ---------- Grid ----------
+        # Grid (subtle)
         "axes.grid": True,
-        "grid.alpha": 0.25,
-        "grid.linewidth": 0.6,
+        "grid.alpha": 0.22,
+        "grid.linewidth": 0.55,
 
-        # ---------- PDF output ----------
-        "pdf.fonttype": 42,   # embedded TrueType (editable)
+        # Output
+        "pdf.fonttype": 42,  # embedded TrueType
         "ps.fonttype": 42,
         "savefig.bbox": "tight",
         "savefig.pad_inches": 0.02,
@@ -89,9 +88,6 @@ def savefig_all(fig: plt.Figure, outbase: Path):
 # ======================
 
 def aggregate_mean_std(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
-    """
-    Mean / std aggregation per (solver, num_edges)
-    """
     g = (
         df.groupby(["solver", "num_edges"], as_index=False)[ycol]
         .agg(["mean", "std", "count"])
@@ -103,18 +99,98 @@ def aggregate_mean_std(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
 
 
 # ======================
-# PLOTTING HELPERS
+# SOLVER LABELS + ORDER
 # ======================
 
-def solver_palette(solvers: list[str]) -> dict[str, tuple]:
-    cmap = plt.get_cmap("tab10")
-    return {s: cmap(i % 10) for i, s in enumerate(solvers)}
+def pretty_solver_name(s: str) -> str:
+    # Keep this conservative; adjust to your naming if you want
+    mapping = {
+        "electrical": "Electrical",
+        "electrical_parallel": "Electrical (par)",
+        "raecke_frt": "Räcke–FRT",
+        "raecke_ckr": "Räcke–CKR",
+        "cohen": "LP (Applegate–Cohen)",
+        "random_mst": "Räcke–MST",
+        "mst": "Räcke–MST",
+    }
+    return mapping.get(s, s)
 
 
-def plot_with_band(
+def solver_sort_key(s: str) -> tuple:
+    # Put "baseline/fast" first, then tree-based, then LP-ish, then others
+    order = {
+        "electrical": 0,
+        "electrical_parallel": 1,
+        "raecke_frt": 2,
+        "raecke_ckr": 3,
+        "random_mst": 4,
+        "mst": 4,
+        "cohen": 5,
+    }
+    return (order.get(s, 99), s)
+
+
+# ======================
+# COLORS (unique per solver, consistent across plots)
+# ======================
+
+def solver_palette_unique(solvers: list[str]) -> dict[str, tuple]:
+    """
+    Guarantees unique colors for all solvers (up to many solvers).
+    - For <= 20: uses tab20 (high contrast).
+    - For > 20: falls back to evenly spaced HSV colors.
+    """
+    n = len(solvers)
+    colors: list[tuple]
+
+    if n <= 20:
+        cmap = plt.get_cmap("tab20")
+        colors = [cmap(i) for i in range(n)]
+    else:
+        # evenly spaced hues
+        cmap = plt.get_cmap("hsv")
+        colors = [cmap(i / n) for i in range(n)]
+
+    return {s: colors[i] for i, s in enumerate(solvers)}
+
+
+def solver_markers(solvers: list[str]) -> dict[str, str]:
+    """
+    Optional: different markers help when printed in grayscale.
+    Still keeps color unique as requested.
+    """
+    pool = ["o", "s", "^", "D", "v", "P", "X", ">", "<", "h", "*"]
+    return {s: pool[i % len(pool)] for i, s in enumerate(solvers)}
+
+
+# ======================
+# PLOTTING
+# ======================
+
+def add_legend(ax: plt.Axes, handles, labels):
+    if not labels:
+        return
+
+    if LEGEND_OUTSIDE:
+        ax.legend(
+            handles, labels,
+            loc="lower left",
+            bbox_to_anchor=(0.0, 1.02),
+            ncol=min(LEGEND_NCOL, max(1, len(labels))),
+            frameon=False,
+            borderaxespad=0.0,
+            columnspacing=0.8,
+            handletextpad=0.5,
+        )
+    else:
+        ax.legend(frameon=False, ncol=min(LEGEND_NCOL, max(1, len(labels))))
+
+
+def plot_lines(
         df_agg: pd.DataFrame,
         solvers: list[str],
         colors: dict[str, tuple],
+        markers: dict[str, str],
         xcol: str,
         y_mean_col: str,
         y_std_col: str,
@@ -127,18 +203,35 @@ def plot_with_band(
 ):
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
+    handles = []
+    labels = []
+
     for s in solvers:
         sub = df_agg[df_agg["solver"] == s].sort_values(xcol)
+        if sub.empty:
+            continue
+
         x = sub[xcol].to_numpy()
         y = sub[y_mean_col].to_numpy()
         e = sub[y_std_col].to_numpy()
-        y = np.maximum(y, LOG_EPS)
-        e = np.minimum(e, y - LOG_EPS)   # prevent y - e <= 0
 
+        # Keep log-plots sane
+        if ylog:
+            y = np.maximum(y, LOG_EPS)
+            e = np.minimum(e, y - LOG_EPS)
 
-        ax.plot(x, y, marker="o", label=s, color=colors[s])
-        if SHOW_ERROR_BARS:
-            ax.fill_between(x, y - e, y + e, alpha=0.15, color=colors[s])
+        h, = ax.plot(
+            x, y,
+            marker=markers[s],
+            label=pretty_solver_name(s),
+            color=colors[s],
+        )
+        handles.append(h)
+        labels.append(pretty_solver_name(s))
+
+        # optional uncertainty band (kept off by default)
+        if SHOW_ERROR_BARS and np.any(e > 0):
+            ax.fill_between(x, y - e, y + e, alpha=0.12, color=colors[s])
 
     if xlog:
         ax.set_xscale("log")
@@ -150,9 +243,10 @@ def plot_with_band(
 
     ax.minorticks_on()
     ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.12)
+    ax.grid(True, which="minor", alpha=0.10)
 
-    ax.legend(frameon=False)
+    add_legend(ax, handles, labels)
+
     savefig_all(fig, outpath)
     plt.close(fig)
 
@@ -166,6 +260,10 @@ def main():
 
     df = pd.read_csv(RESULTS_CSV)
 
+    # If you have status column from timeout script, keep only OK runs by default
+    if "status" in df.columns:
+        df = df[df["status"] == "OK"].copy()
+
     required_cols = {
         "solver",
         "num_edges",
@@ -175,25 +273,28 @@ def main():
         "offline_opt_value",
         ORACLE_TIME_COL,
     }
-
     missing = required_cols - set(df.columns)
     if missing:
         raise ValueError(f"Missing columns in results.csv: {sorted(missing)}")
 
-    df = df.copy()
+    # Enforce numeric columns (prevents “ms”, “edges.” issues from silently breaking plots)
+    for c in ["num_edges", "total_time_ms", "mwu_iterations", "achieved_congestion", "offline_opt_value", ORACLE_TIME_COL]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    df = df.dropna(subset=["solver", "num_edges"]).copy()
     df["relative_error"] = df["achieved_congestion"] / df["offline_opt_value"]
 
-    solvers = sorted(df["solver"].unique())
-    colors = solver_palette(solvers)
+    solvers = sorted(df["solver"].unique(), key=solver_sort_key)
+    colors = solver_palette_unique(solvers)   # <-- UNIQUE COLORS
+    markers = solver_markers(solvers)         # <-- helps grayscale
 
     agg_runtime = aggregate_mean_std(df, "total_time_ms")
     agg_iters   = aggregate_mean_std(df, "mwu_iterations")
     agg_error   = aggregate_mean_std(df, "relative_error")
     agg_oracle  = aggregate_mean_std(df, ORACLE_TIME_COL)
 
-    # 1) Total runtime
-    plot_with_band(
-        agg_runtime, solvers, colors,
+    plot_lines(
+        agg_runtime, solvers, colors, markers,
         "num_edges", "mean", "std",
         "Number of edges",
         "Total running time [ms]",
@@ -202,9 +303,8 @@ def main():
         outpath=OUT_DIR / "runtime_vs_edges",
     )
 
-    # 2) MWU iterations
-    plot_with_band(
-        agg_iters, solvers, colors,
+    plot_lines(
+        agg_iters, solvers, colors, markers,
         "num_edges", "mean", "std",
         "Number of edges",
         "MWU iterations",
@@ -213,9 +313,8 @@ def main():
         outpath=OUT_DIR / "mwu_iterations_vs_edges",
     )
 
-    # 3) Relative error
-    plot_with_band(
-        agg_error, solvers, colors,
+    plot_lines(
+        agg_error, solvers, colors, markers,
         "num_edges", "mean", "std",
         "Number of edges",
         "Relative error (solver / optimal)",
@@ -224,9 +323,8 @@ def main():
         outpath=OUT_DIR / "error_vs_edges",
     )
 
-    # 4) Average oracle runtime
-    plot_with_band(
-        agg_oracle, solvers, colors,
+    plot_lines(
+        agg_oracle, solvers, colors, markers,
         "num_edges", "mean", "std",
         "Number of edges",
         "Average oracle running time [ms]",
@@ -236,6 +334,7 @@ def main():
     )
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
+    print("✔ Unique solver colors (no repeats up to 20 solvers; HSV beyond)")
     print("✔ Vector PDFs with embedded fonts (camera-ready)")
 
 
