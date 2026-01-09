@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 # CONFIG
 # ======================
 
-RESULTS_CSV = Path("results/generated/all_datasets/results.csv")
-OUT_DIR = Path("plots")
+RESULTS_CSV = Path("../results/generated/all_datasets/results.csv")
+OUT_DIR = Path("../plots")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_ms"

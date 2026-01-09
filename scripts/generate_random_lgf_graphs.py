@@ -40,7 +40,7 @@ def write_lgf_file(filename, n, edges, weights):
 
 
 def main():
-    outdir = Path("generated_graphs")
+    outdir = Path("../generated_graphs")
     outdir.mkdir(exist_ok=True)
 
 
