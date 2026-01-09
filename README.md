@@ -8,7 +8,7 @@ The observed algorithms include:
 **MWU-based Oblivious Routing Approximation Algorithms:**
 - Räcke STOC 2008 
   **Optimal Hierarchical Decompositions for Congestion Minimization in Networks**
-  - Goranci et al.  ITCS 2024
+- Goranci et al.  ITCS 2024
   **Electrical Flows for Polylogarithmic Competitive Oblivious Routing**
 
 LP-based evaluation of the optimal Oblivious Routing:
