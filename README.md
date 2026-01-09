@@ -5,18 +5,21 @@ The goal is to compare two MWU style algorithm each instantiating different orac
 More precisely, we examine how electrical flow and tree based oracles solve the Oblivious Routing.
 The observed algorithms include:
 
-MWU-based Oblivious Routing Approximation Algorithms:
-- Räcke STOC 2008 ("Optimal Hierarchical Decompositions for Congestion Minimization in Networks")
-- Goranci et al.  ITCS 2024 ("Electrical Flows for Polylogarithmic Competitive Oblivious Routing")
+**MWU-based Oblivious Routing Approximation Algorithms:**
+- Räcke STOC 2008 
+  **Optimal Hierarchical Decompositions for Congestion Minimization in Networks**
+  - Goranci et al.  ITCS 2024
+  **Electrical Flows for Polylogarithmic Competitive Oblivious Routing**
 
 LP-based evaluation of the optimal Oblivious Routing:
 - Applegate and Cohen SIGCOMM 2003 ("Making intra-domain routing robust to changing and uncertain traffic demands: understanding fundamental tradeoffs")
 
 
-Note that we have implement different variants of the tree based algorithms including FRT, CKR, and Minimum Spanning Tree based oracles.
+Tree-based oracle variants implemented in this repository include:
+- **FRT** — Fakcharoenphol, Rao, Talwar (2004) **A tight bound on approximating arbitrary metrics by tree metrics**
+- **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**
+- **MST-based** decompositions
 
-- FRT = Fakcharoenphol, Rao, and Talwar 2004 ("A tight bound on approximating arbitrary metrics by tree metrics")
-- CKR = Mendel and Schwob 2009 ("Fast C-K-R Partitions of Sparse Graphs ∗")
 
 ### Repository Structure
 
@@ -44,9 +47,32 @@ Note that we have implement different variants of the tree based algorithms incl
     ```
    
 #### Running the Algorithms
-- To run the MWU-based Oblivious Routing algorithms, use the following command:
+- To run an oblivious Routing algorithms, use the following command:
    ```bash
    ./oblivious_routing <algorithm> <graph> <demand_model>
    ```
    Replace `<graph>` with the path to your network topology file and `<algorithm>` with `"electrical,frt,ckr,mst,cohen"`.
-   Replace `<demand_model>` with the desired traffic demand model (e.g., `uniform, gravity, bimodal, gaussian`).
+   Replace `<demand_model>` with the desired traffic demand model (e.g., `uniform, gravity, bimodal, gaussian`). The demand model 
+   evaluates how traffic is distributed across the network givent the precomputed routing scheme.
+
+
+### Running with Docker (recommended)
+You can also run the project using Docker. First, build the Docker image:
+```bash
+    docker build -t oblivious_routing .
+```
+
+For a simplified execution, you can run the Docker container with the following script
+```bash
+    ./run_experiment.sh --solvers <algorithm> --dataset <graph> --demand <demand_model> --out <output_directory>
+```
+### Example smoke test
+To perform a quick smoke test, you can run the following command:
+```bash
+    ./run_experiment.sh --solvers "electrical,frt,ckr,mst,cohen" --dataset /experiments/datasets/Backbone/1221.lgf --demand uniform --out results/test.csv
+```
+
+
+##### Contributors (sorted alphabetically by last name):
+- Mert Biyikli (maintainer)
+- Gramoz Goranci
