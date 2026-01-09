@@ -7,17 +7,17 @@ The observed algorithms include:
 
 **MWU-based Oblivious Routing Approximation Algorithms:**
 - Räcke STOC 2008 
-  **Optimal Hierarchical Decompositions for Congestion Minimization in Networks**
+  **Optimal Hierarchical Decompositions for Congestion Minimization in Networks**[[paper]](https://dl.acm.org/doi/10.1145/1374376.1374415)
 - Goranci et al.  ITCS 2024
-  **Electrical Flows for Polylogarithmic Competitive Oblivious Routing**
+  **Electrical Flows for Polylogarithmic Competitive Oblivious Routing**[[paper]](https://arxiv.org/abs/2303.02491)
 
 LP-based evaluation of the optimal Oblivious Routing:
-- Applegate and Cohen SIGCOMM 2003 **Making intra-domain routing robust to changing and uncertain traffic demands: understanding fundamental tradeoffs**
+- Applegate and Cohen SIGCOMM 2003 **Making intra-domain routing robust to changing and uncertain traffic demands: understanding fundamental tradeoffs**[[paper]](https://dl.acm.org/doi/10.1145/863955.863991)
 
 
 Tree-based oracle variants implemented in this repository include:
-- **FRT** — Fakcharoenphol, Rao, Talwar (2004) **A tight bound on approximating arbitrary metrics by tree metrics**
-- **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**
+- **FRT** — Fakcharoenphol, Rao, Talwar (2004) **A tight bound on approximating arbitrary metrics by tree metrics**[[paper]](https://dl.acm.org/doi/abs/10.1145/780542.780608)
+- **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**[[paper]](https://arxiv.org/abs/0809.1902)
 - **MST-based** decompositions
 
 
