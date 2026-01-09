@@ -250,6 +250,63 @@ def plot_lines(
     savefig_all(fig, outpath)
     plt.close(fig)
 
+def aggregate_mean_std_by_solver(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
+    g = (
+        df.groupby(["solver"], as_index=False)[ycol]
+        .agg(["mean", "std", "count"])
+        .reset_index()
+    )
+    g.rename(columns={"count": "n"}, inplace=True)
+    g["std"] = g["std"].fillna(0.0)
+    return g
+
+def plot_solver_average_bars(
+        df_solver_agg: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, tuple],
+        y_mean_col: str,
+        y_std_col: str,
+        ylabel: str,
+        ylog: bool,
+        figsize,
+        outpath: Path,
+):
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    sub = df_solver_agg.set_index("solver").reindex(solvers).reset_index()
+
+    y = sub[y_mean_col].to_numpy(dtype=float)
+    e = sub[y_std_col].to_numpy(dtype=float)
+
+    if ylog:
+        y = np.maximum(y, LOG_EPS)
+        e = np.minimum(e, y - LOG_EPS)
+
+    x = np.arange(len(solvers))
+    bars = ax.bar(
+        x, y,
+        color=[colors[s] for s in solvers],
+        alpha=0.8,
+    )
+
+    if SHOW_ERROR_BARS and np.any(e > 0):
+        ax.errorbar(x, y, yerr=e, fmt="none", ecolor="black", capsize=2, linewidth=0.8)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=25, ha="right")
+
+    if ylog:
+        ax.set_yscale("log")
+
+    ax.set_ylabel(ylabel)
+
+    ax.minorticks_on()
+    ax.grid(True, which="major")
+    ax.grid(True, which="minor", alpha=0.10)
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
 
 # ======================
 # MAIN
@@ -282,7 +339,7 @@ def main():
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     df = df.dropna(subset=["solver", "num_edges"]).copy()
-    df["relative_error"] = df["achieved_congestion"] / df["offline_opt_value"]
+    df["relative_error"] = (abs(df["offline_opt_value"]-df["achieved_congestion"])) / df["achieved_congestion"]*100.0
 
     solvers = sorted(df["solver"].unique(), key=solver_sort_key)
     colors = solver_palette_unique(solvers)   # <-- UNIQUE COLORS
@@ -332,6 +389,40 @@ def main():
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "avg_oracle_runtime_vs_edges",
     )
+
+
+    avg_runtime_solver = aggregate_mean_std_by_solver(df, "total_time_ms")
+    avg_error_solver   = aggregate_mean_std_by_solver(df, "relative_error")
+    avg_oracle_solver  = aggregate_mean_std_by_solver(df, ORACLE_TIME_COL)
+    avg_iters_solver   = aggregate_mean_std_by_solver(df, "mwu_iterations")
+
+    plot_solver_average_bars(
+        avg_runtime_solver, solvers, colors,
+        y_mean_col="mean", y_std_col="std",
+        ylabel="Average total running time [ms]",
+        ylog=True,
+        figsize=FIGSIZE_SINGLE,
+        outpath=OUT_DIR / "avg_total_runtime_by_solver",
+    )
+
+    plot_solver_average_bars(
+        avg_error_solver, solvers, colors,
+        y_mean_col="mean", y_std_col="std",
+        ylabel="Average relative error [%]",
+        ylog=False,
+        figsize=FIGSIZE_SINGLE,
+        outpath=OUT_DIR / "avg_relative_error_by_solver",
+    )
+
+    plot_solver_average_bars(
+        avg_iters_solver, solvers, colors,
+        y_mean_col="mean", y_std_col="std",
+        ylabel="Average MWU iterations",
+        ylog=False,
+        figsize=FIGSIZE_SINGLE,
+        outpath=OUT_DIR / "avg_mwu_iterations_by_solver",
+    )
+
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
     print("✔ Unique solver colors (no repeats up to 20 solvers; HSV beyond)")
