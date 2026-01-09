@@ -59,7 +59,7 @@ Tree-based oracle variants implemented in this repository include:
 ### Running with Docker (recommended)
 You can also run the project using Docker. First, build the Docker image:
 ```bash
-    docker build -t oblivious_routing .
+    docker build -t oblivious-routing .
 ```
 
 For a simplified execution, you can run the Docker container with the following script
