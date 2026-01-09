@@ -12,7 +12,7 @@ The observed algorithms include:
   **Electrical Flows for Polylogarithmic Competitive Oblivious Routing**
 
 LP-based evaluation of the optimal Oblivious Routing:
-- Applegate and Cohen SIGCOMM 2003 ("Making intra-domain routing robust to changing and uncertain traffic demands: understanding fundamental tradeoffs")
+- Applegate and Cohen SIGCOMM 2003 **Making intra-domain routing robust to changing and uncertain traffic demands: understanding fundamental tradeoffs**
 
 
 Tree-based oracle variants implemented in this repository include:
