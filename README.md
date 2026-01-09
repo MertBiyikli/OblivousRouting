@@ -36,7 +36,7 @@ Note that we have implement different variants of the tree based algorithms incl
 1. Clone the repository:
    ```bash
    git clone "https://github.com/MertBiyikli/OblivousRouting.git"
-    cd OblivousRouting
+   cd OblivousRouting
    mkdir build
    cd build
    cmake .. -DCMAKE_BUILD_TYPE=Release
