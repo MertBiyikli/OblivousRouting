@@ -6,7 +6,7 @@ IMAGE="oblivious-routing:latest"
 # iterate over *all* datasets recursively
 DATASET_ROOT="$(pwd)/generated_graphs/real_data/real_data_2x"
 OUT_DIR="$(pwd)/results/generated/all_datasets"
-CSV="$OUT_DIR/results.csv"
+CSV="$OUT_DIR/generated_results.csv"
 
 # Default solvers and demand
 SOLVERS_RAW="${1:-electrical,frt,ckr,random_mst,cohen}"
