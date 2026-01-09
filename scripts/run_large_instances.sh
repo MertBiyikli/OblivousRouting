@@ -12,7 +12,7 @@ CSV="$OUT_DIR/generated_results.csv"
 SOLVERS_RAW="${1:-electrical,frt,ckr,random_mst,cohen}"
 DEMAND="${2:-gravity, uniform, bimodal, gaussian}"
 
-# Timeout per (solver, graph). Override via: TIMEOUT=10m ./collect_data.sh ...
+# Timeout per (solver, graph). Override via: TIMEOUT=10m ./run_experiments.sh ...
 TIMEOUT="${TIMEOUT:-20m}"
 
 # Normalize solver list (keep commas, remove spaces)

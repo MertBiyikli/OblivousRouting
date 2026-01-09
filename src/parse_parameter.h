@@ -96,7 +96,7 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
         return SolverType::RAECKE_FRT;
     if (s == "raecke_ckr" || s == "ckr" || s == "c")
         return SolverType::RAECKE_CKR;
-    if (s == "raecke_mst" || s == "random_mst" || s == "rmst")
+    if (s == "raecke_mst" || s == "random_mst" || s == "rmst" || s == "mst")
         return SolverType::RAECKE_RANDOM_MST;
     // LP (Applegate–Cohen)
     if (s == "cohen" || s == "lp" || s == "applegate" || s == "ac" || s == "l")
