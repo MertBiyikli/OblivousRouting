@@ -161,8 +161,10 @@ for g in "${GRAPHS[@]}"; do
       status="OK"
     else
       ec=$?
-      if [[ "$ec" -eq 124 ]]; then
+      if [[ "$ec" -eq 124 || "$ec" -eq 137 || "$ec" -eq 143 ]]; then
         status="TIMEOUT"
+      elif [[ "$ec" -eq 139 ]]; then
+        status="SEGFAULT"
       else
         status="ERROR_$ec"
       fi
