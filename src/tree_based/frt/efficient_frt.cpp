@@ -21,14 +21,26 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTree() {
             this->addDemands(u, v, cap);
         }
     }
-    computeBestBetaAndPermutation();
+    // computeBestBetaAndPermutation();
    // auto tree = getBestTree();
+    computeBetaAndRandomPermutation();
 
     auto bottom_up = getTreeBottomUp();
 
     return bottom_up;
 }
 
+
+void EfficientFRT::computeBetaAndRandomPermutation() {
+    computeBetas();
+
+    // don't have to recompute the permutation
+    if (verticesPermutation.size()!=graph.getNumNodes()) {
+        for (const auto& v : graph.getVertices()) {
+            verticesPermutation.push_back(v);
+        }
+    }
+}
 
 void EfficientFRT::cleanUpTree(std::shared_ptr<EfficientFRTTreeNode>& node) {
     if (!node) return;
@@ -98,9 +110,8 @@ void EfficientFRT::computeBetas() {
 }
 
 
+// Derandomization process to compute the best beta and permutation
 void EfficientFRT::computeBestBetaAndPermutation() {
-    // Implementation of best beta and permutation computation
-    // This is a placeholder for the actual implementation
     computeBetas();
     double minExp = std::numeric_limits<double>::infinity();
     std::unordered_set<int> allVertices(graph.getVertices().begin(), graph.getVertices().end());

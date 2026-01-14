@@ -37,6 +37,8 @@ public:
     std::shared_ptr<EfficientFRTTreeNode> getBestTree();
     void updateEdgeDistances(const std::vector<double>& distances);
 
+    void computeBetaAndRandomPermutation();
+
     void computeBestBetaAndPermutation();
     void computeBetas();
 

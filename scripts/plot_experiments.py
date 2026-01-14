@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/results_SNDLIB_gravity.csv")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/SNDLIB/SNDLIB_gravity.csv")
 OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/SNDLib/Gravity/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -325,6 +325,7 @@ def main():
         "num_edges",
         "total_time_ms",
         "mwu_iterations",
+        "transformation_time_ms",
         "achieved_congestion",
         "offline_opt_value",
         ORACLE_TIME_COL,
@@ -391,10 +392,12 @@ def main():
 
 
     avg_runtime_solver = aggregate_mean_std_by_solver(df, "total_time_ms")
+    avg_transformtime_solver = aggregate_mean_std_by_solver(df, "transformation_time_ms")
     avg_error_solver   = aggregate_mean_std_by_solver(df, "relative_error")
-    avg_oracle_solver  = aggregate_mean_std_by_solver(df, ORACLE_TIME_COL)
     avg_iters_solver   = aggregate_mean_std_by_solver(df, "mwu_iterations")
 
+
+    # Bar plots of average metrics per solver
     plot_solver_average_bars(
         avg_runtime_solver, solvers, colors,
         y_mean_col="mean", y_std_col="std",
@@ -421,6 +424,26 @@ def main():
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "avg_mwu_iterations_by_solver",
     )
+
+    # Bar plots showing the percentage of solve time vs transformation time
+    df["percent_transform_time"] = (
+        df["transformation_time_ms"] / df["total_time_ms"] * 100.0
+    )
+    df["percent_transform_time"] = df["percent_transform_time"].replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=["percent_transform_time"])
+
+    agg_transform_share = aggregate_mean_std_by_solver(df, "percent_transform_time")
+
+    plot_solver_average_bars(
+        agg_transform_share, solvers, colors,
+        y_mean_col="mean", y_std_col="std",
+        ylabel="Percentage of transformation time [%]",
+        ylog=False,
+        figsize=FIGSIZE_SINGLE,
+        outpath=OUT_DIR / "avg_transformation_time_share_by_solver",
+    )
+
+
 
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
