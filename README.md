@@ -20,6 +20,9 @@ Tree-based oracle variants implemented in this repository include:
 - **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**[[paper]](https://arxiv.org/abs/0809.1902)
 - **MST-based** decompositions
 
+Electrical flow based oracle variant is based on the [[AMGCL solver]](https://github.com/ddemidov/amgcl).
+The default solver is set to use the algebraic multigrid method for preconditioning the Conjugate Gradient (CG) method.
+
 
 ### Repository Structure
 
