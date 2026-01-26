@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/SNDLIB/SNDLIB_gravity.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/SNDLib/Gravity/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/generaated_graphs.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/generated/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_ms"
