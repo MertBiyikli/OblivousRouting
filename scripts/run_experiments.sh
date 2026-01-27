@@ -6,7 +6,7 @@ set -euo pipefail
 ############################################
 OUT_CSV="results/results.csv"
 OUT_DIR="${OUT_DIR:-results/logs}"
-TIMEOUT="${TIMEOUT:-60m}"
+TIMEOUT="${TIMEOUT:-600m}"
 IMAGE="${IMAGE:-oblivious-routing:latest}"
 
 SOLVERS=""
