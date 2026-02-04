@@ -160,7 +160,9 @@ void AMGSolver::buildLaplacian() {
         int u = kv.first.first;
         int v = kv.first.second;
         double w = kv.second;
-        if (u == v) continue;
+        if (u >= v) continue;
+
+
 
         // Laplacian contributions:
         L[{u,u}] += w;
@@ -214,7 +216,7 @@ void AMGSolver::buildLaplacian() {
             m_indexMap[{r, row[k].first}] = start + k;
         }
     }
-
+/*
     // --- Step 5: Check diagonal entries ---
     if (debug ) {
         for (int i = 0; i < n; ++i) {
@@ -233,7 +235,7 @@ void AMGSolver::buildLaplacian() {
                 m_values[it->second] = 1.0;
             }
         }
-    }
+    }*/
 
     if(debug){
         if (!checkMatrix()) {
@@ -254,7 +256,14 @@ void AMGSolver::buildLaplacian() {
 
     assert(checkMatrix() && "Matrix structure is invalid during buildLaplacian");
 
-    hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    if (use_dirichlet) {
+        m_values_dirichlet = m_values;
+        applyDirichletInPlace(m_values_dirichlet);
+        hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values_dirichlet));
+    } else {
+        hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    }
+
 
     // Construct solver
     // solver = std::make_unique<Solver>(std::tie(n, m_row_ptr, m_col_ind, m_values), prm);
@@ -264,43 +273,47 @@ void AMGSolver::buildLaplacian() {
 
 
 std::vector<double> AMGSolver::solve(const std::vector<double> &b, double eps) {
-    if (b.size() != n)
+    if (b.size() != (size_t)n)
         throw std::runtime_error("RHS size mismatch");
+
+    if (!hierarchy) throw std::runtime_error("AMGSolver: hierarchy not built");
 
     x_buffer.assign(n, 0.0);
     bvec_buffer.assign(b.begin(), b.end());
 
-    // --- Enforce zero-mean RHS (orthogonal to nullspace) ---
-    double mean_bvec = std::reduce(bvec_buffer.begin(), bvec_buffer.end(), 0.0) / n;
-    // divide each entry of bvec by the mean to ensure zero-sum
-    for(auto& val : bvec_buffer) {
-        val -= mean_bvec;
+    if (use_dirichlet) {
+        bvec_buffer[dirichlet_root] = 0.0;
+        x_buffer[dirichlet_root] = 0.0;
+    } else {
+        // (only if you ever keep ungrounded mode)
+        double mean_b = std::reduce(bvec_buffer.begin(), bvec_buffer.end(), 0.0) / n;
+        for (double &v : bvec_buffer) v -= mean_b;
     }
 
     amgcl::solver::cg<Backend>::params solver_params;
     solver_params.tol = eps;
+    solver_params.maxiter = 1000; // optional
 
-    amgcl::solver::cg<Backend> solver(n,solver_params);
+    const amgcl::solver::cg<Backend> solver(n, solver_params);
 
-    if (true) {
-        if(debug) {
-            const auto res = solver(*hierarchy, bvec_buffer, x_buffer);
-            std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
-                      << "  Error: " << std::get<1>(res) << std::endl;
-        }else {
-            solver(*hierarchy, bvec_buffer, x_buffer);
-        }
-        // --- Enforce zero-mean solution (orthogonal to nullspace) ---
-        double mean_x = std::reduce( x_buffer.begin(), x_buffer.end()) / n;
-        for(auto& val : x_buffer) {
-            val -= mean_x; // Project solution to zero-mean
-        }
-    }else {
-        std::cout << "[AMGSolver] No solver found." << std::endl;
+    if (debug) {
+        const auto res = solver(*hierarchy, bvec_buffer, x_buffer);
+        std::cout << "[AMGSolver] Iterations: " << std::get<0>(res)
+                  << "  Error: " << std::get<1>(res) << std::endl;
+    } else {
+        solver(*hierarchy, bvec_buffer, x_buffer);
+    }
+
+    if (use_dirichlet) {
+        x_buffer[dirichlet_root] = 0.0;
+    } else {
+        double mean_x = std::reduce(x_buffer.begin(), x_buffer.end(), 0.0) / n;
+        for (double &v : x_buffer) v -= mean_x;
     }
 
     return x_buffer;
 }
+
 
 Eigen::VectorXd AMGSolver::solve(const Eigen::VectorXd& b, double eps) {
     const int n = b.size();
@@ -342,6 +355,13 @@ void AMGSolver::updateSolver() {
 */
     assert(checkMatrix() && "Matrix structure is invalid during updateSolver");
     // Update hierarchy numeric values (same structure)
-    hierarchy->rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    if (use_dirichlet) {
+        m_values_dirichlet = m_values;
+        applyDirichletInPlace(m_values_dirichlet);
+        hierarchy->rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values_dirichlet));
+    } else {
+        hierarchy->rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
+    }
+
 }
 

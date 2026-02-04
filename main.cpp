@@ -21,6 +21,13 @@ int main(int argc, char **argv) {
     std::cout << "Graph loaded: " << G.getNumNodes() << " nodes, "
               << G.getNumEdges() << " edges.\n";
 
+    if ( !G.isConnected()) {
+        std::cerr << "Input graph is not connected!\n";
+        // return -1;
+    }
+
+    // G.print();
+
     for (SolverType type : cfg->solvers) {
         std::cout << "\n=== Running solver: " << ::solverNames[static_cast<int>(type)] << " ===\n";
 

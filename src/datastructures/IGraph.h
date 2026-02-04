@@ -147,6 +147,27 @@ public:
     // Note that this function does change the members from the base class
     virtual void InitializeMemberByParser(int maxNodeIdSeen) = 0;
 
+
+    bool isConnected() const {
+        // Simple BFS to check connectivity
+        std::vector<bool> visited(n, false);
+        std::vector<int> queue;
+        queue.push_back(0);
+        visited[0] = true;
+
+        size_t idx = 0;
+        while (idx < queue.size()) {
+            int u = queue[idx++];
+            for (int v : neighbors(u)) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    queue.push_back(v);
+                }
+            }
+        }
+
+        return std::all_of(visited.begin(), visited.end(), [](bool v) { return v; });
+    }
 };
 
 
@@ -238,6 +259,8 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
         inArcsSection = false;
         bool readHeader = false;
         std::unordered_set<std::pair<int, int>, PairHash> existingEdges;
+        bool capacityInHeader = false;
+        bool costInHeader = false;
         for (size_t i = 0; i < allLines.size(); ++i) {
             const std::string &raw = allLines[i];
             std::string lower = raw;
@@ -265,25 +288,43 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
                     }
                 }
                 // Find which index is “cost” and which is “capacity”
+                bool labelInHeader = false;
                 for (int col = 0; col < (int)headerTokens.size(); ++col) {
                     std::string h = headerTokens[col];
                     std::transform(h.begin(), h.end(), h.begin(),
                                    [](unsigned char c) { return std::tolower(c); });
                     if (h == "cost") {
                         costColIdx = col;
+                        costInHeader = true;
                     }
                     if (h == "capacity") {
                         capColIdx = col;
+                        capacityInHeader = true;
+                    }
+
+                    // if label is also in the header, the column indices shift by 3 (u, v, label), otherwise it would be 2 (u, v)
+                    if (h == "label") {
+                        labelInHeader = true;
                     }
                 }
-                costColIdx += 2; // TODO: this is hardcoded for now, should be dynamic
+
+                costColIdx += (costInHeader ? 2 : 0);
+                capColIdx +=  (capacityInHeader ? 2 : 0);
+                /*
+                if (labelInHeader) {
+                    // label is header, we need to shift further by 1
+                    costColIdx += (costInHeader ? 1 : 0);
+                    capColIdx +=  (capacityInHeader ? 1 : 0);
+                }*/
                 readHeader = true;
                 continue;
             }
 
             // Now each subsequent line (after header) is “u<TAB>v<TAB>…”
-            if (raw.empty() || raw[0] == '#') {
-                // skip blank or comment lines
+
+            // skip blank or comment lines
+            if (raw.empty()
+                || raw[0] == '#') {
                 continue;
             }
 
@@ -328,40 +369,55 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
                 existingEdges.insert({u,v});
             }
 
-            // Determine capacity:
-            double capacityValue = 1.0;
+            /* Note the following:
+            *   in many dataset, such as BackBone, the 'cost' is only provided,
+            *   and 'capacity' is missing. In such cases, we choose to
+            *   use the inverse of cost as capacity.
+            *
+            *   if both 'cost' and 'capacity' are provided, we use 'capacity' directly.
+            *
+            *   if none is provided, we set capacity = 1.0 by default.
+             */
+
             bool capacityParsed = false;
-            if (costColIdx >= 0 && costColIdx < (int)parts.size()) {
+            double capacityValue = 1.0;
+            if (capacityInHeader
+                && capColIdx >= 0
+                && capColIdx < (int)parts.size()) {
                 // attempt to parse capacity
                 try {
-                    capacityValue = std::stod(parts[costColIdx]);
+                    capacityValue = std::stod(parts[capColIdx]);
                     capacityParsed = true;
+                    continue; // done with this edge
                 } catch (...) {
-                    capacityParsed = false;
+                    // failed to parse capacity, will try cost or default below
+                }
+            }
+
+
+            bool costParsed = false;
+            double costValue = 1.0;
+            if (costInHeader
+                && costColIdx >= 0
+                && costColIdx < (int)parts.size()) {
+                // attempt to parse capacity
+                try {
+                    costValue = std::stod(parts[costColIdx]);
+                    costParsed = true;
+                } catch (...) {
                 }
             }
 
             // TODO: for now we only consider the undirected case...
-            if (false && !capacityParsed && withDistances && costColIdx >= 0 && costColIdx < (int)parts.size()) {
-                // parse cost, then invert it
-                try {
-                    double costVal = std::stod(parts[costColIdx]);
-                    if (costVal != 0.0) {
-                        capacityValue = costVal;
-                    } else {
-                        capacityValue = 1.0;
-                    }
-                    capacityParsed = true;
-                } catch (...) {
-                    capacityParsed = false;
-                }
-            }
-            // if still not parsed, we leave capacityValue = 1.0 by default
-
-            if (capacityValue == 0) {
-                capacityValue = 1;
+            if (!capacityParsed && costParsed && costValue != 0.0) {
+                // use inverse of cost as capacity
+                capacityValue = 1.0 / costValue;
             }
 
+            if (!capacityParsed && !costParsed) {
+                // both capacity and cost parsing failed, use default capacity = 1.0
+                capacityValue = 1.0;
+            }
 
             // Finally, add the undirected edge (Graph::addEdge adds both directions)
             // add random edge capacities

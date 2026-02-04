@@ -16,6 +16,7 @@
 #include <amgcl/solver/cg.hpp>
 #include <amgcl/amg.hpp>
 #include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/coarsening/smoothed_aggr_emin.hpp>
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/solver/bicgstab.hpp>
 #include <Eigen/Sparse>
@@ -82,7 +83,7 @@ public:
             int u = edges[e].first;
             int v = edges[e].second;
             double old_w = m_edge_weights[{u, v}];
-            double new_w = new_weights[e];
+            double new_w = std::max(new_weights[e], 1e-15);
             double delta = new_w - old_w;
 
             if (std::abs(delta) < 1e-32) continue;
@@ -102,8 +103,8 @@ public:
 
             // --- Update CSR Laplacian entries ---
             // Diagonal contributions
-            m_values[index_uv] += delta;
-            m_values[index_vu] += delta;
+            m_values[index_uu] += delta;
+            m_values[index_vv] += delta;
 
             // Off-diagonal contributions
             m_values[index_uv] -= delta;
@@ -115,6 +116,34 @@ public:
     //bool updateEdge(int u, int v, double new_weight);
 
     /*bool checkMatrix() const;*/
+    bool use_dirichlet = true;
+    int dirichlet_root = 0;
+    std::vector<double> m_values_dirichlet;
+
+    void applyDirichletInPlace(std::vector<double>& vals) {
+        const int r = dirichlet_root;
+
+        // Row r: make it [0 ... 0 1 0 ... 0]
+        for (int jj = m_row_ptr[r]; jj < m_row_ptr[r+1]; ++jj) {
+            vals[jj] = (m_col_ind[jj] == r) ? 1.0 : 0.0;
+        }
+
+        // Column r: zero out A[i,r] for i != r (keep symmetry)
+        for (int i = 0; i < n; ++i) {
+            if (i == r) continue;
+            for (int jj = m_row_ptr[i]; jj < m_row_ptr[i+1]; ++jj) {
+                if (m_col_ind[jj] == r) {
+                    vals[jj] = 0.0;
+                    break;
+                }
+            }
+        }
+
+        // Must have diagonal entry at (r,r)
+        if (m_indexMap.find({r,r}) == m_indexMap.end()) {
+            throw std::runtime_error("Dirichlet root has no diagonal entry (r,r) in sparsity pattern");
+        }
+    }
 
 };
 

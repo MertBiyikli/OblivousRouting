@@ -37,7 +37,7 @@ def write_lgf(path: Path, n: int, edges: List[Edge]) -> None:
       0
       1
       ...
-      @edges
+      @arcs
       u v label capacity
       0 1 e1 1
       ...
@@ -63,10 +63,12 @@ def write_lgf(path: Path, n: int, edges: List[Edge]) -> None:
         for i in range(n):
             f.write(f"{i}\n")
 
-        f.write("\n@edges\n")
-        f.write("label u v capacity\n")
+        f.write("\n@arcs\n")
+        f.write("label  cost\n")
+        ctr = 0
         for i, e in enumerate(deduped):
-            f.write(f"{e.u} {e.v} {i} {e.cap}\n")
+            f.write(f"{e.u} {e.v} {ctr} {e.cap}\n")
+            ctr += 1
 
     print(f"[WROTE] {path} | nodes={n:,}, edges={len(deduped):,}")
 
