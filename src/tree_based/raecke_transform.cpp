@@ -247,7 +247,7 @@ EfficientRaeckeTransform::findCycle(const std::pair<int,int>& d) {
 
 
 
-/*
+
 const LinearRoutingTable& LinearEfficientRaeckeTransform::getRoutingTable() const {
     return linear_tb;
 }
@@ -308,7 +308,20 @@ void LinearEfficientRaeckeTransform::distributeDemands(const std::shared_ptr<ITr
                                 //linear_tb.addFlow(e, dst, src, lambda);
 
                             }
+                        }
+/*
+                        if ( src == root) {
+                            for (size_t i = 0; i + 1 < path.size(); ++i) {
 
+                                int e = g.getEdgeId(path[i], path[i+1]);
+                                // int anti_e = g.getEdgeId(path[i+1], path[i]);
+
+                                assert(e != INVALID_EDGE_ID);
+                                linear_tb.addFlow(e, dst, lambda);
+                                //linear_tb.addFlow(e, dst, src, lambda);
+
+                            }
+                        }*/
                     }
                 }
                 q.push(child);
@@ -436,4 +449,4 @@ std::vector<std::pair<int, int>> LinearEfficientRaeckeTransform::findCycle(const
             return *maybe;
     }
     return {};
-}*/
+}

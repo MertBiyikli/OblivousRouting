@@ -9,7 +9,7 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init( bool debug, const std::string& solver_name, boost::property_tree::ptree _params)
+void ElectricalFlowOptimized::init(bool debug, const std::string& solver_name)
 {
 
     n = graph.getNumNodes();
@@ -36,15 +36,7 @@ void ElectricalFlowOptimized::init( bool debug, const std::string& solver_name, 
 
     // init AMG
     amg = SolverFactory::create(solver_name);
-    if (_params.empty()) {
-        // set default parameters if not provided
-        boost::property_tree::ptree config;
-        boost::property_tree::read_json("../configs/amg_configs.json", config);
-        _params = config;
-    }
-    // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
-    amg->setSolverParams(_params);
-    amg->init(graph, edge_weights, n, edges, debug);
+    amg->init(edge_weights, n, edges, debug);
 
     // U: diagonal of capacities (per-edge)
     U = Eigen::SparseMatrix<double>(m, m);
@@ -222,12 +214,14 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
 
             // Solve L x = b (solver returns dense potentials; that’s expected)
             // If your amg wrapper doesn't accept SparseVector, use: amg->solve(rhs.toDense())
-            auto start_pure = timeNow();
+            // auto start_pure = timeNow();
             Eigen::VectorXd x = amg->solve(rhs, epsilon_L);
-            pure_oracles_running_times.push_back(duration(timeNow()-start_pure));
+            // pure_oracles_running_times.push_back(duration(timeNow()-start_pure));
 
             // accumulate edge flows for commodity (u -> x_fixed):
             // f_e(u) = w_e * (x[u]-x[v])
+
+            // TODO: Make this iterating over all UNORDERED edges instead of ordered edges only
             for (int e = 0; e < m; ++e) {
                 double fval = edge_weights[e] * (x[edges[e].first] - x[edges[e].second]);
 
@@ -246,20 +240,60 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
                             // std::cout << "anti_e= " << anti_edge << " head=" << head << " tail=" << tail << "\n";
                             // std::cout << "found anti edge adding: " << std::abs(fval) << " for source " << u << "\n";
                         }
-                        t0 = timeNow();
                         table.addFlow(anti_edge, u, std::abs(fval));
-                        this->transformation_time += duration(timeNow() - t0);
                     }else {
                         if (original_edge_id) {
                             // std::cout << "orig_e= " << original_edge_id << " head=" << head << " tail=" << tail << "\n";
                             // std::cout << "found anti edge adding: " << fval << " for source " << u << "\n";
                         }
-                        t0 = timeNow();
                         table.addFlow(original_edge_id, u, std::abs(fval));
-                        this->transformation_time += duration(timeNow() - t0);
                     }
                 }
             }
+
+            for (int e = 0; e < m; ++e) {
+                double fval = edge_weights[e] * (x[edges[e].second] - x[edges[e].first]);
+
+                if (u == edges[e].second)      div_accum[u] += fval;
+                else if (u == edges[e].first) div_accum[u] -= fval;
+                if (std::abs(fval) > EPS) {
+
+                    // if value is negative, we push along the anti-edge
+                    auto [head, tail] = edges[e];
+                    std::swap(head, tail);
+                    const int& original_edge_id = graph.getEdgeId(head, tail);
+                    // std::cout << "electrical e: " << e << "\n";
+                    if (fval < 0) {
+                        int anti_edge = graph.getAntiEdge(original_edge_id);
+                        if (anti_edge) {
+                            // std::cout << "anti_e= " << anti_edge << " head=" << head << " tail=" << tail << "\n";
+                            // std::cout << "found anti edge adding: " << std::abs(fval) << " for source " << u << "\n";
+                        }
+                        table.addFlow(anti_edge, u, std::abs(fval));
+                    }else {
+                        if (original_edge_id) {
+
+                            // std::cout << "orig_e= " << original_edge_id << " head=" << head << " tail=" << tail << "\n";
+                            // std::cout << "found anti edge adding: " << fval << " for source " << u << "\n";
+                        }
+                        table.addFlow(original_edge_id, u, std::abs(fval));
+                    }
+
+                }
+            }
+
+            // for debugging purposes, print the flows
+            for (int i = 0; i<table.src_ids.size(); i++) {
+                for (int j = 0; j<table.src_ids[i].size(); j++) {
+                    int source = table.src_ids[i][j];
+                    double flow = table.src_flows[i][j];
+                    if (flow != 0.0) {
+                        auto [head, tail] = graph.edgeEndpoints(i);
+                        // std::cout << "Edge " << head << " / " << tail << " has flow " << flow / iteration_count << " for source " << source << "\n";
+                    }
+                }
+            }
+
         }
 
 
@@ -279,7 +313,7 @@ void ElectricalFlowOptimized::scaleFlowDown(LinearRoutingTable& table) {
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
         for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
-            for (double &val : table.src_flows[e]) val *= (inv_iters);
+            for (double &val : table.src_flows[e]) val *= inv_iters;
     }
 }
 

@@ -110,7 +110,7 @@ public:
             auto node = q.front();
             q.pop();
 
-            // Process each child: represents a cut S_child | V\S_child ---
+            // --- 3️⃣ Process each child: represents a cut S_child | V\S_child ---
             for (auto child : node->getChildren()) {
                 // Add child to traversal queue
                 q.push(child);

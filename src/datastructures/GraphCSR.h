@@ -454,7 +454,7 @@ public:
 
 
 
-    virtual void print() const override {
+    void print() {
         for (int e = 0; e<m; e++) {
             std::cout << "Edge " << e << " =("<< from[e] << ", "  << to[e] << " cap:" << capacity[e] << " dist: " << distance[e] << ")" << std::endl;
         }

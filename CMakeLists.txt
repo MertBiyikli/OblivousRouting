@@ -34,8 +34,6 @@ endif()
 
 # ---- amgcl (vendored) ----
 #add_subdirectory(extern/amgcl)
-# add_subdirectory(extern/xcut)
-
 
 # list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/local/ortools")
 # include_directories(BEFORE ${ORTOOLS_ROOT}/include)
@@ -45,15 +43,93 @@ find_package(ortools REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
 
 
+
+
+# ---- Your target ----
+#[===[
+
+
 set(SRC_FILES
         main.cpp
-        src/utils/my_math.cpp
-
         src/datastructures/GraphADJ.cpp
-        src/datastructures/GraphADJ.h
+        src/lp_solver/LPSolver.cpp
+        src/lp_solver/MCCF_lp_solver.cpp
+        src/tree_based/random_mst/raecke_mst_solver.cpp
+        src/tree_based/random_mst/raecke_random_mst.cpp
+        src/tree_based/frt/raecke_frt.cpp
+        src/tree_based/frt/mcct/Node.cpp
+        src/tree_based/frt/mcct/mcct_derandomized_weighted_solver.cpp
+        src/electrical/electrical_flow_naive.cpp
+        src/electrical/electrical_flow_optimized.cpp
+        src/electrical/electrical_flow_optimized.h
+        src/electrical/electrical_flow_parallel.cpp
+        src/electrical/electrical_flow_parallel.h
+        src/electrical/laplacian_solvers/AMGSolver.cpp
+        src/electrical/laplacian_solvers/AMGSolver.h
+        src/electrical/laplacian_solvers/LaplacianSolver.h
+        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
+        experiments/performance/Performance.cpp
+        experiments/performance/Performance.h
+        experiments/performance/LP_Oblivious_Ratio.cpp
+        experiments/performance/LP_Oblivious_Ratio.h
+        experiments/performance/linear_oblivious_routing_ratio.cpp
+        experiments/performance/linear_oblivious_routing_ratio.h
+        experiments/performance/demands/GravityModel.cpp
+        experiments/performance/demands/GravityModel.h
+        experiments/performance/demands/BimodalModel.cpp
+        experiments/performance/demands/BimodalModel.h
+        experiments/performance/demands/GaussianModel.cpp
+        experiments/performance/demands/GaussianModel.h
+        experiments/performance/demands/UniformModel.cpp
+        experiments/performance/demands/UniformModel.h
+        src/utils/my_math.cpp
+        src/utils/my_math.h
+        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
+        src/electrical/laplacian_solvers/AMGSolverParallel.h
+        src/electrical/electrical_flow_parallel_on_the_fly.cpp
+        src/electrical/electrical_flow_parallel_on_the_fly.h
+        src/tree_based/ckr/ckr_partition.cpp
+        src/tree_based/ckr/ckr_partition.h
+        src/utils/priority_queue.h
+        src/utils/lca_datstructure.h
+        src/tree_based/ckr/ckr_tree_decomposer.cpp
+        src/tree_based/ckr/ckr_tree_decomposer.h
+        src/tree_based/ckr/raecke_ckr_transform.h
+        src/tree_based/ckr/raecke_ckr_solver.h
+        # src/tree_based/ckr/raecke_ckr_optimized.cpp
+        # src/tree_based/ckr/raecke_ckr_optimized.h
+        src/tree_based/optimized_versions/raecke_optimized_base.h
+        src/tree_based/optimized_versions/frt/raecke_frt_opt.h
+        src/tree_based/optimized_versions/frt/raecke_frt_transform_opt.h
+        # src/tree_based/optimized_versions/frt/raecke_frt_opt.cpp
         src/datastructures/GraphCSR.h
         src/datastructures/GraphCSR.cpp
-
+        # src/tree_based/optimized_versions/frt/mcct_optimized.cpp
+        # src/tree_based/optimized_versions/frt/mcct_optimized.h
+        src/tree_based/ckr/utils/ultrametric_tree.h
+        src/tree_based/ckr/utils/ultrametric_tree.cpp
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.h
+        src/tree_based/ckr/optimized/efficient_oracle_ckr.cpp
+        src/tree_based/ckr/optimized/efficient_raecke_ckr.h
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.h
+        src/tree_based/ckr/optimized/efficient_raecke_ckr_transform.cpp
+)
+]===]
+# ---- Your target ----
+set(SRC_FILES
+        main.cpp
+        src/datastructures/GraphADJ.cpp
+        src/electrical/electrical_flow_optimized.cpp
+        src/electrical/electrical_flow_optimized.h
+        src/electrical/laplacian_solvers/AMGSolver.cpp
+        src/electrical/laplacian_solvers/AMGSolver.h
+        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
+        src/electrical/laplacian_solvers/AMGSolverParallel.h
+        src/electrical/laplacian_solvers/LaplacianSolver.h
+        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
+        src/utils/my_math.cpp
+        src/datastructures/GraphCSR.h
+        src/datastructures/GraphCSR.cpp
         experiments/performance/demands/GravityModel.cpp
         experiments/performance/demands/GravityModel.h
         experiments/performance/demands/BimodalModel.cpp
@@ -81,31 +157,9 @@ set(SRC_FILES
         src/tree_based/ckr/utils/ultrametric_tree.h
         src/tree_based/ckr/utils/ultrametric_tree.cpp
 
-        src/electrical/electrical_flow_optimized.cpp
-        src/electrical/electrical_flow_optimized.h
-
-        src/electrical/electrical_flow_par_batches.cpp
-        src/electrical/electrical_flow_par_batches.h
-
-        src/electrical/laplacian_solvers/AMGSolver.cpp
-        src/electrical/laplacian_solvers/AMGSolver.h
-        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
-        src/electrical/laplacian_solvers/AMGSolverParallel.h
-        src/electrical/laplacian_solvers/LaplacianSolver.h
-        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
-
-        #src/expanders/xcut_expander_hierarchy.cpp
-        #src/expanders/xcut_expander_hierarchy.h
 
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
-        src/tree_based/tree_mwu.h
-        src/tree_based/frt.h
-        src/tree_based/fast_ckr.h
-        src/tree_based/hst.h
-        src/tree_based/tree_oracle.h
-        src/tree_based/tree_transform.h
-        src/tree_based/random_mst.h
 )
 
 
@@ -119,35 +173,25 @@ if(USE_OPENMP)
 endif()
 
 add_executable(oblivious_routing ${SRC_FILES})
-# Ensure OR-Tools headers are searched BEFORE anything OpenMP/Homebrew injects
-get_target_property(ORT_INC ortools::ortools INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(oblivious_routing SYSTEM BEFORE PRIVATE ${ORT_INC})
 
-target_include_directories(oblivious_routing PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
-# add_subdirectory(extern/xcut)
-# target_link_libraries(oblivious_routing PRIVATE xcut_lib)  # or whatever the target is called
-
-
-# Link OR-Tools first
-target_link_libraries(oblivious_routing PRIVATE ortools::ortools)
-
-# Then OpenMP
 if(USE_OPENMP)
     target_link_libraries(oblivious_routing PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-if(APPLE)
-    # Force Homebrew libomp explicitly (Intel: /usr/local, Apple Silicon: /opt/homebrew)
-    if(EXISTS "/usr/local/opt/libomp/lib/libomp.dylib")
-        target_link_libraries(oblivious_routing PRIVATE /usr/local/opt/libomp/lib/libomp.dylib)
-        target_include_directories(oblivious_routing SYSTEM PRIVATE /usr/local/opt/libomp/include)
-    elseif(EXISTS "/opt/homebrew/opt/libomp/lib/libomp.dylib")
-        target_link_libraries(oblivious_routing PRIVATE /opt/homebrew/opt/libomp/lib/libomp.dylib)
-        target_include_directories(oblivious_routing SYSTEM PRIVATE /opt/homebrew/opt/libomp/include)
-    endif()
+# Optional: keep a small macOS tweak if you still need it locally
+if(APPLE AND USE_OPENMP)
+    target_compile_options(oblivious_routing PRIVATE -Xclang -fopenmp)
 endif()
 
 
+
+
+
+
+
+# target_link_libraries(oblivious_routing ortools::ortools)
+target_include_directories(oblivious_routing PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
+target_link_libraries(oblivious_routing PRIVATE ortools::ortools)
 target_link_libraries(oblivious_routing
         PRIVATE
         Boost::boost

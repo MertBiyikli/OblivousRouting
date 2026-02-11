@@ -27,8 +27,8 @@ class EfficientCKR{
 public:
 
     std::vector<double> scales;
-
     MendelScaling::UltrametricTree ultrametric;
+
     double diameter = 0.0;
     bool debug = false;
 

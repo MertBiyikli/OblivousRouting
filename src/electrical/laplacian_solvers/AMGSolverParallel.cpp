@@ -5,36 +5,29 @@
 #include "../../utils/hash.h"
 #include "amgcl/solver/precond_side.hpp"
 
-/*
- * AMGSolverMT implementation
- * Multi-threaded AMG solver using a pool of threads for solving Laplacian system
- */
+
 AMGSolverMT::AMGSolverMT() {
+    solver_params_.solver.tol = 1e-8;
+    solver_params_.solver.maxiter = 1000;
 
+    precond_params_.npre = 1;
+    precond_params_.npost = 1;
+    precond_params_.ncycle = 1;
+    precond_params_.pre_cycles = 1;
 
-    #ifdef _OPENMP
-        set_num_threads(omp_get_max_threads());
-    #else
-        set_num_threads(1);
-    #endif
 }
 
-
-/*
- * Build the Laplacian matrix in CRS format
- *
- */
 void AMGSolverMT::buildLaplacian() {
-     std::cout << "Number of threads for AMG solver pool: " << num_threads_ << "\n";
+    if (debug) std::cout << "Number of threads for AMG solver pool: " << num_threads_ << "\n";
 
     // --- Step 1: Aggregate edge contributions into a Laplacian map ---
     std::unordered_map<std::pair<int,int>, double, PairHash> L;
 
-    for (int e = 0; e<weight_model.weights.size(); e++) {
-        int u = weight_model.from[e];
-        int v = weight_model.to[e];
-        double w = weight_model.getEdgeWeight(u, v);
-        if (u >= v) continue;
+    for (const auto &kv : m_edge_weights) {
+        int u = kv.first.first;
+        int v = kv.first.second;
+        double w = kv.second;
+        if (u == v) continue;
 
         // Laplacian contributions:
         L[{u,u}] += w;
@@ -59,7 +52,7 @@ void AMGSolverMT::buildLaplacian() {
     m_values.resize(nnz);
 
     std::vector<int> offset(n, 0);
-
+    m_indexMap.clear();
 
     for (auto &entry : L) {
         int r = entry.first.first;
@@ -68,7 +61,7 @@ void AMGSolverMT::buildLaplacian() {
         int pos = m_row_ptr[r] + offset[r]++;
         m_col_ind[pos] = c;
         m_values[pos] = val;
-        weight_model.setLaplacianIndex(r, c, pos);
+        m_indexMap[{r, c}] = pos;
     }
 
     // --- Step 4: Sort columns within each row ---
@@ -85,98 +78,179 @@ void AMGSolverMT::buildLaplacian() {
         for (int k = 0; k < (int)row.size(); ++k) {
             m_col_ind[start + k] = row[k].first;
             m_values[start + k] = row[k].second;
+            m_indexMap[{r, row[k].first}] = start + k;
+        }
+    }
 
-            weight_model.setLaplacianIndex(r, row[k].first, start + k);
+    // --- Step 5: Check diagonal entries ---
+    if(debug) {
+        for (int i = 0; i < n; ++i) {
+            auto it = m_indexMap.find({i, i});
+            if (it == m_indexMap.end()) {
+                // If diagonal entry is missing, insert one
+                std::cerr << "Warning: row " << i << " missing diagonal, inserting one.\n";
+                // Insert at end of row (resizing is simpler than shifting for now)
+                int insert_pos = m_row_ptr[i + 1];
+                m_col_ind.insert(m_col_ind.begin() + insert_pos, i);
+                m_values.insert(m_values.begin() + insert_pos, 1.0);
+                for (int r = i + 1; r <= n; ++r) m_row_ptr[r]++;
+                m_indexMap[{i, i}] = insert_pos;
+            } else if (m_values[it->second] == 0.0) {
+                std::cerr << "Warning: row " << i << " diagonal is zero, fixing to 1.\n";
+                m_values[it->second] = 1.0;
+            }
         }
     }
 
 
-    if (use_dirichlet) {
-        m_values_dirichlet = m_values;
-        applyDirichletInPlace(m_values_dirichlet);
-    } else {
-        m_values_dirichlet.clear();
-    }
-    // --- Build CRS matrix from active values ---
-    const std::vector<double>& active_vals = (use_dirichlet ? m_values_dirichlet : m_values);
+    // --- Build solver pool ---
+    A_ = amgcl::backend::crs<double>(
+        n, n, m_row_ptr, m_col_ind, m_values
+    );
 
-    A_ = amgcl::backend::crs<double>(n, n, m_row_ptr, m_col_ind, active_vals);
-
-    solvers_.clear();
-    solvers_.reserve(num_threads_);
-    for (int t = 0; t < num_threads_; ++t) {
-        solvers_.emplace_back(std::make_unique<Solver>(A_));
+    precond_ = std::make_shared<Precond>(A_, precond_params_);
+    pool_.clear();
+    pool_.reserve(num_threads_);
+    for (int i = 0; i < num_threads_; ++i) {
+        pool_.emplace_back(precond_);
     }
 
+    n_ = n;           // you already use 'n' in this function
+    since_last_rebuild_ = 0;
 
-    n_ = n;
+    if (debug_)
+        std::cout << "[AMGSolverMT] Built CRS with " << n
+                  << " nodes and " << nnz << " non-zeros, initialized "
+                  << num_threads_ << " solvers.\n";
 
 }
 
+std::vector<double> AMGSolverMT::solve(const std::vector<double>& b, double eps) {
+    std::vector<double> x(b.size(), 0.0);
+#ifdef _OPENMP
+    int tid = omp_get_thread_num() % pool_.size();
+    pool_[tid].apply(b, x);
+
+#else
+    pool_[0].apply(b, x);
+#endif
+    return x;
+}
+
+Eigen::VectorXd AMGSolverMT::solve(const Eigen::VectorXd& b, double eps) {
+    std::vector<double> bv(b.data(), b.data() + b.size());
+    auto xv = solve(bv, eps);
+    Eigen::VectorXd x(bv.size());
+    for (int i = 0; i < b.size(); ++i) x[i] = xv[i];
+    return x;
+}
 
 Eigen::MatrixXd AMGSolverMT::solve_many(const Eigen::MatrixXd& B) {
-    const int n = (int)B.rows();
-    const int k = (int)B.cols();
+    const int n = B.rows();
+    const int k = B.cols();
     Eigen::MatrixXd X(n, k);
 
-#ifdef _OPENMP
-    omp_set_dynamic(0);
-    #pragma omp single
-    {
-        const int tid = omp_get_thread_num();
-        std::cout << "I am thread: " << tid << " processing nodes "  << "\n";
-
-        // Thread-local buffers reused across columns
-        std::vector<double> rhs(n);
-        std::vector<double> sol(n);
-        for (int j = 0; j < k; ++j) {
-            // copy Eigen column -> rhs
-            // (B.col(j) is contiguous in memory for column-major Eigen matrices)
-            std::memcpy(rhs.data(), B.col(j).data(), sizeof(double) * n);
-
-            std::fill(sol.begin(), sol.end(), 0.0);
-            (*solvers_[tid])(rhs, sol);
-
-
-            // copy sol -> Eigen column
-            std::memcpy(X.col(j).data(), sol.data(), sizeof(double) * n);
-        }
-    }
-#else
-    std::vector<double> rhs(n), sol(n);
+    #pragma omp parallel for schedule(static)
     for (int j = 0; j < k; ++j) {
-        std::memcpy(rhs.data(), B.col(j).data(), sizeof(double) * n);
-        std::fill(sol.begin(), sol.end(), 0.0);
-        (*solvers_[0])(rhs, sol);
-        std::memcpy(X.col(j).data(), sol.data(), sizeof(double) * n);
+        Eigen::VectorXd rhs = B.col(j);
+        X.col(j) = solve(rhs);
     }
-#endif
-
     return X;
 }
 
 
 
-
-void AMGSolverMT::updateSolver() {
-    // 1) Apply Dirichlet if enabled
-    if (use_dirichlet) {
-        m_values_dirichlet = m_values;
-        applyDirichletInPlace(m_values_dirichlet);
-    } else {
-        m_values_dirichlet.clear();
+std::vector<double> AMGSolverMT::solve_single_thread(const std::vector<double>& b) {
+    std::vector<double> x(b.size(), 0.0);
+#ifdef _OPENMP
+    int tid = omp_get_thread_num() % pool_.size();
+    // ensure that only a single thread uses this solver at a time
+    #pragma omp single
+    {
+        pool_[tid].apply(b, x);
     }
-
-    const std::vector<double>& active_vals =
-        (use_dirichlet ? m_values_dirichlet : m_values);
-
-    // 2) Rebuild A_ view with the *same structure*, new values
-    A_ = amgcl::backend::crs<double>(n_, n_, m_row_ptr, m_col_ind, active_vals);
-
-
-    for (int t = 0; t < num_threads_; ++t) {
-        solvers_.emplace_back(std::make_unique<Solver>(A_));
-    }
+#else
+    pool_[0].apply(b, x);
+#endif
+    return x;
 }
 
+Eigen::VectorXd AMGSolverMT::solve_single_thread(const Eigen::VectorXd& b) {
+    std::vector<double> bv(b.data(), b.data() + b.size());
+    auto xv = solve(bv);
+    Eigen::VectorXd x(bv.size());
+    for (int i = 0; i < b.size(); ++i) x[i] = xv[i];
+    return x;
+}
 
+void AMGSolverMT::updateSolver() {
+    A_ = amgcl::backend::crs<double>(n_, n_, m_row_ptr, m_col_ind, m_values);
+    if (!precond_) {
+        precond_ = std::make_shared<Precond>(A_, precond_params_);
+    } else {
+        auto &dst = precond_->system_matrix();
+        if (A_.nrows != dst.nrows || A_.ncols != dst.ncols)
+            throw std::runtime_error("Matrix structure mismatch in updateSolver()");
+        std::memcpy(dst.val, A_.val, sizeof(double) * A_.nnz);
+    }
+
+    // Refresh thread clones (reuse hierarchy)
+    pool_.clear();
+    for (int i = 0; i < num_threads_; ++i)
+        pool_.emplace_back(precond_);
+
+    /*
+    // -------------------------------------------------------------------------
+    // Step 1: Bind the updated CRS view (same topology, new values)
+    // -------------------------------------------------------------------------
+    A_ = amgcl::backend::crs<double>(
+        n_, n_, m_row_ptr, m_col_ind, m_values
+    );
+
+    // -------------------------------------------------------------------------
+    // Step 2: Update or build the shared reference preconditioner once
+    // -------------------------------------------------------------------------
+    if (!precond_) {
+        // First-time build: construct hierarchy
+        precond_ = std::make_shared<Precond>(A_, precond_params_);
+        if (debug_)
+            std::cout << "[AMGSolverMT] Built initial preconditioner hierarchy.\n";
+    } else {
+        // Fastest possible value update — O(nnz)
+        auto &dst = precond_->system_matrix();
+        if (A_.nrows != dst.nrows || A_.ncols != dst.ncols)
+            throw std::runtime_error("Matrix structure mismatch during value refresh.");
+
+        std::memcpy(dst.val, A_.val, sizeof(double) * A_.nnz);
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 3: Ensure each solver in the pool has its own hierarchy
+    //         and update values in-place (thread-safe)
+    // -------------------------------------------------------------------------
+    if (pool_.empty()) {
+        pool_.resize(num_threads_);
+    }
+
+    for (int i = 0; i < static_cast<int>(pool_.size()); ++i) {
+        if (!pool_[i]) {
+            // Build a new solver for this thread
+            pool_[i] = std::make_unique<Solver>(A_, solver_params_);
+        } else {
+            // Copy updated matrix values into the solver’s own backend CRS
+            auto &dst = pool_[i]->system_matrix();
+            if (A_.nrows != dst.nrows || A_.ncols != dst.ncols)
+                throw std::runtime_error("Matrix structure mismatch during pool update.");
+
+            std::memcpy(dst.val, A_.val, sizeof(double) * A_.nnz);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 4: (Optional) Debug logging
+    // -------------------------------------------------------------------------
+    if (debug_)
+        std::cout << "[AMGSolverMT] Updated " << pool_.size()
+                  << " solver(s) with new Laplacian edge weights ("
+                  << A_.nnz << " nonzeros).\n";*/
+}

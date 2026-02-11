@@ -101,6 +101,10 @@ class ElectricalFlowParallel : public ObliviousRoutingSolver{
 
     void init(const GraphADJ& g, bool debug = false, const std::string& solver_name = ("amg_parallel"));
 
+/*
+    std::vector<int> buildBFSTree(int root);
+    void enforceConservation();*/
+
 
 };
 

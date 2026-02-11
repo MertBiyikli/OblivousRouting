@@ -8,8 +8,6 @@
 
 #include <memory>
 #include <cassert>
-
-#include "hst.h"
 #include "raecke_tree.h"
 #include "ckr/ckr_tree_decomposer.h"
 
@@ -18,7 +16,6 @@ class OracleTreeIteration {
 private:
     double lambda = 0.0;
     const std::shared_ptr<ITreeNode> tree;          // owns the tree of this level
-    const std::shared_ptr<HSTNode> hst_tree;
     std::vector<double> distance;
 
 public:
@@ -29,15 +26,6 @@ public:
                         const std::vector<double>& distance)
         : lambda(lambda),
           tree((tree)),
-          distance(distance)
-    {}
-
-    // TODO: implement this BEEEEE CAREFUL when to use std::move here!!!! Is it really moved????
-    OracleTreeIteration(double lambda,
-                        std::shared_ptr<HSTNode> tree,
-                        const std::vector<double>& distance)
-        : lambda(lambda),
-          hst_tree((tree)),
           distance(distance)
     {}
 
