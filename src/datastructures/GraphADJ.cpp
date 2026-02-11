@@ -268,15 +268,7 @@ void GraphADJ::InitializeMemberByParser(int maxNodeIdSeen) {
     std::iota(IGraph::vertices.begin(), IGraph::vertices.end(), 0); // fill vertices with 0, 1, ..., maxNodeIdSeen
 }
 
-void GraphADJ::print() const {
-    for (size_t i = 0; i < m_adj.size(); ++i) {
-        std::cout << "Node " << i << ": ";
-        for (size_t j = 0; j < m_adj[i].size(); ++j) {
-            std::cout << "(" << m_adj[i][j] << ", " << m_adj_capacities[i][j] << ", " << m_adj_distances[i][j] << ") ";
-        }
-        std::cout << std::endl;
-    }
-}
+
 
 
 bool GraphADJ::IsDistanceMatrixComputed() const {

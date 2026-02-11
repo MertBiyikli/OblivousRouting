@@ -5,8 +5,11 @@
 #ifndef OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 #define OBLIVIOUSROUTING_LAPLACIANSOLVER_H
 
-#include "../../datastructures/GraphADJ.h"
-#include "../../utils/hash.h"
+#include <iostream>
+
+#include "../../datastructures/IGraph.h"
+#include "GraphToLaplacian.h"
+#include "../../utils/my_math.h"
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,166 +17,139 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 class LaplacianSolver {
+protected:
+    GraphToLaplacian weight_model;
+    bool debug = false;
+    int n;
+    // CSR storage
+    std::vector<int> m_row_ptr;
+    std::vector<int> m_col_ind;
+    std::vector<double> m_values;
+
+    // reusable buffers
+    std::vector<double> result;
+    std::vector<double> bvec_buffer, x_buffer;
+
+    // member for dirichlet boundary computations
+    bool use_dirichlet = true;
+    int dirichlet_root = 0;
+    std::vector<double> m_values_dirichlet;
+
+    // this for configuration of the solver, e.g. coarsening and relaxation types
+    boost::property_tree::ptree params;
+    //boost::property_tree::read_json(config_path, prm);
+
 public:
     virtual ~LaplacianSolver() = default;
-
-    // virtual void init(std::unordered_map<std::pair<int,int>, double>& edge_weights, int n, bool debug = false) = 0;
-    // virtual void buildLaplacian() = 0;
 
     virtual std::vector<double> solve(const std::vector<double>& b, double eps) = 0;
     virtual Eigen::VectorXd solve(const Eigen::VectorXd& b, double eps) = 0;
     virtual void updateSolver() = 0;
+
     virtual void buildLaplacian() = 0;
-    //virtual void buildLaplacian_(const GraphADJ& g) = 0;
-/*
-    virtual bool updateEdge(int u, int v, double new_weight) = 0;
 
-    virtual bool checkMatrix() const = 0;
-*/
-    bool debug = false;
-    int n;
-    // CSR storage
-    std::vector<int> m_row_ptr, m_row_ptr_red;
-    std::vector<int> m_col_ind, m_col_ind_red;
-    std::vector<double> m_values, m_values_red;
-
-    std::vector<double> result;
-    std::vector<double> bvec_buffer, x_buffer;
-
-
-    std::unordered_map<std::pair<int, int>, double, PairHash> m_edge_weights; // Edge weights
-
-    std::vector<std::vector<double>> adj_edge_weights; // Edge weights
-
-    // handling the indices
-    struct indexKey {
-        int r, c;
-        bool operator==(const indexKey &o) const { return r==o.r && c==o.c; }
-    };
-
-    struct indexKeyHash {
-        std::size_t operator()(const indexKey &k) const {
-            return std::hash<int>()(k.r*73856093 ^ k.c*19349663);
-        }
-    };
-    std::unordered_map<indexKey, int, indexKeyHash> m_indexMap;
-    std::unordered_map<std::pair<int,int>, int, PairHash> m_edgeIndexMap;
-    int findIndex(int r, int c) const {
-        for (int k = m_row_ptr[r]; k < m_row_ptr[r + 1]; ++k)
-            if (m_col_ind[k] == c) return k;
-        return -1;
+    void setSolverParams(const boost::property_tree::ptree& new_params) {
+        params = new_params;
+        // print_params(params);
     }
 
-    void init(std::vector<double>& _adj_edge_weights,
+    void print_params(const boost::property_tree::ptree& prm) {
+        boost::property_tree::write_json(std::cout, prm);
+    }
+
+
+    void init(IGraph& g, std::vector<double>& _adj_edge_weights,
         int n,
         std::vector<std::pair<int, int>>& edges,
         bool debug = false) {
+
         this->debug = debug;
         this->n = n;
         m_row_ptr.clear();
         m_col_ind.clear();
         m_values.clear();
 
-        // convert edge list to edge weight map
-        m_edge_weights.clear();
-        for(int i = 0; i<edges.size(); i++) {
-            auto [e1, e2] = edges[i];
-            double w = _adj_edge_weights[i];
-            m_edge_weights[{e1, e2}] = w;
-            m_edge_weights[{e2, e1}] = w; // keep it symmetric
+        weight_model.init(g);
+        for (int e = 0; e < edges.size(); e++) {
+            int u = edges[e].first;
+            int v = edges[e].second;
+            double w = _adj_edge_weights[e];
+            weight_model.setEdgeWeight(u, v, w);
+            weight_model.setEdgeWeight(v, u, w); // keep it symmetric
         }
 
         buildLaplacian();
     }
-/*
-    void init(std::vector<std::vector<double>>& _adj_edge_weights, int n, const GraphADJ& g, bool debug = false) {
-        this->debug = debug;
-        this->n = n;
-        m_row_ptr.clear();
-        m_col_ind.clear();
-        m_values.clear();
 
-        // Convert adjacency list to edge weight map
-        adj_edge_weights = _adj_edge_weights;
+    void updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges) {
+        if (new_weights.size() != edges.size()) {
+            throw std::runtime_error("updateAllEdges: size mismatch between weights and edges");
+        }
 
-        buildLaplacian_(g);
+
+        for (size_t e = 0; e < edges.size(); ++e) {
+            int u = edges[e].first;
+            int v = edges[e].second;
+            double old_w = weight_model.getEdgeWeight(u, v);
+            double new_w = std::max(new_weights[e], EPS);
+            double delta = new_w - old_w;
+
+            if (std::abs(delta) < EPS) continue;
+
+
+            int uu = weight_model.getLaplacianIndex(u, u),
+                vv = weight_model.getLaplacianIndex(v, v),
+                uv = weight_model.getLaplacianIndex(u, v),
+                vu = weight_model.getLaplacianIndex(v, u);
+
+            if (uu == -1 || vv == -1 || uv == -1 || vu == -1) {
+                throw std::runtime_error("updateAllEdges: missing matrix entry for edge update");
+            }
+
+
+
+            weight_model.setEdgeWeight(u, v, new_w);
+            weight_model.setEdgeWeight(v, u, new_w);
+
+            // --- Update CSR Laplacian entries ---
+            // Diagonal contributions
+            m_values[uu] += delta;
+            m_values[vv] += delta;
+
+            // Off-diagonal contributions
+            m_values[uv] -= delta;
+            m_values[vu] -= delta;
+
+        }
     }
 
-    void init(std::unordered_map<std::pair<int, int>, double, PairHash>& _edge_weights, int n, bool debug = false) {
-        this->debug = debug;
-        this->n = n;
-        m_row_ptr.clear();
-        m_col_ind.clear();
-        m_values.clear();
 
-        m_edge_weights = _edge_weights;
-        buildLaplacian();
-    }*/
+    void applyDirichletInPlace(std::vector<double>& vals) {
+        const int r = dirichlet_root;
 
+        // Row r: make it [0 ... 0 1 0 ... 0]
+        for (int jj = m_row_ptr[r]; jj < m_row_ptr[r+1]; ++jj) {
+            vals[jj] = (m_col_ind[jj] == r) ? 1.0 : 0.0;
+        }
 
-    virtual void updateAllEdges(const std::vector<double>& new_weights,
-                    const std::vector<std::pair<int,int>>& edges) = 0;
-/*
-    virtual void updateAllEdges(const std::vector<std::vector<double>>& new_weights, const GraphADJ& G) {
-        for (int u = 0; u < n; ++u) {
-            for (int idx = 0; idx < G.neighbors(u).size(); ++idx) {
-                int v = G.neighbors(u)[idx];
-
-                double weight = new_weights[u][idx];
-                double delta = weight - adj_edge_weights[u][idx];
-                m_edge_weights[{u, v}] = weight; // Update the weight
-
-                // Update diagonal
-                m_values[m_indexMap[{u,u}]] += delta;
-                m_values[m_indexMap[{v,v}]] += delta;
-
-                // Update off-diagonals
-                m_values[m_indexMap[{u,v}]] -= delta;
-                m_values[m_indexMap[{v,u}]] -= delta;
-
+        // Column r: zero out A[i,r] for i != r (keep symmetry)
+        for (int i = 0; i < n; ++i) {
+            if (i == r) continue;
+            for (int jj = m_row_ptr[i]; jj < m_row_ptr[i+1]; ++jj) {
+                if (m_col_ind[jj] == r) {
+                    vals[jj] = 0.0;
+                    break;
+                }
             }
         }
     }
 
-    void updateAllEdges(const std::unordered_map<std::pair<int, int>, double, PairHash>& new_weights) {
-        for (const auto& [edge, weight] : new_weights) {
 
-            int u = edge.first;
-            int v = edge.second;
-
-            double delta = weight - m_edge_weights[edge];
-            m_edge_weights[edge] = weight; // Update the weight
-
-            // Update diagonal
-            m_values[m_indexMap[{u,u}]] += delta;
-            m_values[m_indexMap[{v,v}]] += delta;
-
-            // Update off-diagonals
-            m_values[m_indexMap[{u,v}]] -= delta;
-            m_values[m_indexMap[{v,u}]] -= delta;
-        }
-    }*/
-
-    bool updateEdge(int u, int v, double new_weight) {
-        auto it = m_edge_weights.find({u, v});
-        if (it == m_edge_weights.end()) {
-            return false;
-        }else{
-            double delta = new_weight - it->second;
-            it->second = new_weight; // Update the weight
-
-            // Update diagonal
-            m_values[m_indexMap[{u,u}]] += delta;
-            m_values[m_indexMap[{v,v}]] += delta;
-
-            // Update off-diagonals
-            m_values[m_indexMap[{u,v}]] -= delta;
-            m_values[m_indexMap[{v,u}]] -= delta;
-
-            return true;
-        }
-    }
     bool checkMatrix() const {
         bool ok = true;
 
@@ -230,6 +206,12 @@ public:
         }
 
         return ok;
+    }
+
+    int findIndex(int r, int c) const {
+        for (int k = m_row_ptr[r]; k < m_row_ptr[r + 1]; ++k)
+            if (m_col_ind[k] == c) return k;
+        return -1;
     }
 };
 

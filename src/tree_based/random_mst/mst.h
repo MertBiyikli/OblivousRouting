@@ -15,6 +15,7 @@
 #include "../../datastructures/GraphADJ.h"
 #include "../../datastructures/GraphCSR.h"
 #include "../raecke_tree.h"
+#include "../hst.h"
 
 
 class MSTTreeNode : public ITreeNode {
@@ -162,12 +163,12 @@ void updateEdgeDistances(const std::vector<double>& distances) {
         return t;
     }
 
-    std::shared_ptr<MSTTreeNode> buildRaeckeTree(const std::vector<std::pair<int,int>>& mst_edges,
+    std::shared_ptr<HSTNode> buildRaeckeTree(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
         auto mst_tree = build_tree(mst_edges, root);
-        std::vector<std::shared_ptr<MSTTreeNode>> cluster(n);
+        std::vector<std::shared_ptr<HSTNode>> cluster(n);
         for (int v = 0; v < n; ++v) {
-            cluster[v] = std::make_shared<MSTTreeNode>();
+            cluster[v] = std::make_shared<HSTNode>(v);
             cluster[v]->id = v;
             cluster[v]->members = {v};
             cluster[v]->center = v;
@@ -182,7 +183,7 @@ void updateEdgeDistances(const std::vector<double>& distances) {
             int pv = dsu.find(v);
             if (pu == pv) continue;
 
-            auto parent = std::make_shared<MSTTreeNode>();
+            auto parent = std::make_shared<HSTNode>(std::numeric_limits<int>::max());
             parent->children = {cluster[pu], cluster[pv]};
             cluster[pu]->parent = parent;
             cluster[pv]->parent = parent;

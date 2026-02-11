@@ -7,6 +7,7 @@
 #include <list>
 #include <cmath>
 #include <absl/strings/str_format.h>
+#include "../random_mst/mst.h"
 
 void EfficientFRT::updateEdgeDistances(const std::vector<double> &distances) {
     for (int e = 0; e < graph.getNumEdges(); ++e) {
@@ -15,21 +16,55 @@ void EfficientFRT::updateEdgeDistances(const std::vector<double> &distances) {
 }
 
 std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTree() {
+    /*
     for (const auto& u : graph.getVertices()) {
         for (const auto& v : graph.neighbors(u)) {
             double cap = graph.getEdgeCapacity(u, v);
             this->addDemands(u, v, cap);
         }
-    }
+    }*/
     // computeBestBetaAndPermutation();
    // auto tree = getBestTree();
     computeBetaAndRandomPermutation();
+    mendel_diameter = graph.GetDiameter();
 
     auto bottom_up = getTreeBottomUp();
 
     return bottom_up;
 }
 
+void EfficientFRT::computeBetas() {
+    const auto& nodes = graph.getVertices();
+    betas.clear();
+    std::list<int> toBeAnalyzed(nodes.begin(), nodes.end());
+
+    for (auto& v : nodes) {
+        toBeAnalyzed.pop_front();
+        for (auto& u : toBeAnalyzed) {
+            if (v == u) continue; // Skip if both vertices are the same
+            if (v < 0 || u < 0 || v >= nodes.size() || u >= nodes.size()) {
+                throw std::out_of_range("Vertex index out of range");
+            }
+
+            double dist = graph.getShortestPathDistance(v, u);
+            if (dist < 0.0) {
+                throw std::runtime_error("Negative distance encountered between vertices " + std::to_string(v) + " and " + std::to_string(u));
+            }
+
+            double log2Dist = std::log2(dist);
+            double base = std::pow(2.0, std::floor(log2Dist));
+            double beta = dist / base;
+
+            if(std::isnan(beta) || std::isinf(beta)) {
+                throw std::runtime_error("Beta value is NaN or Inf, check the distance values.");
+            }
+            // Enforce minimum beta > 1
+            if (beta <= 1.0) beta = 2.0;
+
+            betas.insert(beta);
+        }
+    }
+}
 
 void EfficientFRT::computeBetaAndRandomPermutation() {
     computeBetas();
@@ -76,6 +111,42 @@ void EfficientFRT::cleanUpTree(std::shared_ptr<EfficientFRTTreeNode>& node) {
     node->children.swap(new_children);
 }
 
+void EfficientFRT::computeFRTPartition(MendelScaling::QuotientLevel &Q, double Delta, CKRLevel &L) {
+    // compute FRT given the quotient graph
+    // that is given the Quotient grapgh , compute the shortest path between any nodes and assign the nodes to the clusters center that covers the corresponding nodes
+    std::vector<int> permutation(Q.Gq->getNumNodes());
+    L.owner.resize(Q.Gq->getNumNodes());
+
+    for (int v = 0; v<Q.Gq->getNumNodes(); v++) {
+        L.owner[v]=v;
+        permutation[v]=v;
+    }
+    std::unordered_set<int> assigned;
+    L.R = Delta;
+
+
+
+    for (auto& v : permutation) {
+        if (assigned.contains(v)) {
+            continue;
+        }
+        assigned.insert(v);
+        L.centers.push_back(v);
+        // make a new cluster that has v as center
+        for (int u = 0; u<Q.Gq->getNumNodes(); u++) {
+            if (assigned.contains(u)) continue;
+
+            double dist = Q.Gq->getShortestPathDistance(v, u);
+            if (dist <= Delta) {
+                // assign u to the ball of v
+                L.owner[u]=v;
+                assigned.insert(u);
+            }
+        }
+    }
+}
+
+/*
 void EfficientFRT::computeBetas() {
     const auto& nodes = graph.getVertices();
     betas.clear();
@@ -152,7 +223,26 @@ void EfficientFRT::computeBestBetaAndPermutation() {
     }
 
 }
+*/
 
+void EfficientFRT::preprocess() {
+    // -- compute MST using Kruskals Algo
+    RandomMST mst_oracle(graph);
+    //mst_oracle.setGraph(g);
+    auto mst = mst_oracle.build_mst();
+
+
+    // ----  Collect MST edge weights ----
+    std::vector<double> mst_weights;
+    mst_weights.reserve(mst.size());
+    for (auto [u,v] : mst) {
+        mst_weights.push_back(graph.getEdgeDistance(u,v));
+    }
+
+    ultrametric.buildFromMST(graph.getNumNodes(), mst, mst_weights);
+
+    assert(ultrametric.root != -1);
+}
 std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
     double diameter = graph.GetDiameter();
     if (diameter == 0.0) {
@@ -176,9 +266,20 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
 
     i--;
 
+    preprocess();
+    MendelScaling::QuotientConstruction qc;
+    qc.preprocessEdges(graph);
 
     while (i>=0) {
         double cur_beta = bestBeta * std::pow(2.0, i-1);
+
+        MendelScaling::QuotientLevel Q;
+        Q = qc.constructQuotientGraph(ultrametric, cur_beta,graph);
+        if (Q.Gq->getNumNodes() <= 1) {
+            // if single cluster: make that the root once at the end
+            continue;
+        }
+
 
         std::unordered_set<int> assigned;
         for (int& v : verticesPermutation) {
@@ -192,7 +293,12 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
                     if (assigned.find(vertex) != assigned.end()) {
                         continue;
                     }
-                    double dist = graph.getShortestPathDistance(v, vertex);
+
+                    // get the corresponding ndoe from the clustereed node v and vertex
+                    int v_compact = Q.sigma_compact_of_v[v];
+                    int vertex_compact = Q.sigma_compact_of_v[vertex];
+
+                    double dist = Q.Gq->getShortestPathDistance(v_compact, vertex_compact);
 
                     if (dist < cur_beta) {
                         childNode->members.push_back(vertex);
@@ -228,7 +334,7 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getBestTree() {
 }
 
 
-std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeBottomUp() {
+std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeTopDown() {
     const int n = graph.getNumNodes();
     if ((int)verticesPermutation.size() != n) {
         throw std::runtime_error("Vertices permutation size != n");
@@ -267,6 +373,7 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeBottomUp() {
     for (int i = L; i >= 0; --i) {
         const double R = Delta(i);
 
+
         std::vector<std::shared_ptr<EfficientFRTTreeNode>> nextFrontier;
         nextFrontier.reserve(frontier.size() * 2);
 
@@ -300,7 +407,9 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeBottomUp() {
                 // iterate over parent's members for locality
                 for (int v : parent->members) {
                     if (!unassigned.contains(v)) continue;
-                    if (graph.getShortestPathDistance(c, v) < R) {
+
+                    double dist = graph.getShortestPathDistance(c, v);
+                    if (dist < R) {
                         child->members.push_back(v);
                     }
                 }
@@ -381,6 +490,104 @@ std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeBottomUp() {
 }
 
 
+std::shared_ptr<EfficientFRTTreeNode> EfficientFRT::getTreeBottomUp() {
+
+    const int n = graph.getNumNodes();
+    if (n == 0) return nullptr;
+
+    double diameter = graph.GetDiameter();
+
+    // --- (0) preprocess ultrametric from MST ---
+    preprocess();
+
+
+    // ---- (1) prepare node pointers for the finest level ----
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> prev_nodes(n);
+    for (int v = 0; v < n; ++v) {
+        prev_nodes[v] = std::make_shared<EfficientFRTTreeNode>();
+        prev_nodes[v]->id = v;
+        prev_nodes[v]->members = {v};  // keep original vertex IDs here
+        prev_nodes[v]->center = v;
+    }
+
+    // ---- (2) choose logarithmic set of Δ-scales ----
+    computeScales();
+
+    // ---- (3) build hierarchical levels ----
+    std::shared_ptr<EfficientFRTTreeNode> root = std::make_shared<EfficientFRTTreeNode>();
+
+    MendelScaling::QuotientConstruction qc;
+    qc.preprocessEdges(graph);
+
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> current_tree_nodes;
+    for (int v = 0; v < n; ++v) {
+        current_tree_nodes.push_back(prev_nodes[v]);
+    }
+
+    // ---- (4) for each scale, build the CKR level and link to previous level ----
+    for (double Delta : mendel_scales) {
+        MendelScaling::QuotientLevel Q;
+
+        Q = qc.constructQuotientGraph(ultrametric, Delta,graph);
+        if (Q.Gq->getNumNodes() <= 1) {
+            // if single cluster: make that the root once at the end
+            continue;
+        }
+
+        m_levels.emplace_back();
+        CKRLevel& L = m_levels.back();
+        computeFRTPartition(Q, Delta, L);
+
+        // only needed for the helper function
+        CKRPartition partition;
+        auto qid = partition.build_qid_to_rep(Q, graph.getNumNodes(), Q.Gq->getNumNodes());
+        partition.build_cluster_of_qid(Q, qid, L);
+
+
+        auto current_level = buildTreeLevel(prev_nodes, Q, L, Delta);
+        if (current_level.size() == graph.getNumNodes()) {
+            // no clustering happened at this level; skip
+            m_levels.pop_back();
+            continue;
+        }
+        for (auto& node : current_level) {
+            current_tree_nodes.push_back(node);
+        }
+        prev_nodes = current_level;
+    }
+
+    // finishTree(root, current_tree_nodes);
+    // print_tree(root);
+    // sanity: all original vertices must be present exactly once
+    // (you can add a debug assert that counts coverage here)
+    return root;
+}
+
+
+void EfficientFRT::computeScales() {
+    const int n = graph.getNumNodes();
+    mendel_scales.clear();
+    if (n == 0) return;
+    double min_weight = std::numeric_limits<double>::max();
+    for (int e = 0; e< graph.getNumEdges(); e++) {
+        double w = graph.getEdgeDistance(e);
+        if (w < min_weight) {
+            min_weight = w;
+        }
+    }
+
+    // compute the new diameter after preprocessing
+    if (mendel_diameter == 0) {
+        throw std::runtime_error("Graph has zero diameter; cannot build CKR tree.");
+    }
+    double d = mendel_diameter * 2 * n;
+    for (; d >= mendel_diameter / (2.0 * n) || d > min_weight; d /= 8.0)
+        mendel_scales.push_back(d);
+
+    // sort the scales in increasing order
+    std::reverse(mendel_scales.begin(), mendel_scales.end());
+}
+
 
 
 void EfficientFRT::computeCurrentPartition(std::vector<int>& centers, std::vector<int>& clusters, const double scale) {
@@ -414,7 +621,7 @@ void EfficientFRT::computeCurrentPartition(std::vector<int>& centers, std::vecto
     }
 }
 
-
+/*
 double EfficientFRT::computeExpectation(double beta, std::unordered_set<int> &allVertices, const std::vector<int> &currentPermutation) {
      double result = 0.0;
     std::unordered_set<std::pair<int, int>, PairHash> settledDemands;
@@ -509,7 +716,8 @@ double EfficientFRT::computeExpectation(double beta, std::unordered_set<int> &al
     }
     return result;
 }
-
+*/
+/*
 void EfficientFRT::addDemands(int u, int v, double demand) {
     if (u < 0 || v < 0 || u >= graph.getNumNodes() || v >= graph.getNumNodes()) {
         throw std::out_of_range("Vertex index out of range");
@@ -523,21 +731,10 @@ void EfficientFRT::addDemands(int u, int v, double demand) {
         idVertex2idVertex2demand[u] = std::unordered_map<int, double>();
     }
     it[v] = demand;
-/*
-    auto& v_vec = vertex2vertex[u];
-    // Check if v already exists in the adjacency list
-    auto it_v = std::find(v_vec.begin(), v_vec.end(), v);
-    if (it_v == v_vec.end()) {
-        // If v does not exist, add it along with the demand value
-        v_vec.push_back(v);
-        vertex2vertex_value[u].push_back(demand);
-    } else {
-        // If v already exists, update the demand value
-        int index = std::distance(v_vec.begin(), it_v);
-        vertex2vertex_value[u][index] = demand;
-    }*/
-}
 
+}
+*/
+/*
 void EfficientFRT::removeDemands(double beta, int _v) {
     std::unordered_map<int, std::vector<int>> idVertex2vertices;
     int center = _v;
@@ -575,6 +772,102 @@ void EfficientFRT::removeDemands(double beta, int _v) {
         }
     }
 }
+*/
 
 
 
+
+std::vector<std::shared_ptr<EfficientFRTTreeNode>>
+EfficientFRT::buildTreeLevel(
+std::vector<std::shared_ptr<EfficientFRTTreeNode>>& prev_nodes,
+        const MendelScaling::QuotientLevel& Q,
+        const CKRLevel& L,
+        const double Delta
+) {
+    // ------------------------------------------------------------------
+    // Step 0: Map quotient nodes → representative original vertex
+    // ------------------------------------------------------------------
+    const int nq = Q.Gq->getNumNodes();
+    std::vector<int> qid_to_rep(nq, -1);
+
+    for (int v = 0; v < graph.getNumNodes(); ++v) {
+        int qid = Q.sigma_compact_of_v[v];
+        if (qid >= 0 && qid < nq && qid_to_rep[qid] == -1)
+            qid_to_rep[qid] = v;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 1: Create parent nodes (one per CKR cluster)
+    // ------------------------------------------------------------------
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> parents(L.centers.size());
+
+    for (size_t c = 0; c < L.centers.size(); ++c) {
+        auto parent = std::make_shared<EfficientFRTTreeNode>();
+
+        const int center_qid = L.centers[c];
+        int center_rep = -1;
+
+        if (center_qid >= 0 && center_qid < nq)
+            center_rep = qid_to_rep[center_qid];
+
+        // Fallback (should almost never happen)
+        if (center_rep == -1 && !prev_nodes.empty())
+            center_rep = prev_nodes.front()->center;
+
+        parent->center = center_rep;
+        parent->parent.reset();
+        parent->children.clear();
+        parent->members.clear();
+
+        parents[c] = parent;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 2: Attach lower-level nodes to parents
+    //         (according to CKR assignment)
+    // ------------------------------------------------------------------
+    for (const auto& child : prev_nodes) {
+        if (!child) continue;
+
+        int child_center = child->center;
+        int qid = Q.sigma_compact_of_v[child_center];
+        int cluster = L.cluster_of_qid[qid];
+
+        auto& parent = parents[cluster];
+
+        child->parent = parent;
+        parent->children.push_back(child);
+
+        // merge members upward
+        parent->members.insert(
+            parent->members.end(),
+            child->members.begin(),
+            child->members.end()
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Step 3: Deduplicate members (important!)
+    // ------------------------------------------------------------------
+    for (auto& p : parents) {
+        auto& M = p->members;
+        std::sort(M.begin(), M.end());
+        M.erase(std::unique(M.begin(), M.end()), M.end());
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4: Clean empty nodes
+    // ------------------------------------------------------------------
+    std::vector<std::shared_ptr<EfficientFRTTreeNode>> cleaned_parents;
+    for (int i = 0; i < parents.size(); ++i) {
+        auto& p = parents[i];
+        if (p->members.size() == 0) {
+            // skip empty nodes
+            // std::cout << "Removed empty node at level with Delta " << Delta << "\n";
+        } else {
+            cleaned_parents.push_back(p);
+        }
+    }
+
+    return cleaned_parents;
+}

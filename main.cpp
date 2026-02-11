@@ -3,9 +3,15 @@
 #include "src/electrical/electrical_flow_optimized.h"
 #include "src/datastructures/GraphCSR.h"
 #include "src/parse_parameter.h"
+#include "src/expanders/xcut_expander_hierarchy.h"
+#include "src/tree_based/tree_mwu.h"
 
 
+#include "experiments/amg_experiments/amg_parameterized.h"
+#include "src/tree_based/fast_ckr.h"
 
+#include "src/tree_based/frt.h"
+#include "src/tree_based/random_mst.h"
 
 
 int main(int argc, char **argv) {
@@ -14,6 +20,9 @@ int main(int argc, char **argv) {
     auto cfg = parse_parameter(argc, argv, &err);
     if (!cfg) { std::cerr << err; return -1; }
 
+#ifdef _OPENMP
+    std::cout << "Number of threads active: " << omp_get_max_threads() << "\n";
+#endif
 
     GraphCSR G;
     readLGFFile(G, cfg->filename,  true);
@@ -25,8 +34,28 @@ int main(int argc, char **argv) {
         std::cerr << "Input graph is not connected!\n";
         // return -1;
     }
+    //G.print();
 
-    // G.print();
+    //ExpanderRouting expander_routing;
+    // expander_routing.init(G);
+
+    // Run the AMG parameterized experiment
+
+    // first define the output.csv
+/*
+    if (argv[2] == nullptr) {
+        std::cerr << "Graph input is missing.\n";
+        return -1;
+    }
+    std::string graphFile = argv[2];
+    auto it = graphFile.find(".lgf");
+    // remove the extension
+    if (it != std::string::npos) {
+        graphFile = graphFile.substr(0, it);
+    }
+    std::string output = "../results/amg_parameterized_results/"+graphFile.substr(graphFile.find_last_of("/\\") + 1)+".csv";
+    AMG_Experiment(G, output);
+*/
 
     for (SolverType type : cfg->solvers) {
         std::cout << "\n=== Running solver: " << ::solverNames[static_cast<int>(type)] << " ===\n";
@@ -38,20 +67,13 @@ int main(int argc, char **argv) {
         auto scheme = solver->solve();
         double solve_time = duration(timeNow() - t0);
 
-        // scheme->printRoutingTable();
+        //scheme->printRoutingTable();
 
         std::cout << "Total running time: " << solve_time << " ms\n";
 
         // if the algorithm is an MWU framework, print iteration stats
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
-            std::cout << "Solve time: " << mwu->solve_time << " ms\n";
-            std::cout << "Transformation time: " << (solve_time - mwu->solve_time) << " ms\n";
-            std::cout << "MWU iterations: " << mwu->iteration_count << "\n";
-            double average_oracle_time = 0.0;
-            for (double t : mwu->oracle_running_times) {
-                average_oracle_time += t;
-            }
-            std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(mwu->oracle_running_times.size())) << " ms\n";
+            mwu->printTimeStats();
         }
 
         // --- optional: demand model evaluation ---
@@ -60,7 +82,7 @@ int main(int argc, char **argv) {
             std::cout << "Ratio off the optimal offline solution "
                       << (argv[3] ? argv[3] : "<empty>")
                       << " model demand: "
-                      << ( result.second - result.first  / result.second ) * 100.0 << "% "
+                      << ( result.second  / result.first ) * 100.0 << "% "
                       << " ("
                       << result.first << " / " << result.second
                       << ")\n";

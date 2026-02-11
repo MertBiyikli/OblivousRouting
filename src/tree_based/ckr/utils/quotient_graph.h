@@ -14,7 +14,7 @@
 namespace MendelScaling {
 
 
-        struct QuotientLevel {
+    struct QuotientLevel {
         std::unique_ptr<IGraph> Gq;                                 // quotient graph at Δ
         std::vector<int> sigma_compact_of_v;      // size n: original vertex v -> compact qid in [0..k-1]
         std::vector<std::vector<int>> members_of_q; // size k: list of original vertices in each quotient node
@@ -24,27 +24,37 @@ namespace MendelScaling {
     class QuotientConstruction {
     public:
         int original_n = 0;
-        std::vector<std::tuple<double, int, int>> edges; // (weight, u, v)
+        //std::vector<std::tuple<double, int, int>> edges; // (weight, u, v)
+
+        std::vector<std::pair<int, double>> weights;
 
         void preprocessEdges(const IGraph& G) {
             original_n = G.getNumNodes();
             assert(original_n > 0);
-            edges.reserve((size_t)G.getNumEdges());
+            //edges.reserve((size_t)G.getNumEdges());
+            weights.reserve(G.getNumEdges());
             for (int u = 0; u < original_n; ++u) {
                 for (auto& v : G.neighbors(u)) {
                     if (u < v) {
                         double w = G.getEdgeDistance(u, v);
-                        edges.emplace_back(w, u, v);
+                        //edges.emplace_back(w, u, v);
+                        int e_id = G.getEdgeId(u, v);
+                        weights.emplace_back(e_id, w);
                     }
                 }
             }
+            /*
             std::sort(edges.begin(), edges.end(),
-                      [](auto& a, auto& b){ return std::get<0>(a) < std::get<0>(b); });
+                      [](auto& a, auto& b){ return std::get<0>(a) < std::get<0>(b); });*/
+
+            std::sort(weights.begin(), weights.end(),
+                      [](auto& a, auto& b){ return a.second < b.second; });
         }
 
         void reset() {
             original_n = 0;
-            edges.clear();
+            //edges.clear();
+            weights.clear();
         }
 
 
@@ -98,13 +108,20 @@ namespace MendelScaling {
         std::unique_ptr<IGraph> Gq_ = std::make_unique<GraphCSR>(k);
         double w_low = Delta / (2.0 * original_n);
         double w_high = Delta;
-        size_t left = 0, right = 0;;
+        size_t left = 0, right = 0;/*
         while (right < edges.size() && std::get<0>(edges[right]) <= w_high) {
             ++right;
         }
         while (left < edges.size() && std::get<0>(edges[left]) < w_low) {
             ++left;
-        }
+        }*/
+
+            while (right < weights.size() && weights[right].second <= w_high) {
+                ++right;
+            }
+            while (left < weights.size() && weights[left].second < w_low) {
+                ++left;
+            }
 
          // two passes to cover all edges
          std::unordered_map<long long,std::pair<double, double>> min_w;
@@ -112,17 +129,19 @@ namespace MendelScaling {
          auto key = [](int a,int b){ return ((long long)a<<32) | (unsigned)b; };
 
          for (size_t i = left; i < right; ++i) {
-             auto& [w, u, v] = edges[i];
-             int cu = sigma_compact_of_v[u];
-             int cv = sigma_compact_of_v[v];
+             //auto& [w, u, v] = edges[i];
+             const auto& [e_id, w2] = weights[i];
+             const auto& [v1, v2] = G.edgeEndpoints(e_id);
+             int cu = sigma_compact_of_v[v1];
+             int cv = sigma_compact_of_v[v2];
              if (cu == cv) continue;
              int a = (cu < cv) ? cu : cv;
              int b = (cu < cv) ? cv : cu;
-             double cap = G.getEdgeCapacity(u, v);
+             double cap = G.getEdgeCapacity(v1, v2);
              long long K = key(a,b);
              auto it = min_w.find(K);
-             if (it == min_w.end() || w < it->second.second)
-                 min_w[K] = {cap, w};
+             if (it == min_w.end() || w2 < it->second.second)
+                 min_w[K] = {cap, w2};
          }
 
         for (auto& [K, cap_and_weight] : min_w) {
@@ -215,87 +234,7 @@ namespace MendelScaling {
                 .members_of_q = std::move(members_of_q)};
     }
 
-/*
-    // Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
-    // Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
-    inline QuotientLevel build_quotient_graph_with_map(const IGraph& G, const UltrametricTree& ultra, double Delta) {
-        const int n = G.getNumNodes();
 
-        // 1) Map each original vertex to ancestor σΔ(v)
-        std::vector<int> sigma_node(n);
-        for (int v = 0; v < n; ++v) {
-            sigma_node[v] = ultra.sigmaDelta(v, Delta); // ultra node id
-        }
-
-        // 2) Compact those ancestor IDs to 0..k-1
-        // std::unordered_map<int,int> idmap;
-        // idmap.reserve(n*2);
-        int next_id = 0;
-        std::vector<int> qid_of_sigma(ultra.N, -1);
-        for (int v = 0; v < n; ++v) {
-            int s = sigma_node[v];
-            int &ref = qid_of_sigma[s];
-            if (ref == -1) {
-                ref = next_id++;
-                // idmap[ref] = v;
-            }
-        }
-
-        // 3) Original v -> compact quotient id
-        std::vector<int> sigma_compact_of_v(n);
-        sigma_compact_of_v.reserve(n);
-        for (int v = 0; v < n; ++v) {
-            sigma_compact_of_v[v] = qid_of_sigma[sigma_node[v]];
-        }
-
-        // k is the number of quotient nodes
-        const int k = next_id;
-
-        // 4) Members of each quotient node
-        std::vector<std::vector<int>> members_of_q(k);
-        for (int v = 0; v < n; ++v) {
-            members_of_q[sigma_compact_of_v[v]].push_back(v);
-        }
-
-
-
-        // 5) Build quotient edges with min inter-edge weight
-        std::unique_ptr<IGraph> Gq;
-        std::unordered_map<long long,std::pair<double, double>> min_w;
-        min_w.reserve((size_t)G.getNumEdges());
-        auto key = [](int a,int b){ return ((long long)a<<32) | (unsigned)b; };
-
-        for (int u = 0; u < n; ++u) {
-            int cu = sigma_compact_of_v[u];
-            for (auto&  v : G.neighbors(u)) {
-                if (u >= v) continue; // undirected, process each edge once
-                int cv = sigma_compact_of_v[v];
-                if (cu == cv) continue;
-                int a = (cu < cv) ? cu : cv;
-                int b = (cu < cv) ? cv : cu;
-                double cap = G.getEdgeCapacity(u, v);
-                double w = G.getEdgeDistance(u, v);
-                long long K = key(a,b);
-                auto it = min_w.find(K);
-                if (it == min_w.end() || w < it->second.second)
-                    min_w[K] = {cap, w};
-            }
-        }
-
-        // TODO: here we need to ensure that we add the edge distances correctly and not the capacities
-        for (auto& [K, cap_and_weight] : min_w) {
-            int a = (int)(K >> 32);
-            int b = (int)(K & 0xffffffff);
-            Gq->addEdge(a,b, cap_and_weight.first, cap_and_weight.second);
-        }
-
-        Gq->finalize();
-
-        return {.Gq = std::move(Gq),
-                .sigma_compact_of_v = std::move(sigma_compact_of_v),
-                .members_of_q = std::move(members_of_q)};
-    }
-*/
     // Build the Δ-level quotient graph and all mappings needed to map back to original vertices.
     // Complexity: O(m log n) amortized over all levels (by the paper’s edge-coverage argument).
     inline QuotientLevel build_quotient_graph_using_sliding_window(const IGraph& G, const UltrametricTree& ultra, double Delta) {

@@ -73,7 +73,6 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFram
         init(debug, "amg_cg");
         run(table);
         scaleFlowDown(table);
-
     }
 
 
@@ -93,11 +92,8 @@ class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFram
     double recoverNorm(const std::vector<double>& diffs_u,
                                             const std::vector<double>& diffs_v);
 
-    void init( bool debug = false, const std::string& solver_name = ("amg_cg"));
+    void init(bool debug = false, const std::string& solver_name = ("amg_cg"),boost::property_tree::ptree _params = boost::property_tree::ptree() );
 
-/*
-    std::vector<int> buildBFSTree(int root);
-    void enforceConservation();*/
 
 
 };

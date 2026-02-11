@@ -50,8 +50,6 @@ protected:
     IGraph& graph;
     int root;
 
-    // Subclasses implement this:
-    // Must call table.addFlow(e, s, flow_sx)
     virtual void computeBasisFlows(LinearRoutingTable& table) = 0;
 };
 
@@ -60,12 +58,11 @@ public:
     AllPairObliviousSolverBase(IGraph& _g):
         graph(_g) {}
 
-    // 🔧 FIXED: pass table into LinearRoutingScheme
+
     std::unique_ptr<RoutingScheme> solve() override {
         AllPairRoutingTable table;
         table.init(graph);
 
-        // solver must fill table via computeBasisFlows
         computeBasisFlows(table);
 
         graph.resetEdgeWeights();

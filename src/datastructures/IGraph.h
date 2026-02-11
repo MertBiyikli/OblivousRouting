@@ -62,6 +62,9 @@ public:
     virtual NeighborRange neighbors(int node) const = 0;
     virtual int getNumDirectedEdges() const = 0;
 
+    // DEBUGGING
+    virtual void print() const = 0;
+
     // node index based access
     virtual double getEdgeCapacity(int u, int v) const = 0;
     virtual double getEdgeDistance(int u, int v) const = 0;
@@ -81,6 +84,9 @@ public:
 
     double getShortestPathDistance(int s, int t) const {
         auto path = getShortestPath(s, t);
+        if (path.empty()) {
+            return std::numeric_limits<double>::infinity(); // No path exists
+        }
         double total_dist = 0.0;
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             total_dist += getEdgeDistance(path[i], path[i + 1]);
@@ -388,7 +394,6 @@ inline void readLGFFile(IGraph& g, const std::string& filename, bool withDistanc
                 try {
                     capacityValue = std::stod(parts[capColIdx]);
                     capacityParsed = true;
-                    continue; // done with this edge
                 } catch (...) {
                     // failed to parse capacity, will try cost or default below
                 }
