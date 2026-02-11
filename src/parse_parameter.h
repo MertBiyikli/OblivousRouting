@@ -19,6 +19,13 @@
 #include "tree_based/ckr/raecke_mwu_ckr.h"
 #include "tree_based/frt/raecke_mwu_frt.h"
 #include "tree_based/random_mst/raecke_mwu_random.h"
+#include "electrical/electrical_flow_optimized.h"
+#include "electrical/electrical_flow_par_batches.h"
+
+#include "tree_based/tree_mwu.h"
+#include "tree_based/frt.h"
+#include "tree_based/fast_ckr.h"
+#include "tree_based/random_mst.h"
 
 std::vector<std::string> solverNames ={
     "electrical",
@@ -59,20 +66,20 @@ makeSolver(SolverType type, IGraph& g_csr) {
             return std::make_unique<ElectricalFlowOptimized>(g_csr, 0);
 
         case SolverType::RAECKE_FRT:
-            return std::make_unique<RaeckeMWU_FRT>(g_csr);
+            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FRT>(g_csr));
 
         case SolverType::RAECKE_CKR:
-            return std::make_unique<RaeckeMWU_CKR>(g_csr);
+            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FastCKR>(g_csr));
 
         case SolverType::RAECKE_RANDOM_MST:
-            return std::make_unique<RaeckeMWU_Random>(g_csr);
+            return std::make_unique<TreeMWU>(g_csr, std::make_unique<TreeMST>(g_csr));
 
         case SolverType::LP_APPLEGATE_COHEN:
             return std::make_unique<LPSolver>(g_csr);
 
         case SolverType::ELECTRICAL_PARALLEL_BATCHES:
-            // return std::make_unique<ElectricalFlowParallelBatches>(g_csr);
-            throw std::runtime_error("Parallel batches solver not implemented.");
+            return std::make_unique<ElectricalFlowParallelBatches>(g_csr, 0);
+            //throw std::runtime_error("Parallel batches solver not implemented.");
 
         default:
             throw std::runtime_error("Unknown solver type.");
@@ -142,8 +149,8 @@ inline std::string usage(const char* prog) {
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
        << "  raecke_frt | frt | f   -> Tree-based (Raecke/FRT)\n"
         << " raecke_ckr | ckr | c -> Tree-based (Raecke/CKR)\n"
-       << "  cohen | lp | applegate | ac   -> Tree-based (LP/Applegate and Cohen)\n"
        << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n"
+       << "  cohen | lp | applegate | ac   -> Tree-LP (LP/Applegate and Cohen)\n"
         << "  electrical_parallel | elec_par | e_par -> Electrical Flow (parallel)\n"
        << "Numeric shortcuts: 0=electric, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel\n"
        << "[Optional] demand model (case-insensitive):\n"

@@ -87,9 +87,17 @@ public:
 
 
 
-    void print() const;
-    void readGraph(const std::string &filename);
 
+    void readGraph(const std::string &filename);
+    virtual void print() const override {
+        for (size_t i = 0; i < m_adj.size(); ++i) {
+            std::cout << "Node " << i << ": ";
+            for (size_t j = 0; j < m_adj[i].size(); ++j) {
+                std::cout << "(" << m_adj[i][j] << ", " << m_adj_capacities[i][j] << ", " << m_adj_distances[i][j] << ") ";
+            }
+            std::cout << std::endl;
+        }
+    }
 
     // TODO: need to implement this for the adjacency list based distances
     std::vector<int>

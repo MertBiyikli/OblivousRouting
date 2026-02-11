@@ -1,0 +1,7 @@
+{
+  "solver": { "type": "cg", "tol": 1e-8, "maxiter": 100 },
+  "precond": {
+    "coarsening": { "type": "smoothed_aggr_emin" },
+    "relax": { "type": "spai1" }
+  }
+}

@@ -76,7 +76,7 @@ public:
 };
 
 
-
+/*
 class LinearEfficientRaeckeTransform : public IRaeckeTransform{
 protected:
     int root = 0;
@@ -107,6 +107,6 @@ private:
         const int& d);
 
     std::vector<std::pair<int, int>> findCycle(const int& d);
-};
+};*/
 
 #endif //OBLIVIOUSROUTING_EFFICIENT_RAECKE_CKR_TRANSFORM_H
