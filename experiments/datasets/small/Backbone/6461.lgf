@@ -1,0 +1,95 @@
+@nodes
+label	name	
+0	Amsterdam	
+1	Atlanta	
+2	Chicago	
+3	Copenhagen	
+4	Dallas	
+5	Frankfurt	
+6	IAD	
+7	London	
+8	NewYork	
+9	Newark	
+10	PaloAlto	
+11	Paris	
+12	SanCarlos	
+13	SanJose	
+14	Seattle	
+15	Vienna	
+16	Washington	
+@arcs
+		label	name	cost	
+0	11	0	Paris_Amsterdam	20	
+0	5	1	Frankfurt_Amsterdam	50	
+0	7	2	London_Amsterdam	90	
+1	16	3	Washington_Atlanta	40	
+1	4	4	Dallas_Atlanta	35	
+1	6	5	IAD_Atlanta	20	
+1	8	6	NewYork_Atlanta	95	
+2	13	7	SanJose_Chicago	40	
+2	14	8	Seattle_Chicago	50	
+2	16	9	Washington_Chicago	40	
+2	4	10	Dallas_Chicago	55	
+2	8	11	NewYork_Chicago	35	
+3	5	12	Frankfurt_Copenhagen	20	
+3	7	13	London_Copenhagen	50	
+4	1	14	Dallas_Atlanta	35	
+4	13	15	SanJose_Dallas	45	
+4	16	16	Washington_Dallas	30	
+4	2	17	Dallas_Chicago	55	
+5	0	18	Frankfurt_Amsterdam	50	
+5	11	19	Paris_Frankfurt	40	
+5	15	20	Vienna_Frankfurt	20	
+5	3	21	Frankfurt_Copenhagen	20	
+6	13	22	SanJose_IAD	50	
+6	1	23	IAD_Atlanta	20	
+6	16	24	Washington_IAD	70	
+6	8	25	NewYork_IAD	35	
+6	9	26	Newark_IAD	25	
+7	0	27	London_Amsterdam	90	
+7	11	28	Paris_London	60	
+7	13	29	SanJose_London	20	
+7	16	30	Washington_London	40	
+7	3	31	London_Copenhagen	50	
+7	8	32	NewYork_London	65	
+8	1	33	NewYork_Atlanta	95	
+8	14	34	Seattle_NewYork	25	
+8	16	35	Washington_NewYork	80	
+8	2	36	NewYork_Chicago	35	
+8	6	37	NewYork_IAD	35	
+8	7	38	NewYork_London	65	
+9	16	39	Washington_Newark	35	
+9	6	40	Newark_IAD	25	
+10	12	41	SanCarlos_PaloAlto	70	
+10	13	42	SanJose_PaloAlto	60	
+11	0	43	Paris_Amsterdam	20	
+11	16	44	Washington_Paris	125	
+11	5	45	Paris_Frankfurt	40	
+11	7	46	Paris_London	60	
+12	10	47	SanCarlos_PaloAlto	70	
+12	13	48	SanJose_SanCarlos	40	
+13	10	49	SanJose_PaloAlto	60	
+13	12	50	SanJose_SanCarlos	40	
+13	14	51	Seattle_SanJose	40	
+13	16	52	Washington_SanJose	80	
+13	2	53	SanJose_Chicago	40	
+13	4	54	SanJose_Dallas	45	
+13	6	55	SanJose_IAD	50	
+13	7	56	SanJose_London	20	
+14	13	57	Seattle_SanJose	40	
+14	16	58	Washington_Seattle	90	
+14	2	59	Seattle_Chicago	50	
+14	8	60	Seattle_NewYork	25	
+15	16	61	Washington_Vienna	205	
+15	5	62	Vienna_Frankfurt	20	
+16	11	63	Washington_Paris	125	
+16	13	64	Washington_SanJose	80	
+16	14	65	Washington_Seattle	90	
+16	15	66	Washington_Vienna	205	
+16	1	67	Washington_Atlanta	40	
+16	2	68	Washington_Chicago	40	
+16	4	69	Washington_Dallas	30	
+16	6	70	Washington_IAD	70	
+16	7	71	Washington_London	40	
+16	8	72	Washington_NewYork	80	
+16	9	73	Washington_Newark	35	

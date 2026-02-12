@@ -1,0 +1,97 @@
+@nodes
+label	name	
+0	Amsterdam	
+1	Atlanta	
+2	Austin	
+3	Chicago	
+4	ElSegundo	
+5	FortWorth	
+6	Frankfurt	
+7	Herndon	
+8	Irvine	
+9	JerseyCity	
+10	London	
+11	Miami	
+12	NewYork	
+13	OakBrook	
+14	SanJose	
+15	SantaClara	
+16	Tokyo	
+17	Toronto	
+18	Tukwila	
+19	Waltham	
+20	Weehawken	
+@arcs
+		label	name	cost	
+2	5	0	Austin_FortWorth	40	
+1	20	1	Atlanta_Weehawken	185	
+1	5	2	Atlanta_FortWorth	35	
+14	13	3	SanJose_OakBrook	145	
+8	15	4	Irvine_SantaClara	100	
+13	20	5	OakBrook_Weehawken	120	
+10	9	6	London_JerseyCity	20	
+12	7	7	NewYork_Herndon	20	
+20	13	8	Weehawken_OakBrook	120	
+20	1	9	Weehawken_Atlanta	185	
+5	8	10	FortWorth_Irvine	170	
+15	7	11	SantaClara_Herndon	225	
+15	16	12	SantaClara_Tokyo	25	
+7	15	13	Herndon_SantaClara	225	
+12	9	14	NewYork_JerseyCity	25	
+11	12	15	Miami_NewYork	50	
+10	0	16	London_Amsterdam	20	
+7	1	17	Herndon_Atlanta	45	
+13	19	18	OakBrook_Waltham	130	
+19	17	19	Waltham_Toronto	10	
+10	20	20	London_Weehawken	40	
+14	15	21	SanJose_SantaClara	30	
+11	1	22	Miami_Atlanta	25	
+15	4	23	SantaClara_ElSegundo	90	
+9	6	24	JerseyCity_Frankfurt	10	
+4	2	25	ElSegundo_Austin	160	
+5	15	26	FortWorth_SantaClara	160	
+8	5	27	Irvine_FortWorth	170	
+12	11	28	NewYork_Miami	50	
+0	6	29	Amsterdam_Frankfurt	10	
+13	17	30	OakBrook_Toronto	10	
+20	10	31	Weehawken_London	40	
+20	12	32	Weehawken_NewYork	80	
+7	12	33	Herndon_NewYork	20	
+5	1	34	FortWorth_Atlanta	35	
+16	14	35	Tokyo_SanJose	20	
+1	11	36	Atlanta_Miami	25	
+19	9	37	Waltham_JerseyCity	50	
+18	15	38	Tukwila_SantaClara	70	
+9	10	39	JerseyCity_London	20	
+2	4	40	Austin_ElSegundo	160	
+9	19	41	JerseyCity_Waltham	50	
+15	18	42	SantaClara_Tukwila	70	
+5	3	43	FortWorth_Chicago	70	
+17	19	44	Toronto_Waltham	10	
+3	13	45	Chicago_OakBrook	20	
+13	14	46	OakBrook_SanJose	145	
+16	15	47	Tokyo_SantaClara	25	
+15	5	48	SantaClara_FortWorth	160	
+14	16	49	SanJose_Tokyo	20	
+9	20	50	JerseyCity_Weehawken	20	
+4	8	51	ElSegundo_Irvine	10	
+18	3	52	Tukwila_Chicago	90	
+20	7	53	Weehawken_Herndon	40	
+4	15	54	ElSegundo_SantaClara	90	
+8	4	55	Irvine_ElSegundo	10	
+3	18	56	Chicago_Tukwila	90	
+15	14	57	SantaClara_SanJose	30	
+15	8	58	SantaClara_Irvine	100	
+19	13	59	Waltham_OakBrook	130	
+20	9	60	Weehawken_JerseyCity	20	
+6	9	61	Frankfurt_JerseyCity	10	
+0	10	62	Amsterdam_London	20	
+13	3	63	OakBrook_Chicago	20	
+6	0	64	Frankfurt_Amsterdam	10	
+7	20	65	Herndon_Weehawken	40	
+5	2	66	FortWorth_Austin	40	
+3	5	67	Chicago_FortWorth	70	
+12	20	68	NewYork_Weehawken	80	
+1	7	69	Atlanta_Herndon	45	
+17	13	70	Toronto_OakBrook	10	
+9	12	71	JerseyCity_NewYork	25	

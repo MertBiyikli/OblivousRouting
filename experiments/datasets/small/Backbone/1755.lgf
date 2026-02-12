@@ -1,0 +1,88 @@
+@nodes
+label	name	
+0	Amsterdam	
+1	Antwerp	
+2	Berlin	
+3	Brussels	
+4	Copenhagen	
+5	Dusseldorf	
+6	Frankfurt	
+7	Geneva	
+8	Hamburg	
+9	London	
+10	Manchester	
+11	Munich	
+12	NewYork	
+13	Paris	
+14	Prague	
+15	Rotterdam	
+16	Stockholm	
+17	Vienna	
+@arcs
+		label	name	cost	
+13	7	0	Paris_Geneva	25	
+9	12	1	London_NewYork	20	
+12	13	2	NewYork_Paris	45	
+5	11	3	Dusseldorf_Munich	20	
+11	8	4	Munich_Hamburg	20	
+17	11	5	Vienna_Munich	20	
+3	1	6	Brussels_Antwerp	20	
+4	10	7	Copenhagen_Manchester	20	
+2	14	8	Berlin_Prague	20	
+2	11	9	Berlin_Munich	160	
+10	9	10	Manchester_London	100	
+13	9	11	Paris_London	75	
+12	9	12	NewYork_London	20	
+6	11	13	Frankfurt_Munich	20	
+15	0	14	Rotterdam_Amsterdam	20	
+3	13	15	Brussels_Paris	20	
+9	0	16	London_Amsterdam	75	
+11	17	17	Munich_Vienna	20	
+9	13	18	London_Paris	75	
+13	3	19	Paris_Brussels	20	
+7	5	20	Geneva_Dusseldorf	10	
+2	5	21	Berlin_Dusseldorf	25	
+1	13	22	Antwerp_Paris	10	
+5	7	23	Dusseldorf_Geneva	10	
+13	6	24	Paris_Frankfurt	25	
+2	17	25	Berlin_Vienna	95	
+6	13	26	Frankfurt_Paris	25	
+4	16	27	Copenhagen_Stockholm	50	
+13	12	28	Paris_NewYork	45	
+7	6	29	Geneva_Frankfurt	45	
+1	15	30	Antwerp_Rotterdam	20	
+0	6	31	Amsterdam_Frankfurt	25	
+6	5	32	Frankfurt_Dusseldorf	45	
+17	8	33	Vienna_Hamburg	10	
+11	6	34	Munich_Frankfurt	20	
+8	17	35	Hamburg_Vienna	10	
+10	4	36	Manchester_Copenhagen	20	
+2	16	37	Berlin_Stockholm	90	
+13	1	38	Paris_Antwerp	10	
+16	4	39	Stockholm_Copenhagen	50	
+8	11	40	Hamburg_Munich	20	
+11	5	41	Munich_Dusseldorf	20	
+10	5	42	Manchester_Dusseldorf	45	
+0	3	43	Amsterdam_Brussels	20	
+5	6	44	Dusseldorf_Frankfurt	45	
+14	17	45	Prague_Vienna	40	
+11	2	46	Munich_Berlin	160	
+5	0	47	Dusseldorf_Amsterdam	20	
+8	5	48	Hamburg_Dusseldorf	40	
+16	2	49	Stockholm_Berlin	90	
+3	0	50	Brussels_Amsterdam	20	
+5	2	51	Dusseldorf_Berlin	25	
+5	8	52	Dusseldorf_Hamburg	40	
+7	13	53	Geneva_Paris	25	
+0	15	54	Amsterdam_Rotterdam	20	
+9	10	55	London_Manchester	100	
+1	3	56	Antwerp_Brussels	20	
+14	2	57	Prague_Berlin	20	
+17	2	58	Vienna_Berlin	95	
+0	5	59	Amsterdam_Dusseldorf	20	
+5	10	60	Dusseldorf_Manchester	45	
+0	9	61	Amsterdam_London	75	
+6	0	62	Frankfurt_Amsterdam	25	
+6	7	63	Frankfurt_Geneva	45	
+15	1	64	Rotterdam_Antwerp	20	
+17	14	65	Vienna_Prague	40	
