@@ -16,10 +16,11 @@
 #include "../datastructures/IGraph.h"
 
 
-class ElectricalFlowOptimized : public LinearObliviousSolverBase, public MWUFramework {
+class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {
 public:
 
-    ElectricalFlowOptimized(IGraph& g, int root, bool debug = false) : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
+    ElectricalMWU(IGraph& g, int root, bool debug = false)
+    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
     }
 
     void computeBasisFlows(LinearRoutingTable &table) override {

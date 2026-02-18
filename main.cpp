@@ -1,17 +1,8 @@
 #include <iostream>
-#include "src/datastructures/GraphADJ.h"
-#include "src/electrical/electrical_flow_optimized.h"
+#include "src/datastructures/IGraph.h"
 #include "src/datastructures/GraphCSR.h"
+#include "src/datastructures/GraphADJ.h"
 #include "src/parse_parameter.h"
-//#include "src/expanders/xcut_expander_hierarchy.h"
-#include "src/tree_based/tree_mwu.h"
-
-
-#include "experiments/amg_experiments/amg_parameterized.h"
-#include "src/tree_based/fast_ckr.h"
-
-#include "src/tree_based/frt.h"
-#include "src/tree_based/random_mst.h"
 
 
 int main(int argc, char **argv) {

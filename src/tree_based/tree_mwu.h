@@ -15,17 +15,17 @@
 class TreeMWU : public AllPairObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle> oracle;
-
-    // member for storing the information for the computation
-    double lambda_sum = 0.0;
+    double lambda_sum;
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
     std::vector<TreeIteration> iteration;
+
 public:
     TreeMWU(IGraph& g, std::unique_ptr<TreeOracle> _oracle) : AllPairObliviousSolverBase(g), oracle(std::move(_oracle)) {
         current_distances.assign(graph.getNumEdges(), 1.0);
         rload_current.assign(graph.getNumEdges(), 0.0);
         rload_total.assign(graph.getNumEdges(), 0.0);
+        lambda_sum = 0.0;
     }
 
 
@@ -45,7 +45,6 @@ public:
         transform.transform();
         table = transform.getRoutingTable();
 
-        //table.printFlows(graph);
     }
 
 
@@ -212,11 +211,9 @@ public:
     }
 
     void activateMendelScaling(bool flag) {
-        if (oracle) {
+        assert(oracle != nullptr);
+        if (oracle)
             oracle->applyMendelScaling = flag;
-        }else {
-            throw std::runtime_error("TreeMWU: Oracle must be set before activating Mendel Scaling.");
-        }
     }
 };
 

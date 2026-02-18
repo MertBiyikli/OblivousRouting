@@ -82,7 +82,7 @@ class ElectricalFlowParallelBatches : public LinearObliviousSolverBase, public M
 
     void getApproxLoad(std::vector<double>& load);
 
-    void init( bool debug = false);
+    void init( bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree());
 
 
 

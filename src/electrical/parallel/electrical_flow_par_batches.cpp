@@ -8,7 +8,7 @@
 #include <random>
 #include <thread>
 
-void ElectricalFlowParallelBatches::init(bool debug)
+void ElectricalFlowParallelBatches::init(bool debug, boost::property_tree::ptree _params)
 {
 
     n = graph.getNumNodes();
@@ -32,6 +32,13 @@ void ElectricalFlowParallelBatches::init(bool debug)
     buildWeightDiag();
     buildIncidence();
 
+    if (_params.empty()) {
+        // set default parameters if not provided
+        boost::property_tree::ptree config;
+        boost::property_tree::read_json("../../configs/amg_configs.json", config);
+        _params = config;
+    }
+
     // init AMG
     int thread_nums =0;
     #ifdef _OPENMP
@@ -45,6 +52,7 @@ void ElectricalFlowParallelBatches::init(bool debug)
     for (int t = 0; t < p_threads; ++t) {
         auto s = std::make_unique<AMGSolver>();
         s->init(graph, edge_weights, n, edges, debug);
+        s->setSolverParams(_params);
         amg_pool.emplace_back(std::move(s));
     }
 

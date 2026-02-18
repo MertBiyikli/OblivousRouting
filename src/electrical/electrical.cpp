@@ -2,14 +2,14 @@
 // Created by Mert Biyikli on 30.09.25.
 //
 
-#include "electrical_flow_optimized.h"
+#include "electrical.h"
 #include "../utils/my_math.h"
 #include <random>
 /*
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init( bool debug,  boost::property_tree::ptree _params)
+void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
 
     n = graph.getNumNodes();
@@ -44,7 +44,7 @@ void ElectricalFlowOptimized::init( bool debug,  boost::property_tree::ptree _pa
     if (_params.empty()) {
         // set default parameters if not provided
         boost::property_tree::ptree config;
-        boost::property_tree::read_json("../configs/amg_configs.json", config);
+        boost::property_tree::read_json("../../configs/amg_configs.json", config);
         _params = config;
     }
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
@@ -66,7 +66,7 @@ void ElectricalFlowOptimized::init( bool debug,  boost::property_tree::ptree _pa
 
 }
 
-void ElectricalFlowOptimized::initEdgeDistances() {
+void ElectricalMWU::initEdgeDistances() {
     extractEdges();
 
     // note that the edges are stored undirected
@@ -87,7 +87,7 @@ void ElectricalFlowOptimized::initEdgeDistances() {
 }
 
 
-void ElectricalFlowOptimized::extractEdges() {
+void ElectricalMWU::extractEdges() {
 
     // adjancency list version
 
@@ -112,7 +112,7 @@ void ElectricalFlowOptimized::extractEdges() {
 
 
 
-void ElectricalFlowOptimized::buildIncidence()
+void ElectricalMWU::buildIncidence()
 {
     if (B.nonZeros() == 0) {
         B = Eigen::SparseMatrix<double>(m, n);
@@ -126,7 +126,7 @@ void ElectricalFlowOptimized::buildIncidence()
     }
 }
 
-void ElectricalFlowOptimized::buildWeightDiag() {
+void ElectricalMWU::buildWeightDiag() {
     if (!W.nonZeros()) {
         W = Eigen::SparseMatrix<double>(m, m);
         std::vector<Eigen::Triplet<double>> w_triplets; w_triplets.reserve(m);
@@ -136,7 +136,7 @@ void ElectricalFlowOptimized::buildWeightDiag() {
     }
 }
 
-void ElectricalFlowOptimized::refreshWeightMatrix() {
+void ElectricalMWU::refreshWeightMatrix() {
     if (!W.nonZeros()) {
         buildWeightDiag();
     } else {
@@ -145,7 +145,7 @@ void ElectricalFlowOptimized::refreshWeightMatrix() {
     }
 }
 
-void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& load) {
+void ElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {
     // --- 1) stable MWU in log-space with damping & clipping ---
     const double eta   = 1.0 / (4.0 * roh);   // smaller than your 1/(2*roh)
     const double gclip = 10.0;                // gradient clip (tune 5–20)
@@ -205,7 +205,7 @@ void ElectricalFlowOptimized::updateEdgeDistances(const std::vector<double>& loa
 
 
 
-void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
+void ElectricalMWU::run(LinearRoutingTable &table) {
     // Sparse RHS with only two nonzeros per demand (+1 at u, -1 at x_fixed)
     Eigen::SparseVector<double> rhs(n);
     rhs.reserve(2);
@@ -279,7 +279,7 @@ void ElectricalFlowOptimized::run(LinearRoutingTable &table) {
 }
 
 
-void ElectricalFlowOptimized::scaleFlowDown(LinearRoutingTable& table) {
+void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     // scale the flow from the adjacency list flow
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
@@ -288,7 +288,7 @@ void ElectricalFlowOptimized::scaleFlowDown(LinearRoutingTable& table) {
     }
 }
 
-void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
+void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
     const int ell = X.cols();
     // Preconditions: edge_wc precomputed, load sized to m, edge_* sized to m.
 
@@ -333,7 +333,7 @@ void ElectricalFlowOptimized::getApproxLoad(std::vector<double>& load) {
 // across all ℓ sampled solutions.
 //   diffs_u = potentials[u][*]  (length ℓ)
 //   diffs_v = potentials[v][*]  (length ℓ)
-double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
+double ElectricalMWU::recoverNorm(const std::vector<double>& diffs_u,
                                         const std::vector<double>& diffs_v) {
     assert(diffs_u.size() == diffs_v.size());
     size_t L = diffs_u.size();
@@ -349,7 +349,7 @@ double ElectricalFlowOptimized::recoverNorm(const std::vector<double>& diffs_u,
     return abs_diffs[mid];
 }
 
-Eigen::SparseMatrix<double> ElectricalFlowOptimized::getSketchMatrix(int _m, int _n, double eps) {
+Eigen::SparseMatrix<double> ElectricalMWU::getSketchMatrix(int _m, int _n, double eps) {
     double c = 1.1;
     double delta = NegativeExponent(_n, 10); // Set delta to a small value or a default value
     double epsilon = eps; // Set epsilon to the provided value or a default value

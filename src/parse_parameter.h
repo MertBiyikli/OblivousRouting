@@ -17,7 +17,7 @@
 #include "lp_solver/LPSolver.h"
 #include "lp_solver/MCCF_lp_solver.h"
 
-#include "electrical/electrical_flow_optimized.h"
+#include "electrical/electrical.h"
 #include "electrical/parallel/electrical_flow_par_batches.h"
 
 #include "tree_based/tree_mwu.h"
@@ -61,7 +61,7 @@ std::unique_ptr<ObliviousRoutingSolver>
 makeSolver(SolverType type, IGraph& g_csr) {
     switch (type) {
         case SolverType::ELECTRICAL:
-            return std::make_unique<ElectricalFlowOptimized>(g_csr, 0);
+            return std::make_unique<ElectricalMWU>(g_csr, 0);
 
         case SolverType::RAECKE_FRT:
             return std::make_unique<TreeMWU>(g_csr, std::make_unique<FRT>(g_csr));

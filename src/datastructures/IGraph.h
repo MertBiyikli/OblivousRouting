@@ -18,7 +18,7 @@
 
 class IGraph {
 public:
-    int n = 0, m = 0;
+    int n, m;
     bool is_processed = false;
     std::vector<int> vertices;
 
@@ -142,7 +142,7 @@ public:
 
     virtual void resetEdgeWeights() {
         for (int v = 0; v < n; ++v) {
-            for (int i = 0; i < neighbors(v).size(); ++i) {
+            for (size_t i = 0; i < neighbors(v).size(); ++i) {
                 updateEdgeDistance(v, neighbors(v)[i], 1.0);
             }
         }
