@@ -38,16 +38,19 @@ The default solver is set to use the algebraic multigrid method for precondition
 - Eigen3
 - OR-Tools (for LP solving)
 
-#### Building the Project
-1. Clone the repository:
-   ```bash
-   git clone "https://github.com/MertBiyikli/OblivousRouting.git"
-   cd OblivousRouting
-   mkdir build
-   cd build
-   cmake .. -DCMAKE_BUILD_TYPE=Release
-   make -j
-    ```
+#### Building the Project (Recommended)
+
+This project provides predefined CMake presets for reproducible builds.
+
+From the project root, simply run:
+
+```bash
+cmake --preset release
+cmake --build --preset release
+```
+
+Change the preset configuration from `release` to `debug` for a debug build.
+
    
 #### Running the Algorithms
 - To run an oblivious Routing algorithms, use the following command:
