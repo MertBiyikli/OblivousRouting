@@ -27,7 +27,7 @@ The default solver is set to use the algebraic multigrid method for precondition
 ### Repository Structure
 
 - `src/`: Contains the source code for the Oblivious Routing algorithms.
-- `data/`: Contains datasets and network topologies used for testing the algorithms.
+- `experiments/datasets`: Contains datasets and network topologies used for testing the algorithms.
 
 
 ### Getting Started
