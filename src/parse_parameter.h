@@ -76,8 +76,7 @@ makeSolver(SolverType type, IGraph& g_csr) {
             return std::make_unique<LPSolver>(g_csr);
 
         case SolverType::ELECTRICAL_PARALLEL_BATCHES:
-            return std::make_unique<ElectricalFlowParallelBatches>(g_csr, 0);
-            //throw std::runtime_error("Parallel batches solver not implemented.");
+            return std::make_unique<ParallelElectricalMWU>(g_csr, 0);
 
         default:
             throw std::runtime_error("Unknown solver type.");

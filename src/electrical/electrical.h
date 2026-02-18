@@ -6,8 +6,6 @@
 #define OBLIVIOUSROUTING_ELECTRICAL_FLOW_OPTIMIZED_H
 
 #include <algorithm>
-#include "../datastructures/GraphADJ.h"
-#include "../utils/hash.h"
 #include "../solver/solver.h"
 #include "../solver/mwu_framework.h"
 #include "laplacian_solvers/AMGSolver.h"
@@ -16,37 +14,40 @@
 #include "../datastructures/IGraph.h"
 
 
+/*
+* This is the implementation of the algorithm from " Electrical Flows for Polylogarithmic Competitive Oblivious Routing" by Goranci et al.
+ */
 class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {
+
+    // AMG solver instance
+    std::unique_ptr<LaplacianSolver> amg;
 public:
 
     ElectricalMWU(IGraph& g, int root, bool debug = false)
     : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
+        this->debug = debug;
     }
 
+    // entry point
     void computeBasisFlows(LinearRoutingTable &table) override {
         init(debug);
         run(table);
         scaleFlowDown(table);
     }
 
-    void run(LinearRoutingTable &table);
-    void scaleFlowDown(LinearRoutingTable &table);
+    virtual void run(LinearRoutingTable &table);
+    void addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table);
+    virtual void scaleFlowDown(LinearRoutingTable &table);
+    virtual void getApproxLoad(std::vector<double>& load);
+    virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
 
-    void getApproxLoad(std::vector<double>& load);
-    double recoverNorm(const std::vector<double>& diffs_u,
-                                            const std::vector<double>& diffs_v);
-
-    void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
-
-private:
 
     int n, m;
-    double K = 0; // this is used as an approximation errror for the Laplacian Solver( see. Paper for details)
+    double K = 1.0; // this is used as an approximation errror for the Laplacian Solver( see. Paper for details)
 
     double epsilon = 0.5; // sketching parameter
-    double epsilon_L = EPS; // Laplacian solving accuracy
+    double epsilon_L = EPS; // Laplacian solving error
 
-    std::unique_ptr<LaplacianSolver> amg;
     double roh = 0.0;
     double alpha_local = 0.0;
     double inv_m = 0.0;
@@ -55,8 +56,6 @@ private:
     bool debug = false;
     int x_fixed = 0; // fixed node
 
-    std::vector<double> div_accum; // size n
-    std::vector<int> tree_parent;
 
     std::vector<std::pair<int, int> > edges; // u<v only
     std::vector<double> edge_weights;             // w_e
@@ -70,22 +69,16 @@ private:
 
     // Preallocate as class members to avoid reallocs
     Eigen::SparseMatrix<double> B; // incidence matrix
-    Eigen::SparseMatrix<double> U; // capacity diagonal matrix
-    Eigen::SparseMatrix<double> W; // weight diagonal matrix
-    Eigen::SparseMatrix<double> SketchMatrix_T; // sketch matrix transposed
     Eigen::SparseMatrix<double> X;          // n × ℓ precomputed RHS
-    Eigen::SparseMatrix<double> bw_product_t;
+
+    Eigen::MatrixXd SketchMatrix, SketchMatrix_t; // sketch matrix transposed
 
     // Helpers
     void extractEdges();
     void initEdgeDistances();
-    void updateEdgeDistances(const std::vector<double>& load);
-    void buildWeightDiag();
-    void refreshWeightMatrix();
     void buildIncidence();
-
-    Eigen::SparseMatrix<double> getSketchMatrix(int m, int n, double epsilon = 0.5);
-
+    virtual void updateEdgeDistances(const std::vector<double>& load);
+    virtual Eigen::MatrixXd getSketchMatrix(int m, int n, double epsilon = 0.5);
 
 
 };

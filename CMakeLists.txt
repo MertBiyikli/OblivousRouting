@@ -8,7 +8,6 @@ endif()
 
 # --- Options ---
 option(BUILD_TESTS "Build test targets" OFF)
-option(USE_OPENMP "Enable OpenMP support" ON)
 
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" ON)
 option(OR_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
@@ -30,10 +29,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(ortools REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
-
-if(USE_OPENMP)
-    find_package(OpenMP REQUIRED)
-endif()
 
 # --- Target ---
 add_executable(oblivious_routing)
@@ -69,10 +64,6 @@ target_link_libraries(oblivious_routing PRIVATE
         Boost::program_options
         Boost::serialization
 )
-
-if(USE_OPENMP)
-    target_link_libraries(oblivious_routing PRIVATE OpenMP::OpenMP_CXX)
-endif()
 
 
 if(OR_ENABLE_WARNINGS)
@@ -129,7 +120,6 @@ if(OR_ENABLE_LTO)
 endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "OpenMP: ${USE_OPENMP}")
 message(STATUS "Warnings: ${OR_ENABLE_WARNINGS} (Werror=${OR_WARNINGS_AS_ERRORS})")
 message(STATUS "Sanitizers: ASAN=${OR_ENABLE_ASAN} UBSAN=${OR_ENABLE_UBSAN} TSAN=${OR_ENABLE_TSAN}")
 message(STATUS "LTO: ${OR_ENABLE_LTO}")

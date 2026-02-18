@@ -11,7 +11,9 @@
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "20",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "USE_OPENMP": "ON",
+        "Boost_DIR": "/usr/local/lib/cmake/Boost-1.88.0",
+        "CMAKE_PREFIX_PATH": "${env:HOME}/local/ortools",
+        "USE_OPENMP": "OFF",
         "OR_ENABLE_WARNINGS": "ON",
         "OR_WARNINGS_AS_ERRORS": "OFF",
         "OR_ENABLE_ASAN": "OFF",
