@@ -139,9 +139,6 @@ void LPSolver::CreateConstraints(const IGraph &graph) {
         }
     }
 
-    // ensure f_ij(e) is a routing
-
-    // TODO: merge the function calls for incoming and outgoing edges together
     // \forall i , j!=i: \sum_{e \in OUT(i)} f_ij(e) - \sum_{e \in IN(i)} f_ij(e) = 1
     for(int i = 0; i<graph.getNumNodes(); i++) {
         for(int j  = 0; j<graph.getNumNodes(); j++) {
@@ -214,8 +211,6 @@ void LPSolver::CreateConstraints(const IGraph &graph) {
                         } else {
                             std::cerr << "Warning: Variable for arc " << id << " and demand (" << i << ", " << j << ") not found.\n";
                         }
-
-                        //std::cout << "  -1 * f_" << id << "_(" << i << "," << j << ")\n";
                     }
                 }
             }

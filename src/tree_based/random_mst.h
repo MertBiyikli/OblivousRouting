@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_RANDOM_MST_H
 
 #include "tree_oracle.h"
+#include "mst.h"
 
 class TreeMST : public TreeOracle {
 public:

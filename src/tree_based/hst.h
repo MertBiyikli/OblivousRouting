@@ -27,4 +27,12 @@ public:
     std::vector<int> centers;
     std::vector<int> owner;
 };
+
+static bool same_members(const std::vector<int>& a, const std::vector<int>& b) {
+    if (a.size() != b.size()) return false;
+    std::vector<int> aa = a, bb = b;
+    std::sort(aa.begin(), aa.end());
+    std::sort(bb.begin(), bb.end());
+    return aa == bb;
+}
 #endif //OBLIVIOUSROUTING_HST_H

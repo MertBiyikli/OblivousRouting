@@ -25,10 +25,9 @@ struct AMGSolveParams {
     bool verbose = false;
 };
 
-
-
 class AMGSolver : public LaplacianSolver {
 
+    // we keep the components of the AMG solver as wrapper types to allow runtime configuration of coarsening and relaxation methods
     using Backend = amgcl::backend::builtin<double>;
 
     typedef amgcl::make_solver<
@@ -41,13 +40,12 @@ class AMGSolver : public LaplacianSolver {
     > AMG;
 
 
-    std::unique_ptr<AMG> hierarchy;   // BUILT ONCE
+    std::unique_ptr<AMG> hierarchy;
     bool use_dirichlet = true;
     int dirichlet_root = 0;
     std::vector<double> m_values_dirichlet;
 
 public:
-
 
     std::vector<double> solve(const std::vector<double> &b, double eps = EPS) override;
     Eigen::VectorXd solve(const Eigen::VectorXd &b, double eps = EPS) override;
@@ -55,9 +53,6 @@ public:
     void updateSolver() override;
     void buildLaplacian() override;
 
-    void setSolverParams(const boost::property_tree::ptree& new_params) {
-        params = new_params;
-    }
 };
 
 #endif //OBLIVIOUSROUTING_AMGSOLVER_H

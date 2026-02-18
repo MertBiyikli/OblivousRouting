@@ -9,13 +9,17 @@
 
 #include "hst.h"
 #include "../datastructures/IGraph.h"
+#include "utils/ultrametric_tree.h"
+#include "utils/quotient_graph.h"
+#include "mst.h"
 #include <vector>
-
-#include "random_mst/mst.h"
 
 class TreeOracle {
 public:
-    explicit TreeOracle(IGraph& graph) : graph(graph) {}
+    explicit TreeOracle(IGraph& graph) : graph(graph) {
+        n=graph.getNumNodes();
+        diameter=graph.GetDiameter();
+    }
     virtual ~TreeOracle() = default;
     IGraph& graph;
     int n;
@@ -76,7 +80,7 @@ public:
                 // compute the partition on the original graph and build the tree level
                 computeLevelPartition(graph, L, perm, Delta);
             }
-            current_level = buildTreeLevel(prev_nodes, L, Delta);
+            current_level = buildTreeLevel(prev_nodes, L);
 
 
             for (auto& node : current_level) {
@@ -209,8 +213,7 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
 
     std::vector<std::shared_ptr<HSTNode>> buildTreeLevel(
         std::vector<std::shared_ptr<HSTNode>>& prev_nodes,
-        const HSTLevel& L,
-        const double Delta) {
+        const HSTLevel& L) {
 
         // Build tree level based on the partition L
         std::vector<std::shared_ptr<HSTNode>> parents(L.centers.size());
@@ -221,6 +224,7 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
             parents[c]->center = center;
             parents[c]->parent.reset();
             parents[c]->children.clear();
+
         }
 
         // Attach lower-level nodes to parents according to the partition

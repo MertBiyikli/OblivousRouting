@@ -3,7 +3,7 @@
 #include "src/electrical/electrical_flow_optimized.h"
 #include "src/datastructures/GraphCSR.h"
 #include "src/parse_parameter.h"
-#include "src/expanders/xcut_expander_hierarchy.h"
+//#include "src/expanders/xcut_expander_hierarchy.h"
 #include "src/tree_based/tree_mwu.h"
 
 
@@ -34,10 +34,10 @@ int main(int argc, char **argv) {
         std::cerr << "Input graph is not connected!\n";
         // return -1;
     }
-    //G.print();
+/*
+    ExpanderRouting expander_routing(G);
+    expander_routing.init(G);*/
 
-    //ExpanderRouting expander_routing;
-    // expander_routing.init(G);
 
     // Run the AMG parameterized experiment
 
@@ -78,15 +78,7 @@ int main(int argc, char **argv) {
 
         // --- optional: demand model evaluation ---
         auto result = HandleDemandModel(argc, argv, cfg, G, scheme);
-        if (result.first > 0.0 && result.second > 0.0) {
-            std::cout << "Ratio off the optimal offline solution "
-                      << (argv[3] ? argv[3] : "<empty>")
-                      << " model demand: "
-                      << ( result.second  / result.first ) * 100.0 << "% "
-                      << " ("
-                      << result.first << " / " << result.second
-                      << ")\n";
-        }
+        printStatsForDemandModel(argv, result);
     }
     return 0;
 }

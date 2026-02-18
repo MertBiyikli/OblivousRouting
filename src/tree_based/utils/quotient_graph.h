@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_QUOTIENT_GRAPH_H
 #define OBLIVIOUSROUTING_QUOTIENT_GRAPH_H
 
-#include "../../../datastructures/GraphADJ.h"
+#include "../../datastructures/IGraph.h"
 #include "ultrametric_tree.h"
 #include <vector>
 

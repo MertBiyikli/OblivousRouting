@@ -23,6 +23,27 @@ void AMGSolver::buildLaplacian() {
         L[{v,u}] -= w;
     }
 
+    // Ensure every row has an explicit diagonal entry (needed for isolated vertices)
+    for (int i = 0; i < n; ++i) {
+        // If the diagonal is missing, this creates it with value 0.0.
+        // (operator[] default-constructs to 0 and then we add 0)
+        L[{i,i}] += 0.0;
+    }
+
+    const double eps_diag = 1e-12;
+    for (int i = 0; i < n; ++i) {
+        std::unordered_map<std::pair<int, int>, double, PairHash>::iterator it = L.find({i, i});
+        if (it == L.end()) {
+            L[{i,i}] = eps_diag;
+        } else if (it->second == 0.0) {
+            // Only bump true isolates (degree 0 => diagonal 0)
+            it->second = eps_diag;
+        }
+    }
+
+
+
+
     // Count non-zeros per row
     m_row_ptr.assign(n + 1, 0);
     for (auto &entry : L) {

@@ -4,10 +4,11 @@
 
 #include "electrical_flow_par_batches.h"
 #include <omp.h>
-#include "../utils/my_math.h"
+#include "../../utils/my_math.h"
 #include <random>
+#include <thread>
 
-void ElectricalFlowParallelBatches::init(bool debug, const std::string& solver_name)
+void ElectricalFlowParallelBatches::init(bool debug)
 {
 
     n = graph.getNumNodes();
@@ -42,7 +43,7 @@ void ElectricalFlowParallelBatches::init(bool debug, const std::string& solver_n
     amg_pool.reserve(p_threads);
 
     for (int t = 0; t < p_threads; ++t) {
-        auto s = SolverFactory::create(solver_name);
+        auto s = std::make_unique<AMGSolver>();
         s->init(graph, edge_weights, n, edges, debug);
         amg_pool.emplace_back(std::move(s));
     }

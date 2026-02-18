@@ -63,39 +63,19 @@ set(SRC_FILES
         experiments/performance/demands/UniformModel.cpp
         experiments/performance/demands/UniformModel.h
 
-        src/tree_based/ckr/efficient_oracle_ckr.h
-        src/tree_based/ckr/efficient_oracle_ckr.cpp
 
-        src/tree_based/frt/efficient_frt.h
-        src/tree_based/frt/efficient_frt.cpp
-
-        src/tree_based/raecke_transform.h
-        src/tree_based/raecke_transform.cpp
-
-        src/tree_based/ckr/ckr_partition.cpp
-        src/tree_based/ckr/ckr_partition.h
-
-        src/tree_based/ckr/ckr_tree_decomposer.cpp
-        src/tree_based/ckr/ckr_tree_decomposer.h
-
-        src/tree_based/ckr/utils/ultrametric_tree.h
-        src/tree_based/ckr/utils/ultrametric_tree.cpp
+        src/tree_based/utils/ultrametric_tree.h
+        src/tree_based/utils/ultrametric_tree.cpp
 
         src/electrical/electrical_flow_optimized.cpp
         src/electrical/electrical_flow_optimized.h
 
-        src/electrical/electrical_flow_par_batches.cpp
-        src/electrical/electrical_flow_par_batches.h
+        src/electrical/parallel/electrical_flow_par_batches.cpp
+        src/electrical/parallel/electrical_flow_par_batches.h
 
         src/electrical/laplacian_solvers/AMGSolver.cpp
         src/electrical/laplacian_solvers/AMGSolver.h
-        src/electrical/laplacian_solvers/AMGSolverParallel.cpp
-        src/electrical/laplacian_solvers/AMGSolverParallel.h
         src/electrical/laplacian_solvers/LaplacianSolver.h
-        src/electrical/laplacian_solvers/LaplacianSolverFactory.h
-
-        #src/expanders/xcut_expander_hierarchy.cpp
-        #src/expanders/xcut_expander_hierarchy.h
 
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
@@ -106,6 +86,7 @@ set(SRC_FILES
         src/tree_based/tree_oracle.h
         src/tree_based/tree_transform.h
         src/tree_based/random_mst.h
+        src/tree_based/mst.h
 )
 
 
@@ -124,8 +105,6 @@ get_target_property(ORT_INC ortools::ortools INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(oblivious_routing SYSTEM BEFORE PRIVATE ${ORT_INC})
 
 target_include_directories(oblivious_routing PRIVATE ${CMAKE_SOURCE_DIR}/extern/amgcl)
-# add_subdirectory(extern/xcut)
-# target_link_libraries(oblivious_routing PRIVATE xcut_lib)  # or whatever the target is called
 
 
 # Link OR-Tools first

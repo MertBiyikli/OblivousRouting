@@ -16,13 +16,11 @@
 #define INVALID_EDGE_ID -1
 
 
-
-
 class IGraph {
 public:
-    int n = 0, m = 0; // Number of nodes and edges
+    int n = 0, m = 0;
     bool is_processed = false;
-    std::vector<int> vertices; // List of vertices
+    std::vector<int> vertices;
 
     IGraph() = default;
 

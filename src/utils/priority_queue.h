@@ -10,11 +10,12 @@
 #include <cstdint>
 #include <functional>
 #include <vector>
+
+
 /*
  This implementation is copied from the Paper:  "Practical Expander Decomposition" from Gottesbüren
  from the Repository: https://github.com/larsgottesbueren/practical-expander-decomposition/blob/main/lib/datastructures/priority_queue.hpp
  */
-
 using PosT = uint32_t;
 static constexpr PosT invalid_position = std::numeric_limits<PosT>::max();
 

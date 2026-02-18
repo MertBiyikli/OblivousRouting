@@ -9,7 +9,7 @@
     Main algorithm implementation
  */
 
-void ElectricalFlowOptimized::init( bool debug, const std::string& solver_name, boost::property_tree::ptree _params)
+void ElectricalFlowOptimized::init( bool debug,  boost::property_tree::ptree _params)
 {
 
     n = graph.getNumNodes();
@@ -35,7 +35,12 @@ void ElectricalFlowOptimized::init( bool debug, const std::string& solver_name, 
     buildIncidence();
 
     // init AMG
-    amg = SolverFactory::create(solver_name);
+    amg = std::make_unique<AMGSolver>();
+    if (amg == nullptr) {
+        std::cerr << "Failed to create AMG solver instance.\n";
+        return;
+    }
+
     if (_params.empty()) {
         // set default parameters if not provided
         boost::property_tree::ptree config;
@@ -62,7 +67,7 @@ void ElectricalFlowOptimized::init( bool debug, const std::string& solver_name, 
 }
 
 void ElectricalFlowOptimized::initEdgeDistances() {
-    extract_edge_list();
+    extractEdges();
 
     // note that the edges are stored undirected
     // --- Per-edge init ---
@@ -82,7 +87,7 @@ void ElectricalFlowOptimized::initEdgeDistances() {
 }
 
 
-void ElectricalFlowOptimized::extract_edge_list() {
+void ElectricalFlowOptimized::extractEdges() {
 
     // adjancency list version
 

@@ -5,7 +5,6 @@
 #ifndef OBLIVIOUSROUTING_TREE_TRANSFORM_H
 #define OBLIVIOUSROUTING_TREE_TRANSFORM_H
 
-#include "raecke_oracle_iteration.h"
 #include "hst.h"
 #include <set>
 
@@ -43,24 +42,7 @@ public:
     }
 
     void transform() {
-        for (auto& iteration : iterations) {/*
-            // print tree
-            const auto& tree = iteration.getTree();
-            std::queue<std::shared_ptr<HSTNode>> q;
-            q.push(tree);
-            std::cout << "Tree structure (center : members):\n";
-            while (!q.empty()) {
-                const auto& current = q.front();
-                q.pop();
-                std::cout << current->center << " : ";
-                for (int v : current->getMembers()) {
-                    std::cout << v << " ";
-                }
-                std::cout << "\n";
-                for (const auto& child : current->getChildren()) {
-                    q.push(child);
-                }
-            }*/
+        for (auto& iteration : iterations) {
             distributeDemands(iteration);
         }
     }

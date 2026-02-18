@@ -12,36 +12,12 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
-#include "../../datastructures/GraphADJ.h"
-#include "../../datastructures/GraphCSR.h"
-#include "../raecke_tree.h"
-#include "../hst.h"
+#include "../datastructures/GraphADJ.h"
+#include "../datastructures/GraphCSR.h"
+#include "hst.h"
 
 
-class MSTTreeNode : public ITreeNode {
-public:
-    int id = -1;
-    std::weak_ptr<MSTTreeNode> parent;
-    std::vector<std::shared_ptr<MSTTreeNode>> children;
-    std::vector<int> members; // original graph nodes
-    virtual std::shared_ptr<ITreeNode> getParent() const override {
-        return parent.lock();
-    }
-    std::vector<std::shared_ptr<ITreeNode>> getChildren() override {
-        std::vector<std::shared_ptr<ITreeNode>> child_ptrs;
-        for (std::shared_ptr<MSTTreeNode>& child : children) {
-            child_ptrs.push_back(child);
-        }
-        return child_ptrs;
-    }
-    const std::vector<int>& getMembers() const override {
-        return members;
-    }
 
-};
-
-
-class GraphCSR;
 /* Union find data structure to be used in the Kruskal's algorithm */
 // ---------- DSU ----------
 struct DSU {

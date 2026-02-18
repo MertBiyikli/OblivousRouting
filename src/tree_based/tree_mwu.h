@@ -7,8 +7,6 @@
 
 #include "../solver/solver.h"
 #include "../solver/mwu_framework.h"
-#include "raecke_oracle_iteration.h"
-#include "raecke_transform.h"
 #include "hst.h"
 #include "tree_oracle.h"
 #include "tree_transform.h"
@@ -55,7 +53,9 @@ public:
     void run() {
         lambda_sum = 0.0;
         while (lambda_sum < 1.0) {
+            auto t0 = timeNow();
             lambda_sum += treeOracle();
+            this->oracle_running_times.push_back(duration(timeNow()-t0));
             iteration_count++;
         }
     }

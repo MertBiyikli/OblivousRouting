@@ -93,7 +93,7 @@ public:
                     std::make_unique<ElectricalFlowOptimized>(g, 0);
 
                 // your init signature: init(bool, string, ptree)
-                solver->init(false, "amg_cg", solver_params);
+                solver->init(false, solver_params);
                 init_ms = msSince(t);
 
                 t = std::chrono::steady_clock::now();

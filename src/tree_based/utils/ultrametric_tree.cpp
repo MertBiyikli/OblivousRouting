@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <unordered_map>
-#include "../../random_mst/mst.h"
+#include "../mst.h"
 
 using namespace MendelScaling;
 

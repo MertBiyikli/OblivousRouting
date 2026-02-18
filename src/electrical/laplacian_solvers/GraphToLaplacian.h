@@ -6,6 +6,8 @@
 #define OBLIVIOUSROUTING_GRAPHTOLAPLACIAN_H
 #include <vector>
 #include "../../datastructures/IGraph.h"
+
+
 /*
  * Struct for efficiently bookkeeping the matrix entries synched with the graph edges
  */
@@ -39,13 +41,13 @@ struct GraphToLaplacian {
     }
 
     double getEdgeWeight(int e) const {
-        if (e < 0 || e >= weights.size()) {
-            throw std::out_of_range("Edge index out of range in getEdgeWeight");
-        }
+        assert(e >= 0 && e < weights.size());
         return weights[e];
     }
 
     double getEdgeWeight(int u, int v) const {
+        assert(u >= 0 && u < head.size() - 1);
+        assert(v >= 0 && v < head.size() - 1);
         for (int idx = head[u]; idx < head[u + 1]; ++idx) {
             if (to[idx] == v) {
                 return weights[idx];
@@ -55,13 +57,13 @@ struct GraphToLaplacian {
     }
 
     void setEdgeWeight(int e, double w) {
-        if (e < 0 || e >= weights.size()) {
-            throw std::out_of_range("Edge index out of range in setEdgeWeight");
-        }
+        assert(e >= 0 && e < weights.size());
         weights[e] = w;
     }
 
     void setEdgeWeight(int u, int v, double w) {
+        assert(u >= 0 && u < head.size() - 1);
+        assert(v >= 0 && v < head.size() - 1);
         for (int idx = head[u]; idx < head[u + 1]; ++idx) {
             if (to[idx] == v) {
                 weights[idx] = w;
@@ -72,6 +74,8 @@ struct GraphToLaplacian {
     }
 
     void setLaplacianIndex(int u, int v, int idx) {
+        assert(u >= 0 && u < head.size() - 1);
+        assert(v >= 0 && v < head.size() - 1);
         if (u == v) {
             laplacian_indices_for_diagonal_elements[u] = idx;
             return;
@@ -86,6 +90,8 @@ struct GraphToLaplacian {
     }
 
     int getLaplacianIndex(int u, int v) const {
+        assert(u >= 0 && u < head.size() - 1);
+        assert(v >= 0 && v < head.size() - 1);
         if (u == v) {
             return laplacian_indices_for_diagonal_elements[u];
         }
