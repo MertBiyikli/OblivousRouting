@@ -17,7 +17,6 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -60,11 +59,8 @@ public:
     }
 
 
-    void init(IGraph& g, std::vector<double>& _adj_edge_weights,
-        int n,
-        std::vector<std::pair<int, int>>& edges,
-        bool debug = false) {
-
+    void init(IGraph& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug = false) {
+        assert(g.getNumEdges()/2 == static_cast<int>(_adj_edge_weights.size()));
         this->debug = debug;
         this->n = n;
         m_row_ptr.clear();

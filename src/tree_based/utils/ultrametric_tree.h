@@ -37,7 +37,7 @@ namespace MendelScaling {
 
         void preprocessLifting();
 
-        // Return the *highest* ancestor of leaf v whose Γ <= threshold.
+        // Return the highest ancestor of leaf v whose Γ <= threshold.
         // If leaf’s Γ(leaf)=0 is already > threshold (never happens), it returns the leaf itself.
         int sigmaDelta(int v_leaf, double Delta) const;
     };

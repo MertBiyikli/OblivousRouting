@@ -7,8 +7,6 @@
 #include <string>
 #include <optional>
 #include <algorithm>
-#include "datastructures/GraphADJ.h"
-#include "datastructures/GraphCSR.h"
 #include "../experiments/performance/demands/DemandModel.h"
 #include "../experiments/performance/demands/BimodalModel.h"
 #include "../experiments/performance/demands/GaussianModel.h"
@@ -225,7 +223,7 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
 inline std::pair<double, double> HandleDemandModel(int argc,
                               char** argv,
                               const std::optional<Config>& cfg,
-                              GraphCSR& _g,
+                              IGraph& _g,
                               const std::unique_ptr<RoutingScheme>& routing_scheme)
 {
     if (argc < 4 || !cfg) { return {}; }

@@ -18,7 +18,7 @@ option(OR_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 
 option(OR_ENABLE_LTO "Enable Link Time Optimization" OFF)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -35,7 +35,6 @@ add_executable(oblivious_routing)
 target_sources(oblivious_routing PRIVATE
         main.cpp
         src/utils/my_math.cpp
-        src/datastructures/GraphADJ.cpp
         src/datastructures/GraphCSR.cpp
         experiments/performance/demands/GravityModel.cpp
         experiments/performance/demands/BimodalModel.cpp

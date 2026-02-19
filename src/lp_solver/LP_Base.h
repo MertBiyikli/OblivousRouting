@@ -19,8 +19,6 @@ using namespace operations_research;
 
 class LP : public AllPairObliviousSolverBase {
 public:
-
-
     bool debug = false;
     int n, m;
     std::unique_ptr<MPSolver> solver;

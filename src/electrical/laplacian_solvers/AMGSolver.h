@@ -19,11 +19,6 @@
 #include "amgcl/solver/runtime.hpp"
 #include <amgcl/make_solver.hpp>
 
-struct AMGSolveParams {
-    double tol = 1e-8;
-    int max_iter = 1000;
-    bool verbose = false;
-};
 
 class AMGSolver : public LaplacianSolver {
 

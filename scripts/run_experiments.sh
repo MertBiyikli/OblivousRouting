@@ -11,7 +11,7 @@ IMAGE="${IMAGE:-oblivious-routing:latest}"
 
 SOLVERS=""
 DATASET=""
-DEMAND="gravity"         # legacy single-demand flag
+DEMAND=""         # legacy single-demand flag
 DEMANDS=""               # NEW: comma list, e.g. "gravity,gaussian"
 
 # NEW: canonical “all” sets (edit these to match your project)

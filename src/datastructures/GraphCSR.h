@@ -26,7 +26,6 @@
 class GraphCSR : public IGraph {
 public:
 
-    // std::vector<std::pair<int, int>> edges;
     std::vector<int> to;         // size m, neighbor v for each edge
     std::vector<int> from;       // size m, source u (optional)
     std::vector<int> head;

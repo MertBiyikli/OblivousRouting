@@ -12,7 +12,6 @@
 #include <queue>
 #include <unordered_map>
 #include <limits>
-#include "../datastructures/GraphADJ.h"
 #include "../datastructures/GraphCSR.h"
 #include "hst.h"
 

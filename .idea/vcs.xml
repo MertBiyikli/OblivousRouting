@@ -14,17 +14,11 @@
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/re2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/scip-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/zlib-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-release_parallel/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl/pyamgcl/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/googletest" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/extern/xcut" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/extern/xcut/build/_deps/catch-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/extern/xcut/build/_deps/spdlog-src" vcs="Git" />
   </component>
 </project>

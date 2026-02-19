@@ -1,7 +1,6 @@
 #include <iostream>
 #include "src/datastructures/IGraph.h"
 #include "src/datastructures/GraphCSR.h"
-#include "src/datastructures/GraphADJ.h"
 #include "src/parse_parameter.h"
 
 
@@ -11,21 +10,15 @@ int main(int argc, char **argv) {
     auto cfg = parse_parameter(argc, argv, &err);
     if (!cfg) { std::cerr << err; return -1; }
 
-#ifdef _OPENMP
-    std::cout << "Number of threads active: " << omp_get_max_threads() << "\n";
-#endif
 
     GraphCSR G;
     readLGFFile(G, cfg->filename,  true);
     G.finalize();
-    std::cout << "Graph loaded: " << G.getNumNodes() << " nodes, "
-              << G.getNumEdges() << " edges.\n";
+    std::cout << "Graph loaded: " << G.getNumNodes() << " nodes, " << G.getNumEdges() << " edges.\n";
 
     if ( !G.isConnected()) {
         std::cerr << "Input graph is not connected!\n";
-        // return -1;
     }
-
 
     for (SolverType type : cfg->solvers) {
         std::cout << "\n=== Running solver: " << ::solverNames[static_cast<int>(type)] << " ===\n";

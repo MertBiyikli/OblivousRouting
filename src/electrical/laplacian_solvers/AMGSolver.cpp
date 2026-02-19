@@ -179,7 +179,6 @@ void AMGSolver::updateSolver() {
     } else {
         hierarchy->precond().rebuild(std::tie(n, m_row_ptr, m_col_ind, m_values));
     }
-
 }
 
 

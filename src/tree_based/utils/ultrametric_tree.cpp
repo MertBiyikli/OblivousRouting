@@ -1,12 +1,7 @@
-//
-// Created by Mert Biyikli on 18.11.25.
-//
 #include "ultrametric_tree.h"
 #include <queue>
 #include <algorithm>
 #include <numeric>
-#include <unordered_map>
-#include "../mst.h"
 
 using namespace MendelScaling;
 
