@@ -11,12 +11,14 @@ IMAGE="${IMAGE:-oblivious-routing:latest}"
 
 SOLVERS=""
 DATASET=""
-DEMAND=""         # legacy single-demand flag
-DEMANDS=""               # NEW: comma list, e.g. "gravity,gaussian"
 
-# NEW: canonical “all” sets (edit these to match your project)
-ALL_SOLVERS="${ALL_SOLVERS:-electrical,ckr,frt,random_mst,cohen}"   # <-- adapt
-ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"        # <-- adapt
+DEMAND="none"          # legacy single-demand flag (label + default)
+DEMANDS=""             # NEW: comma list, e.g. "gravity,gaussian"
+DEMAND_PROVIDED=0      # tracks whether user explicitly passed demand flags
+
+# Canonical “all” sets (edit to match your project)
+ALL_SOLVERS="${ALL_SOLVERS:-electrical,ckr,frt,random_mst,cohen}"
+ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
 
@@ -39,10 +41,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --demand)     # legacy: single demand
       DEMAND="${2-}"
+      DEMAND_PROVIDED=1
       shift 2
       ;;
     --demands)    # NEW: multiple demands
       DEMANDS="${2-}"
+      DEMAND_PROVIDED=1
       shift 2
       ;;
     --out)
@@ -52,8 +56,13 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       echo "Usage:"
       echo "  $0 --all --dataset <dir-or-file> [--out results.csv]"
-      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> [--demand gravity] [--out results.csv]"
+      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> [--out results.csv]"
+      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> --demand gravity [--out results.csv]"
       echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian,uniform\""
+      echo ""
+      echo "Note:"
+      echo "  If --demand/--demands is omitted, NO demand argument is passed to the solver (C++ gets 2 args)."
+      echo "  CSV/logs will still show demand=none."
       exit 0
       ;;
     *)
@@ -74,9 +83,10 @@ fi
 if [[ "$RUN_ALL" -eq 1 ]]; then
   SOLVERS="$ALL_SOLVERS"
   DEMANDS="$ALL_DEMANDS"
+  DEMAND_PROVIDED=1
 fi
 
-# If user did not pass --demands, fall back to --demand
+# If user did not pass --demands, fall back to --demand (only matters if DEMAND_PROVIDED=1)
 if [[ -z "${DEMANDS:-}" ]]; then
   DEMANDS="$DEMAND"
 fi
@@ -110,7 +120,6 @@ mkdir -p "$OUT_DIR"
 
 CSV="$OUT_CSV"
 
-# NEW: add demand column
 if [[ ! -f "$CSV" ]]; then
   echo "dataset,graph,solver,demand,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value,status" > "$CSV"
 fi
@@ -144,8 +153,13 @@ fi
 SOLVERS_CSV="$(echo "$SOLVERS" | tr -d '[:space:]')"
 IFS=',' read -ra SOLVER_ARR <<< "$SOLVERS_CSV"
 
-DEMANDS_CSV="$(echo "$DEMANDS" | tr -d '[:space:]')"
-IFS=',' read -ra DEMAND_ARR <<< "$DEMANDS_CSV"
+# If user did NOT provide demand flags, run exactly once and label as "none"
+if [[ "$DEMAND_PROVIDED" -eq 0 ]]; then
+  DEMAND_ARR=("none")
+else
+  DEMANDS_CSV="$(echo "${DEMANDS:-}" | tr -d '[:space:]')"
+  IFS=',' read -ra DEMAND_ARR <<< "$DEMANDS_CSV"
+fi
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 
@@ -182,13 +196,21 @@ for g in "${GRAPHS[@]}"; do
 
       echo "[RUN] $rel_path | solver=$solver | demand=$demand | timeout=$TIMEOUT"
 
+      # Build argv for the container entrypoint:
+      # - If demand was NOT provided, pass only: <solver> <graph>
+      # - If demand WAS provided, pass: <solver> <graph> <demand>
+      cmd=( "$solver" "graphs/$rel_path" )
+      if [[ "$DEMAND_PROVIDED" -eq 1 ]]; then
+        cmd+=( "$demand" )
+      fi
+
       status="OK"
       if "$TIMEOUT_BIN" --signal=SIGTERM --kill-after=30s "$TIMEOUT" \
         docker run --rm --runtime=runc \
           -e OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
           -v "$DATASET_ROOT":/app/graphs \
           "$IMAGE" \
-          "$solver" "graphs/$rel_path" "$demand" \
+          "${cmd[@]}" \
         > "$log" 2>&1
       then
         status="OK"
