@@ -9,14 +9,15 @@
 #include "../solver/solver.h"
 #include "../solver/mwu_framework.h"
 #include "laplacian_solvers/AMGSolver.h"
-#include <Eigen/Sparse>
-
 #include "../datastructures/IGraph.h"
+#include <Eigen/Sparse>
 
 
 /*
-* This is the implementation of the algorithm from " Electrical Flows for Polylogarithmic Competitive Oblivious Routing" by Goranci et al.
- */
+* This is the implementation of the electrical flow based oblivious routing algorithm.
+* The idea is to repeatedly invoke an electrical flow computation (Laplacian solve) to get a flow,
+* and then update the edge resistances based on the load on the edges. The process is repeated until convergence.
+*/
 class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     // AMG solver instance
@@ -36,17 +37,18 @@ public:
     }
 
     virtual void run(LinearRoutingTable &table);
-    void addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table);
     virtual void scaleFlowDown(LinearRoutingTable &table);
     virtual void getApproxLoad(std::vector<double>& load);
     virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
+    virtual void updateEdgeDistances(const std::vector<double>& load);
 
 
     int n, m;
-    double K = 1.0; // this is used as an approximation errror for the Laplacian Solver( see. Paper for details)
 
     double epsilon = 0.5; // sketching parameter
     double epsilon_L = EPS; // Laplacian solving error
+    bool K_initialized = false;
+    double K = 1.0; // this is used as an approximation error for the Laplacian Solver( see. Paper for details)
 
     double roh = 0.0;
     double alpha_local = 0.0;
@@ -64,23 +66,17 @@ public:
     std::vector<double> edge_probabilities;       // p_e
     std::vector<double> edge_diffs;
 
-
-
-
     // Preallocate as class members to avoid reallocs
-    Eigen::SparseMatrix<double> B; // incidence matrix
     Eigen::SparseMatrix<double> X;          // n × ℓ precomputed RHS
-
     Eigen::MatrixXd SketchMatrix, SketchMatrix_t; // sketch matrix transposed
+
 
     // Helpers
     void extractEdges();
     void initEdgeDistances();
-    void buildIncidence();
-    virtual void updateEdgeDistances(const std::vector<double>& load);
-    virtual Eigen::MatrixXd getSketchMatrix(int m, int n, double epsilon = 0.5);
-
-
+    Eigen::SparseMatrix<double> buildIncidence();
+    Eigen::MatrixXd getSketchMatrix(int m, int n, double epsilon = 0.5);
+    void addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table);
 };
 
 #endif //OBLIVIOUSROUTING_ELECTRICAL_FLOW_OPTIMIZED_H

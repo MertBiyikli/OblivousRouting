@@ -32,7 +32,6 @@ void ParallelElectricalMWU::init(bool debug, boost::property_tree::ptree _params
 
 
     initEdgeDistances();
-    buildIncidence();
 
     if (_params.empty()) {
         // set default parameters if not provided
@@ -66,9 +65,8 @@ void ParallelElectricalMWU::init(bool debug, boost::property_tree::ptree _params
     for (int e = 0; e < m; ++e)
         UCt.row(e) *= edge_capacities[e];
 
-    auto X_dense = (B.transpose() * UCt); // n × ℓ
-    X = X_dense.sparseView();
-
+    auto B = buildIncidence();
+    X = (B.transpose() * UCt).sparseView(); // n × ℓ
 }
 
 void ParallelElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {

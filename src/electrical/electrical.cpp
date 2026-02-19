@@ -1,13 +1,7 @@
-//
-// Created by Mert Biyikli on 30.09.25.
-//
-
 #include "electrical.h"
 #include "../utils/my_math.h"
 #include <random>
-/*
-    Main algorithm implementation
- */
+
 
 void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
@@ -19,13 +13,12 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
     alpha_local = std::log2(n)*std::log2(n); // Initialize alpha_local based on the number of nodes
     this->cap_X = m;
-    this->iteration_count = 8.0*roh*std::log(m)/alpha_local;
+    this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
     this->inv_m = 1.0 / static_cast<double>(m);
     this->x_fixed = 0;
 
 
     initEdgeDistances();
-    buildIncidence();
 
     // init AMG
     amg = std::make_unique<AMGSolver>();
@@ -40,6 +33,7 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
         boost::property_tree::read_json("../../configs/amg_configs.json", config);
         _params = config;
     }
+
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
     amg->setSolverParams(_params);
     amg->init(graph, edge_weights, n, edges, debug);
@@ -53,95 +47,17 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     for (int e = 0; e < m; ++e)
         UCt.row(e) *= edge_capacities[e];
 
-    auto X_dense = (B.transpose() * UCt); // n × ℓ
-    X = X_dense.sparseView();
-
-}
-
-void ElectricalMWU::initEdgeDistances() {
-    extractEdges();
-
-    // note that the edges are stored undirected
-    // --- Per-edge init ---
-    edge_distances.assign(m, 1.0);
-    edge_capacities.resize(m);
-    edge_probabilities.resize(m);
-    edge_weights.resize(m);
-
-    for (int e = 0; e < m; ++e) {
-        double cap = graph.getEdgeCapacity(e);      // undirected capacity accessor
-        edge_capacities[e]  = cap;
-        edge_probabilities[e] = edge_distances[e] / cap_X;
-        edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);
-    }
-
-
+    auto B = buildIncidence();
+    X = (B.transpose() * UCt).sparseView(); // n × ℓ
 }
 
 
-void ElectricalMWU::extractEdges() {
-    // in edges we only store the undirected edges
-    edges.reserve(m);
-    for (int e = 0; e < graph.getNumEdges(); e++) {
-        auto [u, v] = graph.edgeEndpoints(e);
-        if (u < v) {
-            edges.emplace_back(u,v);
-        }
-    }
-
-    // sort the edges based on the first node, then second node
-    std::sort(edges.begin(), edges.end(),
-              [](const std::pair<int,int> &a, const std::pair<int,int> &b) {
-                  if (a.first != b.first) return a.first < b.first;
-                  return a.second < b.second;
-              });
-}
-
-
-
-void ElectricalMWU::buildIncidence()
-{
-    if (B.nonZeros() == 0) {
-        B = Eigen::SparseMatrix<double>(m, n);
-        std::vector<Eigen::Triplet<double>> T; T.reserve(2*m);
-        for (int e = 0; e < m; ++e) {
-            auto [u,v] = edges[e]; // u < v
-            T.emplace_back(e, u, -1.0);
-            T.emplace_back(e, v, +1.0);
-        }
-        B.setFromTriplets(T.begin(), T.end());
-    }
-}
-
-
-void ElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {
-    for (int e = 0; e < m; ++e) {
-        if (load[e] <= 0.0 || std::isnan(load[e])) continue;
-        edge_distances[e] *= (1 + (1/(2*roh)) * load[e]);
-        cap_X += edge_distances[e];
-    }
-
-    for (int e = 0; e < m; ++e) {
-        double x = edge_distances[e];
-        if (x <= 0.0 || std::isnan(x)) continue;
-
-        double p = x / cap_X;
-        edge_probabilities[e] = p;
-
-        double cap = edge_capacities[e];
-        double w   = std::pow(cap, 2) / (p + inv_m);
-        edge_weights[e] = w;
-    }
-
-
-    amg->updateAllEdges(edge_weights, edges);
-    amg->updateSolver();
-
-}
-
-
-
-
+/*
+ * The main loop of the MWU algorithm.
+ * For each iteration, we loop over all sources (except the fixed one), build the RHS for the Laplacian system,
+ * solve for potentials, and then add the computed flow to the routing table.
+ * After processing all sources, we compute the approximate load and update edge distances accordingly.
+ */
 void ElectricalMWU::run(LinearRoutingTable &table) {
 
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
@@ -177,8 +93,11 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
 }
 
 
+/*
+ * This function takes the potentials obtained from solving the Laplacian system
+ * and computes the flow on each edge based on the potential difference and edge resistances.
+ */
 void ElectricalMWU::addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table) {
-    // f_e(u) = w_e * (x[u]-x[v])
     auto t0 = timeNow();
     for (int e = 0; e < m; ++e) {
         double fval = edge_weights[e] * (potential[edges[e].first] - potential[edges[e].second]);
@@ -191,24 +110,19 @@ void ElectricalMWU::addFlowToTable(const int& u, Eigen::VectorXd& potential, Lin
             // as the anti-edge in the graph, so we need to get the original edge id and then get the anti-edge if needed
             const int& original_edge_id = graph.getEdgeId(head, tail);
 
-            int e = (fval < 0 ? graph.getAntiEdge(original_edge_id) : original_edge_id);
-            t0 = timeNow();
-            table.addFlow(e, u, std::abs(fval));
-            this->transformation_time += duration(timeNow() - t0);
+            int e_orig = (fval < 0 ? graph.getAntiEdge(original_edge_id) : original_edge_id);
+
+            table.addFlow(e_orig, u, std::abs(fval));
         }
     }
+    this->transformation_time += duration(timeNow() - t0);
 }
 
 
-void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
-    // scale the flow from the adjacency list flow
-    if (iteration_count > 0) {
-        const double inv_iters = 1.0 / static_cast<double>(iteration_count);
-        for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
-            for (double &val : table.src_flows[e]) val *= (inv_iters);
-    }
-}
-
+/*
+ * This function computes the approximate load on each edge based on the current potentials obtained from solving the Laplacian system.
+ * It uses the sketching matrix to project the flow differences into a lower-dimensional space and updates the approximate load estimates accordingly.
+ */
 void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
     const int ell = X.cols();
     Eigen::VectorXd rhs(n), sol(n);
@@ -226,14 +140,18 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
             d[e] = sol[v] - sol[u];             // signed diff consistent with B
             edge_diffs[size_t(e) * ell + i] = std::abs(d[e]); // keep abs for median
         }
+
+        if (!K_initialized) {
+            Eigen::VectorXd y = SketchMatrix * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
+            K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
+        }
     }
 
-    // update the Laplacian error bound K based on the observed max diff in the sketch space
-    if (std::abs(K-1.0) < EPS) {
-            Eigen::VectorXd y =SketchMatrix_t * d;
-            K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
+
+    if (!K_initialized) {
+        K = std::max(K, 1.5 * K_obs); // safety factor, monotone
+        K_initialized = true;
     }
-    K = std::max(K, 1.5 * K_obs); // safety factor, monotone
 
     if (K > 0.0) {
         epsilon_L = epsilon / (8.0 * m * std::pow(n, 4) * K);
@@ -250,11 +168,107 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
 }
 
 
+/*
+ * This function updates the edge distances based on the computed load. It iterates over all edges,
+ * and for those with positive load, it updates the edge distance using the formula: x_e *= (1 + (1/(2*roh)) * load[e]).
+ */
+void ElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {
+    cap_X = 0.0;
+    for (int e = 0; e < m; ++e) {
+        const double le = load[e];
+        if (le > 0.0 && std::isfinite(le)) {
+            edge_distances[e] *= (1.0 + (1.0/(2.0*roh)) * le);
+        }
+        cap_X += edge_distances[e];
+    }
 
+    for (int e = 0; e < m; ++e) {
+        double x = edge_distances[e];
+        if (x <= 0.0 || std::isnan(x)) continue;
+
+        double p = x / cap_X;
+        edge_probabilities[e] = p;
+
+        double cap = edge_capacities[e];
+        double w   = std::pow(cap, 2) / (p + inv_m);
+        edge_weights[e] = w;
+    }
+
+
+    amg->updateAllEdges(edge_weights, edges);
+    amg->updateSolver();
+}
+
+/*
+ * After computing the flows in the main loop, we need to scale them down by the number of iterations to get the average flow.
+ */
+void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
+    // scale the flow from the adjacency list flow
+    if (iteration_count > 0) {
+        const double inv_iters = 1.0 / static_cast<double>(iteration_count);
+        for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
+            for (double &val : table.src_flows[e]) val *= (inv_iters);
+    }
+}
+
+void ElectricalMWU::initEdgeDistances() {
+    extractEdges();
+
+    // note that the edges are stored undirected-
+    edge_distances.assign(m, 1.0);
+    edge_capacities.resize(m);
+    edge_probabilities.resize(m);
+    edge_weights.resize(m);
+
+    for (int e = 0; e < m; ++e) {
+        double cap = graph.getEdgeCapacity(e);      // undirected capacity accessor
+        edge_capacities[e]  = cap;
+        edge_probabilities[e] = edge_distances[e] / cap_X;
+        edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);
+    }
+}
+
+
+void ElectricalMWU::extractEdges() {
+    // in edges we only store the undirected edges
+    edges.reserve(m);
+    for (int e = 0; e < graph.getNumEdges(); e++) {
+        auto [u, v] = graph.edgeEndpoints(e);
+        if (u < v) {
+            edges.emplace_back(u,v);
+        }
+    }
+
+    // sort the edges based on the first node, then second node
+    std::sort(edges.begin(), edges.end(),
+              [](const std::pair<int,int> &a, const std::pair<int,int> &b) {
+                  if (a.first != b.first) return a.first < b.first;
+                  return a.second < b.second;
+              });
+}
+
+Eigen::SparseMatrix<double> ElectricalMWU::buildIncidence()
+{
+    Eigen::SparseMatrix<double> B(m, n);
+    std::vector<Eigen::Triplet<double>> T; T.reserve(2*m);
+    for (int e = 0; e < m; ++e) {
+        auto [u,v] = edges[e]; // u < v
+        T.emplace_back(e, u, -1.0);
+        T.emplace_back(e, v, +1.0);
+    }
+    B.setFromTriplets(T.begin(), T.end());
+    return B;
+}
+
+
+/*
+ * Sketching matrix generation using Cauchy distribution for L1 norm approximation.
+ * The goal is to create a matrix that can be used to project the flow differences into a lower-dimensional space while preserving the L1 norm properties.
+ */
 Eigen::MatrixXd ElectricalMWU::getSketchMatrix(int _m, int _n, double eps) {
     double c = 1.1;
-    double delta = NegativeExponent(_n, 10); // Set delta to a small value or a default value
-    double epsilon = eps; // Set epsilon to the provided value or a default value
+    double delta = NegativeExponent(_n, 10);
+    double epsilon = eps;
 
     int l = (c/(epsilon*epsilon) * std::log(1.0/delta) );
 
@@ -266,9 +280,9 @@ Eigen::MatrixXd ElectricalMWU::getSketchMatrix(int _m, int _n, double eps) {
     double val = 0;
     for (int i = 0; i < l; ++i) {
         for (int j = 0; j < _m; ++j) {
+            val = dist(gen);
             C.coeffRef(i, j) = val;
         }
     }
-
     return C;
 }

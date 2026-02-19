@@ -5,7 +5,7 @@
 
 /*
 * This is parallel version of the electrical MWU algorithm.
-* The parallelism is realized by partitioning the nodes into subsets of ndodes and solving the electrical flow problems for each subset in parallel using a pool of AMG solvers.
+* The parallelism is realized by partitioning the nodes into subsets of nodes and solving the electrical flow problems for each subset in parallel using a pool of AMG solvers.
 */
 
 class ParallelElectricalMWU : public ElectricalMWU {
@@ -18,7 +18,6 @@ public:
     void run(LinearRoutingTable &table) override;
     void updateEdgeDistances(const std::vector<double> &load) override;
     void getApproxLoad(std::vector<double>& load) override;
-
     void init( bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree()) override;
 
 
