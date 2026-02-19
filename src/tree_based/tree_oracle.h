@@ -27,7 +27,7 @@ public:
     std::vector<double> scales; // the scales at which to compute the partitions
     std::vector<int> perm;
 
-    bool applyMendelScaling = false; // whether to apply Mendel scaling to the distances before computing the tree
+    bool applyMendelScaling = true; // whether to apply Mendel scaling to the distances before computing the tree
     MendelScaling::UltrametricTree ultrametric;
     MendelScaling::QuotientConstruction qc;
 

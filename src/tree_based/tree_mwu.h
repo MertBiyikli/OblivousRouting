@@ -44,7 +44,6 @@ public:
         TreeTransform transform(graph, iteration);
         transform.transform();
         table = transform.getRoutingTable();
-
     }
 
 
@@ -61,10 +60,7 @@ public:
 
 
     double treeOracle() {
-        auto start = timeNow();
         auto t = oracle->getTree(current_distances);
-        this->oracle_running_times.push_back(duration((timeNow()-start)));
-
         assert(t != nullptr);
         computeRLoads(t);
         double l = getMaxRload();

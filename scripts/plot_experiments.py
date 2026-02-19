@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/yates.csv")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/yates_bimodal.csv")
 OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/generated/yates/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -123,7 +123,6 @@ def solver_sort_key(s: str) -> tuple:
         "raecke_frt": 2,
         "raecke_ckr": 3,
         "random_mst": 4,
-        "mst": 4,
         "cohen": 5,
     }
     return (order.get(s, 99), s)
