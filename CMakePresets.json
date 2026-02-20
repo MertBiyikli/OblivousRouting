@@ -1,25 +1,15 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
   "configurePresets": [
     {
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "CMAKE_PREFIX_PATH": "${env:HOME}/local/ortools",
       "cacheVariables": {
-        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_PREFIX_PATH": "${env:HOME}/local/ortools",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "Boost_DIR": "/usr/local/lib/cmake/Boost-1.88.0",
-        "CMAKE_PREFIX_PATH": "${env:HOME}/local/ortools",
-        "USE_OPENMP": "OFF",
-        "OR_ENABLE_WARNINGS": "ON",
-        "OR_WARNINGS_AS_ERRORS": "OFF",
-        "OR_ENABLE_ASAN": "OFF",
-        "OR_ENABLE_UBSAN": "OFF",
-        "OR_ENABLE_TSAN": "OFF",
-        "OR_ENABLE_LTO": "OFF",
         "BUILD_TESTS": "OFF"
       }
     },
@@ -28,7 +18,10 @@
       "name": "debug",
       "displayName": "Debug",
       "inherits": "base",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-g -Wall -Wextra -pedantic -fsanitize=address"
+      }
     },
 
     {
@@ -37,51 +30,14 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "OR_ENABLE_LTO": "ON"
-      }
-    },
-
-    {
-      "name": "san",
-      "displayName": "Sanitizers (ASAN+UBSAN)",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OR_ENABLE_ASAN": "ON",
-        "OR_ENABLE_UBSAN": "ON",
-        "OR_ENABLE_TSAN": "OFF"
-      }
-    },
-
-    {
-      "name": "tsan",
-      "displayName": "ThreadSanitizer",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OR_ENABLE_TSAN": "ON",
-        "OR_ENABLE_ASAN": "OFF",
-        "OR_ENABLE_UBSAN": "OFF"
-      }
-    },
-
-    {
-      "name": "ci",
-      "displayName": "CI (Warnings as errors)",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "OR_WARNINGS_AS_ERRORS": "ON"
+        "CMAKE_CXX_FLAGS": "-O3"
       }
     }
   ],
 
   "buildPresets": [
     { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" },
-    { "name": "san", "configurePreset": "san" },
-    { "name": "tsan", "configurePreset": "tsan" },
-    { "name": "ci", "configurePreset": "ci" }
+    { "name": "release", "configurePreset": "release" }
   ],
 
   "testPresets": [

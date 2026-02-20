@@ -30,7 +30,7 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     if (_params.empty()) {
         // set default parameters if not provided
         boost::property_tree::ptree config;
-        boost::property_tree::read_json("../../configs/amg_configs.json", config);
+        boost::property_tree::read_json("../configs/amg_configs.json", config);
         _params = config;
     }
 

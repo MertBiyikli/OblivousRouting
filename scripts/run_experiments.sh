@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-############################################
-# Defaults (override via env or flags)
-############################################
 OUT_CSV="results/results.csv"
 OUT_DIR="${OUT_DIR:-results/logs}"
 TIMEOUT="${TIMEOUT:-600m}"
@@ -12,19 +9,15 @@ IMAGE="${IMAGE:-oblivious-routing:latest}"
 SOLVERS=""
 DATASET=""
 
-DEMAND="none"          # legacy single-demand flag (label + default)
-DEMANDS=""             # NEW: comma list, e.g. "gravity,gaussian"
-DEMAND_PROVIDED=0      # tracks whether user explicitly passed demand flags
+DEMAND="none"
+DEMANDS=""
+DEMAND_PROVIDED=0
 
-# Canonical “all” sets (edit to match your project)
 ALL_SOLVERS="${ALL_SOLVERS:-electrical,ckr,frt,random_mst,cohen}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
 
-# -----------------------------
-# Args (robust long-option parser)
-# -----------------------------
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all|-all)
@@ -39,12 +32,12 @@ while [[ $# -gt 0 ]]; do
       DATASET="${2-}"
       shift 2
       ;;
-    --demand)     # legacy: single demand
+    --demand)
       DEMAND="${2-}"
       DEMAND_PROVIDED=1
       shift 2
       ;;
-    --demands)    # NEW: multiple demands
+    --demands)
       DEMANDS="${2-}"
       DEMAND_PROVIDED=1
       shift 2
@@ -77,9 +70,6 @@ if [[ "${DATASET:-}" == /* ]] && [[ "${DATASET:-}" == /experiments/* ]]; then
   DATASET="${DATASET#/}"   # strip leading slash
 fi
 
-############################################
-# Apply --all shortcut
-############################################
 if [[ "$RUN_ALL" -eq 1 ]]; then
   SOLVERS="$ALL_SOLVERS"
   DEMANDS="$ALL_DEMANDS"
@@ -97,9 +87,6 @@ if [[ -z "${SOLVERS:-}" || -z "${DATASET:-}" ]]; then
   exit 1
 fi
 
-############################################
-# Resolve timeout command (macOS: gtimeout)
-############################################
 TIMEOUT_BIN="${TIMEOUT_BIN:-timeout}"
 if ! command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
   if command -v gtimeout >/dev/null 2>&1; then
@@ -112,9 +99,6 @@ if ! command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
   fi
 fi
 
-############################################
-# Setup output dirs + CSV header
-############################################
 mkdir -p "$(dirname "$OUT_CSV")"
 mkdir -p "$OUT_DIR"
 
@@ -124,9 +108,6 @@ if [[ ! -f "$CSV" ]]; then
   echo "dataset,graph,solver,demand,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value,status" > "$CSV"
 fi
 
-############################################
-# Dataset: accept directory OR single file
-############################################
 DATASET_PATH="$DATASET"
 GRAPHS=()
 
@@ -147,9 +128,6 @@ if [[ ${#GRAPHS[@]} -eq 0 ]]; then
   exit 1
 fi
 
-############################################
-# Solvers + Demands arrays
-############################################
 SOLVERS_CSV="$(echo "$SOLVERS" | tr -d '[:space:]')"
 IFS=',' read -ra SOLVER_ARR <<< "$SOLVERS_CSV"
 
