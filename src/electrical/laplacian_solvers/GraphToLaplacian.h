@@ -5,7 +5,6 @@
 #ifndef OBLIVIOUSROUTING_GRAPHTOLAPLACIAN_H
 #define OBLIVIOUSROUTING_GRAPHTOLAPLACIAN_H
 #include <vector>
-#include <expected>
 #include "../../datastructures/IGraph.h"
 
 
@@ -41,11 +40,11 @@ struct GraphToLaplacian {
         }
     }
 
-    std::expected<double, std::out_of_range> getEdgeWeight(int e) const {
+    double getEdgeWeight(int e) const {
         if(e >= 0 && e < weights.size()) {
             return weights[e];
         }else{
-            return std::unexpected(std::out_of_range("Edge index out of range in getEdgeWeight(e)"));
+            throw std::out_of_range("Edge index out of range in getEdgeWeight(e)");
         }
     }
 

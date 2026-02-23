@@ -20,6 +20,12 @@ public:
         n=graph.getNumNodes();
         diameter=graph.GetDiameter();
     }
+
+    TreeOracle(IGraph& graph, bool activateMendelScaling) : graph(graph) {
+        n=graph.getNumNodes();
+        diameter=graph.GetDiameter();
+        this->applyMendelScaling = activateMendelScaling;
+    }
     virtual ~TreeOracle() = default;
     IGraph& graph;
     int n;
@@ -27,7 +33,7 @@ public:
     std::vector<double> scales; // the scales at which to compute the partitions
     std::vector<int> perm;
 
-    bool applyMendelScaling = true; // whether to apply Mendel scaling to the distances before computing the tree
+    bool applyMendelScaling = false; // whether to apply Mendel scaling to the distances before computing the tree
     MendelScaling::UltrametricTree ultrametric;
     MendelScaling::QuotientConstruction qc;
 
@@ -44,7 +50,7 @@ public:
         for (int v = 0; v < n; ++v) {
             prev_nodes.emplace_back(std::make_shared<HSTNode>(v));
             prev_nodes.back()->id = v;
-            prev_nodes.back()->members = {v};  // keep original vertex IDs here
+            prev_nodes.back()->members = {v};
             prev_nodes.back()->center = v;
         }
 
@@ -254,7 +260,6 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
                     );
         }
 
-        // Deduplicate members (important!)
         for (auto& p : parents) {
             auto& M = p->members;
             std::sort(M.begin(), M.end());

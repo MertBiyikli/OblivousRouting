@@ -10,6 +10,7 @@
 class FRT : public TreeOracle {
 public:
     explicit FRT(IGraph& g):TreeOracle(g) {}
+    explicit FRT(IGraph& g, bool mendelscaling):TreeOracle(g, mendelscaling) {}
 
     virtual void computeLevelPartition(IGraph& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
 

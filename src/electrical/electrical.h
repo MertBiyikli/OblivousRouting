@@ -40,6 +40,7 @@ public:
     virtual void scaleFlowDown(LinearRoutingTable &table);
     virtual void getApproxLoad(std::vector<double>& load);
     virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
+    virtual void initAMGSolver(boost::property_tree::ptree _params);
     virtual void updateEdgeDistances(const std::vector<double>& load);
 
 

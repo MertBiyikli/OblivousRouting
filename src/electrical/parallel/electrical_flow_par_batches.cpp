@@ -12,33 +12,8 @@ static inline unsigned default_threads() {
     return t ? t : 4;
 }
 
-void ParallelElectricalMWU::init(bool debug, boost::property_tree::ptree _params)
+void ParallelElectricalMWU::initAMGSolver(boost::property_tree::ptree _params)
 {
-
-    n = graph.getNumNodes();
-    m = graph.getNumEdges()/2;
-
-
-    // set algorithm parameters
-    roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
-    alpha_local = std::log2(n)*std::log2(n); // Initialize alpha_local based on the number of nodes
-    this->cap_X = m;
-    this->iteration_count = 8.0*roh*std::log(m)/alpha_local;
-    this->inv_m = 1.0 / static_cast<double>(m);
-
-
-    // fix a node x
-    this->x_fixed = 0; // Randomly select a fixed node x from the graph
-
-
-    initEdgeDistances();
-
-    if (_params.empty()) {
-        // set default parameters if not provided
-        boost::property_tree::ptree config;
-        boost::property_tree::read_json("../configs/amg_configs.json", config);
-        _params = config;
-    }
 
     // init AMG
     int thread_nums = default_threads();
@@ -56,17 +31,6 @@ void ParallelElectricalMWU::init(bool debug, boost::property_tree::ptree _params
         s->setSolverParams(_params);
         amg_pool.emplace_back(std::move(s));
     }
-
-
-    SketchMatrix = getSketchMatrix(m, n, 0.5);
-    SketchMatrix_t = SketchMatrix.transpose();
-
-    Eigen::MatrixXd UCt = SketchMatrix_t; // m × ℓ
-    for (int e = 0; e < m; ++e)
-        UCt.row(e) *= edge_capacities[e];
-
-    auto B = buildIncidence();
-    X = (B.transpose() * UCt).sparseView(); // n × ℓ
 }
 
 void ParallelElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {

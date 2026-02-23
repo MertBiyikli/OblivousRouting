@@ -12,9 +12,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- Dependencies ---
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
+# Point CMake to your protobuf 6.31.1 package config
+set(Protobuf_DIR "$ENV{HOME}/local/protobuf-6.31.1/lib/cmake/protobuf" CACHE PATH "")
+
+find_package(Protobuf CONFIG REQUIRED)
+find_package(ortools REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(ortools REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
+
 
 # --- Target ---
 add_executable(oblivious_routing)
@@ -33,8 +41,10 @@ target_sources(oblivious_routing PRIVATE
         src/lp_solver/LPSolver.cpp
         src/lp_solver/MCCF_lp_solver.cpp
 )
+target_include_directories(oblivious_routing BEFORE PRIVATE
+        "$ENV{HOME}/local/protobuf-6.31.1/include"
+)
 
-# Includes
 target_include_directories(oblivious_routing
         PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -45,6 +55,7 @@ target_include_directories(oblivious_routing
 # Link libs
 target_link_libraries(oblivious_routing PRIVATE
         ortools::ortools
+        protobuf::libprotobuf
         Eigen3::Eigen
         Boost::program_options
         Boost::serialization

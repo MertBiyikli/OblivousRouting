@@ -7,7 +7,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "${env:HOME}/local/ortools",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/local/protobuf-6.31.1;$env{HOME}/local/ortools",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "Boost_DIR": "/usr/local/lib/cmake/Boost-1.88.0",
         "BUILD_TESTS": "OFF"
@@ -32,18 +32,28 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS": "-O3"
       }
+    },
+
+    {
+      "name": "debug-tests",
+      "displayName": "Debug (Tests)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "BUILD_TESTS": "ON"
+      }
     }
   ],
 
   "buildPresets": [
     { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" }
+    { "name": "release", "configurePreset": "release" },
+    { "name": "debug-tests", "configurePreset": "debug-tests" }
   ],
 
   "testPresets": [
     {
       "name": "test-debug",
-      "configurePreset": "debug",
+      "configurePreset": "debug-tests",
       "output": { "outputOnFailure": true }
     }
   ]

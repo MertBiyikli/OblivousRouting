@@ -27,7 +27,9 @@ std::vector<std::string> solverNames ={
     "electrical",
     "raecke_frt",
     "raecke_ckr",
-    "raecke_random_mst",
+        "raecke_random_mst",
+    "raecke_frt_mendel",
+    "raecke_ckr_mendel",
     "lp_applegate_cohen",
     "electrical_parallel_batches"
 };
@@ -37,6 +39,8 @@ enum class SolverType {
     RAECKE_FRT,
     RAECKE_CKR,
     RAECKE_RANDOM_MST,
+    RAECKE_FRT_MENDELSCALING,
+    RAECKE_CKR_MENDELSCALING,
     LP_APPLEGATE_COHEN,
     ELECTRICAL_PARALLEL_BATCHES
 };
@@ -70,6 +74,12 @@ makeSolver(SolverType type, IGraph& g_csr) {
         case SolverType::RAECKE_RANDOM_MST:
             return std::make_unique<TreeMWU>(g_csr, std::make_unique<TreeMST>(g_csr));
 
+        case SolverType::RAECKE_FRT_MENDELSCALING:
+            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FRT>(g_csr, true));
+
+        case SolverType::RAECKE_CKR_MENDELSCALING:
+            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FastCKR>(g_csr, true));
+
         case SolverType::LP_APPLEGATE_COHEN:
             return std::make_unique<LPSolver>(g_csr);
 
@@ -99,6 +109,10 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
         return SolverType::RAECKE_CKR;
     if (s == "raecke_mst" || s == "random_mst" || s == "rmst" || s == "mst")
         return SolverType::RAECKE_RANDOM_MST;
+    if (s == "raecke_frt_mendel" || s == "frt_mendel")
+        return SolverType::RAECKE_FRT_MENDELSCALING;
+    if (s == "raecke_ckr_mendel" || s == "ckr_mendel")
+        return SolverType::RAECKE_CKR_MENDELSCALING;
     if (s == "cohen" || s == "lp" || s == "applegate" || s == "ac" || s == "l")
         return SolverType::LP_APPLEGATE_COHEN;
     if (s == "electrical_parallel" || s == "elec_par" || s == "e_par")
@@ -112,6 +126,8 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     if (s == "3") return SolverType::RAECKE_RANDOM_MST;
     if (s == "4") return SolverType::LP_APPLEGATE_COHEN;
     if (s == "5") return SolverType::ELECTRICAL_PARALLEL_BATCHES;
+    if (s == "6") return SolverType::RAECKE_FRT_MENDELSCALING;
+    if (s == "7") return SolverType::RAECKE_CKR_MENDELSCALING;
 
     return std::nullopt;
 }
@@ -138,10 +154,12 @@ inline std::string usage(const char* prog) {
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
        << "  raecke_frt | frt | f   -> Tree-based (Raecke/FRT)\n"
         << " raecke_ckr | ckr | c -> Tree-based (Raecke/CKR)\n"
+        << "  raecke_frt_mendel | frt_mendel   -> Tree-based (Raecke/FRT) using MendelScaling\n"
+        << " raecke_ckr_mendel | ckr_mendel -> Tree-based (Raecke/CKR) using MendelScaling\n"
        << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n"
        << "  cohen | lp | applegate | ac   -> Tree-LP (LP/Applegate and Cohen)\n"
         << "  electrical_parallel | elec_par | e_par -> Electrical Flow (parallel)\n"
-       << "Numeric shortcuts: 0=electric, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel\n"
+       << "Numeric shortcuts: 0=electric, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel, 6=frt_mendel, 7=ckr_mendel\n"
        << "[Optional] demand model (case-insensitive):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"
        << "  binomial | binomial_model     -> Binomial Model\n"

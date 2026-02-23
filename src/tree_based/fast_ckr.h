@@ -11,6 +11,7 @@
 class FastCKR : public TreeOracle {
 public:
     explicit FastCKR(IGraph& g) : TreeOracle(g) {}
+    explicit FastCKR(IGraph& g, bool mendelscaling) : TreeOracle(g, mendelscaling) {}
 
     virtual void computeLevelPartition(IGraph& _g, HSTLevel& level, const std::vector<int>& x_perm,double delta) override {
         const int n = _g.getNumNodes();

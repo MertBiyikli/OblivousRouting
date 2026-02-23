@@ -18,7 +18,7 @@ public:
     void run(LinearRoutingTable &table) override;
     void updateEdgeDistances(const std::vector<double> &load) override;
     void getApproxLoad(std::vector<double>& load) override;
-    void init( bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree()) override;
+    void initAMGSolver(boost::property_tree::ptree _params = boost::property_tree::ptree()) override;
 
 
 };

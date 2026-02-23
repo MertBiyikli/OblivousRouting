@@ -2,10 +2,23 @@
 #include "../utils/my_math.h"
 #include <random>
 
+boost::property_tree::ptree make_amg_params() {
+    boost::property_tree::ptree pt;
+
+    // ---- solver ----
+    pt.put("solver.type", "cg");
+    pt.put("solver.tol", 1e-8);
+    pt.put("solver.maxiter", 100);
+
+    // AMG details (typical)
+    pt.put("precond.coarsening.type", "smoothed_aggr_emin");
+    pt.put("precond.relax.type", "spai1");
+
+    return pt;
+}
 
 void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
-
     n = graph.getNumNodes();
     m = graph.getNumEdges()/2;
 
@@ -17,27 +30,10 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     this->inv_m = 1.0 / static_cast<double>(m);
     this->x_fixed = 0;
 
-
     initEdgeDistances();
 
-    // init AMG
-    amg = std::make_unique<AMGSolver>();
-    if (amg == nullptr) {
-        std::cerr << "Failed to create AMG solver instance.\n";
-        return;
-    }
-
-    if (_params.empty()) {
-        // set default parameters if not provided
-        boost::property_tree::ptree config;
-        boost::property_tree::read_json("../configs/amg_configs.json", config);
-        _params = config;
-    }
-
-    // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
-    amg->setSolverParams(_params);
-    amg->init(graph, edge_weights, n, edges, debug);
-
+    boost::property_tree::ptree params = make_amg_params();
+    initAMGSolver(params);
 
     // compute Sketch matrix
     SketchMatrix = getSketchMatrix(m, n, 0.5);
@@ -51,6 +47,19 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     X = (B.transpose() * UCt).sparseView(); // n × ℓ
 }
 
+
+void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
+    // init AMG
+    amg = std::make_unique<AMGSolver>();
+    if (amg == nullptr) {
+        std::cerr << "Failed to create AMG solver instance.\n";
+        return;
+    }
+    // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
+    amg->setSolverParams(_params);
+    amg->init(graph, edge_weights, n, edges, debug);
+
+}
 
 /*
  * The main loop of the MWU algorithm.
