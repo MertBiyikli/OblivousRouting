@@ -13,7 +13,7 @@ DEMAND="none"
 DEMANDS=""
 DEMAND_PROVIDED=0
 
-ALL_SOLVERS="${ALL_SOLVERS:-electrical,ckr,frt,random_mst,cohen,ckr_mendel,frt_mendel}"
+ALL_SOLVERS="${ALL_SOLVERS:-0,1,2,3,4,6,7}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
