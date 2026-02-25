@@ -67,7 +67,9 @@ int main(int argc, char **argv) {
 
         // --- optional: demand model evaluation ---
         auto result = HandleDemandModel(argc, argv, cfg, *G, scheme);
-        printStatsForDemandModel(argv, result);
+        if (cfg->demand_model != DemandModelType::NONE) {
+            printStatsForDemandModel(argv, result);
+        }
     }
     return 0;
 }

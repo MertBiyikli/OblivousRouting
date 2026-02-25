@@ -25,19 +25,14 @@ find_package(Eigen3 REQUIRED)
 
 
 # --- Target ---
-add_executable(oblivious_routing
-        src/datastructures/GraphADJList.cpp
-        src/datastructures/GraphADJList.h
-        src/datastructures/GraphADJMatrix.cpp
-        src/datastructures/GraphADJMatrix.h)
+add_executable(oblivious_routing)
+
 target_sources(oblivious_routing PRIVATE
         main.cpp
         src/utils/my_math.cpp
         src/datastructures/GraphCSR.cpp
-        experiments/performance/demands/GravityModel.cpp
-        experiments/performance/demands/BimodalModel.cpp
-        experiments/performance/demands/GaussianModel.cpp
-        experiments/performance/demands/UniformModel.cpp
+        src/datastructures/GraphADJList.cpp
+        src/datastructures/GraphADJMatrix.cpp
         src/tree_based/utils/ultrametric_tree.cpp
         src/electrical/electrical.cpp
         src/electrical/parallel/electrical_flow_par_batches.cpp

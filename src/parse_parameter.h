@@ -184,7 +184,7 @@ inline std::optional<GraphFormat> parse_graph_format_token(std::string s) {
 inline std::string usage(const char* prog) {
     std::ostringstream os;
     os << "Usage:\n"
-       << "  " << prog << " <solver> <graph_file>\n\n"
+       << "  " << "./oblivious_routing " << " <solver> <graph_file> OPTIOnAL: <demand_model> <graph_format> \n\n"
        << "Solvers (case-insensitive):\n"
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
        << "  raecke_frt | frt | f   -> Tree-based (Raecke/FRT)\n"
@@ -257,8 +257,19 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
     if (argc == 4) {
         auto demand_model_opt = parse_demand_model_token(argv[3]);
         if (!demand_model_opt) {
-            if (err) *err = "Unknown demand model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
-            return std::nullopt;
+            auto graph_format_opt = parse_graph_format_token(argv[3]);
+            if (graph_format_opt) {
+                Config cfg{
+                    *solvers_opt,
+                    std::string(argv[2]),
+                    DemandModelType::NONE,
+                    *graph_format_opt
+                };
+                return cfg;
+            }else {
+                if (err) *err = "Unknown demand model/Graph format model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
+                return std::nullopt;
+            }
         }
 
         Config cfg{
@@ -305,8 +316,12 @@ inline std::pair<double, double> HandleDemandModel(int argc,
 {
     if (argc < 4 || !cfg) { return {}; }
 
-    std::cout << "Demand model: " << (argv[3] ? argv[3] : "<empty>") << std::endl;
-
+    // find demand model type from config and print it
+    std::string demand_model_str = (argv[3] ? argv[3] : "<empty>");
+    auto demand_model = parse_demand_model_token(demand_model_str);
+    if (demand_model) {
+        std::cout << "Demand model: " << (argv[3] ? argv[3] : "<empty>") << std::endl;
+    }
     // if a demand model is provided, compute the oblivious ratio for that demand model
     if (cfg->demand_model != DemandModelType::NONE) {
         std::vector< std::pair<int, int> > demands;
