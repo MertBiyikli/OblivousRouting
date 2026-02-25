@@ -25,7 +25,11 @@ find_package(Eigen3 REQUIRED)
 
 
 # --- Target ---
-add_executable(oblivious_routing)
+add_executable(oblivious_routing
+        src/datastructures/GraphADJList.cpp
+        src/datastructures/GraphADJList.h
+        src/datastructures/GraphADJMatrix.cpp
+        src/datastructures/GraphADJMatrix.h)
 target_sources(oblivious_routing PRIVATE
         main.cpp
         src/utils/my_math.cpp

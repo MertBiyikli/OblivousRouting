@@ -62,6 +62,7 @@ public:
 
     // DEBUGGING
     virtual void print() const = 0;
+    virtual void printGraphType() const = 0;
 
     // node index based access
     virtual double getEdgeCapacity(int u, int v) const = 0;

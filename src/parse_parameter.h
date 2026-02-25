@@ -27,7 +27,7 @@ std::vector<std::string> solverNames ={
     "electrical",
     "raecke_frt",
     "raecke_ckr",
-        "raecke_random_mst",
+       "raecke_random_mst",
     "raecke_frt_mendel",
     "raecke_ckr_mendel",
     "lp_applegate_cohen",
@@ -53,41 +53,66 @@ enum class DemandModelType {
     NONE
 };
 
+
+enum class GraphFormat {
+    CSR,
+    ADJLIST,
+    ADJMATRIX
+};
+
 struct Config {
     std::vector<SolverType>  solvers;
     std::string filename;
     DemandModelType demand_model;
+    GraphFormat graph_format;
 };
 
 std::unique_ptr<ObliviousRoutingSolver>
-makeSolver(SolverType type, IGraph& g_csr) {
+makeSolver(SolverType type, IGraph& g) {
     switch (type) {
         case SolverType::ELECTRICAL:
-            return std::make_unique<ElectricalMWU>(g_csr, 0);
+            return std::make_unique<ElectricalMWU>(g, 0);
 
         case SolverType::RAECKE_FRT:
-            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FRT>(g_csr));
+            return std::make_unique<TreeMWU>(g, std::make_unique<FRT>(g));
 
         case SolverType::RAECKE_CKR:
-            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FastCKR>(g_csr));
+            return std::make_unique<TreeMWU>(g, std::make_unique<FastCKR>(g));
 
         case SolverType::RAECKE_RANDOM_MST:
-            return std::make_unique<TreeMWU>(g_csr, std::make_unique<TreeMST>(g_csr));
+            return std::make_unique<TreeMWU>(g, std::make_unique<TreeMST>(g));
 
         case SolverType::RAECKE_FRT_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FRT>(g_csr, true));
+            return std::make_unique<TreeMWU>(g, std::make_unique<FRT>(g, true));
 
         case SolverType::RAECKE_CKR_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g_csr, std::make_unique<FastCKR>(g_csr, true));
+            return std::make_unique<TreeMWU>(g, std::make_unique<FastCKR>(g, true));
 
         case SolverType::LP_APPLEGATE_COHEN:
-            return std::make_unique<LPSolver>(g_csr);
+            return std::make_unique<LPSolver>(g);
 
         case SolverType::ELECTRICAL_PARALLEL_BATCHES:
-            return std::make_unique<ParallelElectricalMWU>(g_csr, 0);
+            return std::make_unique<ParallelElectricalMWU>(g, 0);
 
         default:
             throw std::runtime_error("Unknown solver type.");
+    }
+}
+
+
+std::unique_ptr<IGraph> makegraph(GraphFormat type) {
+    switch (type) {
+        case GraphFormat::CSR:
+            return std::make_unique<GraphCSR>();
+
+        case GraphFormat::ADJLIST:
+            return std::make_unique<GraphADJList>();
+
+        case GraphFormat::ADJMATRIX:
+            return std::make_unique<GraphADJMatrix>();
+
+        default:
+            throw std::runtime_error("Unknown graph format.");
     }
 }
 
@@ -142,6 +167,16 @@ inline std::optional<DemandModelType> parse_demand_model_token(std::string s) {
         return DemandModelType::GAUSSIAN;
     if (s == "uniform" || s == "uniform_model")
         return DemandModelType::UNIFORM;
+
+    return std::nullopt;
+}
+
+
+inline std::optional<GraphFormat> parse_graph_format_token(std::string s) {
+    s = to_lower(std::move(s));
+    if (s == "csr") return GraphFormat::CSR;
+    if (s == "adjlist" || s == "list") return GraphFormat::ADJLIST;
+    if (s == "adjmatrix" || s == "matrix") return GraphFormat::ADJMATRIX;
 
     return std::nullopt;
 }
@@ -213,7 +248,8 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
         Config cfg{
             *solvers_opt,
             std::string(argv[2]),
-            DemandModelType::NONE
+            DemandModelType::NONE,
+            GraphFormat::CSR
         };
         return cfg;
     }
@@ -228,7 +264,30 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
         Config cfg{
             *solvers_opt,
             std::string(argv[2]),
-            *demand_model_opt
+            *demand_model_opt,
+            GraphFormat::CSR
+        };
+        return cfg;
+    }
+
+    if (argc == 5) {
+        auto demand_model_opt = parse_demand_model_token(argv[3]);
+        if (!demand_model_opt) {
+            if (err) *err = "Unknown demand model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
+            return std::nullopt;
+        }
+
+        auto graph_format_opt = parse_graph_format_token(argv[4]);
+        if (!graph_format_opt) {
+            if (err) *err = "Unknown graph format: " + std::string(argv[4]) + "\n" + usage(argv[0]);
+            return std::nullopt;
+        }
+
+        Config cfg{
+            *solvers_opt,
+            std::string(argv[2]),
+            *demand_model_opt,
+            *graph_format_opt
         };
         return cfg;
     }
@@ -314,6 +373,8 @@ void printStatsForDemandModel(char** argv,std::pair<double, double> result) {
                   << " ("
                   << result.first << " / " << result.second
                   << ")\n";
+    }else {
+        std::cout << "Invalid congestion values for demand model evaluation.\n";
     }
 }
 

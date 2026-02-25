@@ -371,8 +371,8 @@ public:
     }
 
 
-    std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist) const override;
 
+    std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist) const override;
 
     // ===============================================================
     // 🔹 Extract edge IDs along the path found by the last Dijkstra run
@@ -464,6 +464,11 @@ public:
             std::cout << head[i] << " ";
         }
     }
+
+    virtual void printGraphType() const override {
+        std::cout << "GraphCSR (Compressed Sparse Row) format" << std::endl;
+    }
+
     IGraph::NeighborRange neighbors(int u) const override {
         if (!is_processed)
             throw std::runtime_error("GraphCSR::neighbors: graph not finalized");
