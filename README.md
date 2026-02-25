@@ -55,7 +55,7 @@ Change the preset configuration from `release` to `debug` for a debug build.
 #### Running the Algorithms
 - To run an oblivious Routing algorithms, use the following command:
    ```bash
-   ./oblivious_routing <algorithm> <graph> <demand_model>
+   ./oblivious_routing <algorithm> <graph> [OPTIONAL]:<demand_model> <graph_format>
    ```
    Replace `<graph>` with the path to your network topology file and `<algorithm>` with `"electrical,frt,ckr,mst,cohen"`.
    Replace `<demand_model>` with the desired traffic demand model (e.g., `uniform, gravity, bimodal, gaussian`). The demand model 
