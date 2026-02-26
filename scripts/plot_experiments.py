@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/yates_bimodal.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/generated/yates/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/combine.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/merged/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_ms"
@@ -104,13 +104,17 @@ def aggregate_mean_std(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
 def pretty_solver_name(s: str) -> str:
     # Keep this conservative; adjust to your naming if you want
     mapping = {
-        "electrical": "Electrical",
-        "electrical_parallel": "Electrical (par)",
-        "raecke_frt": "Räcke–FRT",
+        "electrical": "Electrical Flow",
+        "electrical_parallel": "Electrical Flow (parallel)",
+        "raecke_frt": "Räcke-FRT",
         "raecke_ckr": "Räcke–CKR",
+        "raecke_mst": "Räcke–MST",
         "cohen": "LP (Applegate–Cohen)",
+        "lp": "LP (Applegate–Cohen)",
         "random_mst": "Räcke–MST",
         "mst": "Räcke–MST",
+        "frt": "Räcke-FRT",
+        "ckr": "Räcke-CKR",
     }
     return mapping.get(s, s)
 
@@ -258,6 +262,7 @@ def aggregate_mean_std_by_solver(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
     g["std"] = g["std"].fillna(0.0)
     return g
 
+
 def plot_solver_average_bars(
         df_solver_agg: pd.DataFrame,
         solvers: list[str],
@@ -305,6 +310,211 @@ def plot_solver_average_bars(
     savefig_all(fig, outpath)
     plt.close(fig)
 
+def plot_box_by_solver(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, tuple],
+        ycol: str,
+        ylabel: str,
+        ylog: bool,
+        figsize,
+        outpath: Path,
+):
+    """
+    Box plot per solver (distribution across instances).
+    Shows mean as a small marker on top of each box.
+    """
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    data = []
+    means = []
+    for s in solvers:
+        vals = df.loc[df["solver"] == s, ycol].dropna().to_numpy(dtype=float)
+        if ylog:
+            vals = np.maximum(vals, LOG_EPS)
+        data.append(vals)
+        means.append(np.mean(vals) if len(vals) > 0 else np.nan)
+
+    bp = ax.boxplot(
+        data,
+        patch_artist=True,
+        showfliers=False,     # publication-friendly; avoids extreme dot clutter
+        widths=0.6,
+        medianprops=dict(linewidth=0.9),
+        whiskerprops=dict(linewidth=0.8),
+        capprops=dict(linewidth=0.8),
+    )
+
+    for i, box in enumerate(bp["boxes"]):
+        s = solvers[i]
+        box.set_facecolor(colors[s])
+        box.set_alpha(0.35)
+        box.set_linewidth(0.8)
+
+    # mean markers
+    x = np.arange(1, len(solvers) + 1)
+    ax.scatter(x, means, marker="D", s=14, zorder=3, color="black", linewidths=0.0, label="Mean")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=25, ha="right")
+
+
+    ax.set_ylabel(ylabel)
+    ax.minorticks_on()
+    ax.grid(True, which="major")
+    ax.grid(True, which="minor", alpha=0.10)
+
+    # small legend just for the mean marker
+    ax.legend(frameon=False, loc="upper right")
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
+
+def _fit_powerlaw_line(x: np.ndarray, y: np.ndarray):
+    """
+    Fit y ≈ a * x^b using log-log linear regression.
+    Returns (a, b) or (None, None) if insufficient data.
+    """
+    mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+    x = x[mask]
+    y = y[mask]
+    if x.size < 3:
+        return None, None
+    lx = np.log10(x)
+    ly = np.log10(y)
+    b, loga = np.polyfit(lx, ly, deg=1)
+    a = 10 ** loga
+    return a, b
+
+
+def plot_scatter_cloud(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, tuple],
+        markers: dict[str, str],
+        xcol: str,
+        ycol: str,
+        xlabel: str,
+        ylabel: str,
+        xlog: bool,
+        ylog: bool,
+        figsize,
+        outpath: Path,
+        add_scaling_line: bool = True,
+):
+    """
+    Scatter plot where each dot is one instance (no connecting lines).
+    Optionally overlays a per-solver power-law scaling trend line.
+    """
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    handles = []
+    labels = []
+
+    for s in solvers:
+        sub = df[df["solver"] == s].copy()
+        if sub.empty:
+            continue
+
+        x = pd.to_numeric(sub[xcol], errors="coerce").to_numpy(dtype=float)
+        y = pd.to_numeric(sub[ycol], errors="coerce").to_numpy(dtype=float)
+
+        if ylog:
+            y = np.maximum(y, LOG_EPS)
+
+        h = ax.scatter(
+            x, y,
+            marker=markers[s],
+            s=12,
+            alpha=0.65,          # “cloud of dots”
+            color=colors[s],
+            edgecolors="none",
+            label=pretty_solver_name(s),
+        )
+        handles.append(h)
+        labels.append(pretty_solver_name(s))
+
+        if add_scaling_line and x.size >= 3:
+            a, b = _fit_powerlaw_line(x, y)
+            if a is not None:
+                xs = np.logspace(np.log10(np.nanmin(x[x > 0])), np.log10(np.nanmax(x)), 100)
+                ys = a * (xs ** b)
+                if ylog:
+                    ys = np.maximum(ys, LOG_EPS)
+                ax.plot(xs, ys, linestyle="--", linewidth=0.9, color=colors[s], alpha=0.9)
+
+    if xlog:
+        ax.set_xscale("log")
+    if ylog:
+        ax.set_yscale("log")
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    ax.minorticks_on()
+    ax.grid(True, which="major")
+    ax.grid(True, which="minor", alpha=0.10)
+
+    add_legend(ax, handles, labels)
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
+
+def plot_runtime_decomposition_grouped_csv(
+        df: pd.DataFrame,
+        solvers: list[str],
+        figsize,
+        outpath: Path,
+):
+    required = ["transformation_time_ms", "solve_time_ms", "total_time_ms"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns for decomposition plot: {missing}")
+
+    rows = []
+    for s in solvers:
+        sub = df[df["solver"] == s]
+        if sub.empty:
+            continue
+        rows.append({
+            "solver": s,
+            "transform": float(np.median(sub["transformation_time_ms"])),
+            "solve": float(np.median(sub["solve_time_ms"])),
+            "total": float(np.median(sub["total_time_ms"])),
+        })
+
+    agg = pd.DataFrame(rows).set_index("solver").reindex(solvers).reset_index()
+
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    x = np.arange(len(agg))
+    width = 0.24
+
+    transform = np.maximum(agg["transform"].to_numpy(dtype=float), LOG_EPS)
+    solve = np.maximum(agg["solve"].to_numpy(dtype=float), LOG_EPS)
+    total = np.maximum(agg["total"].to_numpy(dtype=float), LOG_EPS)
+
+    # Fixed component colors (super clear; works well in print)
+    ax.bar(x - width, transform, width, label="Transformation time", color="#DD8452")
+    ax.bar(x,         solve,     width, label="Computation time",          color="#55A868")
+    ax.bar(x + width, total,     width, label="Total time",          color="#4C72B0")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([pretty_solver_name(s) for s in agg["solver"]], rotation=25, ha="right")
+
+    ax.set_ylabel("Median time [ms]")
+    ax.set_yscale("log")  # runtime plots usually much clearer on log scale
+
+    ax.minorticks_on()
+    ax.grid(True, which="major")
+    ax.grid(True, which="minor", alpha=0.10)
+
+    ax.legend(frameon=False, loc="upper left")
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
 
 # ======================
 # MAIN
@@ -334,8 +544,10 @@ def main():
         raise ValueError(f"Missing columns in results.csv: {sorted(missing)}")
 
     # Enforce numeric columns (prevents “ms”, “edges.” issues from silently breaking plots)
-    for c in ["num_edges", "total_time_ms", "mwu_iterations", "achieved_congestion", "offline_opt_value", ORACLE_TIME_COL]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+    for c in ["num_edges", "total_time_ms", "solve_time_ms", "transformation_time_ms",
+              "mwu_iterations", "achieved_congestion", "offline_opt_value", ORACLE_TIME_COL]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
 
     df = df.dropna(subset=["solver", "num_edges"]).copy()
     df["relative_error"] = (abs(df["offline_opt_value"]-df["achieved_congestion"])) / df["achieved_congestion"]*100.0
@@ -344,84 +556,62 @@ def main():
     colors = solver_palette_unique(solvers)   # <-- UNIQUE COLORS
     markers = solver_markers(solvers)         # <-- helps grayscale
 
-    agg_runtime = aggregate_mean_std(df, "total_time_ms")
-    agg_iters   = aggregate_mean_std(df, "mwu_iterations")
-    agg_error   = aggregate_mean_std(df, "relative_error")
-    agg_oracle  = aggregate_mean_std(df, ORACLE_TIME_COL)
-
-    plot_lines(
-        agg_runtime, solvers, colors, markers,
-        "num_edges", "mean", "std",
-        "Number of edges",
-        "Total running time [ms]",
-        xlog=True, ylog=True,
+    # --- Scatter “cloud” plots (one dot per instance) ---
+    plot_scatter_cloud(
+        df, solvers, colors, markers,
+        xcol="num_edges", ycol="total_time_ms",
+        xlabel="Number of edges",
+        ylabel="Total running time [ms]",
+        xlog=False, ylog=True,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "runtime_vs_edges",
+        outpath=OUT_DIR / "runtime_cloud_vs_edges",
+        add_scaling_line=True,
     )
 
-    plot_lines(
-        agg_iters, solvers, colors, markers,
-        "num_edges", "mean", "std",
-        "Number of edges",
-        "MWU iterations",
+    plot_scatter_cloud(
+        df, solvers, colors, markers,
+        xcol="num_edges", ycol="mwu_iterations",
+        xlabel="Number of edges",
+        ylabel="MWU iterations",
         xlog=True, ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "mwu_iterations_vs_edges",
+        outpath=OUT_DIR / "mwu_iterations_cloud_vs_edges",
+        add_scaling_line=True,
     )
 
-    plot_lines(
-        agg_error, solvers, colors, markers,
-        "num_edges", "mean", "std",
-        "Number of edges",
-        "Relative error (solver / optimal)",
-        xlog=True, ylog=False,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "error_vs_edges",
-    )
-
-    plot_lines(
-        agg_oracle, solvers, colors, markers,
-        "num_edges", "mean", "std",
-        "Number of edges",
-        "Average oracle running time [ms]",
+    plot_scatter_cloud(
+        df, solvers, colors, markers,
+        xcol="num_edges", ycol=ORACLE_TIME_COL,
+        xlabel="Number of edges",
+        ylabel="Average oracle running time [ms]",
         xlog=True, ylog=True,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "avg_oracle_runtime_vs_edges",
+        outpath=OUT_DIR / "oracle_time_cloud_vs_edges",
+        add_scaling_line=True,
     )
-
-
-    avg_runtime_solver = aggregate_mean_std_by_solver(df, "total_time_ms")
-    avg_transformtime_solver = aggregate_mean_std_by_solver(df, "transformation_time_ms")
-    avg_error_solver   = aggregate_mean_std_by_solver(df, "relative_error")
-    avg_iters_solver   = aggregate_mean_std_by_solver(df, "mwu_iterations")
-
 
     # Bar plots of average metrics per solver
-    plot_solver_average_bars(
-        avg_runtime_solver, solvers, colors,
-        y_mean_col="mean", y_std_col="std",
-        ylabel="Average total running time [ms]",
-        ylog=True,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "avg_total_runtime_by_solver",
-    )
-
-    plot_solver_average_bars(
-        avg_error_solver, solvers, colors,
-        y_mean_col="mean", y_std_col="std",
-        ylabel="Average relative error [%]",
+    # --- Box plots per solver (distribution across instances) ---
+    plot_box_by_solver(
+        df, solvers, colors,
+        ycol="relative_error",
+        ylabel="Relative error [%]",
         ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "avg_relative_error_by_solver",
+        outpath=OUT_DIR / "relative_error_box_by_solver",
     )
 
-    plot_solver_average_bars(
-        avg_iters_solver, solvers, colors,
-        y_mean_col="mean", y_std_col="std",
-        ylabel="Average MWU iterations",
-        ylog=False,
+    df["percent_transform_time"] = (
+            df["transformation_time_ms"] / df["total_time_ms"] * 100.0
+    )
+
+    plot_box_by_solver(
+        df, solvers, colors,
+        ycol="percent_transform_time",
+        ylabel="Transformation time [% of total time]",
+        ylog=True,   # usually nicer; switch to False if you prefer linear
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "avg_mwu_iterations_by_solver",
+        outpath=OUT_DIR / "transformation_time_box_by_solver",
     )
 
     # Bar plots showing the percentage of solve time vs transformation time
@@ -443,7 +633,11 @@ def main():
     )
 
 
-
+    plot_runtime_decomposition_grouped_csv(
+        df, solvers,
+        figsize=FIGSIZE_SINGLE,
+        outpath=OUT_DIR / "runtime_decomposition_grouped_csv",
+    )
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
     print("✔ Unique solver colors (no repeats up to 20 solvers; HSV beyond)")

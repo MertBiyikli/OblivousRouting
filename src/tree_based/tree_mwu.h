@@ -12,7 +12,7 @@
 #include "tree_transform.h"
 
 
-class TreeMWU : public AllPairObliviousSolverBase, public MWUFramework {
+class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle> oracle;
     double lambda_sum;
@@ -21,7 +21,7 @@ class TreeMWU : public AllPairObliviousSolverBase, public MWUFramework {
     std::vector<TreeIteration> iteration;
 
 public:
-    TreeMWU(IGraph& g, std::unique_ptr<TreeOracle> _oracle) : AllPairObliviousSolverBase(g), oracle(std::move(_oracle)) {
+    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)) {
         current_distances.assign(graph.getNumEdges(), 1.0);
         rload_current.assign(graph.getNumEdges(), 0.0);
         rload_total.assign(graph.getNumEdges(), 0.0);
@@ -29,7 +29,7 @@ public:
     }
 
 
-    virtual void computeBasisFlows(AllPairRoutingTable &table) override {
+    virtual void computeBasisFlows(LinearRoutingTable &table) override {
         auto t0 = timeNow();
         run();
         this->solve_time = duration((timeNow()-t0));
@@ -40,7 +40,7 @@ public:
         this->transformation_time = duration((timeNow()-t0));
     }
 
-    virtual void transformSolution(AllPairRoutingTable& table) {
+    virtual void transformSolution(LinearRoutingTable& table) {
         TreeTransform transform(graph, iteration);
         transform.transform();
         table = transform.getRoutingTable();

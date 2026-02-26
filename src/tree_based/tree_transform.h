@@ -34,11 +34,13 @@ public:
     const IGraph& graph;
     std::vector<TreeIteration>& iterations;
 
-    AllPairRoutingTable table;
+
+    LinearRoutingTable linearTable;
 
     TreeTransform(const IGraph& _graph, std::vector<TreeIteration>& _iterations)
         : graph(_graph), iterations(_iterations) {
-        table.init(graph);
+
+        linearTable.init(graph);
     }
 
     void transform() {
@@ -47,8 +49,8 @@ public:
         }
     }
 
-    const AllPairRoutingTable& getRoutingTable() const {
-        return table;
+    const LinearRoutingTable& getRoutingTable() const {
+        return linearTable;
     }
 
     void distributeDemands(TreeIteration& iter) {
@@ -103,89 +105,80 @@ public:
 
                             assert(e != INVALID_EDGE_ID
                             && anti_e != INVALID_EDGE_ID);
-                            table.addFlow(anti_e, src, dst, lambda);
-                            table.addFlow(e, dst, src, lambda);
 
+                            if (dst == 0) {
+                                linearTable.addFlow(anti_e, src, lambda);
+                            }
+                            if (src == 0) {linearTable.addFlow(e, dst, lambda);}
                         }
                     }
                 }
                 q.push(child);
             }
         }
-        removeCycles();
+        removeCyclesLinear();
     }
 
-    void removeCycles() {
-        std::set<std::pair<int, int> > all;
-        for (int e = 0; e<table.adj_ids.size(); e++) {
-            const auto& ids  = table.adj_ids[e];
-            for (const auto& id : ids) {
-                int s = id / graph.getNumNodes();
-                int t = id % graph.getNumNodes();
-                all.insert({s, t});
+    void removeCyclesLinear() {
+        // Collect all sources s that have any flow in the linear table
+        std::set<int> all_sources;
+        for (int e = 0; e < (int)linearTable.src_ids.size(); ++e) {
+            for (int s : linearTable.src_ids[e]) {
+                all_sources.insert(s);
             }
         }
 
-        for (auto d : all) {
+        for (int s : all_sources) {
             while (true) {
-                bool debug = false;
-
-                auto cycle = findCycle(d);
+                auto cycle = findCycleLinear(s);
                 if (cycle.empty()) break;
 
+                // find the minimum flow along the cycle for source s
                 double minF = std::numeric_limits<double>::infinity();
-                for (auto e : cycle) {
-                    int e_id = graph.getEdgeId(e.first, e.second);
-                    double frac = (table.getFlow(e_id, d.first, d.second));
-                    minF = std::min(minF,frac);
+                for (auto& [u, v] : cycle) {
+                    int e_id = graph.getEdgeId(u, v);
+                    minF = std::min(minF, linearTable.getFlow(e_id, s));
                 }
 
-                for (auto e : cycle) {
-                    int e_id = graph.getEdgeId(e.first, e.second);
-                    auto& dmap = table.adj_vals[e_id];
-                    // find index of (d.first, d.second) in table.adj_ids[e_id]
-                    const auto& ids = table.adj_ids[e_id];
+                // subtract minF from every edge in the cycle
+                for (auto& [u, v] : cycle) {
+                    int e_id = graph.getEdgeId(u, v);
+                    auto& ids  = linearTable.src_ids[e_id];
+                    auto& vals = linearTable.src_flows[e_id];
+
+                    // binary search for s in the sorted src_ids[e_id]
                     size_t len = ids.size();
                     size_t lo = 0, hi = len;
                     while (lo < hi) {
-                        const size_t mid = (lo + hi) >> 1;
-                        const auto& mid_val = ids[mid];
-                        if (mid_val < getCommodityID(graph.getNumNodes(), d.first, d.second))
-                            lo = mid + 1;
-                        else
-                            hi = mid;
+                        size_t mid = (lo + hi) >> 1;
+                        if (ids[mid] < s) lo = mid + 1;
+                        else              hi = mid;
                     }
 
-                    // if found, decrease the fraction
-                    if (lo < len && ids[lo] == getCommodityID(graph.getNumNodes(), d.first, d.second)) {
-                        dmap[lo] -= minF;
-                        if (dmap[lo] <= 0) {
-                            // remove the entry
-                            dmap.erase(dmap.begin() + static_cast<long>(lo));
-                            table.adj_ids[e_id].erase(table.adj_ids[e_id].begin() + static_cast<long>(lo));
+                    if (lo < len && ids[lo] == s) {
+                        vals[lo] -= minF;
+                        if (vals[lo] <= 0.0) {
+                            ids.erase( ids.begin()  + static_cast<long>(lo));
+                            vals.erase(vals.begin() + static_cast<long>(lo));
                         }
                     }
-
                 }
-
             }
         }
     }
 
-    std::optional<std::vector<std::pair<int, int>>> findCycleRec(
-        int u,
-        std::set<int>& onStack,
-        std::vector<int>& stack,
-        const std::pair<int, int>& d) {
-        // Found a back-edge → cycle
+    std::optional<std::vector<std::pair<int,int>>> findCycleLinearRec(
+            int u,
+            std::set<int>& onStack,
+            std::vector<int>& stack,
+            int s) {
         if (onStack.count(u)) {
-            // extract the cycle vertices
+            // extract the cycle from where u first appears on the stack
             auto it = std::find(stack.begin(), stack.end(), u);
             std::vector<std::pair<int,int>> cycle;
-            for (; it + 1 != stack.end(); ++it) {
+            for (; it + 1 != stack.end(); ++it)
                 cycle.emplace_back(*it, *(it + 1));
-            }
-            cycle.emplace_back(stack.back(), u); // close the cycle
+            cycle.emplace_back(stack.back(), u);
             return cycle;
         }
 
@@ -194,9 +187,8 @@ public:
 
         for (int w : graph.neighbors(u)) {
             int e = graph.getEdgeId(u, w);
-            if (table.getFlow(e, d.first, d.second) <= 0) continue;
-
-            if (auto res = findCycleRec(w, onStack, stack, d))
+            if (linearTable.getFlow(e, s) <= 0.0) continue;
+            if (auto res = findCycleLinearRec(w, onStack, stack, s))
                 return res;
         }
 
@@ -205,13 +197,13 @@ public:
         return std::nullopt;
     }
 
-    std::vector<std::pair<int, int>> findCycle(const std::pair<int, int>& d) {
+    std::vector<std::pair<int,int>> findCycleLinear(int s) {
         std::vector<int> stack;
         std::set<int> onStack;
 
         for (int v : graph.getVertices()) {
             if (onStack.count(v)) continue;
-            if (auto res = findCycleRec(v, onStack,stack, d))
+            if (auto res = findCycleLinearRec(v, onStack, stack, s))
                 return *res;
         }
         return {};

@@ -74,19 +74,19 @@ makeSolver(SolverType type, IGraph& g) {
             return std::make_unique<ElectricalMWU>(g, 0);
 
         case SolverType::RAECKE_FRT:
-            return std::make_unique<TreeMWU>(g, std::make_unique<FRT>(g));
+            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FRT>(g));
 
         case SolverType::RAECKE_CKR:
-            return std::make_unique<TreeMWU>(g, std::make_unique<FastCKR>(g));
+            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FastCKR>(g));
 
         case SolverType::RAECKE_RANDOM_MST:
-            return std::make_unique<TreeMWU>(g, std::make_unique<TreeMST>(g));
+            return std::make_unique<TreeMWU>(g,0,  std::make_unique<TreeMST>(g));
 
         case SolverType::RAECKE_FRT_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g, std::make_unique<FRT>(g, true));
+            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FRT>(g, true));
 
         case SolverType::RAECKE_CKR_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g, std::make_unique<FastCKR>(g, true));
+            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FastCKR>(g, true));
 
         case SolverType::LP_APPLEGATE_COHEN:
             return std::make_unique<LPSolver>(g);
