@@ -22,6 +22,8 @@
 #include "tree_based/frt.h"
 #include "tree_based/fast_ckr.h"
 #include "tree_based/random_mst.h"
+#include "tree_based/utils/quotient_graph.h"
+#include "tree_based/utils/ultrametric_tree.h"
 
 std::vector<std::string> solverNames ={
     "electrical",
