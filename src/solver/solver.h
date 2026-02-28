@@ -8,6 +8,7 @@
 #include <vector>
 #include "../utils/hash.h"
 #include "routing_table.h"
+#include <memory>
 
 
 
