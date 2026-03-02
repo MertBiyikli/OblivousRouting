@@ -25,6 +25,7 @@ public:
         n=graph.getNumNodes();
         diameter=graph.GetDiameter();
         this->applyMendelScaling = activateMendelScaling;
+        total_time_spent_on_mendel_scaling = 0.0;
     }
     virtual ~TreeOracle() = default;
     IGraph& graph;
@@ -36,8 +37,10 @@ public:
     bool applyMendelScaling = false; // whether to apply Mendel scaling to the distances before computing the tree
     MendelScaling::UltrametricTree ultrametric;
     MendelScaling::QuotientConstruction qc;
+    double total_time_spent_on_mendel_scaling;
 
     virtual std::shared_ptr<HSTNode> getTree(std::vector<double>& distances) {
+        total_time_spent_on_mendel_scaling = 0;
         updateDistances(distances);
         std::shared_ptr<HSTNode> tree = computeHST();
         return tree;
@@ -59,7 +62,9 @@ public:
         std::shared_ptr<HSTNode> root =  std::make_shared<HSTNode>(std::numeric_limits<int>::max());
 
         if (applyMendelScaling) {
+            auto start = timeNow();
             qc.preprocessEdges(graph);
+            total_time_spent_on_mendel_scaling += duration(timeNow() - start);
         }
 
 
@@ -73,6 +78,7 @@ public:
 
             MendelScaling::QuotientLevel Q;
             if (applyMendelScaling) {
+                auto start = timeNow();
                 Q = qc.constructQuotientGraph(ultrametric, Delta, graph);
                 //Q = build_quotient_graph_using_sliding_window(graph, ultrametric, Delta);
                 if (Q.Gq->getNumNodes() <= 1) {
@@ -80,6 +86,7 @@ public:
                     continue;
                 }
 
+                total_time_spent_on_mendel_scaling += duration(timeNow() - start);
                 computeQuotientLevelPartition(Q, L, Delta);
 
             }else {
@@ -111,6 +118,7 @@ public:
         }
 
         if (applyMendelScaling) {
+            auto start = timeNow();
             RandomMST mst_oracle(graph);
             auto mst = mst_oracle.build_mst();
 
@@ -121,6 +129,7 @@ public:
             }
 
             ultrametric.buildFromMST(graph.getNumNodes(), mst, mst_weights);
+            total_time_spent_on_mendel_scaling += duration(timeNow() - start);
             assert(ultrametric.root != -1);
         }
     }
@@ -166,7 +175,6 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
     computeLevelPartition(*Q.Gq, qL, x_perm, delta);
 
     const int nG = graph.getNumNodes();
-    const int nQ = Q.Gq->getNumNodes();
 
     // 2) Map quotient partition back to original graph
     level.R = qL.R;
@@ -194,7 +202,6 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
             level.owner[v] = cluster_g;
         }
     }
-    return;
 }
 
 
@@ -381,6 +388,10 @@ void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& le
         }
 
         node->children.swap(new_children);
+    }
+
+    double getMendelScalingTime() const {
+        return total_time_spent_on_mendel_scaling;
     }
 };
 

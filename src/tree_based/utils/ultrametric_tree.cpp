@@ -97,49 +97,54 @@ void UltrametricTree::buildFromMST(
     preprocessLifting();
 }
 
-    void UltrametricTree::preprocessLifting() {
-        gamma.assign(N, 0.0);
-        for (int i = 0; i < N; ++i) gamma[i] = T[i].Gamma;
+void UltrametricTree::preprocessLifting() {
+    gamma.assign(N, 0.0);
+    for (int i = 0; i < N; ++i) {
+        gamma[i] = T[i].Gamma;
+    }
 
-        depth.assign(N, 0);
-        std::queue<int> q;
-        if (root != -1) q.push(root), depth[root] = 0;
-        while (!q.empty()) {
-            int u = q.front(); q.pop();
-            for (int v : T[u].child) {
-                depth[v] = depth[u] + 1;
-                q.push(v);
-            }
+    depth.assign(N, 0);
+    std::queue<int> q;
+    if (root != -1) {
+        q.push(root);
+        depth[root] = 0;
+    }
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : T[u].child) {
+            depth[v] = depth[u] + 1;
+            q.push(v);
         }
-        int LOG = 1;
-        while ((1<<LOG) <= std::max(1, N)) ++LOG;
-        up.assign(LOG, std::vector<int>(N, -1));
+    }
+
+    int LOG = 1;
+    while ((1<<LOG) <= std::max(1, N)) ++LOG;
+    up.assign(LOG, std::vector<int>(N, -1));
+    for (int u = 0; u < N; ++u) {
+        up[0][u] = T[u].parent;
+    }
+    for (int k = 1; k < LOG; ++k) {
         for (int u = 0; u < N; ++u) {
-            up[0][u] = T[u].parent;
-        }
-        for (int k = 1; k < LOG; ++k) {
-            for (int u = 0; u < N; ++u) {
-                int mid = up[k-1][u];
-                up[k][u] = (mid == -1 ? -1 : up[k-1][mid]);
-            }
+            int mid = up[k-1][u];
+            up[k][u] = (mid == -1 ? -1 : up[k-1][mid]);
         }
     }
+}
 
-    // Return the *highest* ancestor of leaf v whose Γ <= threshold.
-    // If leaf’s Γ(leaf)=0 is already > threshold (never happens), it returns the leaf itself.
-    int UltrametricTree::sigmaDelta(int v_leaf, double Delta) const {
-        if (N == 0 || v_leaf < 0 || v_leaf >= n) return v_leaf;
-        const double thr = Delta / (2.0 * (double) n);
-        // std::cout << "threshold: " << thr << std::endl;
+// Return the *highest* ancestor of leaf v whose Γ <= threshold.
+// If leaf’s Γ(leaf)=0 is already > threshold (never happens), it returns the leaf itself.
+int UltrametricTree::sigmaDelta(int v_leaf, double Delta) const {
+    if (N == 0 || v_leaf < 0 || v_leaf >= n) return v_leaf;
+    const double thr = Delta / (2.0 * (double) n);
 
-        int u = v_leaf;
-        if (gamma[u] > thr) return u; // safety
-        // climb as long as parent exists and Γ(parent) <= thr
-        for (int k = (int)up.size()-1; k >= 0; --k) {
-            int p = up[k][u];
-            if (p != -1 && gamma[p] <= thr) {
-                u = p;
-            }
+    int u = v_leaf;
+    if (gamma[u] > thr) return u; // safety
+    // climb as long as parent exists and Γ(parent) <= thr
+    for (int k = (int)up.size()-1; k >= 0; --k) {
+        int p = up[k][u];
+        if (p != -1 && gamma[p] <= thr) {
+            u = p;
         }
-        return u;
     }
+    return u;
+}

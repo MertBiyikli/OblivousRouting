@@ -19,6 +19,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
     std::vector<TreeIteration> iteration;
+    std::vector<double> mendel_scaling_times;
 
 public:
     TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)) {
@@ -38,6 +39,15 @@ public:
         t0 = timeNow();
         transformSolution(table);
         this->transformation_time = duration((timeNow()-t0));
+
+        if (oracle->applyMendelScaling) {
+            double total_mendel_time = 0.0;
+            for (const auto& t : mendel_scaling_times) total_mendel_time += t;
+            std::cout << "Total time spent on Mendel scaling: " << total_mendel_time << " ms\n";
+            double avg_mendel_time = mendel_scaling_times.empty() ? 0.0 : total_mendel_time / mendel_scaling_times.size();
+            std::cout << "Average time spent on Mendel scaling per iteration: " << avg_mendel_time << " ms\n";
+        }
+
     }
 
     virtual void transformSolution(LinearRoutingTable& table) {
@@ -70,6 +80,10 @@ public:
         iteration.push_back(iter);
 
         computeNewDistances(lambda);
+
+        if (oracle->applyMendelScaling) {
+            mendel_scaling_times.push_back(oracle->getMendelScalingTime());
+        }
 
         return lambda;
     }
