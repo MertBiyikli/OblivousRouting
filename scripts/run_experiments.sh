@@ -234,7 +234,7 @@ for g in "${GRAPHS[@]}"; do
         tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
       }
 
-      $0 ~ /\([0-9.]+ \/ [0-9.]+\)/ {
+      $0 ~ /\([0-9.eE+\-]+ \/ [0-9.eE+\-]+\)/ {
         tmp=$0
         sub(/^.*\(/,"",tmp)
         sub(/\).*$/,"",tmp)
