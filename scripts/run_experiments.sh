@@ -211,9 +211,9 @@ for g in "${GRAPHS[@]}"; do
         mendel_total="NaN"; mendel_avg="NaN";
       }
 
-      $0 ~ /^Graph loaded: [0-9]+ nodes, [0-9]+ edges\./ {
+      $0 ~ /^Graph loaded: [0-9]+ (nodes|vertices), [0-9]+ edges\./ {
         tmp=$0
-        sub(/^Graph loaded: [0-9]+ nodes, /, "", tmp)
+        sub(/^Graph loaded: [0-9]+ (nodes|vertices), /, "", tmp)
         sub(/ edges\..*$/, "", tmp)
         edges=tmp
         next
