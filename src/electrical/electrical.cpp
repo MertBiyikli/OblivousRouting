@@ -36,8 +36,7 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     initAMGSolver(params);
 
     // compute Sketch matrix
-    SketchMatrix = getSketchMatrix(m, n, 0.5);
-    SketchMatrix_t = SketchMatrix.transpose();
+    SketchMatrix_t = getSketchMatrix(m, n, 0.5).transpose();
 
     Eigen::MatrixXd UCt = SketchMatrix_t; // m × ℓ
     for (int e = 0; e < m; ++e)
@@ -151,7 +150,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         }
 
         if (!K_initialized) {
-            Eigen::VectorXd y = SketchMatrix * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
+            Eigen::VectorXd y = SketchMatrix_t.transpose() * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
             K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
         }
     }

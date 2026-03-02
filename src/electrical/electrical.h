@@ -19,31 +19,9 @@
 * and then update the edge resistances based on the load on the edges. The process is repeated until convergence.
 */
 class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {
-
+protected:
     // AMG solver instance
     std::unique_ptr<LaplacianSolver> amg;
-public:
-
-    ElectricalMWU(IGraph& g, int root, bool debug = false)
-    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
-        this->debug = debug;
-    }
-
-    // entry point
-    void computeBasisFlows(LinearRoutingTable &table) override {
-        init(debug);
-        run(table);
-        scaleFlowDown(table);
-    }
-
-    virtual void run(LinearRoutingTable &table);
-    virtual void scaleFlowDown(LinearRoutingTable &table);
-    virtual void getApproxLoad(std::vector<double>& load);
-    virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
-    virtual void initAMGSolver(boost::property_tree::ptree _params);
-    virtual void updateEdgeDistances(const std::vector<double>& load);
-
-
     int n, m;
 
     double epsilon = 0.5; // sketching parameter
@@ -70,6 +48,28 @@ public:
     // Preallocate as class members to avoid reallocs
     Eigen::SparseMatrix<double> X;          // n × ℓ precomputed RHS
     Eigen::MatrixXd SketchMatrix, SketchMatrix_t; // sketch matrix transposed
+
+public:
+
+    ElectricalMWU(IGraph& g, int root, bool debug = false)
+    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
+        this->debug = debug;
+    }
+
+    // entry point
+    void computeBasisFlows(LinearRoutingTable &table) override {
+        init(debug);
+        run(table);
+        scaleFlowDown(table);
+    }
+
+    virtual void run(LinearRoutingTable &table);
+    virtual void scaleFlowDown(LinearRoutingTable &table);
+    virtual void getApproxLoad(std::vector<double>& load);
+    virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
+    virtual void initAMGSolver(boost::property_tree::ptree _params);
+    virtual void updateEdgeDistances(const std::vector<double>& load);
+
 
 
     // Helpers
