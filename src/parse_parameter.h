@@ -310,20 +310,18 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
 }
 
 
-inline std::pair<double, double> HandleDemandModel(int argc,
+inline void HandleDemandModel(int argc,
                               char** argv,
                               const std::optional<Config>& cfg,
                               IGraph& _g,
-                              const std::unique_ptr<RoutingScheme>& routing_scheme)
+                              DemandMap& demand_map)
 {
-    if (argc < 4 || !cfg) { return {}; }
+    if (argc < 4 || !cfg) { return; }
 
     // find demand model type from config and print it
     std::string demand_model_str = (argv[3] ? argv[3] : "<empty>");
-    auto demand_model = parse_demand_model_token(demand_model_str);
-    if (demand_model) {
-        std::cout << "Demand model: " << (argv[3] ? argv[3] : "<empty>") << std::endl;
-    }
+    auto demand_model_type = parse_demand_model_token(demand_model_str);
+
     // if a demand model is provided, compute the oblivious ratio for that demand model
     if (cfg->demand_model != DemandModelType::NONE) {
         std::vector< std::pair<int, int> > demands;
@@ -354,34 +352,35 @@ inline std::pair<double, double> HandleDemandModel(int argc,
                 std::cerr << "Unknown demand model type.\n";
         }
 
-        auto demand_map = demand_model->generate(_g, demands,  1.0);
-        double total_demand = 0.0;
-        for (int i = 0; i < demand_map.size(); ++i) {
-            total_demand += demand_map.getDemandValue(i);
-        }
-
-        std::vector<double> congestion_per_edge(_g.getNumEdges(), 0.0); // undirected edges
-
-        routing_scheme->routeDemands(congestion_per_edge, demand_map);
-        double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
-
-
-
-        // compute the Maximum Commodity flow for the given demand set
-        CMMF_Solver mccf(_g);
-        mccf.init(_g);
-        mccf.AddDemandMap(demand_map);
-        auto offline_scheme = mccf.solve();
-
-        double offline_congestion = mccf.getCongestion();
-        return {offline_congestion, max_cong};
-
+        demand_map = demand_model->generate(_g, demands);
     }
-    return {};
 }
 
 
-void printStatsForDemandModel(char** argv,std::pair<double, double> result) {
+inline double computeRoutingSchemeCongestion(IGraph& _g, const std::unique_ptr<RoutingScheme>& routing_scheme, const DemandMap& demand_map) {
+    std::vector<double> congestion_per_edge(_g.getNumEdges(), 0.0); // undirected edges
+
+    routing_scheme->routeDemands(congestion_per_edge, demand_map);
+    double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
+
+    for (const auto& cong : congestion_per_edge) {
+        if (cong > max_cong) {
+            max_cong = cong;
+        }
+    }
+    return max_cong;
+}
+
+inline double computeOfflineOptimalCongestion(IGraph& _g, const DemandMap& demand_map) {
+    CMMF_Solver mccf(_g);
+    mccf.init(_g);
+    mccf.AddDemandMap(demand_map);
+    auto offline_scheme = mccf.solve();
+
+    return mccf.getCongestion();
+}
+
+inline void printStatsForDemandModel(char** argv,std::pair<double, double> result) {
     if (result.first > 0.0 && result.second > 0.0) {
         std::cout << "Ratio off the optimal offline solution "
                   << (argv[3] ? argv[3] : "<empty>")

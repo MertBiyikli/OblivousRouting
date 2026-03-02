@@ -5,8 +5,6 @@
 #ifndef OBLIVOUSROUTING_SOLVER_H
 #define OBLIVOUSROUTING_SOLVER_H
 
-#include <vector>
-#include "../utils/hash.h"
 #include "routing_table.h"
 #include <memory>
 
@@ -14,8 +12,6 @@
 
 class ObliviousRoutingSolver {
 public:
-    //IGraph& graph;
-    // ObliviousRoutingSolver() : graph(g) {};
     virtual ~ObliviousRoutingSolver() = default;
     virtual std::unique_ptr<RoutingScheme> solve() = 0;
 };
@@ -23,11 +19,9 @@ public:
 class LinearObliviousSolverBase : public ObliviousRoutingSolver {
 public:
 
-    // 🔧 FIXED: constructor correctly assigns root
     LinearObliviousSolverBase(IGraph& _g, int _root)
         : graph(_g), root(_root) {}
 
-    // 🔧 FIXED: pass table into LinearRoutingScheme
     std::unique_ptr<RoutingScheme> solve() override {
         LinearRoutingTable table;
         table.init(graph);

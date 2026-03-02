@@ -201,7 +201,7 @@ struct AllPairRoutingTable :public RoutingTable{
         for (int e = 0; e < m; ++e) {
             // get the orientation of the flow
             const auto& [u, v] = g.edgeEndpoints(e);
-            // int sign = (u < v) ? 1 : -1;
+
             for (int s = 0; s < n; ++s) { // By default the root node is 0
                 for ( int t = 0; t < n; ++t ) {
                     if ( s == t ) continue;
@@ -273,18 +273,10 @@ struct LinearRoutingTable : public RoutingTable {
         auto& ids  = src_ids[e];
         auto& vals = src_flows[e];
 
-        bool found = false;
-        if (e == 10) {
-            found = true;
-        }
-
-
         // keep the ids sorted by s for binary search later
         size_t len = ids.size();
         size_t lo = 0, hi = len;
 
-
-        // 1) Linear warm-up for small lists (fast for MWU!)
         const size_t linear_bound = 8;
         for (int i = 0; i < std::min(len, linear_bound); ++i) {
             if (ids[i] == s) {
@@ -484,7 +476,6 @@ public:
         double total_flow = total_flow_sx - total_flow_tx;
         return ( std::abs(total_flow) < EPS ? 0.0 : total_flow );
 
-        // return routing_table.getFlow(e, s) - routing_table.getFlow(e, t);
     }
 
     void addFlow(int e, int s, int t, double flow_sx) {

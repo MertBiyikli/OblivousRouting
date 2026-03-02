@@ -17,32 +17,15 @@ int main(int argc, char **argv) {
     G->printGraphType();
     readLGFFile(*G, cfg->filename,  true);
     G->finalize();
-/*
-    for (int e = 0; e<G->getNumEdges(); e++) {
-        auto [u, v] = G->edgeEndpoints(e);
-        if (G->getEdgeDistance(e) <= 0.0 || std::isnan(G->getEdgeDistance(e))) {
-            std::cerr << "Warning: edge (" << u << ", " << v << ") has non-positive or NaN distance. Setting to 1.0.\n";
-            G->updateEdgeDistance(e, 1.0);
-        }else {
-            std::cout << "Edge (" << u << ", " << v << ") has distance: " << G->getEdgeDistance(e) << "\n";
-        }
-         if (G->getEdgeCapacity(e) <= 0.0 || std::isnan(G->getEdgeCapacity(e))) {
-             std::cerr << "Warning: edge (" << u << ", " << v << ") has non-positive or NaN capacity. Setting to 1.0.\n";
-         }else {
-             std::cout << "Edge (" << u << ", " << v << ") has capacity: " << G->getEdgeCapacity(e) << "\n";
-         }
-    }
-    std::cout << "Graph loaded: " << G->getNumNodes() << " nodes, " << G->getNumEdges() << " edges.\n";
 
-    // compute shortest path distances and diameter for later use in some algorithms
-    std::cout << "Computing shortest path distances and diameter...\n";
-    for (auto c : G->getShortestPath(0, 3)) {
-        std::cout << c << " ";
-    }
-    std::cout << "\nDiameter: " << G->GetDiameter() << "\n";
-*/
-    if ( !G->isConnected()) {
-        std::cerr << "Input graph is not connected!\n";
+    std::cout << "Graph loaded: " << G->getNumNodes() << " vertices, " << G->getNumEdges() << " edges.\n";
+
+    // --- optional: demand model evaluation ---
+    DemandMap demand_map;
+    double offline_opt_cong = 0;
+    HandleDemandModel(argc, argv, cfg, *G, demand_map);
+    if (cfg->demand_model != DemandModelType::NONE) {
+        offline_opt_cong = computeOfflineOptimalCongestion(*G, demand_map);
     }
 
     for (SolverType type : cfg->solvers) {
@@ -55,8 +38,7 @@ int main(int argc, char **argv) {
         auto scheme = solver->solve();
         double solve_time = duration(timeNow() - t0);
 
-        // scheme->printRoutingTable();
-
+        //scheme->printRoutingTable();
 
         std::cout << "Total running time: " << solve_time << " ms\n";
 
@@ -65,10 +47,10 @@ int main(int argc, char **argv) {
             mwu->printTimeStats();
         }
 
-        // --- optional: demand model evaluation ---
-        auto result = HandleDemandModel(argc, argv, cfg, *G, scheme);
+        // compute and print the congestion of the computed routing scheme
+        double scheme_congestion = computeRoutingSchemeCongestion(*G, scheme, demand_map);
         if (cfg->demand_model != DemandModelType::NONE) {
-            printStatsForDemandModel(argv, result);
+            printStatsForDemandModel(argv, {offline_opt_cong, scheme_congestion});
         }
     }
     return 0;

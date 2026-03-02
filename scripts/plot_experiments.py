@@ -52,7 +52,7 @@ def set_paper_style():
 
         # Lines/markers (slightly smaller = cleaner)
         "lines.linewidth": 0.75,
-        "lines.markersize": 2.2,
+        "lines.markersize": 0.28,
 
         # Axes
         "axes.linewidth": 0.8,
@@ -353,7 +353,7 @@ def plot_box_by_solver(
 
     # mean markers
     x = np.arange(1, len(solvers) + 1)
-    ax.scatter(x, means, marker="D", s=14, zorder=3, color="black", linewidths=0.0, label="Mean")
+    ax.scatter(x, means, marker="D", s=7, zorder=3, color="black", linewidths=0.0, label="Mean")
 
     ax.set_xticks(x)
     ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=25, ha="right")
@@ -426,7 +426,7 @@ def plot_scatter_cloud(
         h = ax.scatter(
             x, y,
             marker=markers[s],
-            s=12,
+            s=6,
             alpha=0.65,          # “cloud of dots”
             color=colors[s],
             edgecolors="none",
@@ -591,7 +591,7 @@ def main():
     )
 
     # Bar plots of average metrics per solver
-    # --- Box plots per solver (distribution across instances) ---
+    # Bar plots per solver (distribution across instances) ---
     plot_box_by_solver(
         df, solvers, colors,
         ycol="relative_error",
@@ -600,6 +600,24 @@ def main():
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "relative_error_box_by_solver",
     )
+
+    # Per-demand-model relative error box plots
+    if "demand" in df.columns:
+        demand_models = sorted(df["demand"].dropna().unique())
+        for demand in demand_models:
+            df_demand = df[df["demand"] == demand]
+            # Only keep solvers that have data for this demand model
+            solvers_demand = [s for s in solvers if not df_demand[df_demand["solver"] == s].empty]
+            if not solvers_demand:
+                continue
+            plot_box_by_solver(
+                df_demand, solvers_demand, colors,
+                ycol="relative_error",
+                ylabel="Relative error [%]",
+                ylog=False,
+                figsize=FIGSIZE_SINGLE,
+                outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
+            )
 
     df["percent_transform_time"] = (
             df["transformation_time_ms"] / df["total_time_ms"] * 100.0
