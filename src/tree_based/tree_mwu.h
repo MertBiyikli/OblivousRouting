@@ -79,13 +79,6 @@ public:
         return lambda;
     }
 
-    void normalizeLambdas() {
-        for (auto& it : iteration) {
-            double lambda = it.getLambda();
-            lambda /= lambda_sum;
-            it.setLambda(lambda);
-        }
-    }
 
 
     void addCurrentLoad(double lambda) {
