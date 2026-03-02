@@ -15,6 +15,7 @@
 class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle> oracle;
+    TreeTransform transform;
     double lambda_sum;
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
@@ -22,7 +23,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     std::vector<double> mendel_scaling_times;
 
 public:
-    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)) {
+    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)),transform(graph) {
         current_distances.assign(graph.getNumEdges(), 1.0);
         rload_current.assign(graph.getNumEdges(), 0.0);
         rload_total.assign(graph.getNumEdges(), 0.0);
@@ -31,14 +32,8 @@ public:
 
 
     virtual void computeBasisFlows(LinearRoutingTable &table) override {
-        auto t0 = timeNow();
-        run();
-        this->solve_time = duration((timeNow()-t0));
-        normalizeLambdas();
-
-        t0 = timeNow();
-        transformSolution(table);
-        this->transformation_time = duration((timeNow()-t0));
+        table.init(graph);
+        run(table);
 
         if (oracle->applyMendelScaling) {
             double total_mendel_time = 0.0;
@@ -47,39 +42,35 @@ public:
             double avg_mendel_time = mendel_scaling_times.empty() ? 0.0 : total_mendel_time / mendel_scaling_times.size();
             std::cout << "Average time spent on Mendel scaling per iteration: " << avg_mendel_time << " ms\n";
         }
-
-    }
-
-    virtual void transformSolution(LinearRoutingTable& table) {
-        TreeTransform transform(graph, iteration);
-        transform.transform();
-        table = transform.getRoutingTable();
     }
 
 
     // MWU loop
-    void run() {
+    void run(LinearRoutingTable& table) {
         lambda_sum = 0.0;
+
         while (lambda_sum < 1.0) {
-            auto t0 = timeNow();
-            lambda_sum += treeOracle();
-            this->oracle_running_times.push_back(duration(timeNow()-t0));
+            lambda_sum += treeOracle(table);
             iteration_count++;
         }
     }
 
 
-    double treeOracle() {
+    double treeOracle(LinearRoutingTable& table) {
+        auto t0 = timeNow();
         auto t = oracle->getTree(current_distances);
+        this->oracle_running_times.push_back( duration((timeNow()-t0)));
         assert(t != nullptr);
         computeRLoads(t);
         double l = getMaxRload();
         double lambda = std::min(1.0/l, 1.0 - lambda_sum);
-
-        TreeIteration iter( std::move(t), current_distances, lambda);
-        iteration.push_back(iter);
-
         computeNewDistances(lambda);
+        solve_time += duration(timeNow()-t0);
+
+        t0 = timeNow();
+        TreeIteration iter( std::move(t), current_distances, lambda);
+        transform.transform(iter, table);
+        this->transformation_time += duration((timeNow()-t0));
 
         if (oracle->applyMendelScaling) {
             mendel_scaling_times.push_back(oracle->getMendelScalingTime());
@@ -105,11 +96,8 @@ public:
 
     void computeRLoads(const std::shared_ptr<HSTNode> t) {
         assert(t != nullptr);
-        // clear current rloads
 
         std::fill(rload_current.begin(), rload_current.end(), 0.0);
-
-
 
         std::queue<std::shared_ptr<HSTNode>> q;
         q.push(t);
@@ -173,6 +161,7 @@ public:
             }
         }
     }
+
     double getMaxRload() const {
         assert(rload_current.size() > 0);
 
@@ -218,12 +207,6 @@ public:
             graph.updateEdgeDistance(e, norm);
             current_distances[e] = norm;
         }
-    }
-
-    void activateMendelScaling(bool flag) {
-        assert(oracle != nullptr);
-        if (oracle)
-            oracle->applyMendelScaling = flag;
     }
 };
 

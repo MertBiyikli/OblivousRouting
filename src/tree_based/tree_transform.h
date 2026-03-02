@@ -17,11 +17,6 @@ public:
     TreeIteration(std::shared_ptr<HSTNode> _tree, std::vector<double> _distance, double _lambda)
         : tree(std::move(_tree)), distance(std::move(_distance)), lambda(_lambda) {}
 
-    // setter methods
-    void setTree(std::shared_ptr<HSTNode> _tree) { tree = std::move(_tree); }
-    void setDistance(std::vector<double> _distance) { distance = std::move(_distance); }
-    void setLambda(double _lambda) { lambda = _lambda; }
-
     // getter methods
     std::shared_ptr<HSTNode> getTree() const { assert(tree != nullptr); return tree; }
     std::vector<double> getDistance() const { return distance; }
@@ -32,28 +27,18 @@ public:
 class TreeTransform {
 public:
     const IGraph& graph;
-    std::vector<TreeIteration>& iterations;
 
+    TreeTransform(const IGraph& _graph)
+        : graph(_graph){
 
-    LinearRoutingTable linearTable;
-
-    TreeTransform(const IGraph& _graph, std::vector<TreeIteration>& _iterations)
-        : graph(_graph), iterations(_iterations) {
-
-        linearTable.init(graph);
     }
 
-    void transform() {
-        for (auto& iteration : iterations) {
-            distributeDemands(iteration);
-        }
+
+    void transform(TreeIteration& iteration, LinearRoutingTable& table) {
+        distributeDemands(iteration, table);
     }
 
-    const LinearRoutingTable& getRoutingTable() const {
-        return linearTable;
-    }
-
-    void distributeDemands(TreeIteration& iter) {
+    void distributeDemands(TreeIteration& iter, LinearRoutingTable& table) {
         const auto& root = iter.getTree();
         const auto& distance = iter.getDistance();
         const auto& lambda = iter.getLambda();
@@ -107,19 +92,21 @@ public:
                             && anti_e != INVALID_EDGE_ID);
 
                             if (dst == 0) {
-                                linearTable.addFlow(anti_e, src, lambda);
+                                table.addFlow(anti_e, src, lambda);
                             }
-                            if (src == 0) {linearTable.addFlow(e, dst, lambda);}
+                            if (src == 0) {
+                                table.addFlow(e, dst, lambda);
+                            }
                         }
                     }
                 }
                 q.push(child);
             }
         }
-        removeCyclesLinear();
+        removeCyclesLinear(table);
     }
 
-    void removeCyclesLinear() {
+    void removeCyclesLinear(LinearRoutingTable& linearTable) {
         // Collect all sources s that have any flow in the linear table
         std::set<int> all_sources;
         for (int e = 0; e < (int)linearTable.src_ids.size(); ++e) {
@@ -130,7 +117,7 @@ public:
 
         for (int s : all_sources) {
             while (true) {
-                auto cycle = findCycleLinear(s);
+                auto cycle = findCycleLinear(s, linearTable);
                 if (cycle.empty()) break;
 
                 // find the minimum flow along the cycle for source s
@@ -171,7 +158,8 @@ public:
             int u,
             std::set<int>& onStack,
             std::vector<int>& stack,
-            int s) {
+            int s,
+            LinearRoutingTable& linearTable) {
         if (onStack.count(u)) {
             // extract the cycle from where u first appears on the stack
             auto it = std::find(stack.begin(), stack.end(), u);
@@ -188,23 +176,25 @@ public:
         for (int w : graph.neighbors(u)) {
             int e = graph.getEdgeId(u, w);
             if (linearTable.getFlow(e, s) <= 0.0) continue;
-            if (auto res = findCycleLinearRec(w, onStack, stack, s))
+            if (auto res = findCycleLinearRec(w, onStack, stack, s, linearTable)) {
                 return res;
+            }
         }
 
-        stack.pop_back();
-        onStack.erase(u);
-        return std::nullopt;
+            stack.pop_back();
+            onStack.erase(u);
+            return std::nullopt;
     }
 
-    std::vector<std::pair<int,int>> findCycleLinear(int s) {
+    std::vector<std::pair<int,int>> findCycleLinear(int s, LinearRoutingTable& linearTable) {
         std::vector<int> stack;
         std::set<int> onStack;
 
         for (int v : graph.getVertices()) {
             if (onStack.count(v)) continue;
-            if (auto res = findCycleLinearRec(v, onStack, stack, s))
+            if (auto res = findCycleLinearRec(v, onStack, stack, s, linearTable)) {
                 return *res;
+            }
         }
         return {};
     }
