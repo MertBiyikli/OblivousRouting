@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     readLGFFile(*G, cfg->filename,  true);
     G->finalize();
 
-    std::cout << "Graph loaded: " << G->getNumNodes() << " vertices, " << G->getNumEdges() << " edges.\n";
+    std::cout << "Graph loaded: " << G->getNumNodes() << " nodes, " << G->getNumEdges() << " edges.\n";
     G->printGraphType();
 
     // --- optional: demand model evaluation ---

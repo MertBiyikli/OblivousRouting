@@ -105,7 +105,7 @@ mkdir -p "$OUT_DIR"
 CSV="$OUT_CSV"
 
 if [[ ! -f "$CSV" ]]; then
-  echo "dataset,graph,solver,demand,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value,mendel_total_time_ms,mendel_avg_time_ms,status" > "$CSV"
+  echo "dataset,graph,solver,demand,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value,status" > "$CSV"
 fi
 
 DATASET_PATH="$DATASET"
@@ -208,12 +208,11 @@ for g in "${GRAPHS[@]}"; do
       BEGIN {
         edges="NaN"; total_time="NaN"; solve_time="NaN"; transformation_time="NaN";
         mwu="NaN"; avg_oracle="NaN"; achieved="NaN"; offline="NaN";
-        mendel_total="NaN"; mendel_avg="NaN";
       }
 
-      $0 ~ /^Graph loaded: [0-9]+ (nodes|vertices), [0-9]+ edges\./ {
+      $0 ~ /^Graph loaded: [0-9]+ nodes, [0-9]+ edges\./ {
         tmp=$0
-        sub(/^Graph loaded: [0-9]+ (nodes|vertices), /, "", tmp)
+        sub(/^Graph loaded: [0-9]+ nodes, /, "", tmp)
         sub(/ edges\..*$/, "", tmp)
         edges=tmp
         next
@@ -234,12 +233,6 @@ for g in "${GRAPHS[@]}"; do
       $0 ~ /^Average oracle time: [0-9.]+ ms$/ {
         tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
       }
-      $0 ~ /^Total time spent on Mendel scaling: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ ms$/,"",tmp); mendel_total=tmp; next
-      }
-      $0 ~ /^Average time spent on Mendel scaling per iteration: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
-      }
 
       $0 ~ /\([0-9.]+ \/ [0-9.]+\)/ {
         tmp=$0
@@ -255,11 +248,10 @@ for g in "${GRAPHS[@]}"; do
         if (status != "OK") {
           total_time="NaN"; solve_time="NaN"; transformation_time="NaN";
           mwu="NaN"; avg_oracle="NaN"; achieved="NaN"; offline="NaN";
-          mendel_total="NaN"; mendel_avg="NaN";
         }
-        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
           dataset, graph, solver, demand, edges, total_time, solve_time, transformation_time,
-          mwu, avg_oracle, achieved, offline, mendel_total, mendel_avg, status
+          mwu, avg_oracle, achieved, offline, status
       }
       ' "$log" >> "$CSV"
 
