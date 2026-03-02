@@ -14,11 +14,11 @@ int main(int argc, char **argv) {
 
 
     auto G = makegraph(cfg->graph_format);
-    G->printGraphType();
     readLGFFile(*G, cfg->filename,  true);
     G->finalize();
 
     std::cout << "Graph loaded: " << G->getNumNodes() << " vertices, " << G->getNumEdges() << " edges.\n";
+    G->printGraphType();
 
     // --- optional: demand model evaluation ---
     DemandMap demand_map;

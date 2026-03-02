@@ -38,41 +38,68 @@ LEGEND_OUTSIDE = True  # put legend above plot to avoid occluding data
 
 def set_paper_style():
     mpl.rcParams.update({
-        # Typography
+        # ── Typography ──────────────────────────────────────────────────────────
         "font.family": "serif",
         "font.serif": ["Times New Roman", "Times", "STIXGeneral", "DejaVu Serif"],
         "mathtext.fontset": "stix",
+        "font.size": 8,
+        "axes.labelsize": 8,
+        "axes.titlesize": 8,
+        "axes.titlepad": 4,
+        "legend.fontsize": 6.5,
+        "legend.title_fontsize": 7,
+        "xtick.labelsize": 7,
+        "ytick.labelsize": 7,
 
-        "font.size": 7,
-        "axes.labelsize": 7,
-        "axes.titlesize": 7,
-        "legend.fontsize": 6,
-        "xtick.labelsize": 6,
-        "ytick.labelsize": 6,
+        # ── Lines / markers ──────────────────────────────────────────────────
+        "lines.linewidth": 0.9,
+        "lines.markersize": 3.5,
+        "lines.markeredgewidth": 0.4,
 
-        # Lines/markers (slightly smaller = cleaner)
-        "lines.linewidth": 0.75,
-        "lines.markersize": 0.28,
+        # ── Axes & spines ────────────────────────────────────────────────────
+        "axes.linewidth": 0.7,
+        "axes.labelpad": 3.0,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
 
-        # Axes
-        "axes.linewidth": 0.8,
-        "xtick.major.width": 0.8,
-        "ytick.major.width": 0.8,
-        "xtick.minor.width": 0.6,
-        "ytick.minor.width": 0.6,
+        # ── Ticks ────────────────────────────────────────────────────────────
+        "xtick.major.width": 0.7,
+        "ytick.major.width": 0.7,
+        "xtick.minor.width": 0.5,
+        "ytick.minor.width": 0.5,
+        "xtick.major.size": 3.0,
+        "ytick.major.size": 3.0,
+        "xtick.minor.size": 1.8,
+        "ytick.minor.size": 1.8,
+        "xtick.major.pad": 2.5,
+        "ytick.major.pad": 2.5,
         "xtick.direction": "in",
         "ytick.direction": "in",
 
-        # Grid (subtle)
+        # ── Grid ─────────────────────────────────────────────────────────────
         "axes.grid": True,
-        "grid.alpha": 0.22,
-        "grid.linewidth": 0.55,
+        "axes.axisbelow": True,        # grid behind data
+        "grid.color": "#CCCCCC",
+        "grid.alpha": 0.6,
+        "grid.linewidth": 0.4,
+        "grid.linestyle": "--",
 
-        # Output
-        "pdf.fonttype": 42,  # embedded TrueType
+        # ── Legend ───────────────────────────────────────────────────────────
+        "legend.frameon": False,
+        "legend.borderpad": 0.3,
+        "legend.labelspacing": 0.3,
+        "legend.handlelength": 1.6,
+        "legend.handleheight": 0.7,
+        "legend.handletextpad": 0.4,
+        "legend.columnspacing": 0.8,
+
+        # ── Figure & output ──────────────────────────────────────────────────
+        "figure.dpi": 150,
+        "pdf.fonttype": 42,            # embed TrueType (required by IEEE/ACM)
         "ps.fonttype": 42,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.02,
+        "savefig.pad_inches": 0.03,
+        "savefig.dpi": 450,
     })
 
 
@@ -136,24 +163,32 @@ def solver_sort_key(s: str) -> tuple:
 # COLORS (unique per solver, consistent across plots)
 # ======================
 
-def solver_palette_unique(solvers: list[str]) -> dict[str, tuple]:
-    """
-    Guarantees unique colors for all solvers (up to many solvers).
-    - For <= 20: uses tab20 (high contrast).
-    - For > 20: falls back to evenly spaced HSV colors.
-    """
-    n = len(solvers)
-    colors: list[tuple]
+# Curated colorblind-safe palette (Wong 2011 + Tol extensions).
+# Stays readable in grayscale and on projectors.
+_PALETTE = [
+    "#0072B2",  # blue
+    "#D55E00",  # vermillion
+    "#009E73",  # green
+    "#CC79A7",  # pink
+    "#E69F00",  # orange
+    "#56B4E9",  # sky-blue
+    "#F0E442",  # yellow
+    "#000000",  # black
+    "#999999",  # grey
+    "#882255",  # wine
+]
 
-    if n <= 20:
-        cmap = plt.get_cmap("tab20")
-        colors = [cmap(i) for i in range(n)]
-    else:
-        # evenly spaced hues
-        cmap = plt.get_cmap("hsv")
-        colors = [cmap(i / n) for i in range(n)]
+_LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1)), (0, (5, 1))]
 
-    return {s: colors[i] for i, s in enumerate(solvers)}
+
+def solver_palette_unique(solvers: list[str]) -> dict[str, str]:
+    """Unique color per solver; cycles through colorblind-safe palette."""
+    return {s: _PALETTE[i % len(_PALETTE)] for i, s in enumerate(solvers)}
+
+
+def solver_linestyles(solvers: list[str]) -> dict[str, str]:
+    """Unique linestyle per solver (helps grayscale / print)."""
+    return {s: _LINESTYLES[i % len(_LINESTYLES)] for i, s in enumerate(solvers)}
 
 
 def solver_markers(solvers: list[str]) -> dict[str, str]:
@@ -191,7 +226,7 @@ def add_legend(ax: plt.Axes, handles, labels):
 def plot_lines(
         df_agg: pd.DataFrame,
         solvers: list[str],
-        colors: dict[str, tuple],
+        colors: dict[str, str],
         markers: dict[str, str],
         xcol: str,
         y_mean_col: str,
@@ -202,6 +237,7 @@ def plot_lines(
         ylog: bool,
         figsize,
         outpath: Path,
+        linestyles: dict[str, str] | None = None,
 ):
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
@@ -217,23 +253,29 @@ def plot_lines(
         y = sub[y_mean_col].to_numpy()
         e = sub[y_std_col].to_numpy()
 
-        # Keep log-plots sane
         if ylog:
             y = np.maximum(y, LOG_EPS)
             e = np.minimum(e, y - LOG_EPS)
 
+        ls = linestyles[s] if linestyles else "-"
+        # space markers so they don't clutter when many points
+        every = max(1, len(x) // 6)
         h, = ax.plot(
             x, y,
+            linestyle=ls,
             marker=markers[s],
+            markevery=every,
+            markersize=3.5,
+            markeredgewidth=0.4,
+            markeredgecolor="white",
             label=pretty_solver_name(s),
             color=colors[s],
         )
         handles.append(h)
         labels.append(pretty_solver_name(s))
 
-        # optional uncertainty band (kept off by default)
         if SHOW_ERROR_BARS and np.any(e > 0):
-            ax.fill_between(x, y - e, y + e, alpha=0.12, color=colors[s])
+            ax.fill_between(x, y - e, y + e, alpha=0.10, color=colors[s], linewidth=0)
 
     if xlog:
         ax.set_xscale("log")
@@ -242,10 +284,7 @@ def plot_lines(
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-
     ax.minorticks_on()
-    ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.10)
 
     add_legend(ax, handles, labels)
 
@@ -266,7 +305,7 @@ def aggregate_mean_std_by_solver(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
 def plot_solver_average_bars(
         df_solver_agg: pd.DataFrame,
         solvers: list[str],
-        colors: dict[str, tuple],
+        colors: dict[str, str],
         y_mean_col: str,
         y_std_col: str,
         ylabel: str,
@@ -286,26 +325,31 @@ def plot_solver_average_bars(
         e = np.minimum(e, y - LOG_EPS)
 
     x = np.arange(len(solvers))
-    bars = ax.bar(
+    ax.bar(
         x, y,
         color=[colors[s] for s in solvers],
-        alpha=0.8,
+        edgecolor="white",
+        linewidth=0.5,
+        alpha=0.88,
+        zorder=3,
     )
 
-    if SHOW_ERROR_BARS and np.any(e > 0):
-        ax.errorbar(x, y, yerr=e, fmt="none", ecolor="black", capsize=2, linewidth=0.8)
+    # Always show error bars for bars (they carry statistical meaning)
+    ax.errorbar(
+        x, y, yerr=e,
+        fmt="none", ecolor="#333333",
+        capsize=2.5, capthick=0.7,
+        elinewidth=0.7, zorder=4,
+    )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=25, ha="right")
+    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=30, ha="right")
 
     if ylog:
         ax.set_yscale("log")
 
     ax.set_ylabel(ylabel)
-
     ax.minorticks_on()
-    ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.10)
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -313,7 +357,7 @@ def plot_solver_average_bars(
 def plot_box_by_solver(
         df: pd.DataFrame,
         solvers: list[str],
-        colors: dict[str, tuple],
+        colors: dict[str, str],
         ycol: str,
         ylabel: str,
         ylog: bool,
@@ -322,7 +366,7 @@ def plot_box_by_solver(
 ):
     """
     Box plot per solver (distribution across instances).
-    Shows mean as a small marker on top of each box.
+    Median shown as a colored line; mean as a small diamond marker.
     """
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
@@ -333,39 +377,46 @@ def plot_box_by_solver(
         if ylog:
             vals = np.maximum(vals, LOG_EPS)
         data.append(vals)
-        means.append(np.mean(vals) if len(vals) > 0 else np.nan)
+        means.append(float(np.mean(vals)) if len(vals) > 0 else np.nan)
 
     bp = ax.boxplot(
         data,
         patch_artist=True,
-        showfliers=False,     # publication-friendly; avoids extreme dot clutter
-        widths=0.6,
-        medianprops=dict(linewidth=0.9),
-        whiskerprops=dict(linewidth=0.8),
-        capprops=dict(linewidth=0.8),
+        showfliers=False,
+        widths=0.55,
+        medianprops=dict(linewidth=1.2, color="#333333"),
+        whiskerprops=dict(linewidth=0.7, linestyle="--", color="#555555"),
+        capprops=dict(linewidth=0.7, color="#555555"),
+        boxprops=dict(linewidth=0.7),
     )
 
     for i, box in enumerate(bp["boxes"]):
-        s = solvers[i]
-        box.set_facecolor(colors[s])
-        box.set_alpha(0.35)
-        box.set_linewidth(0.8)
+        box.set_facecolor(colors[solvers[i]])
+        box.set_alpha(0.40)
 
     # mean markers
     x = np.arange(1, len(solvers) + 1)
-    ax.scatter(x, means, marker="D", s=7, zorder=3, color="black", linewidths=0.0, label="Mean")
+    ax.scatter(
+        x, means,
+        marker="D", s=8, zorder=4,
+        color="#222222", linewidths=0.0,
+        label="Mean",
+    )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=25, ha="right")
+    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=30, ha="right")
 
-
+    if ylog:
+        ax.set_yscale("log")
     ax.set_ylabel(ylabel)
     ax.minorticks_on()
-    ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.10)
 
-    # small legend just for the mean marker
-    ax.legend(frameon=False, loc="upper right")
+    ax.legend(
+        frameon=False,
+        loc="upper right",
+        handletextpad=0.3,
+        borderpad=0.2,
+    )
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -391,7 +442,7 @@ def _fit_powerlaw_line(x: np.ndarray, y: np.ndarray):
 def plot_scatter_cloud(
         df: pd.DataFrame,
         solvers: list[str],
-        colors: dict[str, tuple],
+        colors: dict[str, str],
         markers: dict[str, str],
         xcol: str,
         ycol: str,
@@ -402,9 +453,10 @@ def plot_scatter_cloud(
         figsize,
         outpath: Path,
         add_scaling_line: bool = True,
+        linestyles: dict[str, str] | None = None,
 ):
     """
-    Scatter plot where each dot is one instance (no connecting lines).
+    Scatter plot where each dot is one instance.
     Optionally overlays a per-solver power-law scaling trend line.
     """
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
@@ -426,11 +478,12 @@ def plot_scatter_cloud(
         h = ax.scatter(
             x, y,
             marker=markers[s],
-            s=6,
-            alpha=0.65,          # “cloud of dots”
+            s=5,
+            alpha=0.55,
             color=colors[s],
             edgecolors="none",
             label=pretty_solver_name(s),
+            zorder=3,
         )
         handles.append(h)
         labels.append(pretty_solver_name(s))
@@ -438,11 +491,17 @@ def plot_scatter_cloud(
         if add_scaling_line and x.size >= 3:
             a, b = _fit_powerlaw_line(x, y)
             if a is not None:
-                xs = np.logspace(np.log10(np.nanmin(x[x > 0])), np.log10(np.nanmax(x)), 100)
+                xpos = x[x > 0]
+                x_min, x_max = np.nanmin(xpos), np.nanmax(xpos)
+                if xlog:
+                    xs = np.logspace(np.log10(x_min), np.log10(x_max), 200)
+                else:
+                    xs = np.linspace(x_min, x_max, 200)
                 ys = a * (xs ** b)
                 if ylog:
                     ys = np.maximum(ys, LOG_EPS)
-                ax.plot(xs, ys, linestyle="--", linewidth=0.9, color=colors[s], alpha=0.9)
+                ls = linestyles[s] if linestyles else "--"
+                ax.plot(xs, ys, linestyle=ls, linewidth=0.9, color=colors[s], alpha=0.85, zorder=2)
 
     if xlog:
         ax.set_xscale("log")
@@ -451,10 +510,7 @@ def plot_scatter_cloud(
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-
     ax.minorticks_on()
-    ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.10)
 
     add_legend(ax, handles, labels)
 
@@ -496,25 +552,84 @@ def plot_runtime_decomposition_grouped_csv(
     solve = np.maximum(agg["solve"].to_numpy(dtype=float), LOG_EPS)
     total = np.maximum(agg["total"].to_numpy(dtype=float), LOG_EPS)
 
-    # Fixed component colors (super clear; works well in print)
-    ax.bar(x - width, transform, width, label="Transformation time", color="#DD8452")
-    ax.bar(x,         solve,     width, label="Computation time",          color="#55A868")
-    ax.bar(x + width, total,     width, label="Total time",          color="#4C72B0")
+    # Fixed component colors — colorblind-safe (Wong palette)
+    ax.bar(x - width, transform, width, label="Transformation time",
+           color="#D55E00", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
+    ax.bar(x,         solve,     width, label="Computation time",
+           color="#009E73", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
+    ax.bar(x + width, total,     width, label="Total time",
+           color="#0072B2", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
 
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in agg["solver"]], rotation=25, ha="right")
+    ax.set_xticklabels([pretty_solver_name(s) for s in agg["solver"]], rotation=30, ha="right")
 
     ax.set_ylabel("Median time [ms]")
-    ax.set_yscale("log")  # runtime plots usually much clearer on log scale
+    ax.set_yscale("log")
 
     ax.minorticks_on()
-    ax.grid(True, which="major")
-    ax.grid(True, which="minor", alpha=0.10)
 
     ax.legend(frameon=False, loc="upper left")
 
     savefig_all(fig, outpath)
     plt.close(fig)
+
+def plot_error_lines_vs_edges(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, str],
+        figsize,
+        outpath: Path,
+        title: str | None = None,
+        linestyles: dict[str, str] | None = None,
+):
+    """
+    Line plot of mean relative error vs. number of edges, one line per solver.
+    No individual scatter points — only the aggregated mean line and an
+    optional shaded ±1 std band (controlled by SHOW_ERROR_BARS).
+    """
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    handles = []
+    labels = []
+
+    for s in solvers:
+        sub = df[df["solver"] == s][["num_edges", "relative_error"]].dropna()
+        if sub.empty:
+            continue
+
+        agg = (
+            sub.groupby("num_edges")["relative_error"]
+            .agg(mean="mean", std="std")
+            .reset_index()
+            .sort_values("num_edges")
+        )
+        agg["std"] = agg["std"].fillna(0.0)
+
+        x = agg["num_edges"].to_numpy(dtype=float)
+        y = agg["mean"].to_numpy(dtype=float)
+        e = agg["std"].to_numpy(dtype=float)
+
+        ls = linestyles[s] if linestyles else "-"
+        (h,) = ax.plot(x, y, linewidth=0.7, linestyle=ls, color=colors[s],
+                       label=pretty_solver_name(s))
+        handles.append(h)
+        labels.append(pretty_solver_name(s))
+
+        if SHOW_ERROR_BARS and np.any(e > 0):
+            ax.fill_between(x, np.maximum(y - e, 0), y + e,
+                            alpha=0.10, color=colors[s], linewidth=0)
+
+    ax.set_xlabel("Number of edges")
+    ax.set_ylabel("Mean relative error [%]")
+    if title:
+        ax.set_title(title)
+
+    ax.minorticks_on()
+    add_legend(ax, handles, labels)
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
 
 # ======================
 # MAIN
@@ -553,8 +668,9 @@ def main():
     df["relative_error"] = (abs(df["offline_opt_value"]-df["achieved_congestion"])) / df["achieved_congestion"]*100.0
 
     solvers = sorted(df["solver"].unique(), key=solver_sort_key)
-    colors = solver_palette_unique(solvers)   # <-- UNIQUE COLORS
-    markers = solver_markers(solvers)         # <-- helps grayscale
+    colors = solver_palette_unique(solvers)
+    markers = solver_markers(solvers)
+    linestyles = solver_linestyles(solvers)
 
     # --- Scatter “cloud” plots (one dot per instance) ---
     plot_scatter_cloud(
@@ -566,10 +682,15 @@ def main():
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "runtime_cloud_vs_edges",
         add_scaling_line=True,
+        linestyles=linestyles,
     )
 
+    # Exclude LP-type solvers: they have no MWU iterations or oracle time
+    _LP_SOLVERS = {"cohen", "lp"}
+    solvers_mwu = [s for s in solvers if s not in _LP_SOLVERS]
+
     plot_scatter_cloud(
-        df, solvers, colors, markers,
+        df, solvers_mwu, colors, markers,
         xcol="num_edges", ycol="mwu_iterations",
         xlabel="Number of edges",
         ylabel="MWU iterations",
@@ -577,17 +698,19 @@ def main():
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "mwu_iterations_cloud_vs_edges",
         add_scaling_line=True,
+        linestyles=linestyles,
     )
 
     plot_scatter_cloud(
-        df, solvers, colors, markers,
+        df, solvers_mwu, colors, markers,
         xcol="num_edges", ycol=ORACLE_TIME_COL,
         xlabel="Number of edges",
         ylabel="Average oracle running time [ms]",
-        xlog=True, ylog=True,
+        xlog=False, ylog=True,
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "oracle_time_cloud_vs_edges",
         add_scaling_line=True,
+        linestyles=linestyles,
     )
 
     # Bar plots of average metrics per solver
@@ -618,13 +741,21 @@ def main():
                 figsize=FIGSIZE_SINGLE,
                 outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
             )
+            # Line plot: mean relative error vs. number of edges
+            plot_error_lines_vs_edges(
+                df_demand, solvers_demand, colors,
+                figsize=FIGSIZE_SINGLE,
+                outpath=OUT_DIR / f"relative_error_lines_vs_edges_{demand}",
+                title=demand.capitalize(),
+                linestyles=linestyles,
+            )
 
     df["percent_transform_time"] = (
             df["transformation_time_ms"] / df["total_time_ms"] * 100.0
     )
 
     plot_box_by_solver(
-        df, solvers, colors,
+        df, solvers_mwu, colors,
         ycol="percent_transform_time",
         ylabel="Transformation time [% of total time]",
         ylog=True,   # usually nicer; switch to False if you prefer linear
@@ -642,7 +773,7 @@ def main():
     agg_transform_share = aggregate_mean_std_by_solver(df, "percent_transform_time")
 
     plot_solver_average_bars(
-        agg_transform_share, solvers, colors,
+        agg_transform_share, solvers_mwu, colors,
         y_mean_col="mean", y_std_col="std",
         ylabel="Percentage of transformation time [%]",
         ylog=False,
@@ -652,7 +783,7 @@ def main():
 
 
     plot_runtime_decomposition_grouped_csv(
-        df, solvers,
+        df, solvers_mwu,
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "runtime_decomposition_grouped_csv",
     )
