@@ -3,7 +3,7 @@ set -euo pipefail
 
 OUT_CSV="results/results.csv"
 OUT_DIR="${OUT_DIR:-results/logs}"
-TIMEOUT="${TIMEOUT:-600m}"
+TIMEOUT="${TIMEOUT:-120m}"
 
 # Native binary (override via: BIN=... ./run_experiments.sh ...)
 BIN="${BIN:-./build/oblivious_routing}"

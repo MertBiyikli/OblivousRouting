@@ -3,7 +3,7 @@ set -euo pipefail
 
 OUT_CSV="results/results.csv"
 OUT_DIR="${OUT_DIR:-results/logs}"
-TIMEOUT="${TIMEOUT:-600m}"
+TIMEOUT="${TIMEOUT:-120m}"
 IMAGE="${IMAGE:-oblivious-routing:latest}"
 
 SOLVERS=""

@@ -5,7 +5,7 @@ DATASET=""
 SOLVERS="${SOLVERS:-0,1,2,3,4,6,7}"
 JOBS="${JOBS:-8}"
 OUT_CSV="${OUT_CSV:-results/results_parallel.csv}"
-TIMEOUT="${TIMEOUT:-600m}"
+TIMEOUT="${TIMEOUT:-120m}"
 BIN="${BIN:-./build/oblivious_routing}"
 
 DEMAND="none"
