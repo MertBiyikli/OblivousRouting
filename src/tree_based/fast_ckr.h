@@ -30,7 +30,7 @@ public:
 
 
         MinHeap<double, int> Q;
-        Q.resize(x_perm.size() * 4); // roughly |X|, not full n
+        Q.resize(x_perm.size() * 4);
 
         for (int i = 0; i<x_perm.size(); i++) {
             int source = x_perm[i];
@@ -58,7 +58,7 @@ public:
                 // label assignment
                 if (P[w]== 0) P[w] = i+1;
 
-                if (_g.neighbors(w).size() == 0) continue; // no neighbors
+                if (_g.neighbors(w).size() == 0) continue;
                 for (const auto& u : _g.neighbors(w)) {
                     if (u >= level.owner.size()) continue;
                     if (level.owner[u]!=-1) continue;

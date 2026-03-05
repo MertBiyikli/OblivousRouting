@@ -15,8 +15,8 @@ public:
     std::shared_ptr<HSTNode> getTree(std::vector<double>& distances) override {
             updateDistances(distances);
             RandomMST mst_algo(graph);
-            auto mst_edges  = mst_algo.build_mst();
-            auto t = mst_algo.buildRaeckeTree( mst_edges,0);
+            auto mst_edges  = mst_algo.computeMST();
+            auto t = mst_algo.buildHST( mst_edges,0);
             return t;
     }
 

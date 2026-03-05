@@ -74,7 +74,7 @@ public:
     }
 
 
-void updateEdgeDistances(const std::vector<double>& distances) {
+    void updateEdgeDistances(const std::vector<double>& distances) {
         keyed.clear();
         for (const auto& [u,v] : edges) {
             int e = graph.getEdgeId(u,v);
@@ -85,7 +85,7 @@ void updateEdgeDistances(const std::vector<double>& distances) {
     }
 
     // Build a random MST edge set using Kruskal with random priorities
-    std::vector<std::pair<int,int>> build_mst() {
+    std::vector<std::pair<int,int>> computeMST() {
         if (edges.empty() || keyed.empty()) return {};
 
         // apply kruskals algorithm
@@ -110,7 +110,7 @@ void updateEdgeDistances(const std::vector<double>& distances) {
 
 
     // Turn MST edges into a rooted MSTTree (root at 0 by default)
-    MSTTree build_tree(const std::vector<std::pair<int,int>>& mst_edges,
+    MSTTree buildMSTTree(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
         adj = std::vector<std::vector<int>>(n);
         for (auto [u,v] : mst_edges) {
@@ -138,9 +138,9 @@ void updateEdgeDistances(const std::vector<double>& distances) {
         return t;
     }
 
-    std::shared_ptr<HSTNode> buildRaeckeTree(const std::vector<std::pair<int,int>>& mst_edges,
+    std::shared_ptr<HSTNode> buildHST(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
-        auto mst_tree = build_tree(mst_edges, root);
+        auto mst_tree = buildMSTTree(mst_edges, root);
         std::vector<std::shared_ptr<HSTNode>> cluster(n);
         for (int v = 0; v < n; ++v) {
             cluster[v] = std::make_shared<HSTNode>(v);
@@ -183,32 +183,6 @@ void updateEdgeDistances(const std::vector<double>& distances) {
     }
 
 
-
-
-
-    // Return the unique MST path between u and v using parent[] array
-    static std::vector<int> getMSTPath(int u, int v, const std::vector<int>& parent) {
-        std::unordered_map<int,int> depth;
-        int x=u, d=0;
-        while (true) {
-            depth[x]=d++;
-            if (parent[x]==x) break;
-            x=parent[x];
-        }
-        std::vector<int> path_v;
-        int y=v;
-        while (!depth.count(y)) {
-            path_v.push_back(y);
-            y=parent[y];
-        }
-        std::vector<int> path;
-        x=u;
-        while (x!=y) { path.push_back(x); x=parent[x]; }
-        path.push_back(y);
-        std::reverse(path_v.begin(), path_v.end());
-        path.insert(path.end(), path_v.begin(), path_v.end());
-        return path;
-    }
 };
 
 #endif // OBLIVIOUSROUTING_MST_H

@@ -120,7 +120,7 @@ public:
         if (applyMendelScaling) {
             auto start = timeNow();
             RandomMST mst_oracle(graph);
-            auto mst = mst_oracle.build_mst();
+            auto mst = mst_oracle.computeMST();
 
             std::vector<double> mst_weights;
             mst_weights.reserve(mst.size());
@@ -136,73 +136,73 @@ public:
 
 
     // Helper: build one representative original vertex per quotient node.
-// sigma[v] = quotient id of original vertex v  (size nG, values in [0..nQ-1])
-static std::vector<int> buildRepresentatives(const std::vector<int>& sigma, int nQ) {
-    const int nG = (int)sigma.size();
-    std::vector<int> rep(nQ, -1);
-    for (int v = 0; v < nG; ++v) {
-        int q = sigma[v];
-        if (q < 0 || q >= nQ) {
-            throw std::runtime_error("sigma[v] out of range at v=" + std::to_string(v));
+    // sigma[v] = quotient id of original vertex v  (size nG, values in [0..nQ-1])
+    static std::vector<int> buildRepresentatives(const std::vector<int>& sigma, int nQ) {
+        const int nG = (int)sigma.size();
+        std::vector<int> rep(nQ, -1);
+        for (int v = 0; v < nG; ++v) {
+            int q = sigma[v];
+            if (q < 0 || q >= nQ) {
+                throw std::runtime_error("sigma[v] out of range at v=" + std::to_string(v));
+            }
+            if (rep[q] == -1) rep[q] = v;
         }
-        if (rep[q] == -1) rep[q] = v;
-    }
-    for (int q = 0; q < nQ; ++q) {
-        if (rep[q] == -1) {
-            throw std::runtime_error("Quotient node q=" + std::to_string(q) + " has no preimage (rep=-1)");
+        for (int q = 0; q < nQ; ++q) {
+            if (rep[q] == -1) {
+                throw std::runtime_error("Quotient node q=" + std::to_string(q) + " has no preimage (rep=-1)");
+            }
         }
-    }
-    return rep;
-}
-
-void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& level, double delta) {
-    // 1) Compute partition on quotient graph
-    HSTLevel qL;
-    std::vector<int> x_perm;
-    std::vector<char> used(Q.Gq->getNumNodes(), 0);
-
-    for (auto v : perm) {
-        int vq = Q.sigma_compact_of_v[v];
-        if (vq < 0 || vq >= Q.Gq->getNumNodes()) {
-            throw std::runtime_error("computeQuotientLevelPartition: sigma_compact_of_v[v] out of range at v=" + std::to_string(v));
-        }
-        if (!used[vq]) {
-            x_perm.push_back(vq);
-            used[vq] = 1;
-        }
+        return rep;
     }
 
-    computeLevelPartition(*Q.Gq, qL, x_perm, delta);
+    void computeQuotientLevelPartition(MendelScaling::QuotientLevel& Q, HSTLevel& level, double delta) {
+        // 1) Compute partition on quotient graph
+        HSTLevel qL;
+        std::vector<int> x_perm;
+        std::vector<char> used(Q.Gq->getNumNodes(), 0);
 
-    const int nG = graph.getNumNodes();
-
-    // 2) Map quotient partition back to original graph
-    level.R = qL.R;
-    level.centers.clear();
-    level.owner.resize(nG);
-    for (int v = 0; v < nG; ++v) {
-            level.owner[v] =v; // initialize owner to -1 (unassigned)
+        for (auto v : perm) {
+            int vq = Q.sigma_compact_of_v[v];
+            if (vq < 0 || vq >= Q.Gq->getNumNodes()) {
+                throw std::runtime_error("computeQuotientLevelPartition: sigma_compact_of_v[v] out of range at v=" + std::to_string(v));
+            }
+            if (!used[vq]) {
+                x_perm.push_back(vq);
+                used[vq] = 1;
+            }
         }
 
-    // identify the cluster centers for Q
-    std::unordered_map<int, int> q_center_to_g_center;
-    for (size_t c = 0; c < qL.centers.size(); ++c) {
-        int q_center = qL.centers[c];
-        int g_center = Q.members_of_q[q_center].empty() ? throw std::runtime_error("computeQuotientLevelPartition: node cluster empty!") : Q.members_of_q[q_center][0];
-        level.centers.push_back(g_center);
-        q_center_to_g_center[q_center] = g_center;
+        computeLevelPartition(*Q.Gq, qL, x_perm, delta);
+
+        const int nG = graph.getNumNodes();
+
+        // 2) Map quotient partition back to original graph
+        level.R = qL.R;
+        level.centers.clear();
+        level.owner.resize(nG);
+        for (int v = 0; v < nG; ++v) {
+                level.owner[v] =v; // initialize owner to -1 (unassigned)
+            }
+
+        // identify the cluster centers for Q
+        std::unordered_map<int, int> q_center_to_g_center;
+        for (size_t c = 0; c < qL.centers.size(); ++c) {
+            int q_center = qL.centers[c];
+            int g_center = Q.members_of_q[q_center].empty() ? throw std::runtime_error("computeQuotientLevelPartition: node cluster empty!") : Q.members_of_q[q_center][0];
+            level.centers.push_back(g_center);
+            q_center_to_g_center[q_center] = g_center;
+        }
+        for (int vq = 0; vq<Q.Gq->getNumNodes(); ++vq)  {
+            int cluster_q = qL.owner[vq];
+            if (cluster_q == -1) {
+                throw std::runtime_error("computeQuotientLevelPartition: node " + std::to_string(vq) + " in quotient graph has no cluster!");
+            }
+            int cluster_g = q_center_to_g_center[cluster_q];
+            for (int v : Q.members_of_q[vq]) {
+                level.owner[v] = cluster_g;
+            }
+        }
     }
-    for (int vq = 0; vq<Q.Gq->getNumNodes(); ++vq)  {
-        int cluster_q = qL.owner[vq];
-        if (cluster_q == -1) {
-            throw std::runtime_error("computeQuotientLevelPartition: node " + std::to_string(vq) + " in quotient graph has no cluster!");
-        }
-        int cluster_g = q_center_to_g_center[cluster_q];
-        for (int v : Q.members_of_q[vq]) {
-            level.owner[v] = cluster_g;
-        }
-    }
-}
 
 
     virtual void computeLevelPartition(IGraph& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) = 0;

@@ -11,7 +11,12 @@
 #include "tree_oracle.h"
 #include "tree_transform.h"
 
-
+/*
+ *
+ * This is the implementation of the tree-based oblivious routing algorithm using the Multiplicative Weights Update (MWU) framework presented by Räcke in 2008.
+ * The algorithm iteratively computes a tree (HST) embedding of the graph using the provided oracle, computes the load on the edges based on the tree, and updates the edge distances multiplicatively
+ * until the total weight (lambda_sum) of the trees added to the routing table reaches 1.
+ */
 class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle> oracle;
@@ -31,7 +36,7 @@ public:
     }
 
 
-    virtual void computeBasisFlows(LinearRoutingTable &table) override {
+    void computeBasisFlows(LinearRoutingTable &table) override {
         table.init(graph);
         run(table);
 
@@ -126,15 +131,12 @@ public:
                 }
                 if (cut <= 1e-12) cut = 1e-12;  // avoid zero-division
 
-                // Choose representative vertices
                 int repParent = node->getMembers().empty() ? clusterVertices[0] : node->getMembers()[0];
                 int repChild  = clusterVertices[0];
 
-                // Compute shortest path between parent and child reps
                 auto path = graph.getShortestPath(repParent, repChild);
                 if (path.size() < 2) continue;
 
-                // Update edge r-loads along that path
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
                     int u = path[i];
                     int v = path[i + 1];
@@ -177,7 +179,6 @@ public:
         for (auto& r : rload_total) sumExp += std::exp(r - max_r);
         if (sumExp <= 0.0 || !std::isfinite(sumExp)) sumExp = 1.0;
 
-        // 3) distances
         double min_d = std::numeric_limits<double>::infinity();
         std::vector<double> newDist;
         newDist.reserve(rload_total.size());

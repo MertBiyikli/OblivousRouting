@@ -14,8 +14,8 @@
 
 
 /*
-* This is the implementation of the electrical flow based oblivious routing algorithm.
-* The idea is to repeatedly invoke an electrical flow computation (Laplacian solve) to get a flow,
+* This is the implementation of the electrical flow based MWU oblivious routing algorithm presented by Goranci et. al. in 2023.
+* The idea is to repeatedly invoke an electrical flow computation (Laplacian solve)
 * and then update the edge resistances based on the load on the edges. The process is repeated until convergence.
 */
 class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {

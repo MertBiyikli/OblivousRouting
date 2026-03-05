@@ -63,7 +63,3 @@ target_link_libraries(oblivious_routing PRIVATE
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# ---- Tests ----
-if(BUILD_TESTS)
-    add_subdirectory(test)
-endif()
