@@ -23,8 +23,8 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     m = graph.getNumEdges()/2;
 
     // set algorithm parameters
-    roh = std::sqrt(2.0*static_cast<double>(m)); // Initialize roh based on the number of nodes
-    alpha_local = std::log2(n)*std::log2(n); // Initialize alpha_local based on the number of nodes
+    roh = std::sqrt(2.0*static_cast<double>(m));
+    alpha_local = std::log2(n)*std::log2(n);
     this->cap_X = m;
     this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
     this->inv_m = 1.0 / static_cast<double>(m);
@@ -80,7 +80,6 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
         for (int u = 0; u < n; ++u) {
             if (u == x_fixed) continue;
 
-            // build RHS (sum is zero automatically)
             rhs.setZero();
             rhs[u]       =  1.0;
             rhs[x_fixed] = -1.0;
@@ -92,7 +91,7 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
         }
 
         getApproxLoad(load);
-        updateEdgeDistances(load); // keeps 'weights' vector in sync
+        updateEdgeDistances(load);
 
         oracle_running_times.push_back(duration(timeNow() - start_oracle));
     }
@@ -144,7 +143,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         sol = amg->solve(rhs, epsilon_L);
 
         for (int e = 0; e < m; ++e) {
-            const auto [u,v] = edges[e];        // B has -1 at u, +1 at v
+            const auto& [u,v] = edges[e];
             d[e] = sol[v] - sol[u];             // signed diff consistent with B
             edge_diffs[size_t(e) * ell + i] = std::abs(d[e]); // keep abs for median
         }
