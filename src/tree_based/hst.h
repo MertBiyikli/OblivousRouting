@@ -28,7 +28,7 @@ public:
     std::vector<int> owner;
 };
 
-bool same_members(const std::vector<int>& a, const std::vector<int>& b) {
+inline bool same_members(const std::vector<int>& a, const std::vector<int>& b) {
     if (a.size() != b.size()) return false;
     std::vector<int> aa = a, bb = b;
     std::sort(aa.begin(), aa.end());

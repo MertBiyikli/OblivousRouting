@@ -64,18 +64,19 @@ public:
     double treeOracle(LinearRoutingTable& table) {
         auto t0 = timeNow();
         auto t = oracle->getTree(current_distances);
-        this->oracle_running_times.push_back( duration((timeNow()-t0)));
+        this->oracle_running_times.push_back(duration((timeNow() - t0)));
         assert(t != nullptr && "Oracle returned a null tree!");
         computeRLoads(t);
         double l = getMaxRload();
-        double lambda = std::min(1.0/l, 1.0 - lambda_sum);
+        double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
         computeNewDistances(lambda);
-        solve_time += duration(timeNow()-t0);
-
+        solve_time += duration(timeNow() - t0);
         t0 = timeNow();
-        TreeIteration iter( t, current_distances, lambda);
+
+        // Move t into the iteration — t is not used after this point.
+        TreeIteration iter(std::move(t), current_distances, lambda);
         transform.transform(iter, table);
-        this->transformation_time += duration((timeNow()-t0));
+        this->transformation_time += duration((timeNow() - t0));
 
         if (oracle->applyMendelScaling) {
             mendel_scaling_times.push_back(oracle->getMendelScalingTime());
@@ -92,19 +93,21 @@ public:
         }
     }
 
-    void computeRLoads(const std::shared_ptr<HSTNode> t) {
+    void computeRLoads(const std::shared_ptr<HSTNode>& t) {
         assert(t != nullptr);
 
         std::fill(rload_current.begin(), rload_current.end(), 0.0);
 
-        std::queue<std::shared_ptr<HSTNode>> q;
-        q.push(t);
+        // t is kept alive by the caller — safe to observe with raw pointers.
+        std::queue<const HSTNode*> q;
+        q.push(t.get());
         while (!q.empty()) {
-            auto node = q.front();
+            const HSTNode* node = q.front();
             q.pop();
 
             // Process each child: represents a cut S_child | V\S_child ---
-            for (const auto& child : node->getChildren()) {
+            for (const auto& child_ptr : node->getChildren()) {
+                const HSTNode* child = child_ptr.get();
                 // Add child to traversal queue
                 q.push(child);
 

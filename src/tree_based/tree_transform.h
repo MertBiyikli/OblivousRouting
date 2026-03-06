@@ -7,6 +7,7 @@
 
 #include "hst.h"
 #include <set>
+#include <unordered_set>
 
 class TreeIteration {
 public:
@@ -14,12 +15,16 @@ public:
     std::vector<double> distance;
     double lambda;
 
-    TreeIteration(std::shared_ptr<HSTNode> _tree, std::vector<double> _distance, double _lambda)
-        : tree(_tree), distance(_distance), lambda(_lambda) {}
+    // Move the tree ptr and the distance snapshot — no unnecessary ref-count bumps or copies.
+    TreeIteration(std::shared_ptr<HSTNode> _tree, const std::vector<double>& _distance, double _lambda)
+        : tree(std::move(_tree)), distance(_distance), lambda(_lambda) {}
 
-    // getter methods
-    std::shared_ptr<HSTNode> getTree() const { assert(tree != nullptr); return tree; }
-    std::vector<double> getDistance() const { return distance; }
+    TreeIteration(std::shared_ptr<HSTNode> _tree, std::vector<double>&& _distance, double _lambda)
+        : tree(std::move(_tree)), distance(std::move(_distance)), lambda(_lambda) {}
+
+    // Return by const-ref — no ref-count bump, no vector copy.
+    const std::shared_ptr<HSTNode>& getTree() const { assert(tree != nullptr); return tree; }
+    const std::vector<double>& getDistance() const { return distance; }
     double getLambda() const { return lambda; }
 };
 
@@ -39,69 +44,69 @@ public:
     }
 
     void distributeDemands(TreeIteration& iter, LinearRoutingTable& table) {
-        auto root = iter.getTree();
+        // root is kept alive by iter.tree for the entire call — safe to observe with raw ptrs.
+        const HSTNode* root = iter.getTree().get();
         const auto& distance = iter.getDistance();
-        const auto& lambda = iter.getLambda();
+        const auto& lambda   = iter.getLambda();
 
-        std::queue<std::shared_ptr<HSTNode>> q;
+        std::queue<const HSTNode*> q;
         q.push(root);
 
         while (!q.empty()) {
-            auto current = q.front();
+            const HSTNode* current = q.front();
             q.pop();
 
-            for (auto child : current->getChildren()) {
-                assert(child != nullptr && "HSTNode child is null!");
-                if (child->getMembers().size() == current->getMembers().size()) {
-                    q.push(child);
-                    continue;
-                }
+            if (current){
+                for (const auto& child_ptr : current->getChildren()) {
+                    const HSTNode* child = child_ptr.get();
+                    assert(child != nullptr && "HSTNode child is null!");
+                    if (child->getMembers().size() == current->getMembers().size()) {
+                        q.push(child);
+                        continue;
+                    }
 
+                    int parentCenter = current->center;
+                    int childCenter  = child->center;
 
-                int parentCenter = current->center;
-                int childCenter = child->center;
+                    assert(parentCenter != -1 && childCenter != -1);
 
-                assert(parentCenter != -1 && childCenter != -1);
+                    if (parentCenter == childCenter) {
+                        q.push(child);
+                        continue;
+                    }
 
-                if (parentCenter == childCenter) {
-                    q.push(child);
-                    continue;
-                }
+                    // Build A as an unordered_set for O(1) lookup; derive B on-the-fly.
+                    const std::vector<int>& childMembers = child->getMembers();
+                    std::unordered_set<int> A(childMembers.begin(), childMembers.end());
 
-                std::set<int> A;
-                std::set<int> B;
-                A = std::set(child->getMembers().begin(), child->getMembers().end());
-                for (int v : graph.getVertices()) {
-                    if (!A.count(v)) B.insert(v);
-                }
+                    auto path = graph.getShortestPath(parentCenter, childCenter, distance);
+                    if (path.size() < 2) {
+                        q.push(child);
+                        continue;
+                    }
 
+                    for (int src : childMembers) {          // src ∈ A
+                        for (int dst : graph.getVertices()) {
+                            if (A.count(dst)) continue;     // dst ∈ B  (V \ A)
+                            if (src == dst) continue;
 
+                            for (size_t i = 0; i + 1 < path.size(); ++i) {
+                                int e      = graph.getEdgeId(path[i],   path[i+1]);
+                                int anti_e = graph.getEdgeId(path[i+1], path[i]);
 
-                auto path = graph.getShortestPath(parentCenter, childCenter, distance);
-                if (path.size() < 2) continue;
+                                assert(e != INVALID_EDGE_ID && anti_e != INVALID_EDGE_ID);
 
-                for (int src : A) {
-                    for (int dst : B) {
-
-                        if (src == dst) continue;
-
-                        for (size_t i = 0; i + 1 < path.size(); ++i) {
-                            int e = graph.getEdgeId(path[i], path[i+1]);
-                            int anti_e = graph.getEdgeId(path[i+1], path[i]);
-
-                            assert(e != INVALID_EDGE_ID
-                            && anti_e != INVALID_EDGE_ID);
-
-                            if (dst == 0) {
-                                table.addFlow(anti_e, src, lambda);
-                            }
-                            if (src == 0) {
-                                table.addFlow(e, dst, lambda);
+                                if (dst == 0) {
+                                    table.addFlow(anti_e, src, lambda);
+                                }
+                                if (src == 0) {
+                                    table.addFlow(e, dst, lambda);
+                                }
                             }
                         }
                     }
+                    q.push(child);
                 }
-                q.push(child);
             }
         }
         removeCyclesLinear(table);
