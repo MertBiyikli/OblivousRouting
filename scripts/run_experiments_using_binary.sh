@@ -5,75 +5,44 @@ OUT_CSV="results/results.csv"
 OUT_DIR="${OUT_DIR:-results/logs}"
 TIMEOUT="${TIMEOUT:-120m}"
 
-# Native binary (override via: BIN=... ./run_experiments.sh ...)
+# Native binary (override via: BIN=... ./run_experiments_using_binary.sh ...)
 BIN="${BIN:-./build/oblivious_routing}"
 
 SOLVERS=""
 DATASET=""
-
-DEMAND="none"
 DEMANDS=""
 DEMAND_PROVIDED=0
 
-ALL_SOLVERS="${ALL_SOLVERS:-0,1,2,3,4,6,7}"
+ALL_SOLVERS="${ALL_SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --all|-all)
-      RUN_ALL=1
-      shift
-      ;;
-    --solvers)
-      SOLVERS="${2-}"
-      shift 2
-      ;;
-    --dataset)
-      DATASET="${2-}"
-      shift 2
-      ;;
-    --demand)
-      DEMAND="${2-}"
-      DEMAND_PROVIDED=1
-      shift 2
-      ;;
-    --demands)
-      DEMANDS="${2-}"
-      DEMAND_PROVIDED=1
-      shift 2
-      ;;
-    --out)
-      OUT_CSV="${2-}"
-      shift 2
-      ;;
+    --all|-all)      RUN_ALL=1; shift ;;
+    --solvers)       SOLVERS="${2-}"; shift 2 ;;
+    --dataset)       DATASET="${2-}"; shift 2 ;;
+    --demand)        DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
+    --demands)       DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
+    --out)           OUT_CSV="${2-}"; shift 2 ;;
     -h|--help)
       echo "Usage:"
       echo "  $0 --all --dataset <dir-or-file> [--out results.csv]"
-      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> [--out results.csv]"
-      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> --demand gravity [--out results.csv]"
-      echo "  $0 --solvers \"electrical,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian,uniform\""
+      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> [--out results.csv]"
+      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian\" [--out results.csv]"
       echo ""
-      echo "Note:"
-      echo "  If --demand/--demands is omitted, NO demand argument is passed to the solver (C++ gets 2 args)."
-      echo "  CSV/logs will still show demand=none."
-      echo ""
-      echo "Native mode:"
-      echo "  Uses BIN=${BIN}"
-      echo "  Override with: BIN=./build/oblivious_routing $0 ..."
+      echo "All solvers and demands are passed in one binary call per graph."
+      echo "CSV has one row per (graph × solver × demand_model)."
       exit 0
       ;;
-    *)
-      echo "Unknown / misplaced argument: $1"
-      exit 1
-      ;;
+    *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
 
-# Normalize common mistake: user writes "/experiments/..." meaning repo-relative
+# Normalize repo-relative path mistake
 if [[ "${DATASET:-}" == /* ]] && [[ "${DATASET:-}" == /experiments/* ]]; then
-  DATASET="${DATASET#/}"   # strip leading slash
+  DATASET="${DATASET#/}"
 fi
 
 if [[ "$RUN_ALL" -eq 1 ]]; then
@@ -82,14 +51,8 @@ if [[ "$RUN_ALL" -eq 1 ]]; then
   DEMAND_PROVIDED=1
 fi
 
-# If user did not pass --demands, fall back to --demand (only matters if DEMAND_PROVIDED=1)
-if [[ -z "${DEMANDS:-}" ]]; then
-  DEMANDS="$DEMAND"
-fi
-
 if [[ -z "${SOLVERS:-}" || -z "${DATASET:-}" ]]; then
   echo "ERROR: --solvers and --dataset are required (or use --all + --dataset)."
-  echo "Try: $0 --all --dataset experiments/datasets/Backbone"
   exit 1
 fi
 
@@ -98,66 +61,50 @@ if ! command -v "$TIMEOUT_BIN" >/dev/null 2>&1; then
   if command -v gtimeout >/dev/null 2>&1; then
     TIMEOUT_BIN="gtimeout"
   else
-    echo "ERROR: 'timeout' not found."
-    echo "  macOS: brew install coreutils  (then gtimeout exists)"
-    echo "  or set TIMEOUT_BIN to a valid timeout binary."
-    exit 1
+    echo "ERROR: 'timeout' not found. macOS: brew install coreutils"; exit 1
   fi
+fi
+
+if [[ ! -x "$BIN" ]]; then
+  echo "ERROR: binary not found or not executable: $BIN"
+  echo "Hint: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j"
+  exit 1
 fi
 
 mkdir -p "$(dirname "$OUT_CSV")"
 mkdir -p "$OUT_DIR"
 
-# Ensure binary exists (same UX as docker: fail early)
-if [[ ! -x "$BIN" ]]; then
-  echo "ERROR: executable not found or not executable: $BIN"
-  echo "Hint: build first:"
-  echo "  cmake -S . -B build -DCMAKE_BUILD_TYPE=Release"
-  echo "  cmake --build build -j"
-  exit 1
-fi
-
 CSV="$OUT_CSV"
 
+# Write header only if the file does not exist yet
 if [[ ! -f "$CSV" ]]; then
-  echo "dataset,graph,solver,demand,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,achieved_congestion,offline_opt_value,status" > "$CSV"
+  echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
 fi
 
+# Collect graphs
 DATASET_PATH="$DATASET"
 GRAPHS=()
-
 if [[ -f "$DATASET_PATH" ]]; then
   GRAPHS=("$DATASET_PATH")
   DATASET_ROOT="$(cd "$(dirname "$DATASET_PATH")" && pwd)"
 else
   if [[ ! -d "$DATASET_PATH" ]]; then
-    echo "ERROR: --dataset path not found: $DATASET_PATH"
-    exit 1
+    echo "ERROR: --dataset path not found: $DATASET_PATH"; exit 1
   fi
   DATASET_ROOT="$(cd "$DATASET_PATH" && pwd)"
   mapfile -t GRAPHS < <(find "$DATASET_ROOT" -type f -name "*.lgf" | sort)
 fi
 
-if [[ ${#GRAPHS[@]} -eq 0 ]]; then
-  echo "ERROR: No .lgf files found under $DATASET"
-  exit 1
-fi
+[[ ${#GRAPHS[@]} -gt 0 ]] || { echo "ERROR: No .lgf files found under $DATASET"; exit 1; }
 
-SOLVERS_CSV="$(echo "$SOLVERS" | tr -d '[:space:]')"
-IFS=',' read -ra SOLVER_ARR <<< "$SOLVERS_CSV"
-
-# If user did NOT provide demand flags, run exactly once and label as "none"
-if [[ "$DEMAND_PROVIDED" -eq 0 ]]; then
-  DEMAND_ARR=("none")
-else
-  DEMANDS_CSV="$(echo "${DEMANDS:-}" | tr -d '[:space:]')"
-  IFS=',' read -ra DEMAND_ARR <<< "$DEMANDS_CSV"
-fi
+# Normalise solvers/demands into a single comma-separated string each (no spaces)
+SOLVERS_ARG="$(echo "$SOLVERS" | tr -d '[:space:]')"
+DEMANDS_ARG="$(echo "${DEMANDS:-}" | tr -d '[:space:]')"
 
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 
 ############################################
-# Main loop
+# Main loop — one binary invocation per graph
 ############################################
 for g in "${GRAPHS[@]}"; do
   g_abs="$(cd "$(dirname "$g")" && pwd)/$(basename "$g")"
@@ -175,102 +122,152 @@ for g in "${GRAPHS[@]}"; do
   fi
 
   base="$(basename "$g_abs")"
+  safe_rel="${rel_path//\//__}"
+  log="$OUT_DIR/${safe_rel%.lgf}_${RUN_ID}.log"
 
-  for solver in "${SOLVER_ARR[@]}"; do
-    solver="$(echo "$solver" | tr -d '[:space:]')"
-    [[ -z "$solver" ]] && continue
+  # Build command: binary <solvers> <graph> [<demands>]
+  cmd=( "$BIN" "$SOLVERS_ARG" "$g_abs" )
+  if [[ "$DEMAND_PROVIDED" -eq 1 && -n "$DEMANDS_ARG" ]]; then
+    cmd+=( "$DEMANDS_ARG" )
+  fi
 
-    for demand in "${DEMAND_ARR[@]}"; do
-      demand="$(echo "$demand" | tr -d '[:space:]')"
-      [[ -z "$demand" ]] && continue
+  echo "[RUN] $rel_path | solvers=$SOLVERS_ARG | demands=${DEMANDS_ARG:-none} | timeout=$TIMEOUT"
 
-      safe_rel="${rel_path//\//__}"
-      log="$OUT_DIR/${safe_rel%.lgf}_${solver}_${demand}_${RUN_ID}.log"
+  status="OK"
+  if "$TIMEOUT_BIN" --signal=SIGTERM --kill-after=30s "$TIMEOUT" \
+      env OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
+      "${cmd[@]}" \
+    > "$log" 2>&1
+  then
+    status="OK"
+  else
+    ec=$?
+    if   [[ "$ec" -eq 124 || "$ec" -eq 137 || "$ec" -eq 143 ]]; then status="TIMEOUT"
+    elif [[ "$ec" -eq 139 ]]; then status="SEGFAULT"
+    else status="ERROR_$ec"
+    fi
+  fi
 
-      echo "[RUN] $rel_path | solver=$solver | demand=$demand | timeout=$TIMEOUT"
+  # ---------------------------------------------------------------------------
+  # Parse the log.
+  #
+  # Output structure (one binary call, multiple solvers, multiple demands):
+  #
+  #   Graph loaded: 36 nodes, 96 edges.
+  #   ...
+  #   === Running solver: raecke_frt ===
+  #   Total running time: 95 ms
+  #   Solve time: 50 ms
+  #   Transformation time: 24 ms
+  #   MWU iterations: 21
+  #   Average oracle time: 2.28571 ms
+  #   Ratio off the optimal offline solution [bimodal] demand model: 519.863% (2014.49 / 10472.6)
+  #   Ratio off the optimal offline solution [uniform] demand model: 717.007% (11557 / 82864.5)
+  #   ...
+  #   === Running solver: raecke_ckr ===
+  #   ...
+  #
+  # Strategy: track current solver section; for every ratio line emit one CSV row.
+  # If status != OK, emit one row per (solver x demand) with NaN values.
+  # ---------------------------------------------------------------------------
+  awk \
+    -v dataset="$dataset_label" \
+    -v graph="$rel_path" \
+    -v status="$status" \
+    -v demands_arg="$DEMANDS_ARG" \
+    -v demand_provided="$DEMAND_PROVIDED" \
+  '
+  BEGIN {
+    nodes="NaN"; edges="NaN";
+    solver=""; total_time="NaN"; solve_time="NaN"; transf_time="NaN";
+    mwu="NaN"; avg_oracle="NaN";
+    n_rows=0;
+  }
 
-      # Native argv:
-      # - If demand was NOT provided, pass only: <solver> <graph>
-      # - If demand WAS provided, pass: <solver> <graph> <demand>
-      cmd=( "$BIN" "$solver" "$g_abs" )
-      if [[ "$DEMAND_PROVIDED" -eq 1 ]]; then
-        cmd+=( "$demand" )
-      fi
+  # Graph metadata (appears once at the top)
+  /^Graph loaded: [0-9]+ nodes, [0-9]+ edges\./ {
+    tmp=$0
+    sub(/^Graph loaded: /, "", tmp)
+    nodes=tmp; sub(/ nodes.*$/, "", nodes)
+    sub(/^[0-9]+ nodes, /, "", tmp)
+    edges=tmp; sub(/ edges.*$/, "", edges)
+    next
+  }
 
-      status="OK"
-      if "$TIMEOUT_BIN" --signal=SIGTERM --kill-after=30s "$TIMEOUT" \
-          env OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
-          "${cmd[@]}" \
-        > "$log" 2>&1
-      then
-        status="OK"
-      else
-        ec=$?
-        if [[ "$ec" -eq 124 || "$ec" -eq 137 || "$ec" -eq 143 ]]; then
-          status="TIMEOUT"
-        elif [[ "$ec" -eq 139 ]]; then
-          status="SEGFAULT"
-        else
-          status="ERROR_$ec"
-        fi
-      fi
+  # New solver section — reset per-solver fields
+  /^=== Running solver: / {
+    solver=$0; sub(/^=== Running solver: /,"",solver); sub(/ ===/,"",solver)
+    total_time="NaN"; solve_time="NaN"; transf_time="NaN";
+    mwu="NaN"; avg_oracle="NaN";
+    next
+  }
 
-      # Parse log
-      awk -v dataset="$dataset_label" -v graph="$rel_path" -v solver="$solver" -v demand="$demand" -v status="$status" '
-      BEGIN {
-        edges="NaN"; total_time="NaN"; solve_time="NaN"; transformation_time="NaN";
-        mwu="NaN"; avg_oracle="NaN"; achieved="NaN"; offline="NaN";
+  /^Total running time: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ ms$/,"",tmp); total_time=tmp; next
+  }
+  /^Solve time: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ ms$/,"",tmp); solve_time=tmp; next
+  }
+  /^Transformation time: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ ms$/,"",tmp); transf_time=tmp; next
+  }
+  /^MWU iterations: [0-9]+$/ {
+    tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
+  }
+  /^Average oracle time: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
+  }
+
+  # Ratio line — one row per (solver × demand_model)
+  # Format: Ratio off the optimal offline solution [bimodal] demand model: 519.863% (2014.49 / 10472.6)
+  /^Ratio off the optimal offline solution \[/ {
+    # Extract model name from [...]
+    dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
+
+    # Extract ratio percentage
+    ratio_pct=$0; sub(/^.*: /,"",ratio_pct); sub(/%.*$/,"",ratio_pct)
+
+    # Extract (offline / achieved) from (...) at end of line
+    vals=$0; sub(/^.*\(/,"",vals); sub(/\).*$/,"",vals)
+    n=split(vals, ab, " / ")
+    offline_val  = (n>=1) ? ab[1] : "NaN"
+    achieved_val = (n>=2) ? ab[2] : "NaN"
+
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+      dataset, graph, solver, nodes, edges,
+      total_time, solve_time, transf_time, mwu, avg_oracle,
+      dm, offline_val, achieved_val, ratio_pct, status
+    n_rows++
+    next
+  }
+
+  END {
+    # If the run failed (status != OK) or produced no ratio lines, emit placeholder rows
+    # so every (graph × solver × demand) appears in the CSV.
+    if (status != "OK" || n_rows == 0) {
+      if (demand_provided == "1" && demands_arg != "") {
+        n_d = split(demands_arg, dm_arr, ",")
+      } else {
+        n_d = 1; dm_arr[1] = "none"
       }
-
-      $0 ~ /^Graph loaded: [0-9]+ nodes, [0-9]+ edges\./ {
-        tmp=$0
-        sub(/^Graph loaded: [0-9]+ nodes, /, "", tmp)
-        sub(/ edges\..*$/, "", tmp)
-        edges=tmp
-        next
-      }
-
-      $0 ~ /^Total running time: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ ms$/,"",tmp); total_time=tmp; next
-      }
-      $0 ~ /^Solve time: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ ms$/,"",tmp); solve_time=tmp; next
-      }
-      $0 ~ /^Transformation time: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ ms$/,"",tmp); transformation_time=tmp; next
-      }
-      $0 ~ /^MWU iterations: [0-9]+$/ {
-        tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
-      }
-      $0 ~ /^Average oracle time: [0-9.]+ ms$/ {
-        tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
-      }
-
-      $0 ~ /\([0-9.eE+\-]+ \/ [0-9.eE+\-]+\)/ {
-        tmp=$0
-        sub(/^.*\(/,"",tmp)
-        sub(/\).*$/,"",tmp)
-        split(tmp, a, " / ")
-        achieved=a[2]
-        offline=a[1]
-        next
-      }
-
-      END {
-        if (status != "OK") {
-          total_time="NaN"; solve_time="NaN"; transformation_time="NaN";
-          mwu="NaN"; avg_oracle="NaN"; achieved="NaN"; offline="NaN";
+      # We do not know which solvers ran; emit one row with solver="" as a tombstone
+      if (n_rows == 0) {
+        for (di=1; di<=n_d; di++) {
+          printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+            dataset, graph,
+            (solver=="" ? "unknown" : solver),
+            nodes, edges,
+            "NaN","NaN","NaN","NaN","NaN",
+            dm_arr[di], "NaN","NaN","NaN", status
         }
-        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-          dataset, graph, solver, demand, edges, total_time, solve_time, transformation_time,
-          mwu, avg_oracle, achieved, offline, status
       }
-      ' "$log" >> "$CSV"
+    }
+  }
+  ' "$log" >> "$CSV"
 
-      echo "[DONE] $base | $solver | $demand | $status"
-    done
-  done
+  echo "[DONE] $base | solvers=$SOLVERS_ARG | ${DEMANDS_ARG:-none} | $status"
 done
 
 echo "CSV written to: $CSV"
 echo "Logs written to: $OUT_DIR"
+

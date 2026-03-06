@@ -63,10 +63,10 @@ enum class GraphFormat {
 };
 
 struct Config {
-    std::vector<SolverType>  solvers;
-    std::string filename;
-    DemandModelType demand_model;
-    GraphFormat graph_format;
+    std::vector<SolverType>      solvers;
+    std::string                  filename;
+    std::vector<DemandModelType> demand_models;  // empty = no demand evaluation
+    GraphFormat                  graph_format;
 };
 
 std::unique_ptr<ObliviousRoutingSolver>
@@ -173,6 +173,26 @@ inline std::optional<DemandModelType> parse_demand_model_token(std::string s) {
     return std::nullopt;
 }
 
+// Parses a comma-separated list of demand model tokens, e.g. "gravity,uniform,gaussian"
+inline std::optional<std::vector<DemandModelType>>
+parse_demand_model_list(const std::string& s) {
+    std::vector<DemandModelType> result;
+    size_t start = 0;
+    while (true) {
+        size_t pos   = s.find(',', start);
+        std::string token = (pos == std::string::npos)
+                                ? s.substr(start)
+                                : s.substr(start, pos - start);
+        auto dm = parse_demand_model_token(token);
+        if (!dm) return std::nullopt;
+        result.push_back(*dm);
+        if (pos == std::string::npos) break;
+        start = pos + 1;
+    }
+    if (result.empty()) return std::nullopt;
+    return result;
+}
+
 
 inline std::optional<GraphFormat> parse_graph_format_token(std::string s) {
     s = to_lower(std::move(s));
@@ -186,24 +206,26 @@ inline std::optional<GraphFormat> parse_graph_format_token(std::string s) {
 inline std::string usage(const char* prog) {
     std::ostringstream os;
     os << "Usage:\n"
-       << "  " << "./oblivious_routing " << " <solver> <graph_file> OPTIOnAL: <demand_model> <graph_format> \n\n"
-       << "Solvers (case-insensitive):\n"
+       << "  " << "./oblivious_routing " << " <solver> <graph_file> [<demand_models>] [<graph_format>]\n\n"
+       << "Solvers (case-insensitive, comma-separated list allowed):\n"
        << "  electrical | ef | e           -> Electrical Flow (naive)\n"
-       << "  raecke_frt | frt | f   -> Tree-based (Raecke/FRT)\n"
-        << " raecke_ckr | ckr | c -> Tree-based (Raecke/CKR)\n"
-        << "  raecke_frt_mendel | frt_mendel   -> Tree-based (Raecke/FRT) using MendelScaling\n"
-        << " raecke_ckr_mendel | ckr_mendel -> Tree-based (Raecke/CKR) using MendelScaling\n"
-       << "  mst | random_mst | raecke_mst | rmst -> LP (Raecke/Random MST)\n"
-       << "  cohen | lp | applegate | ac   -> Tree-LP (LP/Applegate and Cohen)\n"
-        << "  electrical_parallel | elec_par | e_par -> Electrical Flow (parallel)\n"
-       << "Numeric shortcuts: 0=electric, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel, 6=frt_mendel, 7=ckr_mendel\n"
-       << "[Optional] demand model (case-insensitive):\n"
+       << "  raecke_frt | frt | f          -> Tree-based (Raecke/FRT)\n"
+       << "  raecke_ckr | ckr | c          -> Tree-based (Raecke/CKR)\n"
+       << "  raecke_frt_mendel | frt_mendel -> Tree-based (Raecke/FRT) using MendelScaling\n"
+       << "  raecke_ckr_mendel | ckr_mendel -> Tree-based (Raecke/CKR) using MendelScaling\n"
+       << "  mst | random_mst | raecke_mst | rmst -> Tree-based (Raecke/Random MST)\n"
+       << "  cohen | lp | applegate | ac   -> LP (Applegate and Cohen)\n"
+       << "  electrical_parallel | elec_par | e_par -> Electrical Flow (parallel)\n"
+       << "Numeric shortcuts: 0=electrical, 1=frt, 2=ckr, 3=mst, 4=LP, 5=electrical_parallel, 6=frt_mendel, 7=ckr_mendel\n"
+       << "[Optional] demand models (case-insensitive, comma-separated list allowed):\n"
        << "  gravity | gravity_model       -> Gravity Model\n"
-       << "  binomial | binomial_model     -> Binomial Model\n"
+       << "  bimodal | bimodal_model       -> Bimodal Model\n"
        << "  gaussian | gaussian_model     -> Gaussian Model\n"
        << "  uniform | uniform_model       -> Uniform Model\n"
-       << "If a demand model is provided, the oblivious ratio will be compared to the one of the demand model.\n";
-
+       << "  Example: \"gravity,uniform,gaussian\"\n"
+       << "If demand models are provided, the oblivious ratio is compared to the offline optimum for each.\n"
+       << "[Optional] graph format (case-insensitive):\n"
+       << "  csr | adjlist | list | adjmatrix | matrix\n";
     return os.str();
 }
 
@@ -247,62 +269,35 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
     }
 
     if (argc == 3) {
-        Config cfg{
-            *solvers_opt,
-            std::string(argv[2]),
-            DemandModelType::NONE,
-            GraphFormat::CSR
-        };
-        return cfg;
+        return Config{ *solvers_opt, std::string(argv[2]), {}, GraphFormat::CSR };
     }
 
     if (argc == 4) {
-        auto demand_model_opt = parse_demand_model_token(argv[3]);
-        if (!demand_model_opt) {
-            auto graph_format_opt = parse_graph_format_token(argv[3]);
-            if (graph_format_opt) {
-                Config cfg{
-                    *solvers_opt,
-                    std::string(argv[2]),
-                    DemandModelType::NONE,
-                    *graph_format_opt
-                };
-                return cfg;
-            }else {
-                if (err) *err = "Unknown demand model/Graph format model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
-                return std::nullopt;
-            }
+        // argv[3] can be a demand model list OR a graph format — try demand list first.
+        auto demand_opt = parse_demand_model_list(argv[3]);
+        if (demand_opt) {
+            return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, GraphFormat::CSR };
         }
-
-        Config cfg{
-            *solvers_opt,
-            std::string(argv[2]),
-            *demand_model_opt,
-            GraphFormat::CSR
-        };
-        return cfg;
+        auto graph_format_opt = parse_graph_format_token(argv[3]);
+        if (graph_format_opt) {
+            return Config{ *solvers_opt, std::string(argv[2]), {}, *graph_format_opt };
+        }
+        if (err) *err = "Unknown demand model list / graph format: " + std::string(argv[3]) + "\n" + usage(argv[0]);
+        return std::nullopt;
     }
 
     if (argc == 5) {
-        auto demand_model_opt = parse_demand_model_token(argv[3]);
-        if (!demand_model_opt) {
-            if (err) *err = "Unknown demand model: " + std::string(argv[3]) + "\n" + usage(argv[0]);
+        auto demand_opt = parse_demand_model_list(argv[3]);
+        if (!demand_opt) {
+            if (err) *err = "Unknown demand model list: " + std::string(argv[3]) + "\n" + usage(argv[0]);
             return std::nullopt;
         }
-
         auto graph_format_opt = parse_graph_format_token(argv[4]);
         if (!graph_format_opt) {
             if (err) *err = "Unknown graph format: " + std::string(argv[4]) + "\n" + usage(argv[0]);
             return std::nullopt;
         }
-
-        Config cfg{
-            *solvers_opt,
-            std::string(argv[2]),
-            *demand_model_opt,
-            *graph_format_opt
-        };
-        return cfg;
+        return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, *graph_format_opt };
     }
 
     if (err) *err = usage(argv[0]);
@@ -310,64 +305,87 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
 }
 
 
-inline void HandleDemandModel(int argc,
-                              char** argv,
-                              const std::optional<Config>& cfg,
-                              IGraph& _g,
-                              DemandMap& demand_map)
-{
-    if (argc < 4 || !cfg) { return; }
-
-    // find demand model type from config and print it
-    std::string demand_model_str = (argv[3] ? argv[3] : "<empty>");
-    auto demand_model_type = parse_demand_model_token(demand_model_str);
-
-    // if a demand model is provided, compute the oblivious ratio for that demand model
-    if (cfg->demand_model != DemandModelType::NONE) {
-        std::vector< std::pair<int, int> > demands;
-
-        for (const auto& v : _g.getVertices()) {
-            for (const auto& u : _g.getVertices()) {
-                if (v != u) {
-                    demands.push_back({v, u});
-                }
-            }
-        }
-
-        std::unique_ptr<DemandModel> demand_model;
-        switch  (cfg->demand_model) {
-            case DemandModelType::GRAVITY:
-                demand_model = std::make_unique<GravityModel>();
-                break;
-            case DemandModelType::BIMODAL:
-                demand_model = std::make_unique<BimodalModel>();
-                break;
-            case DemandModelType::GAUSSIAN:
-                demand_model = std::make_unique<GaussianModel>();
-                break;
-            case DemandModelType::UNIFORM:
-                demand_model = std::make_unique<UniformModel>();
-                break;
-            default:
-                std::cerr << "Unknown demand model type.\n";
-        }
-
-        demand_map = demand_model->generate(_g, demands);
+inline std::string demandModelName(DemandModelType type) {
+    switch (type) {
+        case DemandModelType::GRAVITY:  return "gravity";
+        case DemandModelType::BIMODAL:  return "bimodal";
+        case DemandModelType::GAUSSIAN: return "gaussian";
+        case DemandModelType::UNIFORM:  return "uniform";
+        default:                        return "<unknown>";
     }
 }
 
+inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
+    switch (type) {
+        case DemandModelType::GRAVITY:  return std::make_unique<GravityModel>();
+        case DemandModelType::BIMODAL:  return std::make_unique<BimodalModel>();
+        case DemandModelType::GAUSSIAN: return std::make_unique<GaussianModel>();
+        case DemandModelType::UNIFORM:  return std::make_unique<UniformModel>();
+        default:
+            throw std::runtime_error("Unknown demand model type.");
+    }
+}
 
-inline double computeRoutingSchemeCongestion(IGraph& _g, const std::unique_ptr<RoutingScheme>& routing_scheme, const DemandMap& demand_map) {
-    std::vector<double> congestion_per_edge(_g.getNumEdges(), 0.0); // undirected edges
+// Calls callback(model_name, demand_map) once per demand model in cfg->demand_models.
+inline void HandleDemandModels(const std::optional<Config>& cfg,
+                               IGraph& g,
+                               std::function<void(const std::string&, const DemandMap&)> callback)
+{
+    if (!cfg || cfg->demand_models.empty()) return;
 
+    std::vector<std::pair<int,int>> demands;
+    demands.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
+    for (int v : g.getVertices())
+        for (int u : g.getVertices())
+            if (v != u) demands.push_back({v, u});
+
+    for (DemandModelType type : cfg->demand_models) {
+        auto model      = makeDemandModel(type);
+        DemandMap dmap  = model->generate(g, demands);
+        callback(demandModelName(type), dmap);
+    }
+}
+
+// Legacy single-map helper — kept for call sites that only need one map.
+// Uses the first demand model in the list.
+inline void HandleDemandModel(int /*argc*/,
+                              char** /*argv*/,
+                              const std::optional<Config>& cfg,
+                              IGraph& g,
+                              DemandMap& demand_map)
+{
+    if (!cfg || cfg->demand_models.empty()) return;
+
+    std::vector<std::pair<int,int>> demands;
+    demands.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
+    for (int v : g.getVertices())
+        for (int u : g.getVertices())
+            if (v != u) demands.push_back({v, u});
+
+    auto model = makeDemandModel(cfg->demand_models.front());
+    demand_map = model->generate(g, demands);
+}
+
+inline void printStatsForDemandModel(const std::string& model_name,
+                                     std::pair<double, double> result) {
+    if (result.first > 0.0 && result.second > 0.0) {
+        std::cout << "Ratio off the optimal offline solution ["
+                  << model_name << "] demand model: "
+                  << (result.second / result.first) * 100.0 << "% "
+                  << "(" << result.first << " / " << result.second << ")\n";
+    } else {
+        std::cout << "Invalid congestion values for demand model [" << model_name << "].\n";
+    }
+}
+
+inline double computeRoutingSchemeCongestion(IGraph& _g,
+                                             const std::unique_ptr<RoutingScheme>& routing_scheme,
+                                             const DemandMap& demand_map) {
+    std::vector<double> congestion_per_edge(_g.getNumEdges(), 0.0);
     routing_scheme->routeDemands(congestion_per_edge, demand_map);
     double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
-
-    for (const auto& cong : congestion_per_edge) {
-        if (cong > max_cong) {
-            max_cong = cong;
-        }
-    }
+    for (const auto& cong : congestion_per_edge)
+        if (cong > max_cong) max_cong = cong;
     return max_cong;
 }
 
@@ -376,22 +394,8 @@ inline double computeOfflineOptimalCongestion(IGraph& _g, const DemandMap& deman
     mccf.init(_g);
     mccf.AddDemandMap(demand_map);
     auto offline_scheme = mccf.solve();
-
     return mccf.getCongestion();
 }
 
-inline void printStatsForDemandModel(char** argv,std::pair<double, double> result) {
-    if (result.first > 0.0 && result.second > 0.0) {
-        std::cout << "Ratio off the optimal offline solution "
-                  << (argv[3] ? argv[3] : "<empty>")
-                  << " model demand: "
-                  << ( result.second  / result.first ) * 100.0 << "% "
-                  << " ("
-                  << result.first << " / " << result.second
-                  << ")\n";
-    }else {
-        std::cout << "Invalid congestion values for demand model evaluation.\n";
-    }
-}
 
 #endif //OBLIVIOUSROUTING_PARSE_PARAMETER_H
