@@ -6,7 +6,7 @@ SOLVERS="${SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel}"
 JOBS="${JOBS:-8}"
 OUT_CSV="${OUT_CSV:-results/results_parallel.csv}"
 TIMEOUT="${TIMEOUT:-120m}"
-BIN="${BIN:-./cmake-build-release/oblivious_routing}"
+BIN="${BIN:-./build/oblivious_routing}"
 
 DEMANDS=""
 DEMAND_PROVIDED=0
