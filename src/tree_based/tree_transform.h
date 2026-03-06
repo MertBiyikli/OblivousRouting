@@ -51,6 +51,7 @@ public:
             q.pop();
 
             for (auto child : current->getChildren()) {
+                assert(child != nullptr && "HSTNode child is null!");
                 if (child->getMembers().size() == current->getMembers().size()) {
                     q.push(child);
                     continue;
