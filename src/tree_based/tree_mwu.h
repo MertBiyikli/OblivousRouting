@@ -73,7 +73,7 @@ public:
         solve_time += duration(timeNow()-t0);
 
         t0 = timeNow();
-        TreeIteration iter( std::move(t), current_distances, lambda);
+        TreeIteration iter( t, current_distances, lambda);
         transform.transform(iter, table);
         this->transformation_time += duration((timeNow()-t0));
 

@@ -15,7 +15,7 @@ public:
     double lambda;
 
     TreeIteration(std::shared_ptr<HSTNode> _tree, std::vector<double> _distance, double _lambda)
-        : tree(std::move(_tree)), distance(std::move(_distance)), lambda(_lambda) {}
+        : tree(_tree), distance(_distance), lambda(_lambda) {}
 
     // getter methods
     std::shared_ptr<HSTNode> getTree() const { assert(tree != nullptr); return tree; }
