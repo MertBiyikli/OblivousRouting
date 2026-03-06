@@ -65,7 +65,7 @@ public:
         auto t0 = timeNow();
         auto t = oracle->getTree(current_distances);
         this->oracle_running_times.push_back( duration((timeNow()-t0)));
-        assert(t != nullptr);
+        assert(t != nullptr && "Oracle returned a null tree!");
         computeRLoads(t);
         double l = getMaxRload();
         double lambda = std::min(1.0/l, 1.0 - lambda_sum);

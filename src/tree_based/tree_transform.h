@@ -39,7 +39,7 @@ public:
     }
 
     void distributeDemands(TreeIteration& iter, LinearRoutingTable& table) {
-        const auto& root = iter.getTree();
+        auto root = iter.getTree();
         const auto& distance = iter.getDistance();
         const auto& lambda = iter.getLambda();
 
@@ -47,10 +47,10 @@ public:
         q.push(root);
 
         while (!q.empty()) {
-            const auto& current = q.front();
+            auto current = q.front();
             q.pop();
 
-            for (const auto& child : current->getChildren()) {
+            for (auto child : current->getChildren()) {
                 if (child->getMembers().size() == current->getMembers().size()) {
                     q.push(child);
                     continue;
