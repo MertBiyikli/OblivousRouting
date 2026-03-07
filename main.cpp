@@ -37,13 +37,14 @@ int main(int argc, char **argv) {
         auto scheme = solver->solve();
         double solve_time = duration(timeNow() - t0);
 
+        // scheme->printRoutingTable();
         std::cout << "Total running time: " << solve_time << " ms\n";
 
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
             mwu->printTimeStats();
         }
 
-            if (cfg->demand_models.empty()) continue;
+        if (cfg->demand_models.empty()) continue;
 
         for (const auto& [model_name, offline_cong] : offline_opt_per_model) {
             const DemandMap& dmap = demand_maps.at(model_name);

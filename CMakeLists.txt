@@ -25,7 +25,8 @@ find_package(Eigen3 REQUIRED)
 
 
 # --- Target ---
-add_executable(oblivious_routing)
+add_executable(oblivious_routing
+        src/tree_based/flat_hst.h)
 
 target_sources(oblivious_routing PRIVATE
         main.cpp

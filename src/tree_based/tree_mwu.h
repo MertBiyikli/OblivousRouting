@@ -21,6 +21,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle> oracle;
     TreeTransform transform;
+    FlatTreeTransform flatTransform;
     double lambda_sum;
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
@@ -28,7 +29,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     std::vector<double> mendel_scaling_times;
 
 public:
-    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)),transform(graph) {
+    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)),transform(graph), flatTransform(graph) {
         current_distances.assign(graph.getNumEdges(), 1.0);
         rload_current.assign(graph.getNumEdges(), 0.0);
         rload_total.assign(graph.getNumEdges(), 0.0);
@@ -55,7 +56,7 @@ public:
         lambda_sum = 0.0;
 
         while (lambda_sum < 1.0) {
-            lambda_sum += treeOracle(table);
+            lambda_sum += flatTreeOracle(table);
             iteration_count++;
         }
     }
@@ -84,6 +85,71 @@ public:
 
         return lambda;
     }
+
+    double flatTreeOracle(LinearRoutingTable& table) {
+        auto t0 = timeNow();
+        HST hst = oracle->getFlatTree(current_distances);  // flat HST by value, NRVO/move
+        this->oracle_running_times.push_back(duration(timeNow()-t0));
+        computeRLoads(hst);
+        double l = getMaxRload();
+        double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
+        computeNewDistances(lambda);
+        solve_time += duration(timeNow() - t0);
+        t0 = timeNow();
+
+        // Move t into the iteration — t is not used after this point.
+        FlatTreeIteration iter(std::move(hst), current_distances, lambda);
+
+        flatTransform.transform(iter, table);
+        this->transformation_time += duration((timeNow() - t0));
+
+        if (oracle->applyMendelScaling) {
+            mendel_scaling_times.push_back(oracle->getMendelScalingTime());
+        }
+
+        return lambda;
+    }
+
+    void computeRLoads(const HST& hst) {
+        std::fill(rload_current.begin(), rload_current.end(), 0.0);
+
+        std::queue<int> q;
+        q.push(hst.root());
+        while (!q.empty()) {
+            int node_idx = q.front(); q.pop();
+            for (int child_idx : hst.children(node_idx)) {
+                q.push(child_idx);
+
+                auto node_members  = hst.memberRange(node_idx);
+                auto child_members = hst.memberRange(child_idx);
+                if (child_members.size() == node_members.size() || child_members.empty()) continue;
+
+                std::vector<char> S(graph.getNumNodes(), 0);
+                for (int v : child_members) S[v] = 1;
+
+                double cut = 0.0;
+                for (int u : child_members)
+                    for (int v : graph.neighbors(u))
+                        if (!S[v]) cut += graph.getEdgeCapacity(u, v);
+                if (cut <= 1e-12) cut = 1e-12;
+
+                int repParent = node_members.empty() ? child_members[0] : node_members[0];
+                int repChild  = child_members[0];
+
+                auto path = graph.getShortestPath(repParent, repChild);
+                if (path.size() < 2) continue;
+
+                for (size_t i = 0; i + 1 < path.size(); ++i) {
+                    int u = path[i], v = path[i+1];
+                    int e = graph.getEdgeId(u,v), anti_e = graph.getEdgeId(v,u);
+                    double cap = std::max(graph.getEdgeCapacity(u,v), 1e-12);
+                    double rload = rload_current[e] + cut / cap;
+                    rload_current[e] = rload_current[anti_e] = rload;
+                }
+            }
+        }
+    }
+
 
 
 

@@ -8,6 +8,7 @@
 #include <list>
 
 #include "hst.h"
+#include "flat_hst.h"
 #include "../datastructures/IGraph.h"
 #include "utils/ultrametric_tree.h"
 #include "utils/quotient_graph.h"
@@ -393,6 +394,90 @@ public:
     double getMendelScalingTime() const {
         return total_time_spent_on_mendel_scaling;
     }
+
+
+    // flat tree representation version
+    virtual HST getFlatTree(std::vector<double>& distances) {
+        total_time_spent_on_mendel_scaling = 0;
+        updateDistances(distances);
+        preprocess();
+
+        // n leaves are already created by the constructor with members = {v}
+        HSTBuilder builder(n);
+        std::vector<int> prev_level(n);
+        for (int v = 0; v < n; ++v)
+            prev_level[v] = builder.leafOf(v);  // use pre-populated leaves
+
+        if (applyMendelScaling) {
+            auto start = timeNow();
+            qc.preprocessEdges(graph);
+            total_time_spent_on_mendel_scaling += duration(timeNow() - start);
+        }
+
+        computeScales();
+        for (const double Delta : scales) {
+            HSTLevel L;
+            if (applyMendelScaling) {
+                MendelScaling::QuotientLevel Q;
+                auto start = timeNow();
+                Q = qc.constructQuotientGraph(ultrametric, Delta, graph);
+                if (Q.Gq->getNumNodes() <= 1) continue;
+                total_time_spent_on_mendel_scaling += duration(timeNow() - start);
+                computeQuotientLevelPartition(Q, L, Delta);
+            } else {
+                computeLevelPartition(graph, L, perm, Delta);
+            }
+            prev_level = buildFlatTreeLevel(builder, prev_level, L);
+        }
+
+        // Create an explicit root that covers all vertices and attach all
+        // top-level nodes from the last level as its children
+        int root_idx = builder.addNode(builder.node(prev_level[0]).center);
+        std::vector<bool> attached(builder.size(), false);
+        for (int v = 0; v < n; ++v) {
+            int top = prev_level[v];
+            if (attached[top]) continue;
+            attached[top] = true;
+            builder.attach(root_idx, top);
+        }
+        builder.sortMembers(root_idx);
+
+        return builder.finalise(root_idx);
+    }
+
+    std::vector<int> buildFlatTreeLevel(HSTBuilder& builder,
+                                        const std::vector<int>& prev_level,
+                                        const HSTLevel& L) {
+        // one new parent node per cluster center
+        std::unordered_map<int,int> center_to_parent;
+        center_to_parent.reserve(L.centers.size());
+        for (int c : L.centers) center_to_parent[c] = builder.addNode(c);
+
+        // attach each unique prev-level node to its parent cluster
+        const int builder_size_before = builder.size();
+        std::vector<bool> attached(builder_size_before, false);
+        for (int v = 0; v < n; ++v) {
+            int old_node = prev_level[v];
+            if (old_node >= builder_size_before || attached[old_node]) continue;
+            attached[old_node] = true;
+            int child_center = builder.node(old_node).center;
+            int cluster      = L.owner[child_center];
+            builder.attach(center_to_parent.at(cluster), old_node);
+        }
+
+        // sort & dedup members on the new parent nodes
+        for (auto& [c, idx] : center_to_parent) builder.sortMembers(idx);
+
+        // new prev_level: each vertex v points to its new parent
+        std::vector<int> new_level(n);
+        for (int v = 0; v < n; ++v) {
+            int child_center = builder.node(prev_level[v]).center;
+            new_level[v] = center_to_parent.at(L.owner[child_center]);
+        }
+        return new_level;
+    }
+
+
 };
 
 #endif //OBLIVIOUSROUTING_TREE_ORACLE_H
