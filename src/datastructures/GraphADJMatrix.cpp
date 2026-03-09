@@ -208,6 +208,8 @@ std::vector<int> GraphADJMatrix::getShortestPath(
     return dijkstra(tmp, s, t);
 }
 
+
+
 const double GraphADJMatrix::GetDiameter() const {
     double diameter = 0.0;
     for (int u = 0; u < n; ++u) {

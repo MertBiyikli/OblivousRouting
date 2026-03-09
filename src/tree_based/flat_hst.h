@@ -9,11 +9,11 @@
 
 struct HSTNodeFlat {
     int center;
-    int members_begin, members_end;  // slice into HST::members[]
-    int children_begin, children_end; // slice into HST::children_idx[]
+    int members_begin, members_end;  // slice into FlatHST::members[]
+    int children_begin, children_end; // slice into FlatHST::children_idx[]
 };
 
-struct HST {
+struct FlatHST {
     std::vector<HSTNodeFlat> nodes;        // index 0 = root
     std::vector<int>         children_idx; // flat list of child node indices
     std::vector<int>         members;      // flat list of all member vertices
@@ -49,10 +49,25 @@ struct HST {
     bool isLeaf(int i) const {
         return nodes[i].children_begin == nodes[i].children_end;
     }
+
+    void print() {
+        for (int i = 0; i < numNodes(); ++i) {
+            const auto& n = nodes[i];
+            printf("Node %d: center=%d, members=[", i, n.center);
+            for (int j = n.members_begin; j < n.members_end; ++j) {
+                printf("%d ", members[j]);
+            }
+            printf("], children=[");
+            for (int j = n.children_begin; j < n.children_end; ++j) {
+                printf("%d ", children_idx[j]);
+            }
+            printf("]\n");
+        }
+    }
 };
 
 // HSTBuilder: builds a mutable tree level-by-level from tree_oracle,
-// then packs it into a flat HST in one pass.
+// then packs it into a flat FlatHST in one pass.
 class HSTBuilder {
 public:
     struct BuildNode {
@@ -99,8 +114,38 @@ public:
         m.erase(std::unique(m.begin(), m.end()), m.end());
     }
 
-    // cleanUp + pack into flat HST
-    HST finalise(int root_idx);
+    // cleanUp + pack into flat FlatHST
+    FlatHST finalise(int root_idx);
+
+    // if children and parent are the same, compress them into a single node
+    void compressTree() {
+        for (int i = 0; i < size(); ++i) {
+            BuildNode& nd = build_nodes_[i];
+            if (nd.members.size() <= 1) continue;
+            for (int c : nd.children) {
+                BuildNode& cn = build_nodes_[c];
+                if (sameMembers(nd.members, cn.members)) {
+                    // absorb child: adopt grandchildren
+                    for (int gc : cn.children) {
+                        build_nodes_[gc].parent = i;
+                        nd.children.push_back(gc);
+                    }
+                    cn.children.clear();
+                }
+            }
+        }
+        // remove absorbed children
+        for (int i = 0; i < size(); ++i) {
+            BuildNode& nd = build_nodes_[i];
+            std::vector<int> new_children;
+            new_children.reserve(nd.children.size());
+            for (int c : nd.children) {
+                if (!build_nodes_[c].children.empty()) new_children.push_back(c);
+            }
+            nd.children.swap(new_children);
+        }
+        // now we have a clean tree but with some empty nodes. finalise() will clean those up.
+    }
 
 private:
     std::vector<BuildNode> build_nodes_;
@@ -136,7 +181,7 @@ inline void HSTBuilder::cleanUp(int i) {
     nd.children.swap(new_children);
 }
 
-inline HST HSTBuilder::finalise(int root_idx) {
+inline FlatHST HSTBuilder::finalise(int root_idx) {
     cleanUp(root_idx);
 
     // BFS to assign new contiguous indices (root = 0)
@@ -152,7 +197,7 @@ inline HST HSTBuilder::finalise(int root_idx) {
         }
     }
 
-    HST hst;
+    FlatHST hst;
     const int N = (int)bfs.size();
     hst.nodes.resize(N);
 

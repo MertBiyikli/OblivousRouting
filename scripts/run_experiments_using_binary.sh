@@ -78,7 +78,7 @@ CSV="$OUT_CSV"
 
 # Write header only if the file does not exist yet
 if [[ ! -f "$CSV" ]]; then
-  echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
+  echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,mendel_total_ms,mendel_avg_ms,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
 fi
 
 # Collect graphs
@@ -181,7 +181,8 @@ for g in "${GRAPHS[@]}"; do
     nodes="NaN"; edges="NaN";
     solver=""; total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN";
-    n_rows=0;
+    mendel_total="NaN"; mendel_avg="NaN";
+    n_rows=0; solver_seen=0;
   }
 
   # Graph metadata (appears once at the top)
@@ -194,11 +195,21 @@ for g in "${GRAPHS[@]}"; do
     next
   }
 
-  # New solver section — reset per-solver fields
+  # New solver section — flush previous solver row if no demands, then reset
   /^=== Running solver: / {
+    if (demand_provided != "1" && solver != "" && solver_seen) {
+      printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+        dataset, graph, solver, nodes, edges,
+        total_time, solve_time, transf_time, mwu, avg_oracle,
+        mendel_total, mendel_avg,
+        "none", "NaN","NaN","NaN", status
+      n_rows++
+    }
     solver=$0; sub(/^=== Running solver: /,"",solver); sub(/ ===/,"",solver)
     total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN";
+    mendel_total="NaN"; mendel_avg="NaN";
+    solver_seen=1;
     next
   }
 
@@ -217,50 +228,54 @@ for g in "${GRAPHS[@]}"; do
   /^Average oracle time: [0-9.]+ ms$/ {
     tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
   }
+  /^Total time spent on Mendel scaling: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ ms$/,"",tmp); mendel_total=tmp; next
+  }
+  /^Average time spent on Mendel scaling per iteration: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
+  }
 
   # Ratio line — one row per (solver × demand_model)
-  # Format: Ratio off the optimal offline solution [bimodal] demand model: 519.863% (2014.49 / 10472.6)
   /^Ratio off the optimal offline solution \[/ {
-    # Extract model name from [...]
     dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
-
-    # Extract ratio percentage
     ratio_pct=$0; sub(/^.*: /,"",ratio_pct); sub(/%.*$/,"",ratio_pct)
-
-    # Extract (offline / achieved) from (...) at end of line
     vals=$0; sub(/^.*\(/,"",vals); sub(/\).*$/,"",vals)
     n=split(vals, ab, " / ")
     offline_val  = (n>=1) ? ab[1] : "NaN"
     achieved_val = (n>=2) ? ab[2] : "NaN"
-
-    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
+      mendel_total, mendel_avg,
       dm, offline_val, achieved_val, ratio_pct, status
     n_rows++
     next
   }
 
   END {
-    # If the run failed (status != OK) or produced no ratio lines, emit placeholder rows
-    # so every (graph × solver × demand) appears in the CSV.
-    if (status != "OK" || n_rows == 0) {
+    if (n_rows == 0) {
+      # Error / timeout with no output at all
       if (demand_provided == "1" && demands_arg != "") {
         n_d = split(demands_arg, dm_arr, ",")
       } else {
         n_d = 1; dm_arr[1] = "none"
       }
-      # We do not know which solvers ran; emit one row with solver="" as a tombstone
-      if (n_rows == 0) {
-        for (di=1; di<=n_d; di++) {
-          printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-            dataset, graph,
-            (solver=="" ? "unknown" : solver),
-            nodes, edges,
-            "NaN","NaN","NaN","NaN","NaN",
-            dm_arr[di], "NaN","NaN","NaN", status
-        }
+      for (di=1; di<=n_d; di++) {
+        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+          dataset, graph,
+          (solver=="" ? "unknown" : solver),
+          nodes, edges,
+          total_time, solve_time, transf_time, mwu, avg_oracle,
+          mendel_total, mendel_avg,
+          dm_arr[di], "NaN","NaN","NaN", status
       }
+    } else if (demand_provided != "1" && solver_seen) {
+      # Flush the last solver (no demand model run)
+      printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+        dataset, graph, solver, nodes, edges,
+        total_time, solve_time, transf_time, mwu, avg_oracle,
+        mendel_total, mendel_avg,
+        "none", "NaN","NaN","NaN", status
     }
   }
   ' "$log" >> "$CSV"

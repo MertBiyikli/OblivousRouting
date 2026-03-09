@@ -14,59 +14,57 @@
 /*
  *
  * This is the implementation of the tree-based oblivious routing algorithm using the Multiplicative Weights Update (MWU) framework presented by Räcke in 2008.
- * The algorithm iteratively computes a tree (HST) embedding of the graph using the provided oracle, computes the load on the edges based on the tree, and updates the edge distances multiplicatively
+ * The algorithm iteratively computes a tree (FlatHST) embedding of the graph using the provided oracle, computes the load on the edges based on the tree, and updates the edge distances multiplicatively
  * until the total weight (lambda_sum) of the trees added to the routing table reaches 1.
  */
+template<typename HSTDatastructures>
 class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
-    std::unique_ptr<TreeOracle> oracle;
+    std::unique_ptr<TreeOracle<HSTDatastructures>> oracle;
     TreeTransform transform;
-    FlatTreeTransform flatTransform;
     double lambda_sum;
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
-    std::vector<TreeIteration> iteration;
     std::vector<double> mendel_scaling_times;
 
 public:
-    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle> _oracle) : LinearObliviousSolverBase(g, root), oracle(std::move(_oracle)),transform(graph), flatTransform(graph) {
+    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
+        : LinearObliviousSolverBase(g, root)
+        , oracle(std::move(_oracle))
+        , transform(graph) {
         current_distances.assign(graph.getNumEdges(), 1.0);
         rload_current.assign(graph.getNumEdges(), 0.0);
         rload_total.assign(graph.getNumEdges(), 0.0);
         lambda_sum = 0.0;
     }
 
-
-    void computeBasisFlows(LinearRoutingTable &table) override {
+    void computeBasisFlows(LinearRoutingTable& table) override {
         table.init(graph);
         run(table);
-
         if (oracle->applyMendelScaling) {
-            double total_mendel_time = 0.0;
-            for (const auto& t : mendel_scaling_times) total_mendel_time += t;
-            std::cout << "Total time spent on Mendel scaling: " << total_mendel_time << " ms\n";
-            double avg_mendel_time = mendel_scaling_times.empty() ? 0.0 : total_mendel_time / mendel_scaling_times.size();
-            std::cout << "Average time spent on Mendel scaling per iteration: " << avg_mendel_time << " ms\n";
+            double total = 0.0;
+            for (auto t : mendel_scaling_times) total += t;
+            std::cout << "Total time spent on Mendel scaling: " << total << " ms\n";
+            double avg = mendel_scaling_times.empty() ? 0.0 : total / mendel_scaling_times.size();
+            std::cout << "Average time spent on Mendel scaling per iteration: " << avg << " ms\n";
         }
     }
 
-
-    // MWU loop
     void run(LinearRoutingTable& table) {
         lambda_sum = 0.0;
-
         while (lambda_sum < 1.0) {
-            lambda_sum += flatTreeOracle(table);
+            lambda_sum += treeOracle(table);
             iteration_count++;
         }
     }
 
-
     double treeOracle(LinearRoutingTable& table) {
         auto t0 = timeNow();
-        auto t = oracle->getTree(current_distances);
-        this->oracle_running_times.push_back(duration((timeNow() - t0)));
-        assert(t != nullptr && "Oracle returned a null tree!");
+
+
+        HSTDatastructures t = oracle->getTree(current_distances);
+        this->oracle_running_times.push_back(duration(timeNow() - t0));
+
         computeRLoads(t);
         double l = getMaxRload();
         double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
@@ -74,43 +72,17 @@ public:
         solve_time += duration(timeNow() - t0);
         t0 = timeNow();
 
-        // Move t into the iteration — t is not used after this point.
-        TreeIteration iter(std::move(t), current_distances, lambda);
+        TreeIteration<HSTDatastructures> iter(std::move(t), current_distances, lambda);
         transform.transform(iter, table);
-        this->transformation_time += duration((timeNow() - t0));
+        this->transformation_time += duration(timeNow() - t0);
 
-        if (oracle->applyMendelScaling) {
+        if (oracle->applyMendelScaling)
             mendel_scaling_times.push_back(oracle->getMendelScalingTime());
-        }
 
         return lambda;
     }
 
-    double flatTreeOracle(LinearRoutingTable& table) {
-        auto t0 = timeNow();
-        HST hst = oracle->getFlatTree(current_distances);  // flat HST by value, NRVO/move
-        this->oracle_running_times.push_back(duration(timeNow()-t0));
-        computeRLoads(hst);
-        double l = getMaxRload();
-        double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
-        computeNewDistances(lambda);
-        solve_time += duration(timeNow() - t0);
-        t0 = timeNow();
-
-        // Move t into the iteration — t is not used after this point.
-        FlatTreeIteration iter(std::move(hst), current_distances, lambda);
-
-        flatTransform.transform(iter, table);
-        this->transformation_time += duration((timeNow() - t0));
-
-        if (oracle->applyMendelScaling) {
-            mendel_scaling_times.push_back(oracle->getMendelScalingTime());
-        }
-
-        return lambda;
-    }
-
-    void computeRLoads(const HST& hst) {
+    void computeRLoads(const FlatHST& hst) {
         std::fill(rload_current.begin(), rload_current.end(), 0.0);
 
         std::queue<int> q;
@@ -141,8 +113,8 @@ public:
 
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
                     int u = path[i], v = path[i+1];
-                    int e = graph.getEdgeId(u,v), anti_e = graph.getEdgeId(v,u);
-                    double cap = std::max(graph.getEdgeCapacity(u,v), 1e-12);
+                    int e = graph.getEdgeId(u, v), anti_e = graph.getEdgeId(v, u);
+                    double cap = std::max(graph.getEdgeCapacity(u, v), 1e-12);
                     double rload = rload_current[e] + cut / cap;
                     rload_current[e] = rload_current[anti_e] = rload;
                 }
@@ -150,55 +122,30 @@ public:
         }
     }
 
-
-
-
-    void addCurrentLoad(double lambda) {
-        for (int e = 0; e < graph.getNumEdges(); ++e) {
-            rload_total[e] += rload_current[e] * lambda;
-        }
-    }
-
     void computeRLoads(const std::shared_ptr<HSTNode>& t) {
         assert(t != nullptr);
-
         std::fill(rload_current.begin(), rload_current.end(), 0.0);
 
-        // t is kept alive by the caller — safe to observe with raw pointers.
         std::queue<const HSTNode*> q;
         q.push(t.get());
         while (!q.empty()) {
-            const HSTNode* node = q.front();
-            q.pop();
-
-            // Process each child: represents a cut S_child | V\S_child ---
+            const HSTNode* node = q.front(); q.pop();
             for (const auto& child_ptr : node->getChildren()) {
                 const HSTNode* child = child_ptr.get();
-                // Add child to traversal queue
                 q.push(child);
 
-
-                // if node has the same nodes as child, skip
-                if (node->getMembers().size() == child->getMembers().size()) {
-                    continue;
-                }
+                if (node->getMembers().size() == child->getMembers().size()) continue;
                 const std::vector<int>& clusterVertices = child->getMembers();
                 if (clusterVertices.empty()) continue;
 
-                // Build set for fast lookup
                 std::vector<char> S(graph.getNumNodes(), 0);
                 for (int v : clusterVertices) S[v] = 1;
 
-
-                // Compute total cut capacity of this child cluster
                 double cut = 0.0;
-                for (int u : clusterVertices) {
-                    for (auto&  v : graph.neighbors(u)) {
-                        if (!S[v])  // boundary edge
-                            cut += graph.getEdgeCapacity(u, v);
-                    }
-                }
-                if (cut <= 1e-12) cut = 1e-12;  // avoid zero-division
+                for (int u : clusterVertices)
+                    for (auto v : graph.neighbors(u))
+                        if (!S[v]) cut += graph.getEdgeCapacity(u, v);
+                if (cut <= 1e-12) cut = 1e-12;
 
                 int repParent = node->getMembers().empty() ? clusterVertices[0] : node->getMembers()[0];
                 int repChild  = clusterVertices[0];
@@ -207,20 +154,11 @@ public:
                 if (path.size() < 2) continue;
 
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
-                    int u = path[i];
-                    int v = path[i + 1];
-
-                    int e = graph.getEdgeId(u, v);
-                    double rload = rload_current[e];
-                    double cap = graph.getEdgeCapacity(u, v);
-                    if (cap <= 1e-12) cap = 1e-12;
-
-                    rload += cut / cap;
-                    rload_current[e] = rload;
-
-                    int anti_e = graph.getEdgeId(v, u);
-                    rload_current[anti_e] = rload;
-
+                    int u = path[i], v = path[i+1];
+                    int e = graph.getEdgeId(u, v), anti_e = graph.getEdgeId(v, u);
+                    double cap = std::max(graph.getEdgeCapacity(u, v), 1e-12);
+                    double rload = rload_current[e] + cut / cap;
+                    rload_current[e] = rload_current[anti_e] = rload;
                 }
             }
         }
@@ -238,6 +176,11 @@ public:
         return max_load;
     }
 
+    void addCurrentLoad(double lambda) {
+        for (int e = 0; e < graph.getNumEdges(); ++e) {
+            rload_total[e] += rload_current[e] * lambda;
+        }
+    }
     void computeNewDistances(double lambda) {
         addCurrentLoad(lambda);
 

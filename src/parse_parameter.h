@@ -29,22 +29,32 @@ std::vector<std::string> solverNames ={
     "electrical",
     "raecke_frt",
     "raecke_ckr",
-       "raecke_random_mst",
+    "raecke_random_mst",
     "raecke_frt_mendel",
     "raecke_ckr_mendel",
     "lp_applegate_cohen",
-    "electrical_parallel_batches"
+    "electrical_parallel_batches",
+    "racke_frt_pointer",
+    "racke_ckr_pointer",
+    "racke_random_mst_pointer",
+    "racke_frt_mendel_pointer",
+    "racke_ckr_mendel_pointer"
 };
 
 enum class SolverType {
     ELECTRICAL,
-    RAECKE_FRT,
-    RAECKE_CKR,
-    RAECKE_RANDOM_MST,
-    RAECKE_FRT_MENDELSCALING,
-    RAECKE_CKR_MENDELSCALING,
+    RAECKE_FRT_FLAT,
+    RAECKE_CKR_FLAT,
+    RAECKE_RANDOM_MST_FLAT,
+    RAECKE_FRT_MENDELSCALING_FLAT,
+    RAECKE_CKR_MENDELSCALING_FLAT,
     LP_APPLEGATE_COHEN,
-    ELECTRICAL_PARALLEL_BATCHES
+    ELECTRICAL_PARALLEL_BATCHES,
+    RAECKE_FRT_POINTER,
+    RAECKE_CKR_POINTER,
+    RAECKE_RANDOM_MST_POINTER,
+    RAECKE_FRT_MENDELSCALING_POINTER,
+    RAECKE_CKR_MENDELSCALING_POINTER
 };
 
 enum class DemandModelType {
@@ -75,26 +85,42 @@ makeSolver(SolverType type, IGraph& g) {
         case SolverType::ELECTRICAL:
             return std::make_unique<ElectricalMWU>(g, 0);
 
-        case SolverType::RAECKE_FRT:
-            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FRT>(g));
+        case SolverType::RAECKE_FRT_FLAT:
+            return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<FRT<FlatHST>>(g,false));
 
-        case SolverType::RAECKE_CKR:
-            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FastCKR>(g));
+        case SolverType::RAECKE_CKR_FLAT:
+            return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<FastCKR<FlatHST>>(g,false));
 
-        case SolverType::RAECKE_RANDOM_MST:
-            return std::make_unique<TreeMWU>(g,0,  std::make_unique<TreeMST>(g));
+        case SolverType::RAECKE_RANDOM_MST_FLAT:
+            return std::make_unique<TreeMWU<FlatHST>>(g,0,  std::make_unique<TreeMST<FlatHST>>(g));
 
-        case SolverType::RAECKE_FRT_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FRT>(g, true));
+        case SolverType::RAECKE_FRT_MENDELSCALING_FLAT:
+            return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<FRT<FlatHST>>(g, true));
 
-        case SolverType::RAECKE_CKR_MENDELSCALING:
-            return std::make_unique<TreeMWU>(g, 0, std::make_unique<FastCKR>(g, true));
+        case SolverType::RAECKE_CKR_MENDELSCALING_FLAT:
+            return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<FastCKR<FlatHST>>(g, true));
 
         case SolverType::LP_APPLEGATE_COHEN:
             return std::make_unique<LPSolver>(g);
 
         case SolverType::ELECTRICAL_PARALLEL_BATCHES:
             return std::make_unique<ParallelElectricalMWU>(g, 0);
+
+        case SolverType::RAECKE_FRT_POINTER:
+            return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FRT<std::shared_ptr<HSTNode>>>(g,false));
+
+        case SolverType::RAECKE_CKR_POINTER:
+            return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g,false));
+
+        case SolverType::RAECKE_RANDOM_MST_POINTER:
+            return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g,0,  std::make_unique<TreeMST<std::shared_ptr<HSTNode>>>(g));
+
+        case SolverType::RAECKE_FRT_MENDELSCALING_POINTER:
+            return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FRT<std::shared_ptr<HSTNode>>>(g, true));
+
+        case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
+            return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g, true));
+
 
         default:
             throw std::runtime_error("Unknown solver type.");
@@ -131,30 +157,44 @@ inline std::optional<SolverType> parse_solver_token(std::string s) {
     if (s == "electrical" || s == "elec" || s == "ef" || s == "e")
         return SolverType::ELECTRICAL;
     if (s == "raecke_frt" || s == "frt" || s == "f")
-        return SolverType::RAECKE_FRT;
+        return SolverType::RAECKE_FRT_FLAT;
     if (s == "raecke_ckr" || s == "ckr" || s == "c")
-        return SolverType::RAECKE_CKR;
+        return SolverType::RAECKE_CKR_FLAT;
     if (s == "raecke_mst" || s == "random_mst" || s == "rmst" || s == "mst")
-        return SolverType::RAECKE_RANDOM_MST;
+        return SolverType::RAECKE_RANDOM_MST_FLAT;
     if (s == "raecke_frt_mendel" || s == "frt_mendel")
-        return SolverType::RAECKE_FRT_MENDELSCALING;
+        return SolverType::RAECKE_FRT_MENDELSCALING_FLAT;
     if (s == "raecke_ckr_mendel" || s == "ckr_mendel")
-        return SolverType::RAECKE_CKR_MENDELSCALING;
+        return SolverType::RAECKE_CKR_MENDELSCALING_FLAT;
     if (s == "cohen" || s == "lp" || s == "applegate" || s == "ac" || s == "l")
         return SolverType::LP_APPLEGATE_COHEN;
     if (s == "electrical_parallel" || s == "elec_par" || s == "e_par")
         return SolverType::ELECTRICAL_PARALLEL_BATCHES;
-
+    if (s == "raecke_frt_pointer" || s == "frt_pointer")
+        return SolverType::RAECKE_FRT_POINTER;
+    if (s == "raecke_ckr_pointer" || s == "ckr_pointer")
+        return SolverType::RAECKE_CKR_POINTER;
+    if (s == "raecke_mst_pointer" || s == "random_mst_pointer" || s == "rmst_pointer" || s == "mst_pointer")
+        return SolverType::RAECKE_RANDOM_MST_POINTER;
+    if (s == "raecke_frt_mendel_pointer" || s == "frt_mendel_pointer")
+        return SolverType::RAECKE_FRT_MENDELSCALING_POINTER;
+    if (s == "raecke_ckr_mendel_pointer" || s == "ckr_mendel_pointer")
+        return SolverType::RAECKE_CKR_MENDELSCALING_POINTER;
 
 
     if (s == "0") return SolverType::ELECTRICAL;
-    if (s == "1") return SolverType::RAECKE_FRT;
-    if (s == "2") return SolverType::RAECKE_CKR;
-    if (s == "3") return SolverType::RAECKE_RANDOM_MST;
+    if (s == "1") return SolverType::RAECKE_FRT_FLAT;
+    if (s == "2") return SolverType::RAECKE_CKR_FLAT;
+    if (s == "3") return SolverType::RAECKE_RANDOM_MST_FLAT;
     if (s == "4") return SolverType::LP_APPLEGATE_COHEN;
     if (s == "5") return SolverType::ELECTRICAL_PARALLEL_BATCHES;
-    if (s == "6") return SolverType::RAECKE_FRT_MENDELSCALING;
-    if (s == "7") return SolverType::RAECKE_CKR_MENDELSCALING;
+    if (s == "6") return SolverType::RAECKE_FRT_MENDELSCALING_FLAT;
+    if (s == "7") return SolverType::RAECKE_CKR_MENDELSCALING_FLAT;
+    if (s == "8") return SolverType::RAECKE_FRT_POINTER;
+    if (s == "9") return SolverType::RAECKE_CKR_POINTER;
+    if (s == "10") return SolverType::RAECKE_RANDOM_MST_POINTER;
+    if (s == "11") return SolverType::RAECKE_FRT_MENDELSCALING_POINTER;
+    if (s == "12") return SolverType::RAECKE_CKR_MENDELSCALING_POINTER;
 
     return std::nullopt;
 }

@@ -64,6 +64,7 @@ public:
     std::vector<int> getShortestPath(int u, int v) const override;
     std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist_e) const override;
 
+
     void print() const override;
     void printGraphType() const override {
         std::cout << "GraphADJMatrix (Adjacency Matrix) format" << std::endl;

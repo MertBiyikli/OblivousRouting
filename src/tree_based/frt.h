@@ -7,12 +7,13 @@
 
 #include "tree_oracle.h"
 
-class FRT : public TreeOracle {
+template<typename T>
+class FRT : public TreeOracle<T> {
 public:
-    explicit FRT(IGraph& g):TreeOracle(g) {}
-    explicit FRT(IGraph& g, bool mendelscaling):TreeOracle(g, mendelscaling) {}
+    explicit FRT(IGraph& g) : TreeOracle<T>(g) {}
+    explicit FRT(IGraph& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
 
-    virtual void computeLevelPartition(IGraph& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
+    void computeLevelPartition(IGraph& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
 
         level.owner.resize(g.getNumNodes());
         for (const auto& v : g.getVertices()) {

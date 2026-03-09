@@ -8,12 +8,13 @@
 #include "tree_oracle.h"
 #include "../utils/priority_queue.h"
 
-class FastCKR : public TreeOracle {
+template<typename T>
+class FastCKR : public TreeOracle<T> {
 public:
-    explicit FastCKR(IGraph& g) : TreeOracle(g) {}
-    explicit FastCKR(IGraph& g, bool mendelscaling) : TreeOracle(g, mendelscaling) {}
+    explicit FastCKR(IGraph& g) : TreeOracle<T>(g) {}
+    explicit FastCKR(IGraph& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
 
-    virtual void computeLevelPartition(IGraph& _g, HSTLevel& level, const std::vector<int>& x_perm,double delta) override {
+    void computeLevelPartition(IGraph& _g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
         const int n = _g.getNumNodes();
 
         // Sample R in [Δ/4, Δ/2] ---

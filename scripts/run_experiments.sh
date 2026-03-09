@@ -70,7 +70,7 @@ CSV="$OUT_CSV"
 
 # Write header only if the file does not exist yet
 if [[ ! -f "$CSV" ]]; then
-  echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
+  echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,mendel_total_ms,mendel_avg_ms,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
 fi
 
 # Collect graphs
@@ -157,6 +157,7 @@ for g in "${GRAPHS[@]}"; do
     nodes="NaN"; edges="NaN";
     solver=""; total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN";
+    mendel_total="NaN"; mendel_avg="NaN";
     n_rows=0;
   }
 
@@ -173,6 +174,7 @@ for g in "${GRAPHS[@]}"; do
     solver=$0; sub(/^=== Running solver: /,"",solver); sub(/ ===/,"",solver)
     total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN";
+    mendel_total="NaN"; mendel_avg="NaN";
     next
   }
 
@@ -191,6 +193,12 @@ for g in "${GRAPHS[@]}"; do
   /^Average oracle time: [0-9.]+ ms$/ {
     tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
   }
+  /^Total time spent on Mendel scaling: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ ms$/,"",tmp); mendel_total=tmp; next
+  }
+  /^Average time spent on Mendel scaling per iteration: [0-9.]+ ms$/ {
+    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
+  }
 
   /^Ratio off the optimal offline solution \[/ {
     dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
@@ -199,9 +207,10 @@ for g in "${GRAPHS[@]}"; do
     n=split(vals, ab, " / ")
     offline_val  = (n>=1) ? ab[1] : "NaN"
     achieved_val = (n>=2) ? ab[2] : "NaN"
-    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
+      mendel_total, mendel_avg,
       dm, offline_val, achieved_val, ratio_pct, status
     n_rows++
     next
@@ -216,11 +225,12 @@ for g in "${GRAPHS[@]}"; do
       }
       if (n_rows == 0) {
         for (di=1; di<=n_d; di++) {
-          printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+          printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
             dataset, graph,
             (solver=="" ? "unknown" : solver),
             nodes, edges,
             "NaN","NaN","NaN","NaN","NaN",
+            "NaN","NaN",
             dm_arr[di], "NaN","NaN","NaN", status
         }
       }
