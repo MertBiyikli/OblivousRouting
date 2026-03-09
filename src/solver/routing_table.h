@@ -430,6 +430,25 @@ public:
     explicit LinearRoutingScheme(const IGraph& _g, int _root_x, LinearRoutingTable&& table) : RoutingScheme(_g, table), root_x(_root_x), routing_table(std::move(table)) {
     }
 
+    double computeObliviousRatio() {
+        // for the liner routing scheme, we can compute the oblivious ratio, by pushing for each
+        // edge the capacity of along the edge points
+        const int m = g.getNumEdges();
+        DemandMap worst_case_demands;
+        double max_ratio = 0.0;
+        for (int e = 0; e < m; ++e) {
+            auto [u, v] = g.edgeEndpoints(e);
+            if (u > v) continue; // only consider one orientation for undirected edges
+            double capacity = g.getEdgeCapacity(e);
+            worst_case_demands.addDemand(u,v,capacity);
+        }
+
+        std::vector<double> congestion;
+        routeDemands(congestion, worst_case_demands);
+        double max_cong = getMaxCongestion(congestion);
+        return max_cong;
+    }
+
     void initRoutingTable() {
         routing_table.init(g);
     }

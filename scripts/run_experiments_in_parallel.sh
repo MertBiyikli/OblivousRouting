@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DATASET=""
-SOLVERS="${SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel}"
+SOLVERS=""
 JOBS="${JOBS:-8}"
 OUT_CSV="${OUT_CSV:-results/results_parallel.csv}"
 TIMEOUT="${TIMEOUT:-120m}"
@@ -61,14 +61,15 @@ fi
 
 mkdir -p results/parts results/logs
 
-RUNLIST="results/parts/jobs_$(date +%Y%m%d_%H%M%S).txt"
+RUN_TS="$(date +%Y%m%d_%H%M%S)"
+RUNLIST="results/parts/jobs_${RUN_TS}.txt"
 : > "$RUNLIST"
 
 # One job per graph — binary handles all solvers+demands in one call
 for g in "${GRAPHS[@]}"; do
   g_abs="$(cd "$(dirname "$g")" && pwd)/$(basename "$g")"
   tag="$(basename "${g_abs%.lgf}")"
-  out_part="results/parts/${tag}.csv"
+  out_part="results/parts/${tag}_${RUN_TS}.csv"
   echo "${g_abs}|${out_part}" >> "$RUNLIST"
 done
 
@@ -107,11 +108,17 @@ else
 fi
 
 mkdir -p "$(dirname "$OUT_CSV")"
-# Merge: take header from first part, data rows from all parts
-first_part="$(ls -1 results/parts/*.csv 2>/dev/null | head -n 1)"
-if [[ -n "$first_part" ]]; then
-  head -n 1 "$first_part" > "$OUT_CSV"
-  tail -n +2 -q results/parts/*.csv >> "$OUT_CSV"
+# Collect only the part files produced by THIS run
+THIS_RUN_PARTS=()
+while IFS='|' read -r _ out_part; do
+  [[ -f "$out_part" ]] && THIS_RUN_PARTS+=("$out_part")
+done < "$RUNLIST"
+
+if [[ ${#THIS_RUN_PARTS[@]} -gt 0 ]]; then
+  head -n 1 "${THIS_RUN_PARTS[0]}" > "$OUT_CSV"
+  for p in "${THIS_RUN_PARTS[@]}"; do
+    tail -n +2 "$p" >> "$OUT_CSV"
+  done
   echo "[DONE] Merged CSV : $OUT_CSV"
 else
   echo "[WARN] No part CSVs found — nothing merged."

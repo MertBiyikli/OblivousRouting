@@ -44,6 +44,13 @@ int main(int argc, char **argv) {
             mwu->printTimeStats();
         }
 
+        if (scheme) {
+            if ( auto linear_scheme = dynamic_cast<LinearRoutingScheme*>(scheme.get()) ) {
+                double oblivious_ratio = linear_scheme->computeObliviousRatio();
+                std::cout << "Oblivious ratio of the linear routing scheme: " << oblivious_ratio << "\n";
+            }
+        }
+
         if (cfg->demand_models.empty()) continue;
 
         for (const auto& [model_name, offline_cong] : offline_opt_per_model) {
