@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/combine.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/merged/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/small.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/small_new/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_ms"
@@ -134,14 +134,18 @@ def pretty_solver_name(s: str) -> str:
         "electrical": "Electrical Flow",
         "electrical_parallel": "Electrical Flow (parallel)",
         "raecke_frt": "Räcke-FRT",
-        "raecke_ckr": "Räcke–CKR",
+        "raecke_ckr": "Räcke–Fast-CKR",
         "raecke_mst": "Räcke–MST",
         "cohen": "LP (Applegate–Cohen)",
         "lp": "LP (Applegate–Cohen)",
         "random_mst": "Räcke–MST",
         "mst": "Räcke–MST",
         "frt": "Räcke-FRT",
-        "ckr": "Räcke-CKR",
+        "ckr": "Räcke-Fast-CKR",
+        "frt_mendel": "Räcke-FRT (Mendel)",
+        "ckr_mendel": "Räcke-Fast-CKR (Mendel)",
+        "raecke_frt_mendel": "Räcke-FRT (Mendel)",
+        "raecke_ckr_mendel": "Räcke–Fast-CKR (Mendel)"
     }
     return mapping.get(s, s)
 
@@ -155,6 +159,8 @@ def solver_sort_key(s: str) -> tuple:
         "raecke_ckr": 3,
         "random_mst": 4,
         "cohen": 5,
+        "raecke_frt_mendel": 6,
+        "raecke_ckr_mendel": 7,
     }
     return (order.get(s, 99), s)
 

@@ -11,15 +11,15 @@ import matplotlib.pyplot as plt
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/small.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/small_new/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/new_results/SNDLib/SNDLib.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/SNDLib/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_ms"
 
 # Typical LaTeX paper sizes
-FIGSIZE_SINGLE = (4.2, 2.8)   # thesis single-column-ish
-FIGSIZE_DOUBLE = (7.0, 3.2)     # thesis double-column-ish
+FIGSIZE_SINGLE = (2.87, 2.17)   # thesis single-column-ish
+FIGSIZE_DOUBLE = (5.91, 2.17)     # thesis double-column-ish
 
 EXPORT_PNG = True
 DPI_RASTER = 450
@@ -28,7 +28,7 @@ SHOW_ERROR_BARS = False
 LOG_EPS = 1e-3  # ms, safe lower bound for log-plots
 
 # Legend control
-LEGEND_NCOL = 3
+LEGEND_NCOL = 2
 LEGEND_OUTSIDE = True  # put legend above plot to avoid occluding data
 
 
@@ -42,22 +42,21 @@ def set_paper_style():
         "font.family": "serif",
         "font.serif": ["Times New Roman", "Times", "STIXGeneral", "DejaVu Serif"],
         "mathtext.fontset": "stix",
-        "font.size": 8,
+        "font.size": 9,
         "axes.labelsize": 8,
         "axes.titlesize": 8,
         "axes.titlepad": 4,
-        "legend.fontsize": 6.5,
         "legend.title_fontsize": 7,
-        "xtick.labelsize": 7,
-        "ytick.labelsize": 7,
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
 
         # ── Lines / markers ──────────────────────────────────────────────────
-        "lines.linewidth": 0.9,
+        "lines.linewidth": 1.2,
         "lines.markersize": 4.5,
         "lines.markeredgewidth": 0.4,
 
         # ── Axes & spines ────────────────────────────────────────────────────
-        "axes.linewidth": 0.7,
+        "axes.linewidth": 0.8,
         "axes.labelpad": 3.0,
         "axes.spines.top": False,
         "axes.spines.right": False,
@@ -92,6 +91,7 @@ def set_paper_style():
         "legend.handleheight": 0.7,
         "legend.handletextpad": 0.4,
         "legend.columnspacing": 0.8,
+        "legend.fontsize": 7,
 
         # ── Figure & output ──────────────────────────────────────────────────
         "figure.dpi": 150,
@@ -145,7 +145,8 @@ def pretty_solver_name(s: str) -> str:
         "frt_mendel": "Räcke-FRT (Mendel)",
         "ckr_mendel": "Räcke-Fast-CKR (Mendel)",
         "raecke_frt_mendel": "Räcke-FRT (Mendel)",
-        "raecke_ckr_mendel": "Räcke–Fast-CKR (Mendel)"
+        "raecke_ckr_mendel": "Räcke–Fast-CKR (Mendel)",
+        "raecke_random_mst": "Räcke–MST",
     }
     return mapping.get(s, s)
 
@@ -153,27 +154,29 @@ def pretty_solver_name(s: str) -> str:
 def solver_sort_key(s: str) -> tuple:
     """
     Global solver order used across *all* plots for consistency.
-    (Baseline) electrical → CKR → CKR (Mendel) → FRT → FRT (Mendel) → MST → LP → others.
+    electrical → CKR → CKR (Mendel) → FRT → FRT (Mendel) → MST → ... → LP (always last)
     """
     order = {
-        "electrical": 0,
+        "electrical":          0,
         "electrical_parallel": 1,
-        "raecke_ckr": 2,
-        "ckr": 2,
-        "raecke_ckr_mendel": 3,
-        "ckr_mendel": 3,
-        "raecke_frt": 4,
-        "frt": 4,
-        "raecke_frt_mendel": 5,
-        "frt_mendel": 5,
-        "raecke_mst": 6,
-        "random_mst": 6,
-        "mst": 6,
-        "raecke_mst_mendel": 6,
-        "cohen": 7,
-        "lp": 7,
+        "raecke_ckr":          2,
+        "ckr":                 2,
+        "raecke_ckr_mendel":   3,
+        "ckr_mendel":          3,
+        "raecke_frt":          4,
+        "frt":                 4,
+        "raecke_frt_mendel":   5,
+        "frt_mendel":          5,
+        "raecke_mst":          6,
+        "raecke_random_mst":   6,
+        "random_mst":          6,
+        "mst":                 6,
+        "raecke_mst_mendel":   6,
+        # LP variants always last
+        "cohen":               99,
+        "lp":                  99,
     }
-    return (order.get(s, 99), s)
+    return (order.get(s, 90), s)
 
 
 # ======================
@@ -229,7 +232,7 @@ def add_legend(ax: plt.Axes, handles, labels):
         ax.legend(
             handles, labels,
             loc="lower left",
-            bbox_to_anchor=(0.0, 1.02),
+            bbox_to_anchor=(0.0, 1.01),
             ncol=min(LEGEND_NCOL, max(1, len(labels))),
             frameon=False,
             borderaxespad=0.0,
@@ -580,8 +583,6 @@ def plot_runtime_decomposition_grouped_csv(
 
     ax.minorticks_on()
 
-    ax.legend(frameon=False, loc="upper left")
-
     savefig_all(fig, outpath)
     plt.close(fig)
 
@@ -663,7 +664,7 @@ def main():
         "mwu_iterations",
         "transformation_time_ms",
         "achieved_congestion",
-        "offline_opt_value",
+        "offline_opt",
         ORACLE_TIME_COL,
     }
     missing = required_cols - set(df.columns)
@@ -672,12 +673,22 @@ def main():
 
     # Enforce numeric columns (prevents “ms”, “edges.” issues from silently breaking plots)
     for c in ["num_edges", "total_time_ms", "solve_time_ms", "transformation_time_ms",
-              "mwu_iterations", "achieved_congestion", "offline_opt_value", ORACLE_TIME_COL]:
+              "mwu_iterations", "achieved_congestion", "offline_opt", ORACLE_TIME_COL]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
     df = df.dropna(subset=["solver", "num_edges"]).copy()
-    df["relative_error"] = (abs(df["offline_opt_value"]-df["achieved_congestion"])) / df["achieved_congestion"]*100.0
+
+    # ratio_pct = oblivious ratio as a percentage: how many % of the offline optimum
+    # the scheme achieves. Always >= 100% (scheme can never beat offline optimum).
+    df["ratio_pct"] = (
+        df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan) * 100.0
+    )
+
+    # relative_error = excess over the offline optimum in percent.
+    # = (achieved - offline) / offline * 100  = ratio_pct - 100
+    # Clamp to 0 to absorb floating-point noise where achieved ≈ offline.
+    df["relative_error"] = (df["ratio_pct"] - 100.0).clip(lower=0.0)
 
     solvers = sorted(df["solver"].unique(), key=solver_sort_key)
     colors = solver_palette_unique(solvers)
@@ -697,7 +708,7 @@ def main():
         linestyles=linestyles,
     )
 
-# Exclude LP-type solvers: they have no MWU iterations or oracle time
+    # Exclude LP-type solvers: they have no MWU iterations or oracle time
     _LP_SOLVERS = {"cohen", "lp"}
     solvers_mwu = [s for s in solvers if s not in _LP_SOLVERS]
 
@@ -725,7 +736,7 @@ def main():
         linestyles=linestyles,
     )
 
-# Bar plots of average metrics per solver
+    # Bar plots of average metrics per solver
     # Bar plots per solver (distribution across instances) ---
     plot_box_by_solver(
         df, solvers, colors,
@@ -737,10 +748,10 @@ def main():
     )
 
     # Per-demand-model relative error box plots
-    if "demand" in df.columns:
-        demand_models = sorted(df["demand"].dropna().unique())
+    if "demand_model" in df.columns:
+        demand_models = sorted(df["demand_model"].dropna().unique())
         for demand in demand_models:
-            df_demand = df[df["demand"] == demand]
+            df_demand = df[df["demand_model"] == demand]
             # Only keep solvers that have data for this demand model
             solvers_demand = [s for s in solvers if not df_demand[df_demand["solver"] == s].empty]
             if not solvers_demand:
@@ -753,14 +764,7 @@ def main():
                 figsize=FIGSIZE_SINGLE,
                 outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
             )
-            # Line plot: mean relative error vs. number of edges
-            plot_error_lines_vs_edges(
-                df_demand, solvers_demand, colors,
-                figsize=FIGSIZE_SINGLE,
-                outpath=OUT_DIR / f"relative_error_lines_vs_edges_{demand}",
-                title=demand.capitalize(),
-                linestyles=linestyles,
-            )
+
 
     df["percent_transform_time"] = (
             df["transformation_time_ms"] / df["total_time_ms"] * 100.0
@@ -769,7 +773,7 @@ def main():
     plot_box_by_solver(
         df, solvers_mwu, colors,
         ycol="percent_transform_time",
-        ylabel="Transformation time [% of total time]",
+        ylabel="Transformation time in %",
         ylog=True,   # usually nicer; switch to False if you prefer linear
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "transformation_time_box_by_solver",
@@ -777,7 +781,7 @@ def main():
 
     # Bar plots showing the percentage of solve time vs transformation time
     df["percent_transform_time"] = (
-        df["transformation_time_ms"] / df["total_time_ms"] * 100.0
+            df["transformation_time_ms"] / df["total_time_ms"] * 100.0
     )
     df["percent_transform_time"] = df["percent_transform_time"].replace([np.inf, -np.inf], np.nan)
     df = df.dropna(subset=["percent_transform_time"])
