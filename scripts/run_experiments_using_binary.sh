@@ -25,6 +25,7 @@ while [[ $# -gt 0 ]]; do
     --dataset)       DATASET="${2-}"; shift 2 ;;
     --demand)        DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
     --demands)       DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
+    --bin)           BIN="${2-}"; shift 2 ;;
     --out)           OUT_CSV="${2-}"; shift 2 ;;
     -h|--help)
       echo "Usage:"
@@ -168,6 +169,11 @@ for g in "${GRAPHS[@]}"; do
   # Strategy: track current solver section; for every ratio line emit one CSV row.
   # If status != OK, emit one row per (solver x demand) with NaN values.
   # ---------------------------------------------------------------------------
+  # Parse the log into a temp file, then append atomically to the CSV.
+  # Using a temp file ensures no partial/stale data from a previous run
+  # can leak into the output even if the script is interrupted.
+  # ---------------------------------------------------------------------------
+  _tmp_rows="$(mktemp)"
   awk \
     -v dataset="$dataset_label" \
     -v graph="$rel_path" \
@@ -175,12 +181,23 @@ for g in "${GRAPHS[@]}"; do
     -v demands_arg="$DEMANDS_ARG" \
     -v demand_provided="$DEMAND_PROVIDED" \
   '
-  BEGIN {
-    nodes="NaN"; edges="NaN";
-    solver=""; total_time="NaN"; solve_time="NaN"; transf_time="NaN";
+  function flush_no_demand_row() {
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+      dataset, graph, solver, nodes, edges,
+      total_time, solve_time, transf_time, mwu, avg_oracle,
+      mendel_total, mendel_avg, oblivious_ratio,
+      "none", "NaN","NaN","NaN", status
+    n_rows++
+  }
+  function reset_solver_state() {
+    total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN";
     mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
-    n_rows=0; solver_seen=0;
+  }
+  BEGIN {
+    nodes="NaN"; edges="NaN";
+    solver=""; n_rows=0; solver_seen=0;
+    reset_solver_state()
   }
 
   # Graph metadata (appears once at the top)
@@ -196,18 +213,11 @@ for g in "${GRAPHS[@]}"; do
   # New solver section — flush previous solver row if no demands, then reset
   /^=== Running solver: / {
     if (demand_provided != "1" && solver != "" && solver_seen) {
-      printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-        dataset, graph, solver, nodes, edges,
-        total_time, solve_time, transf_time, mwu, avg_oracle,
-        mendel_total, mendel_avg, oblivious_ratio,
-        "none", "NaN","NaN","NaN", status
-      n_rows++
+      flush_no_demand_row()
     }
     solver=$0; sub(/^=== Running solver: /,"",solver); sub(/ ===/,"",solver)
-    total_time="NaN"; solve_time="NaN"; transf_time="NaN";
-    mwu="NaN"; avg_oracle="NaN";
-    mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
-    solver_seen=1;
+    reset_solver_state()
+    solver_seen=1
     next
   }
 
@@ -232,8 +242,7 @@ for g in "${GRAPHS[@]}"; do
   /^Average time spent on Mendel scaling per iteration: [0-9.]+ ms$/ {
     tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
   }
-
-  /^Oblivious ratio of the linear routing scheme: [0-9.]/ {
+  /^Oblivious ratio of the linear routing scheme: / {
     tmp=$0; sub(/^Oblivious ratio of the linear routing scheme: /,"",tmp); oblivious_ratio=tmp; next
   }
 
@@ -255,8 +264,8 @@ for g in "${GRAPHS[@]}"; do
   }
 
   END {
-    if (n_rows == 0) {
-      # Error / timeout with no output at all
+    if (n_rows == 0 && !solver_seen) {
+      # Binary produced no output at all (crash before any solver ran)
       if (demand_provided == "1" && demands_arg != "") {
         n_d = split(demands_arg, dm_arr, ",")
       } else {
@@ -264,23 +273,18 @@ for g in "${GRAPHS[@]}"; do
       }
       for (di=1; di<=n_d; di++) {
         printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-          dataset, graph,
-          (solver=="" ? "unknown" : solver),
-          nodes, edges,
-          total_time, solve_time, transf_time, mwu, avg_oracle,
-          mendel_total, mendel_avg, "NaN",
+          dataset, graph, "unknown", nodes, edges,
+          "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
           dm_arr[di], "NaN","NaN","NaN", status
       }
     } else if (demand_provided != "1" && solver_seen) {
       # Flush the last solver (no demand model run)
-      printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-        dataset, graph, solver, nodes, edges,
-        total_time, solve_time, transf_time, mwu, avg_oracle,
-        mendel_total, mendel_avg, oblivious_ratio,
-        "none", "NaN","NaN","NaN", status
+      flush_no_demand_row()
     }
   }
-  ' "$log" >> "$CSV"
+  ' "$log" > "$_tmp_rows"
+  cat "$_tmp_rows" >> "$CSV"
+  rm -f "$_tmp_rows"
 
   echo "[DONE] $base | solvers=$SOLVERS_ARG | ${DEMANDS_ARG:-none} | $status"
 done

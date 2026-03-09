@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Absolute path to the directory containing this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 DATASET=""
 SOLVERS=""
 JOBS="${JOBS:-8}"
@@ -86,14 +89,15 @@ run_one() {
   local g_abs="$1" out_part="$2"
   # shellcheck disable=SC2086
   BIN="$BIN" TIMEOUT="$TIMEOUT" OUT_DIR="results/logs" \
-    ./scripts/run_experiments_using_binary.sh \
+    "$SCRIPT_DIR/run_experiments_using_binary.sh" \
       --solvers "$SOLVERS" \
       --dataset "$g_abs" \
       --out     "$out_part" \
+      --bin     "$BIN" \
       $DEMANDS_FLAG
 }
 export -f run_one
-export BIN TIMEOUT SOLVERS DEMANDS_FLAG
+export BIN TIMEOUT SOLVERS DEMANDS_FLAG SCRIPT_DIR
 
 if command -v parallel >/dev/null 2>&1; then
   parallel -j "$JOBS" --colsep '\|' run_one {1} {2} :::: "$RUNLIST"
