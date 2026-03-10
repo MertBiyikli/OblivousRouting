@@ -4,3 +4,4 @@ experiments/datasets/synth_dc/*.lgf
 /experiments/datasets/generated_graphs/
 result
 results
+/results_latest/
