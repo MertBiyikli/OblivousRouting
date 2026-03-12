@@ -350,12 +350,17 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
             if (err) *err = "Unknown demand model list: " + std::string(argv[3]) + "\n" + usage(argv[0]);
             return std::nullopt;
         }
+        // argv[4] can be a graph format OR a num_threads integer — try graph format first.
         auto graph_format_opt = parse_graph_format_token(argv[4]);
-        if (!graph_format_opt) {
-            if (err) *err = "Unknown graph format: " + std::string(argv[4]) + "\n" + usage(argv[0]);
-            return std::nullopt;
+        if (graph_format_opt) {
+            return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, *graph_format_opt };
         }
-        return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, *graph_format_opt };
+        auto num_threads = parse_num_threads(argv[4]);
+        if (num_threads) {
+            return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, GraphFormat::CSR, *num_threads };
+        }
+        if (err) *err = "Unknown graph format / num_threads: " + std::string(argv[4]) + "\n" + usage(argv[0]);
+        return std::nullopt;
     }
 
     if (err) *err = usage(argv[0]);
