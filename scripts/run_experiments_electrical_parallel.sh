@@ -7,7 +7,7 @@ set -euo pipefail
 #       --num_threads "1,2,4,8" \
 #       --out results/out.csv
 
-BIN="${BIN:-./cmake-build-release/oblivious_routing}"
+BIN="${BIN:-./build/oblivious_routing}"
 SOLVER="electrical_parallel"
 DATASET=""
 NUM_THREADS_LIST="1"
