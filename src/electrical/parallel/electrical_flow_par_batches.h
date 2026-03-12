@@ -21,6 +21,9 @@ public:
     void initAMGSolver(boost::property_tree::ptree _params = boost::property_tree::ptree()) override;
 
 
+    void setNumThreads(int num_threads) override {
+        p_threads = num_threads;
+    }
 };
 
 

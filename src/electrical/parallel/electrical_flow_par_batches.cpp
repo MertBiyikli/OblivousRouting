@@ -19,7 +19,7 @@ void ParallelElectricalMWU::initAMGSolver(boost::property_tree::ptree _params)
     int thread_nums = default_threads();
 
 
-    p_threads = std::max(1, thread_nums);
+    p_threads = (p_threads == 1 ? std::max(1, thread_nums) : p_threads);
     std::cout << "Initializing with " << p_threads << " threads for parallel batches.\n";
 
     amg_pool.clear();

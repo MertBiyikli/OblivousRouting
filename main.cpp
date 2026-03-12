@@ -34,6 +34,9 @@ int main(int argc, char **argv) {
         auto solver = makeSolver(type, *G);
 
         auto t0 = timeNow();
+        if (cfg->num_threads > 1) {
+            solver->setNumThreads(cfg->num_threads);
+        }
         auto scheme = solver->solve();
         double solve_time = duration(timeNow() - t0);
 

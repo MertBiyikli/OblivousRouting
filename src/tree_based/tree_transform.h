@@ -33,8 +33,7 @@ public:
 
     TreeIteration(T&& _tree,
                   std::vector<double>&& _distance,
-                  double _lambda,
-                  std::vector<std::vector<int>>&& _path_table)
+                  double _lambda)
         : tree(std::move(_tree)), distance(std::move(_distance))
         , lambda(_lambda){}
 

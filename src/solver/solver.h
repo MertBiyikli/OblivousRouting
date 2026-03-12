@@ -14,6 +14,7 @@ class ObliviousRoutingSolver {
 public:
     virtual ~ObliviousRoutingSolver() = default;
     virtual std::unique_ptr<RoutingScheme> solve() = 0;
+    virtual void setNumThreads(int num_threads) {};
 };
 
 class LinearObliviousSolverBase : public ObliviousRoutingSolver {

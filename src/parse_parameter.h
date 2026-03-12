@@ -77,6 +77,7 @@ struct Config {
     std::string                  filename;
     std::vector<DemandModelType> demand_models;  // empty = no demand evaluation
     GraphFormat                  graph_format;
+    int num_threads = 1;
 };
 
 std::unique_ptr<ObliviousRoutingSolver>
@@ -243,6 +244,16 @@ inline std::optional<GraphFormat> parse_graph_format_token(std::string s) {
     return std::nullopt;
 }
 
+inline std::optional<int> parse_num_threads(std::string s) {
+    try {
+        int num = std::stoi(s);
+        if (num > 0) return num;
+    } catch (...) {
+        // ignore parse errors
+    }
+    return std::nullopt;
+}
+
 inline std::string usage(const char* prog) {
     std::ostringstream os;
     os << "Usage:\n"
@@ -312,15 +323,22 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
         return Config{ *solvers_opt, std::string(argv[2]), {}, GraphFormat::CSR };
     }
 
+    // TODO: chang this such that it dynamically adjust the number of arguments passed so it can work with all possibilities
+    // TODO: now the the num threads is only parsed if an integer is passed a third argument
     if (argc == 4) {
         // argv[3] can be a demand model list OR a graph format — try demand list first.
         auto demand_opt = parse_demand_model_list(argv[3]);
         if (demand_opt) {
-            return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, GraphFormat::CSR };
+            return Config{ *solvers_opt, std::string(argv[2]), *demand_opt, GraphFormat::CSR, 1 };
         }
         auto graph_format_opt = parse_graph_format_token(argv[3]);
         if (graph_format_opt) {
-            return Config{ *solvers_opt, std::string(argv[2]), {}, *graph_format_opt };
+            return Config{ *solvers_opt, std::string(argv[2]), {}, *graph_format_opt, 1 };
+        }
+
+        auto num_threads = parse_num_threads(argv[3]);
+        if (num_threads) {
+            return Config{*solvers_opt, std::string(argv[2]), {}, GraphFormat::CSR, *num_threads};
         }
         if (err) *err = "Unknown demand model list / graph format: " + std::string(argv[3]) + "\n" + usage(argv[0]);
         return std::nullopt;
