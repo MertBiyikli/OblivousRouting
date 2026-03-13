@@ -16,14 +16,14 @@ public:
     double transformation_time = 0;
 
     void printTimeStats() {
-        std::cout << "Solve time: " << this->solve_time << " ms\n";
-        std::cout << "Transformation time: " << transformation_time << " ms\n";
+        std::cout << "Solve time: " << this->solve_time << " micro seconds\n";
+        std::cout << "Transformation time: " << transformation_time << " micro seconds\n";
         std::cout << "MWU iterations: " << this->iteration_count << "\n";
         double average_oracle_time = 0.0;
         for (double t : this->oracle_running_times) {
             average_oracle_time += t;
         }
-        std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(this->oracle_running_times.size())) << " ms\n";
+        std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(this->oracle_running_times.size())) << " micro seconds\n";
     }
 };
 

@@ -14,7 +14,7 @@
 #include <chrono>
 
 
-#define duration(a) std::chrono::duration_cast<std::chrono::milliseconds>(a).count()
+#define duration(a) std::chrono::duration_cast<std::chrono::microseconds>(a).count()
 #define timeNow() std::chrono::high_resolution_clock::now()
 
 struct PairHash {

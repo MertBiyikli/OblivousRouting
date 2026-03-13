@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
         double solve_time = duration(timeNow() - t0);
 
         //scheme->printRoutingTable();
-        std::cout << "Total running time: " << solve_time << " ms\n";
+        std::cout << "Total running time: " << solve_time << " micro seconds\n";
 
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
             mwu->printTimeStats();

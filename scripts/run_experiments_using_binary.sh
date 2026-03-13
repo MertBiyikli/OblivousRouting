@@ -78,7 +78,7 @@ mkdir -p "$OUT_DIR"
 CSV="$OUT_CSV"
 
 # Always write a fresh header — each invocation owns its output file
-echo "dataset,graph,solver,num_nodes,num_edges,total_time_ms,solve_time_ms,transformation_time_ms,mwu_iterations,avg_oracle_time_ms,mendel_total_ms,mendel_avg_ms,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
+echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
 
 # Collect graphs
 DATASET_PATH="$DATASET"
@@ -221,26 +221,26 @@ for g in "${GRAPHS[@]}"; do
     next
   }
 
-  /^Total running time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ ms$/,"",tmp); total_time=tmp; next
+  /^Total running time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ micro_seconds/,"",tmp); total_time=tmp; next
   }
-  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ ms$/,"",tmp); solve_time=tmp; next
+  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ micro_seconds/,"",tmp); solve_time=tmp; next
   }
-  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ ms$/,"",tmp); transf_time=tmp; next
+  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ micro_seconds/,"",tmp); transf_time=tmp; next
   }
   /^MWU iterations: [0-9]+$/ {
     tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
   }
-  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
+  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro_seconds/,"",tmp); avg_oracle=tmp; next
   }
-  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ ms$/,"",tmp); mendel_total=tmp; next
+  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ micro_seconds/,"",tmp); mendel_total=tmp; next
   }
-  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
-    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
+  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
+    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ micro_seconds/,"",tmp); mendel_avg=tmp; next
   }
   /^Oblivious ratio of the linear routing scheme: / {
     tmp=$0; sub(/^Oblivious ratio of the linear routing scheme: /,"",tmp); oblivious_ratio=tmp; next
