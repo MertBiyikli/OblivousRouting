@@ -13,7 +13,7 @@ DATASET=""
 DEMANDS=""
 DEMAND_PROVIDED=0
 
-ALL_SOLVERS="${ALL_SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel}"
+ALL_SOLVERS="${ALL_SOLVERS:-electrical,frt,ckr,mst,frt_mendel,ckr_mendel}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
@@ -221,25 +221,25 @@ for g in "${GRAPHS[@]}"; do
     next
   }
 
-  /^Total running time: [0-9.]+ ms$/ {
+  /^Total running time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ ms$/,"",tmp); total_time=tmp; next
   }
-  /^Solve time: [0-9.]+ ms$/ {
+  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ ms$/,"",tmp); solve_time=tmp; next
   }
-  /^Transformation time: [0-9.]+ ms$/ {
+  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ ms$/,"",tmp); transf_time=tmp; next
   }
   /^MWU iterations: [0-9]+$/ {
     tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
   }
-  /^Average oracle time: [0-9.]+ ms$/ {
+  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ ms$/,"",tmp); avg_oracle=tmp; next
   }
-  /^Total time spent on Mendel scaling: [0-9.]+ ms$/ {
+  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ ms$/,"",tmp); mendel_total=tmp; next
   }
-  /^Average time spent on Mendel scaling per iteration: [0-9.]+ ms$/ {
+  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)? ms$/ {
     tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ ms$/,"",tmp); mendel_avg=tmp; next
   }
   /^Oblivious ratio of the linear routing scheme: / {
