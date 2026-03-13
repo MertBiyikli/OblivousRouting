@@ -221,26 +221,26 @@ for g in "${GRAPHS[@]}"; do
     next
   }
 
-  /^Total running time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ micro_seconds/,"",tmp); total_time=tmp; next
+  /^Total running time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Total running time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); total_time=tmp; next
   }
-  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ micro_seconds/,"",tmp); solve_time=tmp; next
+  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); solve_time=tmp; next
   }
-  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ micro_seconds/,"",tmp); transf_time=tmp; next
+  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); transf_time=tmp; next
   }
   /^MWU iterations: [0-9]+$/ {
     tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
   }
-  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro_seconds/,"",tmp); avg_oracle=tmp; next
+  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); avg_oracle=tmp; next
   }
-  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ micro_seconds/,"",tmp); mendel_total=tmp; next
+  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); mendel_total=tmp; next
   }
-  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro_seconds/ {
-    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ micro_seconds/,"",tmp); mendel_avg=tmp; next
+  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); mendel_avg=tmp; next
   }
   /^Oblivious ratio of the linear routing scheme: / {
     tmp=$0; sub(/^Oblivious ratio of the linear routing scheme: /,"",tmp); oblivious_ratio=tmp; next
