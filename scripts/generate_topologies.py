@@ -718,6 +718,27 @@ def generateDRing_80_64(parameters):
 
     return G0, name
 
+def generateRandomRegularExpander(parameters):
+    numNodes = parameters['numNodes']
+    degree = parameters['degree']
+    linkCapacity = parameters['linkCapacity']
+    seed = parameters.get('seed', None)
+
+    if numNodes * degree % 2 != 0:
+        raise ValueError("numNodes * degree must be even for a d-regular graph.")
+
+    G0 = nx.random_regular_graph(degree, numNodes, seed=seed)
+
+    for u, v in G0.edges():
+        G0[u][v]['capacity'] = linkCapacity
+
+    for n in G0.nodes():
+        G0.nodes[n]['type'] = 'tor'
+        G0.nodes[n]['numServer'] = 0
+        G0.nodes[n]['tor'] = n
+
+    name = f'RandomRegularExpander-{numNodes}-{degree}-{linkCapacity}'
+    return G0, name
 
 # -------------------------
 # CLI glue
@@ -737,6 +758,7 @@ TOPOLOGIES = {
     "dring": generateDRing,
     "abstract_aug_expander": generateAbstractAugmentExpander,
     "slimfly": loadSlimFly,
+    "expander": generateRandomRegularExpander,
     "binarycube": generateBinaryCube,
     "clique": generateClique,
     "dring_80_64": generateDRing_80_64,
