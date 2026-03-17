@@ -182,19 +182,9 @@ for g in "${GRAPHS[@]}"; do
     -v demand_provided="$DEMAND_PROVIDED" \
   '
   function flush_no_demand_row() {
-    # If Mendel scaling was applied, add its time to transformation time
-    adjusted_transf_time = transf_time
-    if (mendel_total != "NaN" && mendel_total != "") {
-      if (adjusted_transf_time == "NaN" || adjusted_transf_time == "") {
-        adjusted_transf_time = mendel_total
-      } else {
-        adjusted_transf_time = adjusted_transf_time + mendel_total
-      }
-    }
-
     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
-      total_time, solve_time, adjusted_transf_time, mwu, avg_oracle,
+      total_time, solve_time, transf_time, mwu, avg_oracle,
       avg_scales, mendel_total, mendel_avg, oblivious_ratio,
       "none", "NaN","NaN","NaN", status
     n_rows++
@@ -267,20 +257,9 @@ for g in "${GRAPHS[@]}"; do
     n=split(vals, ab, " / ")
     offline_val  = (n>=1) ? ab[1] : "NaN"
     achieved_val = (n>=2) ? ab[2] : "NaN"
-
-    # If Mendel scaling was applied, add its time to transformation time
-    adjusted_transf_time = transf_time
-    if (mendel_total != "NaN" && mendel_total != "") {
-      if (adjusted_transf_time == "NaN" || adjusted_transf_time == "") {
-        adjusted_transf_time = mendel_total
-      } else {
-        adjusted_transf_time = adjusted_transf_time + mendel_total
-      }
-    }
-
     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
-      total_time, solve_time, adjusted_transf_time, mwu, avg_oracle,
+      total_time, solve_time, transf_time, mwu, avg_oracle,
       avg_scales, mendel_total, mendel_avg, oblivious_ratio,
       dm, offline_val, achieved_val, ratio_pct, status
     n_rows++

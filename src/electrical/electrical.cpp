@@ -72,10 +72,10 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
     Eigen::VectorXd potentials(n);
     std::vector<double> load(m, 0.0);
 
-    auto start_run = timeNow();
+
 
     for (int t = 0; t < this->iteration_count; ++t) {
-        auto start_oracle = timeNow();
+        auto oracle_iteration = 0.0;
         // --- main loop over sources (u -> x_fixed) ---
         for (int u = 0; u < n; ++u) {
             if (u == x_fixed) continue;
@@ -86,17 +86,18 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
 
             auto start_oracle_pure = timeNow();
             potentials = amg->solve(rhs, epsilon_L);
-            pure_oracles_running_times.push_back(duration(timeNow()-start_oracle_pure));
+            oracle_iteration += duration(timeNow() - start_oracle_pure);
+
             addFlowToTable(u, potentials, table);
         }
 
         getApproxLoad(load);
         updateEdgeDistances(load);
 
-        oracle_running_times.push_back(duration(timeNow() - start_oracle));
+        oracle_running_times.push_back(oracle_iteration);
     }
 
-    this->solve_time = duration(timeNow() - start_run);
+
 }
 
 
@@ -211,11 +212,13 @@ void ElectricalMWU::updateEdgeDistances(const std::vector<double>& load) {
  */
 void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     // scale the flow from the adjacency list flow
+    auto start_transfo = timeNow();
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
         for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
             for (double &val : table.src_flows[e]) val *= (inv_iters);
     }
+    this->transformation_time += duration(timeNow() - start_transfo);
 }
 
 void ElectricalMWU::initEdgeDistances() {

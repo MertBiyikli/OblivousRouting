@@ -58,9 +58,11 @@ public:
 
     // entry point
     void computeBasisFlows(LinearRoutingTable &table) override {
+        auto start_run = timeNow();
         init(debug);
         run(table);
         scaleFlowDown(table);
+        this->solve_time = duration(timeNow() - start_run) - transformation_time;
     }
 
     virtual void run(LinearRoutingTable &table);

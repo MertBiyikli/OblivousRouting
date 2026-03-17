@@ -10,7 +10,7 @@
 class MWUFramework{
 public:
     std::vector<double> oracle_running_times;
-    std::vector<double> pure_oracles_running_times;
+    //std::vector<double> pure_oracles_running_times;
     int iteration_count = 0;
     double solve_time = 0; // total time spent in solve()
     double transformation_time = 0;
