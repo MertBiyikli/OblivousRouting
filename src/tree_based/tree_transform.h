@@ -119,8 +119,8 @@ private:
                 q.push(child);
             }
         }
-        removeCyclesUsingTarjanSCCAlgorithm(table);
-        //removeCyclesLinear(table);
+        //removeCyclesUsingTarjanSCCAlgorithm(table);
+        removeCyclesLinear(table);
     }
 
     // ------------------------------------------------------------------
@@ -155,8 +155,8 @@ private:
                 q.push(child_idx);
             }
         }
-        removeCyclesUsingTarjanSCCAlgorithm(table);
-        //removeCyclesLinear(table);
+        //removeCyclesUsingTarjanSCCAlgorithm(table);
+        removeCyclesLinear(table);
     }
 public:
     void removeCyclesLinear(LinearRoutingTable& linearTable) {
