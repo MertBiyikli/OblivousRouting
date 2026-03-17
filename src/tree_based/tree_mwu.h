@@ -26,6 +26,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances;
     std::vector<double> mendel_scaling_times;
+    std::vector<int> scales;
 
 public:
     TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
@@ -44,9 +45,9 @@ public:
         if (oracle->applyMendelScaling) {
             double total = 0.0;
             for (auto t : mendel_scaling_times) total += t;
-            std::cout << "Total time spent on Mendel scaling: " << total << " ms\n";
+            std::cout << "Total time spent on Mendel scaling: " << total << "  micro seconds\n";
             double avg = mendel_scaling_times.empty() ? 0.0 : total / mendel_scaling_times.size();
-            std::cout << "Average time spent on Mendel scaling per iteration: " << avg << " ms\n";
+            std::cout << "Average time spent on Mendel scaling per iteration: " << avg << "  micro seconds\n";
         }
     }
 
@@ -63,6 +64,7 @@ public:
 
 
         HSTDatastructures t = oracle->getTree(current_distances);
+        scales.push_back(oracle->scales.empty() ? 0.0 : oracle->scales.size());
         this->oracle_running_times.push_back(duration(timeNow() - t0));
 
         computeRLoads(t);
@@ -213,6 +215,10 @@ public:
             graph.updateEdgeDistance(e, norm);
             current_distances[e] = norm;
         }
+    }
+
+    std::vector<int> getScales() const {
+        return scales;
     }
 };
 

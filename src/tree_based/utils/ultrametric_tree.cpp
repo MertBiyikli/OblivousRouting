@@ -69,7 +69,7 @@ void UltrametricTree::buildFromMST(
         // This is key: Look into the paper from Mendel and Har-Peled: Fast Construction of Nets in Low Dimensional Metrics and Their
         // Applications
         // They multiply the distance by (n-1) to ensure the ultrametric property holds
-        T[cur].Gamma = w * (double)(n-1);
+        T[cur].Gamma = w;
         T[cur].child.clear();
 
         int nodeU = comp_node[ru];

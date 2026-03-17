@@ -120,6 +120,7 @@ private:
             }
         }
         removeCyclesUsingTarjanSCCAlgorithm(table);
+        //removeCyclesLinear(table);
     }
 
     // ------------------------------------------------------------------
@@ -155,6 +156,7 @@ private:
             }
         }
         removeCyclesUsingTarjanSCCAlgorithm(table);
+        //removeCyclesLinear(table);
     }
 public:
     void removeCyclesLinear(LinearRoutingTable& linearTable) {

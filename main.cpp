@@ -47,6 +47,19 @@ int main(int argc, char **argv) {
             mwu->printTimeStats();
         }
 
+        double total_scales = 0;
+        if (auto tree_solver_flat = dynamic_cast<TreeMWU<FlatHST>*>(solver.get())) {
+            for (int& scales : tree_solver_flat->getScales()) {
+                total_scales += scales;
+            }
+            std::cout << "Average scales: " << total_scales/tree_solver_flat->getScales().size() << "\n";
+        }else if (auto tree_solver_pointer = dynamic_cast<TreeMWU<std::shared_ptr<HSTNode>>*>(solver.get())) {
+            for (int& scales : tree_solver_pointer->getScales()) {
+                total_scales += scales;
+            }
+            std::cout << "Average scales: " << total_scales/tree_solver_pointer->getScales().size() << "\n";
+        }
+
         if (scheme) {
             if ( auto linear_scheme = dynamic_cast<LinearRoutingScheme*>(scheme.get()) ) {
                 double oblivious_ratio = linear_scheme->computeObliviousRatio();

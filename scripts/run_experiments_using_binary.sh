@@ -78,7 +78,7 @@ mkdir -p "$OUT_DIR"
 CSV="$OUT_CSV"
 
 # Always write a fresh header — each invocation owns its output file
-echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
+echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_scales,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,status" > "$CSV"
 
 # Collect graphs
 DATASET_PATH="$DATASET"
@@ -182,16 +182,26 @@ for g in "${GRAPHS[@]}"; do
     -v demand_provided="$DEMAND_PROVIDED" \
   '
   function flush_no_demand_row() {
+    # If Mendel scaling was applied, add its time to transformation time
+    adjusted_transf_time = transf_time
+    if (mendel_total != "NaN" && mendel_total != "") {
+      if (adjusted_transf_time == "NaN" || adjusted_transf_time == "") {
+        adjusted_transf_time = mendel_total
+      } else {
+        adjusted_transf_time = adjusted_transf_time + mendel_total
+      }
+    }
+
     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
-      total_time, solve_time, transf_time, mwu, avg_oracle,
-      mendel_total, mendel_avg, oblivious_ratio,
+      total_time, solve_time, adjusted_transf_time, mwu, avg_oracle,
+      avg_scales, mendel_total, mendel_avg, oblivious_ratio,
       "none", "NaN","NaN","NaN", status
     n_rows++
   }
   function reset_solver_state() {
     total_time="NaN"; solve_time="NaN"; transf_time="NaN";
-    mwu="NaN"; avg_oracle="NaN";
+    mwu="NaN"; avg_oracle="NaN"; avg_scales="NaN";
     mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
   }
   BEGIN {
@@ -236,6 +246,9 @@ for g in "${GRAPHS[@]}"; do
   /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
     tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); avg_oracle=tmp; next
   }
+  /^Average scales: [0-9][0-9.]*([eE][+-]?[0-9]+)?$/ {
+    tmp=$0; sub(/^Average scales: /,"",tmp); avg_scales=tmp; next
+  }
   /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
     tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); mendel_total=tmp; next
   }
@@ -254,10 +267,21 @@ for g in "${GRAPHS[@]}"; do
     n=split(vals, ab, " / ")
     offline_val  = (n>=1) ? ab[1] : "NaN"
     achieved_val = (n>=2) ? ab[2] : "NaN"
+
+    # If Mendel scaling was applied, add its time to transformation time
+    adjusted_transf_time = transf_time
+    if (mendel_total != "NaN" && mendel_total != "") {
+      if (adjusted_transf_time == "NaN" || adjusted_transf_time == "") {
+        adjusted_transf_time = mendel_total
+      } else {
+        adjusted_transf_time = adjusted_transf_time + mendel_total
+      }
+    }
+
     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
-      total_time, solve_time, transf_time, mwu, avg_oracle,
-      mendel_total, mendel_avg, oblivious_ratio,
+      total_time, solve_time, adjusted_transf_time, mwu, avg_oracle,
+      avg_scales, mendel_total, mendel_avg, oblivious_ratio,
       dm, offline_val, achieved_val, ratio_pct, status
     n_rows++
     next

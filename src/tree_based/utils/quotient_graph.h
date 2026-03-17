@@ -28,6 +28,7 @@ namespace MendelScaling {
         void preprocessEdges(const IGraph& G) {
             assert(G.getNumNodes() > 0);
             original_n = G.getNumNodes();
+            weights.clear();
             weights.reserve(G.getNumEdges());
             for (int u = 0; u < original_n; ++u) {
                 for (auto& v : G.neighbors(u)) {
@@ -97,7 +98,7 @@ namespace MendelScaling {
             // interval: [(left, right) = edges with weight in [Delta, Delta /2n]
             std::unique_ptr<IGraph> Gq_ = std::make_unique<GraphCSR>(k);
             double w_low = Delta / (2.0 * original_n);
-            double w_high = Delta;
+            double w_high = Delta/2.0;
             size_t left = 0, right = 0;
 
             while (right < weights.size() && weights[right].second <= w_high) {
