@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_POINTER_HST_H
 
 #include <vector>
+#include <memory>
 
 class HSTNode {
 public:
