@@ -4,6 +4,7 @@
 
 #include "../../include/data_structures/hst/flat_hst.h"
 #include <unordered_map>
+#include <cstdio>
 
 FlatHST::ChildRange FlatHST::children(int i) const {
     const auto& n = nodes[i];
