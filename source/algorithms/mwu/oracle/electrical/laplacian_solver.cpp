@@ -12,7 +12,7 @@
 #include "amgcl/solver/runtime.hpp"
 #include <amgcl/make_solver.hpp>
 #include <cassert>
-
+#include <stdexcept>
 
 void LaplacianSolver::init(IGraph& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug) {
      assert(g.getNumUndirectedEdges() == static_cast<int>(_adj_edge_weights.size()));
