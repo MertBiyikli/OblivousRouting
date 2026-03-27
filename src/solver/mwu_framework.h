@@ -9,11 +9,20 @@
 
 class MWUFramework{
 public:
+    MWUFramework() {
+        iteration_count = 0;
+        solve_time = 0;
+        transformation_time = 0;
+    }
+
+    virtual ~MWUFramework() = default;
     std::vector<double> oracle_running_times;
-    //std::vector<double> pure_oracles_running_times;
-    int iteration_count = 0;
-    double solve_time = 0; // total time spent in solve()
-    double transformation_time = 0;
+    int iteration_count;
+    double solve_time;
+    double transformation_time;
+
+
+    virtual void updateDistances(std::vector<double>& distances) = 0;
 
     void printTimeStats() {
         std::cout << "Solve time: " << this->solve_time << " micro seconds\n";
@@ -24,7 +33,10 @@ public:
             average_oracle_time += t;
         }
         std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(this->oracle_running_times.size())) << " micro seconds\n";
+        printAdditionalStats();
     }
+
+    virtual void printAdditionalStats() = 0;
 };
 
 #endif //OBLIVIOUSROUTING_MWU_FRAMEWORK_H

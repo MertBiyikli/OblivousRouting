@@ -13,7 +13,6 @@ class GraphADJList : public IGraph {
 public:
     std::vector<std::vector<int>> adjList;
     std::vector<std::vector<int>> edge_ids;
-    // edge_id_start[u] = the first (smallest) edge id assigned to node u; last element is total edges (size = n+1)
     std::vector<int> edge_id_start;
     std::vector<std::vector<double>> capacity;
     std::vector<std::vector<double>> distance;

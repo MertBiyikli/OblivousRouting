@@ -280,7 +280,7 @@ public:
 
 
     void updateDistances(std::vector<double>& distances) {
-        for (int e = 0; e < graph.getNumEdges(); ++e)
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e)
             graph.updateEdgeDistance(e, distances[e]);
     }
 
@@ -351,7 +351,7 @@ public:
 
     void computeMendelScales() {
         double min_distance = std::numeric_limits<double>::max();
-        for (int e = 0; e < graph.getNumEdges(); e++) {
+        for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
             double w = graph.getEdgeDistance(e);
             if (w < min_distance) min_distance = w;
         }

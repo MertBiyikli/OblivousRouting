@@ -112,7 +112,7 @@ public:
 
             // Write CSV row
             out
-                << g.getNumNodes() << "," << g.getNumEdges() << ","
+                << g.getNumNodes() << "," << g.getNumDirectedEdges() << ","
                 << csvEscape(config_file) << ","
                 << csvEscape(run_name) << ","
                 << csvEscape(solver_type) << ","

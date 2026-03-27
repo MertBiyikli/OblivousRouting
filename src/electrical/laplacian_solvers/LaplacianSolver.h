@@ -60,7 +60,7 @@ public:
 
 
     void init(IGraph& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug = false) {
-        assert(g.getNumEdges()/2 == static_cast<int>(_adj_edge_weights.size()));
+        assert(g.getNumUndirectedEdges() == static_cast<int>(_adj_edge_weights.size()));
         this->debug = debug;
         this->n = n;
         m_row_ptr.clear();

@@ -1,8 +1,0 @@
-expander_ish,expander_hypercube_d10.lgf,electrical,gravity,10240,NaN,NaN,NaN,NaN,NaN,NaN,NaN,TIMEOUT
-expander_ish,expander_hypercube_d10.lgf,electrical,gaussian,10240,NaN,NaN,NaN,NaN,NaN,NaN,NaN,TIMEOUT
-expander_ish,expander_hypercube_d10.lgf,electrical,bimodal,10240,NaN,NaN,NaN,NaN,NaN,NaN,NaN,TIMEOUT
-expander_ish,expander_hypercube_d10.lgf,electrical,uniform,10240,NaN,NaN,NaN,NaN,NaN,NaN,NaN,TIMEOUT
-expander_ish,expander_hypercube_d6.lgf,electrical,gravity,384,606,234,0,23,9.78261,9.78946,1.96875,OK
-expander_ish,expander_hypercube_d6.lgf,electrical,gaussian,384,531,189,0,23,7.78261,38525.9,7504.46,OK
-expander_ish,expander_hypercube_d6.lgf,electrical,bimodal,384,531,201,0,23,8.26087,4040.63,681.629,OK
-expander_ish,expander_hypercube_d6.lgf,electrical,uniform,384,2122,462,0,23,19.6522,31423.2,6326.18,OK

@@ -6,8 +6,8 @@
 #define OBLIVOUSROUTING_LPSOLVER_H
 
 #include "../solver/solver.h"
-#include "ortools/linear_solver/linear_solver.h"
 #include <map>
+#include "ortools/linear_solver/linear_solver.h"
 #include <vector>
 #include <tuple>
 #include "../utils/hash.h"
@@ -46,12 +46,12 @@ public:
     void GetRoutingTable(const IGraph& graph);
 
     virtual void storeFlow(AllPairRoutingTable& table) override;
-    double getCongestion(DemandMap& demands, IGraph& g) const;
+    double getCongestion(demands& demands, IGraph& g) const;
 
     void PrintCommoditiesPerEdge(const IGraph& graph);
 
     double getDemandWeightedCongestion(const IGraph& graph,
-                                                 const DemandMap& demands);
+                                                 const demands& demands);
 };
 
 #endif //OBLIVOUSROUTING_LPSOLVER_H

@@ -20,7 +20,7 @@ boost::property_tree::ptree make_amg_params() {
 void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
     n = graph.getNumNodes();
-    m = graph.getNumEdges()/2;
+    m = graph.getNumUndirectedEdges();
 
     // set algorithm parameters
     roh = std::sqrt(2.0*static_cast<double>(m));
@@ -215,7 +215,7 @@ void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     auto start_transfo = timeNow();
     if (iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(iteration_count);
-        for (int e = 0; e < graph.getNumEdges(); ++e) // dont use m here. m is undirected edges only
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) // dont use m here. m is undirected edges only
             for (double &val : table.src_flows[e]) val *= (inv_iters);
     }
     this->transformation_time += duration(timeNow() - start_transfo);
@@ -242,7 +242,7 @@ void ElectricalMWU::initEdgeDistances() {
 void ElectricalMWU::extractEdges() {
     // in edges we only store the undirected edges
     edges.reserve(m);
-    for (int e = 0; e < graph.getNumEdges(); e++) {
+    for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
         auto [u, v] = graph.edgeEndpoints(e);
         if (u < v) {
             edges.emplace_back(u,v);

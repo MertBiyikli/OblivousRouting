@@ -123,7 +123,6 @@ void ParallelElectricalMWU::run(LinearRoutingTable &table) {
         double oracle_time = duration(timeNow() - start_time);
         oracle_running_times.push_back(oracle_time);
 
-
         for (int tid = 0; tid < p; ++tid) {
             auto& local_table = thread_flows[tid];
             for (int e = 0; e < local_table.src_ids.size(); ++e) {
@@ -140,7 +139,6 @@ void ParallelElectricalMWU::run(LinearRoutingTable &table) {
         getApproxLoad(load);
         updateEdgeDistances(load); // keeps 'weights' vector in sync
 
-        oracle_running_times.push_back(duration(timeNow() - start_time));
 
     }
 

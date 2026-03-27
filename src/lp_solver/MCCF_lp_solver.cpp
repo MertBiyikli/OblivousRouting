@@ -6,7 +6,7 @@
 #include "../utils/hash.h"
 
 
-void CMMF_Solver::AddDemandMap(const DemandMap &d_map) {
+void CMMF_Solver::AddDemandMap(const demands &d_map) {
      for (int i = 0; i < static_cast<int>(d_map.size()); ++i) {
          const auto& d = d_map.getDemandPair(i);
          const double& value = d_map.getDemandValue(i);

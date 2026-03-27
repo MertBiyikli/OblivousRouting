@@ -1,21 +1,34 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
+from collections.abc import Callable
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
+import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 
 
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/new_results/SNDLib/SNDLib.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/SNDLib/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results_latest/real_world/small.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/real_world/small/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-ORACLE_TIME_COL = "avg_oracle_time_ms"
+ORACLE_TIME_COL = "avg_oracle_time_micro_seconds"
+
+TIME_COLUMN_ALIASES: dict[str, tuple[str, float]] = {
+    "total_time_micro_seconds": ("total_time_ms", 1_000.0),
+    "solve_time_micro_seconds": ("solve_time_ms", 1_000.0),
+    "transformation_time_micro_seconds": ("transformation_time_ms", 1_000.0),
+    "avg_oracle_time_micro_seconds": ("avg_oracle_time_ms", 1_000.0),
+    "mendel_total_micro_seconds": ("mendel_total_ms", 1_000.0),
+    "mendel_avg_micro_seconds": ("mendel_avg_ms", 1_000.0),
+}
 
 # Typical LaTeX paper sizes
 FIGSIZE_SINGLE = (2.87, 2.17)   # thesis single-column-ish
@@ -25,11 +38,18 @@ EXPORT_PNG = True
 DPI_RASTER = 450
 
 SHOW_ERROR_BARS = False
-LOG_EPS = 1e-3  # ms, safe lower bound for log-plots
+LOG_EPS = 1e-3  # microseconds, safe lower bound for log-plots
 
 # Legend control
 LEGEND_NCOL = 2
 LEGEND_OUTSIDE = True  # put legend above plot to avoid occluding data
+# Set False to strip legends from every individual plot and instead emit a
+# single standalone legend_plate.pdf/png that can be included once in a paper.
+EMBED_LEGEND = False
+# Set False to strip all axis labels, titles, and named tick labels from every
+# plot.  Axis/scale tick numbers are kept; all human-readable text is removed
+# so plots can be annotated via LaTeX captions / pgfplots overlay instead.
+EMBED_AXIS_LABELS = False
 
 
 # ======================
@@ -51,8 +71,8 @@ def set_paper_style():
         "ytick.labelsize": 8,
 
         # ── Lines / markers ──────────────────────────────────────────────────
-        "lines.linewidth": 1.2,
-        "lines.markersize": 4.5,
+        "lines.linewidth": 0.5,
+        "lines.markersize": 2.5,
         "lines.markeredgewidth": 0.4,
 
         # ── Axes & spines ────────────────────────────────────────────────────
@@ -107,6 +127,29 @@ def savefig_all(fig: plt.Figure, outbase: Path):
     fig.savefig(outbase.with_suffix(".pdf"))
     if EXPORT_PNG:
         fig.savefig(outbase.with_suffix(".png"), dpi=DPI_RASTER)
+
+
+def normalize_time_columns_to_microseconds(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Accept both legacy millisecond CSVs and the newer microsecond CSVs.
+
+    For each canonical ``*_micro_seconds`` column:
+      * keep the microsecond values when already present,
+      * otherwise backfill from the corresponding ``*_ms`` column × 1000,
+      * create the canonical column when only the legacy millisecond column exists.
+    """
+    df = df.copy()
+
+    for canonical_col, (legacy_col, scale) in TIME_COLUMN_ALIASES.items():
+        if canonical_col in df.columns:
+            df[canonical_col] = pd.to_numeric(df[canonical_col], errors="coerce")
+            if legacy_col in df.columns:
+                legacy_vals = pd.to_numeric(df[legacy_col], errors="coerce") * scale
+                df[canonical_col] = df[canonical_col].fillna(legacy_vals)
+        elif legacy_col in df.columns:
+            df[canonical_col] = pd.to_numeric(df[legacy_col], errors="coerce") * scale
+
+    return df
 
 
 # ======================
@@ -225,7 +268,7 @@ def solver_markers(solvers: list[str]) -> dict[str, str]:
 # ======================
 
 def add_legend(ax: plt.Axes, handles, labels):
-    if not labels:
+    if not labels or not EMBED_LEGEND:
         return
 
     if LEGEND_OUTSIDE:
@@ -241,6 +284,21 @@ def add_legend(ax: plt.Axes, handles, labels):
         )
     else:
         ax.legend(frameon=False, ncol=min(LEGEND_NCOL, max(1, len(labels))))
+
+
+def _apply_labels(ax: plt.Axes,
+                  xlabel: str = "",
+                  ylabel: str = "",
+                  title:  str | None = None):
+    """Set axis / title labels only when EMBED_AXIS_LABELS is True."""
+    if not EMBED_AXIS_LABELS:
+        return
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
 
 
 def plot_lines(
@@ -278,14 +336,11 @@ def plot_lines(
             e = np.minimum(e, y - LOG_EPS)
 
         ls = linestyles[s] if linestyles else "-"
-        # space markers so they don't clutter when many points
-        every = max(1, len(x) // 6)
         h, = ax.plot(
             x, y,
             linestyle=ls,
             marker=markers[s],
-            markevery=every,
-            markersize=4.5,
+            markersize=2.5,
             markeredgewidth=0.4,
             markeredgecolor="white",
             label=pretty_solver_name(s),
@@ -302,8 +357,7 @@ def plot_lines(
     if ylog:
         ax.set_yscale("log")
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    _apply_labels(ax, xlabel, ylabel)
     ax.minorticks_on()
 
     add_legend(ax, handles, labels)
@@ -363,12 +417,15 @@ def plot_solver_average_bars(
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=30, ha="right")
+    ax.set_xticklabels(
+        [pretty_solver_name(s) for s in solvers] if EMBED_AXIS_LABELS else [""] * len(solvers),
+        rotation=30, ha="right",
+    )
 
     if ylog:
         ax.set_yscale("log")
 
-    ax.set_ylabel(ylabel)
+    _apply_labels(ax, ylabel=ylabel)
     ax.minorticks_on()
 
     savefig_all(fig, outpath)
@@ -391,13 +448,20 @@ def plot_box_by_solver(
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
     data = []
-    means = []
+    valid_solvers = []
     for s in solvers:
         vals = df.loc[df["solver"] == s, ycol].dropna().to_numpy(dtype=float)
-        if ylog:
-            vals = np.maximum(vals, LOG_EPS)
-        data.append(vals)
-        means.append(float(np.mean(vals)) if len(vals) > 0 else np.nan)
+        if len(vals) > 0:  # Only include solvers with data
+            if ylog:
+                vals = np.maximum(vals, LOG_EPS)
+            data.append(vals)
+            valid_solvers.append(s)
+
+    # Skip if no valid data
+    if len(data) == 0:
+        print(f"DEBUG: No data for {ycol} - df shape: {df.shape}, ycol in df: {ycol in df.columns}, solvers: {solvers}")
+        plt.close(fig)
+        return
 
     bp = ax.boxplot(
         data,
@@ -410,28 +474,25 @@ def plot_box_by_solver(
         boxprops=dict(linewidth=0.7),
     )
 
-    for i, box in enumerate(bp["boxes"]):
-        box.set_facecolor(colors[solvers[i]])
-        box.set_alpha(0.40)
+    # Handle color assignment safely
+    if bp.get("boxes"):
+        for i, box in enumerate(bp["boxes"]):
+            if i < len(valid_solvers):
+                box.set_facecolor(colors[valid_solvers[i]])
+                box.set_alpha(0.40)
 
-    # mean markers
-    x = np.arange(1, len(solvers) + 1)
-    ax.scatter(
-        x, means,
-        marker="D", s=18, zorder=4,
-        color="#222222", linewidths=0.0,
-        label="Mean",
-    )
-
+    x = np.arange(1, len(valid_solvers) + 1)
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in solvers], rotation=30, ha="right")
+    ax.set_xticklabels(
+        [pretty_solver_name(s) for s in valid_solvers] if EMBED_AXIS_LABELS else [""] * len(valid_solvers),
+        rotation=30, ha="right",
+    )
 
     if ylog:
         ax.set_yscale("log")
-    ax.set_ylabel(ylabel)
+    _apply_labels(ax, ylabel=ylabel)
     ax.minorticks_on()
 
-    add_legend(ax, [ax.collections[-1]], ["Mean"])
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -523,8 +584,7 @@ def plot_scatter_cloud(
     if ylog:
         ax.set_yscale("log")
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    _apply_labels(ax, xlabel, ylabel)
     ax.minorticks_on()
 
     add_legend(ax, handles, labels)
@@ -539,7 +599,7 @@ def plot_runtime_decomposition_grouped_csv(
         figsize,
         outpath: Path,
 ):
-    required = ["transformation_time_ms", "solve_time_ms", "total_time_ms"]
+    required = ["transformation_time_micro_seconds", "solve_time_micro_seconds"]
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns for decomposition plot: {missing}")
@@ -551,40 +611,214 @@ def plot_runtime_decomposition_grouped_csv(
             continue
         rows.append({
             "solver": s,
-            "transform": float(np.median(sub["transformation_time_ms"])),
-            "solve": float(np.median(sub["solve_time_ms"])),
-            "total": float(np.median(sub["total_time_ms"])),
+            "transform": float(np.median(sub["transformation_time_micro_seconds"].fillna(0))),
+            "solve": float(np.median(sub["solve_time_micro_seconds"].fillna(0))),
         })
 
-    agg = pd.DataFrame(rows).set_index("solver").reindex(solvers).reset_index()
+    if not rows:
+        return
+
+    agg = pd.DataFrame(rows).set_index("solver").reindex(solvers).dropna(how="all").reset_index()
+
+    transform_vals = agg["transform"].fillna(0).to_numpy(dtype=float)
+    solve_vals     = agg["solve"].fillna(0).to_numpy(dtype=float)
+    totals         = transform_vals + solve_vals
+
+    # Avoid division by zero for solvers where both are 0 / NaN
+    safe_totals = np.where(totals > 0, totals, 1.0)
+    pct_transform = transform_vals / safe_totals * 100.0
+    pct_solve     = solve_vals     / safe_totals * 100.0
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
-    x = np.arange(len(agg))
-    width = 0.24
-
-    transform = np.maximum(agg["transform"].to_numpy(dtype=float), LOG_EPS)
-    solve = np.maximum(agg["solve"].to_numpy(dtype=float), LOG_EPS)
-    total = np.maximum(agg["total"].to_numpy(dtype=float), LOG_EPS)
+    x     = np.arange(len(agg))
+    width = 0.50
 
     # Fixed component colors — colorblind-safe (Wong palette)
-    ax.bar(x - width, transform, width, label="Transformation time",
+    ax.bar(x, pct_transform, width,
+           label="Transformation time",
            color="#D55E00", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
-    ax.bar(x,         solve,     width, label="Computation time",
+    ax.bar(x, pct_solve, width,
+           bottom=pct_transform,
+           label="Computation time",
            color="#009E73", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
-    ax.bar(x + width, total,     width, label="Total time",
-           color="#0072B2", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
+
+    ax.set_ylim(0, 100)
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter())
 
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in agg["solver"]], rotation=30, ha="right")
+    ax.set_xticklabels(
+        [pretty_solver_name(s) for s in agg["solver"]] if EMBED_AXIS_LABELS else [""] * len(agg),
+        rotation=30, ha="right",
+    )
 
-    ax.set_ylabel("Median time [ms]")
-    ax.set_yscale("log")
-
-    ax.minorticks_on()
+    _apply_labels(ax, ylabel="Share of runtime [%]")
 
     savefig_all(fig, outpath)
     plt.close(fig)
+
+def _graph_short_name(name: str) -> str:
+    """Return a compact display name for a graph path/identifier.
+
+    Always strips the file extension (e.g. .lgf, .gr, .dimacs) and any
+    trailing run-index suffixes (_0, _1, …).
+    """
+    # Always take the last path component and drop the extension
+    base = Path(name).stem
+    # Remove trailing _N suffixes like _0, _1 that come from repeated runs
+    base = re.sub(r"_\d+$", "", base)
+    return base
+
+
+def plot_metric_table_by_graph(
+        df: pd.DataFrame,
+        solvers: list[str],
+        metric_col: str,
+        metric_label: str,
+        fmt: "Callable[[float], str]",
+        outpath: Path,
+        dedup_by_graph: bool = False,
+):
+    """
+    Render a matplotlib table for a single metric where:
+      • Rows    = solvers  (pretty names in the first column)
+      • Columns = individual graph names  (sorted)
+      • Cells   = median of *metric_col* for that (solver, graph) pair,
+                  or "—" when no data is available.
+
+    Parameters
+    ----------
+    dedup_by_graph : if True, drop duplicate (graph, solver) pairs before
+                     aggregating (useful for oblivious_ratio which is unique
+                     per graph rather than per run).
+    """
+    if metric_col not in df.columns or "graph" not in df.columns:
+        return
+
+    work = df[df["solver"].isin(solvers)][["solver", "graph", metric_col]].copy()
+    work[metric_col] = pd.to_numeric(work[metric_col], errors="coerce")
+    work = work.dropna(subset=[metric_col])
+
+    if work.empty:
+        return
+
+    if dedup_by_graph:
+        work = work.drop_duplicates(subset=["solver", "graph"])
+
+    # Aggregate: median over repeated runs of the same (solver, graph)
+    agg = (
+        work.groupby(["solver", "graph"])[metric_col]
+        .median()
+        .reset_index()
+    )
+
+    graphs_unsorted = agg["graph"].unique()
+
+    # ── Sort graphs by edge count (ascending) ─────────────────────────────────
+    if "num_edges" in df.columns:
+        edge_lookup = (
+            df[["graph", "num_edges"]]
+            .dropna(subset=["num_edges"])
+            .groupby("graph")["num_edges"]
+            .median()
+        )
+        graphs = sorted(
+            graphs_unsorted,
+            key=lambda g: (float(edge_lookup.get(g, np.inf)), _graph_short_name(g)),
+        )
+    else:
+        graphs = sorted(graphs_unsorted, key=_graph_short_name)
+
+    g_labels = [_graph_short_name(g) for g in graphs]
+
+    # ── Build cell matrix (formatted strings + parallel raw floats) ──────────
+    rows      = []   # formatted strings for display
+    raw_vals  = []   # raw floats (np.nan for missing) — used to find minima
+    active_solvers = []
+    for s in solvers:
+        sub = agg[agg["solver"] == s]
+        if sub.empty:
+            continue
+        active_solvers.append(s)
+        row     = [pretty_solver_name(s)]
+        row_raw = [np.nan]   # solver name column — never a minimum
+        for g in graphs:
+            match = sub[sub["graph"] == g][metric_col]
+            if not match.empty:
+                v = float(match.iloc[0])
+                row.append(fmt(v))
+                row_raw.append(v)
+            else:
+                row.append("—")
+                row_raw.append(np.nan)
+        rows.append(row)
+        raw_vals.append(row_raw)
+
+    if not rows:
+        return
+
+    # ── Per-column minimum row index (data columns only, j >= 1) ─────────────
+    n_rows = len(rows)
+    n_cols = len(rows[0])   # == 1 (solver) + len(graphs)
+    col_min_row: dict[int, int] = {}   # j -> row-index i of minimum
+    for j in range(1, n_cols):
+        col_vals = [raw_vals[i][j] for i in range(n_rows)]
+        valid    = [(v, i) for i, v in enumerate(col_vals) if np.isfinite(v)]
+        if valid:
+            col_min_row[j] = min(valid, key=lambda t: t[0])[1]
+
+    header  = ["Solver"] + g_labels
+
+    # ── Figure sizing ─────────────────────────────────────────────────────────
+    row_h      = 0.30
+    solver_w   = 1.60   # first column (solver name) is wider
+    data_col_w = 1.20   # data columns
+    fig_h = row_h * (n_rows + 1) + 0.15
+    fig_w = solver_w + data_col_w * (n_cols - 1)
+
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), constrained_layout=True)
+    ax.axis("off")
+
+    tbl = ax.table(
+        cellText=rows,
+        colLabels=header,
+        loc="center",
+        cellLoc="center",
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(7)
+
+    # ── Header styling (B&W) ──────────────────────────────────────────────────
+    for j in range(n_cols):
+        cell = tbl[0, j]
+        cell.set_facecolor("white")
+        cell.set_text_props(color="black", fontweight="bold")
+        cell.set_edgecolor("black")
+        cell.set_linewidth(0.7)
+        if j > 0:
+            cell.get_text().set_rotation(45)
+            cell.get_text().set_horizontalalignment("left")
+
+    # ── Data-row styling (B&W) ────────────────────────────────────────────────
+    for i in range(n_rows):
+        bg = "#F2F2F2" if i % 2 == 0 else "white"
+        for j in range(n_cols):
+            cell = tbl[i + 1, j]
+            cell.set_facecolor(bg)
+            cell.set_edgecolor("#888888")
+            cell.set_linewidth(0.4)
+            if j == 0:
+                cell.get_text().set_horizontalalignment("left")
+            # Bold + slightly larger font for the minimum value in each column
+            if j >= 1 and col_min_row.get(j) == i:
+                cell.get_text().set_fontweight("bold")
+                cell.get_text().set_fontsize(8)
+
+    tbl.auto_set_column_width(list(range(n_cols)))
+
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
 
 def plot_error_lines_vs_edges(
         df: pd.DataFrame,
@@ -632,16 +866,488 @@ def plot_error_lines_vs_edges(
             ax.fill_between(x, np.maximum(y - e, 0), y + e,
                             alpha=0.10, color=colors[s], linewidth=0)
 
-    ax.set_xlabel("Number of edges")
-    ax.set_ylabel("Mean relative error [%]")
-    if title:
-        ax.set_title(title)
-
+    _apply_labels(ax, xlabel="Number of edges", ylabel="Mean relative error [%]", title=title)
     ax.minorticks_on()
     add_legend(ax, handles, labels)
 
     savefig_all(fig, outpath)
     plt.close(fig)
+
+
+# ======================
+# STANDALONE LEGEND PLATE
+# ======================
+
+def plot_legend_plate(
+        solvers: list[str],
+        colors: dict[str, str],
+        markers: dict[str, str],
+        linestyles: dict[str, str],
+        outpath: Path,
+        ncol: int | None = None,
+):
+    """
+    Emit a figure that contains *only* the legend — no axes, no data.
+
+    Each row shows the solver's line style + marker + colour + human-readable
+    name.  Drop ``legend_plate.pdf`` once into a LaTeX paper and reference it
+    from every figure caption.
+
+    Parameters
+    ----------
+    ncol : number of legend columns.  Defaults to min(3, n_solvers).
+    """
+    n = len(solvers)
+    if n == 0:
+        return
+    ncol = ncol or min(3, n)
+
+    # Build proxy artists — a Line2D shows both the line style and the marker
+    handles = []
+    labels  = []
+    for s in solvers:
+        ls = linestyles.get(s, "-")
+        h = mlines.Line2D(
+            [], [],
+            color=colors[s],
+            linestyle=ls,
+            linewidth=1.2,
+            marker=markers[s],
+            markersize=5,
+            markeredgewidth=0.5,
+            markeredgecolor="white",
+            label=pretty_solver_name(s),
+        )
+        handles.append(h)
+        labels.append(pretty_solver_name(s))
+
+    # Size the figure to comfortably fit the legend
+    nrows     = int(np.ceil(n / ncol))
+    row_h_in  = 0.22   # height per legend row
+    col_w_in  = 1.8    # width per legend column
+    width_in  = col_w_in * ncol + 0.15
+    height_in = row_h_in * nrows + 0.15
+
+    fig, ax = plt.subplots(figsize=(width_in, height_in))
+    ax.set_axis_off()
+    fig.patch.set_facecolor("none")   # transparent background
+
+    legend2 = ax.legend(
+        handles, labels,
+        ncol=ncol,
+        loc="center",
+        frameon=False,
+        fontsize=8,
+        handlelength=2.2,
+        handleheight=0.9,
+        handletextpad=0.5,
+        columnspacing=1.2,
+        labelspacing=0.4,
+        borderpad=0.0,
+    )
+
+    fig.tight_layout(pad=0.0)
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
+
+# ======================
+# QUALITY VS RUNTIME PLOT
+# ======================
+
+def plot_quality_vs_runtime(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, str],
+        markers: dict[str, str],
+        figsize,
+        outpath: Path,
+        linestyles: dict[str, str] | None = None,
+):
+    """
+    Scatter plot correlating solution quality against runtime.
+
+    X-axis (log): total running time [microseconds] — one point per (graph, solver) instance.
+    Y-axis (linear): oblivious ratio (lower = better; optimal = 1.0).
+
+    A dashed y = 1 reference marks the theoretical optimum.
+
+    Companion panel: per-solver mean ± 1 std summary so the quality/speed
+    trade-off across solvers is immediately visible.
+    """
+    group_cols = ["solver", "graph"] if "graph" in df.columns else ["solver"]
+
+    # One row per (graph, solver): mean total time + mean oblivious ratio.
+    agg = (
+        df[df["solver"].isin(solvers)]
+        .groupby(group_cols, as_index=False)
+        .agg(
+            total_time_micro_seconds=("total_time_micro_seconds", "mean"),
+            oblivious_ratio=("oblivious_ratio", "mean"),
+        )
+    )
+
+    # Per-solver summary: mean & std of both axes
+    summary = (
+        agg.groupby("solver", as_index=False)
+        .agg(
+            t_mean=("total_time_micro_seconds",   "mean"),
+            t_std= ("total_time_micro_seconds",   "std"),
+            q_mean=("oblivious_ratio", "mean"),
+            q_std= ("oblivious_ratio", "std"),
+            n=     ("total_time_micro_seconds",   "count"),
+        )
+    )
+    summary["t_std"] = summary["t_std"].fillna(0.0)
+    summary["q_std"] = summary["q_std"].fillna(0.0)
+
+    # ── Panel 1: individual instances ────────────────────────────────────────
+    fig1, ax1 = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    ax1.axhline(1.0, color="#888888", linewidth=0.7, linestyle="--",
+                zorder=1, label="_nolegend_")
+
+    handles1, labels1 = [], []
+    for s in solvers:
+        sub = agg[agg["solver"] == s].copy()
+        if sub.empty:
+            continue
+        x = pd.to_numeric(sub["total_time_micro_seconds"],   errors="coerce").to_numpy(dtype=float)
+        y = pd.to_numeric(sub["oblivious_ratio"], errors="coerce").to_numpy(dtype=float)
+        mask = np.isfinite(x) & np.isfinite(y) & (x > 0)
+        x, y = x[mask], y[mask]
+        if x.size == 0:
+            continue
+
+        h = ax1.scatter(
+            x, y,
+            marker=markers[s],
+            s=10,
+            alpha=0.65,
+            color=colors[s],
+            edgecolors="none",
+            label=pretty_solver_name(s),
+            zorder=3,
+        )
+        handles1.append(h)
+        labels1.append(pretty_solver_name(s))
+
+    ax1.set_xscale("log")
+    _apply_labels(ax1, xlabel="Total running time [microseconds]", ylabel="Oblivious ratio")
+    ax1.minorticks_on()
+    add_legend(ax1, handles1, labels1)
+    savefig_all(fig1, outpath.parent / (outpath.name + "_instances"))
+    plt.close(fig1)
+
+    # ── Panel 2: per-solver mean ± std (Pareto / summary view) ──────────────
+    fig2, ax2 = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    ax2.axhline(1.0, color="#888888", linewidth=0.7, linestyle="--",
+                zorder=1, label="_nolegend_")
+
+    handles2, labels2 = [], []
+    for s in solvers:
+        row = summary[summary["solver"] == s]
+        if row.empty:
+            continue
+        t_m  = float(row["t_mean"].iloc[0])
+        t_s  = float(row["t_std"].iloc[0])
+        q_m  = float(row["q_mean"].iloc[0])
+        q_s  = float(row["q_std"].iloc[0])
+        if not (np.isfinite(t_m) and t_m > 0 and np.isfinite(q_m)):
+            continue
+
+        ls = linestyles[s] if linestyles else "-"
+
+        # cross-hairs: horizontal error bar (time std) + vertical (quality std)
+        ax2.errorbar(
+            t_m, q_m,
+            xerr=[[min(t_s, t_m * 0.999)], [t_s]],   # log-safe lower bound
+            yerr=[[min(q_s, max(q_m - 1e-9, 0))], [q_s]],
+            fmt="none",
+            ecolor=colors[s],
+            elinewidth=0.7,
+            capsize=2.5,
+            capthick=0.7,
+            alpha=0.55,
+            zorder=2,
+        )
+        h = ax2.scatter(
+            t_m, q_m,
+            marker=markers[s],
+            s=18,
+            color=colors[s],
+            edgecolors="white",
+            linewidths=0.4,
+            zorder=4,
+            label=pretty_solver_name(s),
+        )
+        handles2.append(h)
+        labels2.append(pretty_solver_name(s))
+
+    ax2.set_xscale("log")
+    _apply_labels(ax2, xlabel="Total running time [microseconds]", ylabel="Oblivious ratio (mean ± std)")
+    ax2.minorticks_on()
+    add_legend(ax2, handles2, labels2)
+    savefig_all(fig2, outpath.parent / (outpath.name + "_summary"))
+    plt.close(fig2)
+
+
+# ======================
+# MAIN PLOTTING ROUTINE (shared helper)
+# ======================
+
+def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
+              linestyles: dict, out_dir: Path, ylog: bool = False,
+              mendel_mode: bool = False):
+    """
+    Generate the full set of plots for the given solver list into out_dir.
+
+    Parameters
+    ----------
+    ylog        : if True all scaling/time axes use log-scale (used for Mendel pass).
+    mendel_mode : if True also produce the Mendel-total-time plots.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Standalone legend plate (one file used by all figures in the paper) ──
+    plot_legend_plate(
+        solvers, colors, markers, linestyles,
+        outpath=out_dir / "legend_plate",
+    )
+
+    _LP_SOLVERS = {"cohen", "lp"}
+    solvers_mwu = [s for s in solvers if s not in _LP_SOLVERS]
+
+    # ── Runtime scaling ──────────────────────────────────────────────────────
+    agg_runtime = aggregate_mean_std(df[df["solver"].isin(solvers)].copy(), "total_time_micro_seconds")
+    plot_lines(
+        agg_runtime, solvers, colors, markers,
+        xcol="num_edges", y_mean_col="mean", y_std_col="std",
+        xlabel="Number of edges",
+        ylabel="Total running time [microseconds]",
+        xlog=True, ylog=True,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "runtime_lines_vs_edges",
+        linestyles=linestyles,
+    )
+
+    # ── MWU iterations ───────────────────────────────────────────────────────
+    agg_mwu = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), "mwu_iterations")
+    plot_lines(
+        agg_mwu, solvers_mwu, colors, markers,
+        xcol="num_edges", y_mean_col="mean", y_std_col="std",
+        xlabel="Number of edges",
+        ylabel="MWU iterations",
+        xlog=True, ylog=ylog,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "mwu_iterations_lines_vs_edges",
+        linestyles=linestyles,
+    )
+
+    # ── Oracle time ──────────────────────────────────────────────────────────
+    agg_oracle = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), ORACLE_TIME_COL)
+    plot_lines(
+        agg_oracle, solvers_mwu, colors, markers,
+        xcol="num_edges", y_mean_col="mean", y_std_col="std",
+        xlabel="Number of edges",
+        ylabel="Average oracle running time [microseconds]",
+        xlog=True, ylog=True,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "oracle_time_lines_vs_edges",
+        linestyles=linestyles,
+    )
+
+    # ── Relative error box plots — always linear ─────────────────────────────
+    plot_box_by_solver(
+        df[df["solver"].isin(solvers)], solvers, colors,
+        ycol="relative_error",
+        ylabel="Relative error [%]",
+        ylog=False,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "relative_error_box_by_solver",
+    )
+
+    if "demand_model" in df.columns:
+        demand_models = sorted(df["demand_model"].dropna().unique())
+        for demand in demand_models:
+            df_demand = df[(df["demand_model"] == demand) & df["solver"].isin(solvers)]
+            solvers_demand = [s for s in solvers
+                              if not df_demand[df_demand["solver"] == s].empty]
+            if not solvers_demand:
+                continue
+            plot_box_by_solver(
+                df_demand, solvers_demand, colors,
+                ycol="relative_error",
+                ylabel="Relative error [%]",
+                ylog=False,
+                figsize=FIGSIZE_SINGLE,
+                outpath=out_dir / f"relative_error_box_by_solver_{demand}",
+            )
+
+    # ── Transformation time ──────────────────────────────────────────────────
+    df_t = df[df["solver"].isin(solvers_mwu)].copy()
+    df_t["percent_transform_time"] = (
+        df_t["transformation_time_micro_seconds"] / df_t["total_time_micro_seconds"] * 100.0
+    )
+
+    plot_box_by_solver(
+        df_t, solvers_mwu, colors,
+        ycol="percent_transform_time",
+        ylabel="Transformation time in %",
+        ylog=ylog,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "transformation_time_box_by_solver",
+    )
+
+    df_t["percent_transform_time"] = df_t["percent_transform_time"].replace(
+        [np.inf, -np.inf], np.nan
+    )
+    df_t = df_t.dropna(subset=["percent_transform_time"])
+
+    agg_transform_share = aggregate_mean_std_by_solver(df_t, "percent_transform_time")
+    plot_solver_average_bars(
+        agg_transform_share, solvers_mwu, colors,
+        y_mean_col="mean", y_std_col="std",
+        ylabel="Percentage of transformation time [%]",
+        ylog=ylog,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "avg_transformation_time_share_by_solver",
+    )
+
+    plot_runtime_decomposition_grouped_csv(
+        df[df["solver"].isin(solvers_mwu)], solvers_mwu,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "runtime_decomposition_grouped_csv",
+    )
+
+    # ── Per-metric tables: rows = solvers, columns = graph names ─────────────
+    _df_mwu = df[df["solver"].isin(solvers_mwu)]
+
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="solve_time_micro_seconds",
+        metric_label="Solve time [microseconds]",
+        fmt=lambda v: f"{v:,.1f}",
+        outpath=out_dir / "table_solve_time_by_graph",
+    )
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="mwu_iterations",
+        metric_label="MWU iterations",
+        fmt=lambda v: f"{int(round(v)):,}",
+        outpath=out_dir / "table_mwu_iterations_by_graph",
+    )
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="avg_oracle_time_micro_seconds",
+        metric_label="Avg oracle time [microseconds]",
+        fmt=lambda v: f"{v:,.3f}",
+        outpath=out_dir / "table_avg_oracle_time_by_graph",
+    )
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="oblivious_ratio",
+        metric_label="Oblivious ratio",
+        fmt=lambda v: f"{v:.4f}",
+        outpath=out_dir / "table_oblivious_ratio_by_graph",
+        dedup_by_graph=True,
+    )
+
+    # ── Mendel total time (only in Mendel comparison pass) ───────────────────
+    if mendel_mode and "mendel_total_micro_seconds" in df.columns:
+        df_mendel = df[df["solver"].isin(solvers_mwu)].copy()
+        df_mendel["mendel_total_micro_seconds"] = pd.to_numeric(
+            df_mendel["mendel_total_micro_seconds"], errors="coerce"
+        )
+        df_mendel = df_mendel.dropna(subset=["mendel_total_micro_seconds"])
+        # Only keep solvers that actually report mendel time (non-zero)
+        solvers_mendel_time = [
+            s for s in solvers_mwu
+            if df_mendel.loc[df_mendel["solver"] == s, "mendel_total_micro_seconds"].gt(0).any()
+        ]
+        if solvers_mendel_time:
+            agg_mendel = aggregate_mean_std(
+                df_mendel[df_mendel["solver"].isin(solvers_mendel_time)], "mendel_total_micro_seconds"
+            )
+            plot_lines(
+                agg_mendel, solvers_mendel_time, colors, markers,
+                xcol="num_edges", y_mean_col="mean", y_std_col="std",
+                xlabel="Number of edges",
+                ylabel="Mendel scaling total time [microseconds]",
+                xlog=False, ylog=ylog,
+                figsize=FIGSIZE_SINGLE,
+                outpath=out_dir / "mendel_total_time_lines_vs_edges",
+                linestyles=linestyles,
+            )
+            plot_box_by_solver(
+                df_mendel[df_mendel["solver"].isin(solvers_mendel_time)],
+                solvers_mendel_time, colors,
+                ycol="mendel_total_micro_seconds",
+                ylabel="Mendel scaling total time [microseconds]",
+                ylog=ylog,
+                figsize=FIGSIZE_SINGLE,
+                outpath=out_dir / "mendel_total_time_box_by_solver",
+            )
+
+    # ── Oblivious ratio ──────────────────────────────────────────────────────
+    if "oblivious_ratio" in df.columns:
+        df_oblivious = df[df["solver"].isin(solvers_mwu)].dropna(
+            subset=["oblivious_ratio"]
+        ).copy()
+        df_oblivious["oblivious_ratio"] = pd.to_numeric(
+            df_oblivious["oblivious_ratio"], errors="coerce"
+        )
+        df_oblivious = df_oblivious.dropna(subset=["oblivious_ratio"])
+
+        dedup_cols = [c for c in ["graph", "solver", "num_edges", "oblivious_ratio"]
+                      if c in df_oblivious.columns]
+        df_oblivious_dedup = df_oblivious[dedup_cols].drop_duplicates(
+            subset=["graph", "solver"] if "graph" in dedup_cols else None
+        )
+
+        solvers_oblivious = [s for s in solvers_mwu
+                             if not df_oblivious_dedup[
+                                 df_oblivious_dedup["solver"] == s].empty]
+
+        if solvers_oblivious:
+            plot_scatter_cloud(
+                df_oblivious_dedup, solvers_oblivious, colors, markers,
+                xcol="num_edges", ycol="oblivious_ratio",
+                xlabel="Number of edges",
+                ylabel="Oblivious ratio",
+                xlog=False, ylog=False,
+                figsize=FIGSIZE_SINGLE,
+                outpath=out_dir / "oblivious_ratio_scatter_vs_edges",
+                add_scaling_line=False,
+                linestyles=linestyles,
+            )
+
+            plot_box_by_solver(
+                df_oblivious_dedup, solvers_oblivious, colors,
+                ycol="oblivious_ratio",
+                ylabel="Oblivious ratio",
+                ylog=False,
+                figsize=FIGSIZE_SINGLE,
+                outpath=out_dir / "oblivious_ratio_box_by_solver",
+            )
+
+            # ── Quality vs Runtime correlation ───────────────────────────────
+            # Merge oblivious_ratio back onto rows that also have total runtime.
+            qr_cols = ["solver", "total_time_micro_seconds", "oblivious_ratio"]
+            if "graph" in df_oblivious.columns:
+                qr_cols = ["solver", "graph", "total_time_micro_seconds", "oblivious_ratio"]
+            df_qr = df_oblivious.loc[
+                df_oblivious["solver"].isin(solvers_oblivious), qr_cols
+            ].dropna(subset=["total_time_micro_seconds", "oblivious_ratio"]).copy()
+
+            if not df_qr.empty:
+                plot_quality_vs_runtime(
+                    df_qr, solvers_oblivious, colors, markers,
+                    figsize=FIGSIZE_SINGLE,
+                    outpath=out_dir / "quality_vs_runtime",
+                    linestyles=linestyles,
+                )
 
 
 # ======================
@@ -652,157 +1358,124 @@ def main():
     set_paper_style()
 
     df = pd.read_csv(RESULTS_CSV)
+    df = normalize_time_columns_to_microseconds(df)
 
-    # If you have status column from timeout script, keep only OK runs by default
     if "status" in df.columns:
-        df = df[df["status"] == "OK"].copy()
+        # Only filter by status if there are non-NaN values
+        if df["status"].notna().any():
+            df = df[df["status"] == "OK"].copy()
 
     required_cols = {
-        "solver",
-        "num_edges",
-        "total_time_ms",
-        "mwu_iterations",
-        "transformation_time_ms",
-        "achieved_congestion",
-        "offline_opt",
+        "solver", "num_edges", "total_time_micro_seconds", "mwu_iterations",
+        "transformation_time_micro_seconds", "achieved_congestion", "offline_opt",
         ORACLE_TIME_COL,
     }
     missing = required_cols - set(df.columns)
     if missing:
         raise ValueError(f"Missing columns in results.csv: {sorted(missing)}")
 
-    # Enforce numeric columns (prevents “ms”, “edges.” issues from silently breaking plots)
-    for c in ["num_edges", "total_time_ms", "solve_time_ms", "transformation_time_ms",
+    for c in ["num_edges", "total_time_micro_seconds", "solve_time_micro_seconds", "transformation_time_micro_seconds",
               "mwu_iterations", "achieved_congestion", "offline_opt", ORACLE_TIME_COL]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
+    # CSV stores directed edge count; divide by 2 to get undirected edge count
+    # used on all plot axes.
+    df["num_edges"] = df["num_edges"] / 2
+
+    # ── Derived columns ───────────────────────────────────────────────────────
+    # 1) If solve_time is missing/NaN but MWU iterations and average oracle time
+    #    are available, estimate solve_time = mwu_iterations × avg_oracle_time.
+    if "solve_time_micro_seconds" in df.columns:
+        if (ORACLE_TIME_COL in df.columns) and ("mwu_iterations" in df.columns):
+            mask_missing_solve = df["solve_time_micro_seconds"].isna() | (df["solve_time_micro_seconds"] <= 0)
+            if mask_missing_solve.any():
+                df.loc[mask_missing_solve, "solve_time_micro_seconds"] = (
+                    df.loc[mask_missing_solve, "mwu_iterations"]
+                    * df.loc[mask_missing_solve, ORACLE_TIME_COL]
+                )
+                print(f"  ↳ Imputed {mask_missing_solve.sum()} missing solve_time_micro_seconds values "
+                      f"from mwu_iterations × {ORACLE_TIME_COL}.")
+    else:
+        # Column not present at all — create it if we can
+        if (ORACLE_TIME_COL in df.columns) and ("mwu_iterations" in df.columns):
+            df["solve_time_micro_seconds"] = df["mwu_iterations"] * df[ORACLE_TIME_COL]
+            print(f"  ↳ Created solve_time_micro_seconds from mwu_iterations × {ORACLE_TIME_COL}.")
+
+    # 2) If total time is missing/NaN, fall back to solve time + transformation time.
+    if "total_time_micro_seconds" in df.columns:
+        mask_missing_total = df["total_time_micro_seconds"].isna()
+        if mask_missing_total.any():
+            for dep in ("solve_time_micro_seconds", "transformation_time_micro_seconds"):
+                if dep not in df.columns:
+                    df[dep] = np.nan
+            df.loc[mask_missing_total, "total_time_micro_seconds"] = (
+                df.loc[mask_missing_total, "solve_time_micro_seconds"].fillna(0.0)
+                + df.loc[mask_missing_total, "transformation_time_micro_seconds"].fillna(0.0)
+            )
+            print(f"  ↳ Imputed {mask_missing_total.sum()} missing total_time_micro_seconds values "
+                  f"from solve_time_micro_seconds + transformation_time_micro_seconds.")
+    else:
+        # Column not present at all
+        for dep in ("solve_time_micro_seconds", "transformation_time_micro_seconds"):
+            if dep not in df.columns:
+                df[dep] = np.nan
+        df["total_time_micro_seconds"] = (
+            df["solve_time_micro_seconds"].fillna(0.0)
+            + df["transformation_time_micro_seconds"].fillna(0.0)
+        )
+        print("  ↳ Created total_time_micro_seconds from solve_time_micro_seconds + transformation_time_micro_seconds.")
+
     df = df.dropna(subset=["solver", "num_edges"]).copy()
 
-    # ratio_pct = oblivious ratio as a percentage: how many % of the offline optimum
-    # the scheme achieves. Always >= 100% (scheme can never beat offline optimum).
     df["ratio_pct"] = (
-        df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan) * 100.0
+        df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
     )
+    df["relative_error"] = (df["ratio_pct"] ).clip(lower=0.0)
 
-    # relative_error = excess over the offline optimum in percent.
-    # = (achieved - offline) / offline * 100  = ratio_pct - 100
-    # Clamp to 0 to absorb floating-point noise where achieved ≈ offline.
-    df["relative_error"] = (df["ratio_pct"] - 100.0).clip(lower=0.0)
+    print(f"DEBUG: After creating relative_error - df shape: {df.shape}, solvers in df: {df['solver'].nunique()}")
 
-    solvers = sorted(df["solver"].unique(), key=solver_sort_key)
-    colors = solver_palette_unique(solvers)
-    markers = solver_markers(solvers)
-    linestyles = solver_linestyles(solvers)
-
-    # --- Scaling plots: aggregated mean lines (cleaner than scatter clouds) ---
-    agg_runtime = aggregate_mean_std(df, "total_time_ms")
-    plot_lines(
-        agg_runtime, solvers, colors, markers,
-        xcol="num_edges", y_mean_col="mean", y_std_col="std",
-        xlabel="Number of edges",
-        ylabel="Total running time [ms]",
-        xlog=False, ylog=True,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "runtime_lines_vs_edges",
-        linestyles=linestyles,
+    # All solvers present in data (no _pointer variants)
+    all_solvers = sorted(
+        [s for s in df["solver"].unique() if not s.endswith("_pointer")],
+        key=solver_sort_key,
     )
+    print(f"DEBUG: all_solvers (non-pointer): {all_solvers}")
 
-    # Exclude LP-type solvers: they have no MWU iterations or oracle time
-    _LP_SOLVERS = {"cohen", "lp"}
-    solvers_mwu = [s for s in solvers if s not in _LP_SOLVERS]
+    # Shared visual style — same color/marker/linestyle per solver in every plot
+    colors     = solver_palette_unique(all_solvers)
+    markers    = solver_markers(all_solvers)
+    linestyles = solver_linestyles(all_solvers)
 
-    agg_mwu = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), "mwu_iterations")
-    plot_lines(
-        agg_mwu, solvers_mwu, colors, markers,
-        xcol="num_edges", y_mean_col="mean", y_std_col="std",
-        xlabel="Number of edges",
-        ylabel="MWU iterations",
-        xlog=True, ylog=False,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "mwu_iterations_lines_vs_edges",
-        linestyles=linestyles,
-    )
+    # ── Solver sets ───────────────────────────────────────────────────────────
+    # Pass 1: all solvers except any whose name ends with "_mendel"
+    solvers_no_mendel = [s for s in all_solvers if not s.endswith("_mendel")]
 
-    agg_oracle = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), ORACLE_TIME_COL)
-    plot_lines(
-        agg_oracle, solvers_mwu, colors, markers,
-        xcol="num_edges", y_mean_col="mean", y_std_col="std",
-        xlabel="Number of edges",
-        ylabel="Average oracle running time [ms]",
-        xlog=False, ylog=True,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "oracle_time_lines_vs_edges",
-        linestyles=linestyles,
-    )
+    # Pass 2: for each _mendel variant include its base + the mendel version
+    # so the plot directly compares "before vs after" Mendel scaling.
+    solvers_mendel_cmp: list[str] = []
+    for s in all_solvers:
+        if s.endswith("_mendel"):
+            base = s[: -len("_mendel")]
+            if base in all_solvers and base not in solvers_mendel_cmp:
+                solvers_mendel_cmp.append(base)
+            if s not in solvers_mendel_cmp:
+                solvers_mendel_cmp.append(s)
+    solvers_mendel_cmp = sorted(solvers_mendel_cmp, key=solver_sort_key)
 
-    # Bar plots of average metrics per solver
-    # Bar plots per solver (distribution across instances) ---
-    plot_box_by_solver(
-        df, solvers, colors,
-        ycol="relative_error",
-        ylabel="Relative error [%]",
-        ylog=False,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "relative_error_box_by_solver",
-    )
+    # ── Pass 1: standard plots WITHOUT Mendel solvers (linear y-axes) ─────────
+    print(f"[1/2] Generating no-Mendel plots → {OUT_DIR}")
+    run_plots(df, solvers_no_mendel, colors, markers, linestyles, OUT_DIR,
+              ylog=False, mendel_mode=False)
 
-    # Per-demand-model relative error box plots
-    if "demand_model" in df.columns:
-        demand_models = sorted(df["demand_model"].dropna().unique())
-        for demand in demand_models:
-            df_demand = df[df["demand_model"] == demand]
-            # Only keep solvers that have data for this demand model
-            solvers_demand = [s for s in solvers if not df_demand[df_demand["solver"] == s].empty]
-            if not solvers_demand:
-                continue
-            plot_box_by_solver(
-                df_demand, solvers_demand, colors,
-                ycol="relative_error",
-                ylabel="Relative error [%]",
-                ylog=False,
-                figsize=FIGSIZE_SINGLE,
-                outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
-            )
-
-
-    df["percent_transform_time"] = (
-            df["transformation_time_ms"] / df["total_time_ms"] * 100.0
-    )
-
-    plot_box_by_solver(
-        df, solvers_mwu, colors,
-        ycol="percent_transform_time",
-        ylabel="Transformation time in %",
-        ylog=True,   # usually nicer; switch to False if you prefer linear
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "transformation_time_box_by_solver",
-    )
-
-    # Bar plots showing the percentage of solve time vs transformation time
-    df["percent_transform_time"] = (
-            df["transformation_time_ms"] / df["total_time_ms"] * 100.0
-    )
-    df["percent_transform_time"] = df["percent_transform_time"].replace([np.inf, -np.inf], np.nan)
-    df = df.dropna(subset=["percent_transform_time"])
-
-    agg_transform_share = aggregate_mean_std_by_solver(df, "percent_transform_time")
-
-    plot_solver_average_bars(
-        agg_transform_share, solvers_mwu, colors,
-        y_mean_col="mean", y_std_col="std",
-        ylabel="Percentage of transformation time [%]",
-        ylog=False,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "avg_transformation_time_share_by_solver",
-    )
-
-
-    plot_runtime_decomposition_grouped_csv(
-        df, solvers_mwu,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "runtime_decomposition_grouped_csv",
-    )
+    # ── Pass 2: Mendel-comparison plots (log y-axes + Mendel time plots) ─────
+    if solvers_mendel_cmp:
+        mendel_dir = OUT_DIR / "mendel"
+        print(f"[2/2] Generating Mendel-comparison plots → {mendel_dir}")
+        run_plots(df, solvers_mendel_cmp, colors, markers, linestyles, mendel_dir,
+                  ylog=True, mendel_mode=True)
+    else:
+        print("[2/2] No Mendel solvers found in data — skipping Mendel comparison plots.")
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
     print("✔ Unique solver colors (no repeats up to 20 solvers; HSV beyond)")
@@ -811,3 +1484,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

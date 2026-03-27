@@ -17,13 +17,13 @@ int main(int argc, char **argv) {
     readLGFFile(*G, cfg->filename,  true);
     G->finalize();
 
-    std::cout << "Graph loaded: " << G->getNumNodes() << " nodes, " << G->getNumEdges() << " edges.\n";
+    std::cout << "Graph loaded: " << G->getNumNodes() << " nodes, " << G->getNumUndirectedEdges() << " edges.\n";
     G->printGraphType();
 
     // Pre-compute demand maps and offline optimal congestions once — outside the solver loop.
-    std::unordered_map<std::string, DemandMap> demand_maps;
+    std::unordered_map<std::string, demands> demand_maps;
     std::unordered_map<std::string, double>    offline_opt_per_model;
-    HandleDemandModels(cfg, *G, [&](const std::string& model_name, const DemandMap& dmap) {
+    HandleDemandModels(cfg, *G, [&](const std::string& model_name, const demands& dmap) {
         demand_maps[model_name]         = dmap;
         offline_opt_per_model[model_name] = computeOfflineOptimalCongestion(*G, dmap);
     });
@@ -41,23 +41,15 @@ int main(int argc, char **argv) {
         double solve_time = duration(timeNow() - t0);
 
         //scheme->printRoutingTable();
+        if (scheme->isValid()) {
+            std::cout << "Routing scheme is valid.\n";
+        } else {
+            std::cout << "Routing scheme is invalid!\n";
+        }
         std::cout << "Total running time: " << solve_time << " micro seconds\n";
 
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
             mwu->printTimeStats();
-        }
-
-        double total_scales = 0;
-        if (auto tree_solver_flat = dynamic_cast<TreeMWU<FlatHST>*>(solver.get())) {
-            for (int& scales : tree_solver_flat->getScales()) {
-                total_scales += scales;
-            }
-            std::cout << "Average scales: " << total_scales/tree_solver_flat->getScales().size() << "\n";
-        }else if (auto tree_solver_pointer = dynamic_cast<TreeMWU<std::shared_ptr<HSTNode>>*>(solver.get())) {
-            for (int& scales : tree_solver_pointer->getScales()) {
-                total_scales += scales;
-            }
-            std::cout << "Average scales: " << total_scales/tree_solver_pointer->getScales().size() << "\n";
         }
 
         if (scheme) {
@@ -70,7 +62,7 @@ int main(int argc, char **argv) {
         if (cfg->demand_models.empty()) continue;
 
         for (const auto& [model_name, offline_cong] : offline_opt_per_model) {
-            const DemandMap& dmap = demand_maps.at(model_name);
+            const demands& dmap = demand_maps.at(model_name);
             double scheme_cong = computeRoutingSchemeCongestion(*G, scheme, dmap);
             printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
         }

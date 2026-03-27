@@ -14,7 +14,7 @@ public:
     DemandModel() = default;
     virtual ~DemandModel() = default;
     // Generate a gravity model demand matrix
-    virtual DemandMap generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) = 0;
+    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) = 0;
 };
 
 

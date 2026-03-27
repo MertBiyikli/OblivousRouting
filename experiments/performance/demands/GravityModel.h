@@ -14,8 +14,8 @@ public:
     bool debug = false;
     GravityModel() = default;
     // Generate a gravity model demand matrix
-    virtual DemandMap generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) {
-        DemandMap demand2flow;
+    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) {
+        demands demand2flow;
 
         std::unordered_set<int> nodes(g.getNumNodes());
         for(const auto& d : demands) {

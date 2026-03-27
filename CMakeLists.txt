@@ -7,7 +7,7 @@ project(ObliviousRouting
 # --- Options ---
 option(BUILD_TESTS "Build test targets" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -26,28 +26,72 @@ find_package(Eigen3 REQUIRED)
 
 # --- Target ---
 add_executable(oblivious_routing
-        src/tree_based/flat_hst.h)
+        app/main.cpp
 
-target_sources(oblivious_routing PRIVATE
-        main.cpp
-        src/utils/my_math.cpp
-        src/datastructures/GraphCSR.cpp
-        src/datastructures/GraphADJList.cpp
-        src/datastructures/GraphADJMatrix.cpp
-        src/tree_based/utils/ultrametric_tree.cpp
-        src/electrical/electrical.cpp
-        src/electrical/parallel/electrical_flow_par_batches.cpp
-        src/electrical/laplacian_solvers/AMGSolver.cpp
-        src/lp_solver/LPSolver.cpp
-        src/lp_solver/MCCF_lp_solver.cpp
+        include/core/routing_table.h
+        source/core/routing_table.cpp
+        include/core/routing_scheme.h
+        source/core/routing_scheme.cpp
+        include/io/graph_io.h
+        source/io/graph_io.cpp
+
+        include/data_structures/graph/Igraph.h
+        include/data_structures/graph/graph_adj.h
+        include/data_structures/graph/graph_csr.h
+        source/data_structures/graph/graph_adj.cpp
+        source/data_structures/graph/graph_csr.cpp
+        include/data_structures/mendel_scaling/quotient_graph.h
+        include/data_structures/mendel_scaling/ultrametric_tree.h
+        source/data_structures/mendel_scaling/quotient_graph.cpp
+        source/data_structures/mendel_scaling/ultrametric_tree.cpp
+        include/data_structures/hst/pointer_hst.h
+        include/data_structures/hst/flat_hst.h
+        source/data_structures/hst/pointer_hst.cpp
+        source/data_structures/hst/flat_hst.cpp
+
+        include/algorithms/mwu/electrical_mwu.h
+        source/algorithms/mwu/electrical_mwu.cpp
+        include/algorithms/mwu/tree_mwu.h
+        source/algorithms/mwu/tree_mwu.cpp
+        include/algorithms/mwu/oracle/electrical/laplacian_solver.h
+        source/algorithms/mwu/oracle/electrical/laplacian_solver.cpp
+        include/algorithms/mwu/oracle/electrical/graph_to_laplacian.h
+        source/algorithms/mwu/oracle/electrical/graph_to_laplacian.cpp
+
+        include/algorithms/mwu/oracle/tree/tree_transform.h
+        include/algorithms/mwu/oracle/tree/tree_oracle.h
+        include/algorithms/mwu/oracle/tree/mst/mst_oracle.h
+        include/algorithms/mwu/oracle/tree/mst/mst_algo.h
+        source/algorithms/mwu/oracle/tree/mst/mst_algo.cpp
+        include/algorithms/mwu/oracle/tree/frt/frt.h
+        include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h
+        include/algorithms/lp/lp_base.h
+        include/algorithms/lp/lp_ac.h
+        include/algorithms/lp/lp_mcf.h
+        source/algorithms/lp/lp_base.cpp
+        source/algorithms/lp/lp_ac.cpp
+        source/algorithms/lp/lp_mcf.cpp
+
+
+        include/utils/time_tracking.h
+        include/utils/demands.h
+        source/utils/demands.cpp
+        include/utils/hash.h
+        include/data_structures/union_find/union_find.h
+        source/data_structures/union_find/union_find.cpp
+        include/io/solver_io.h
+        include/io/parse_argurment_io.h
+        include/io/demand_io.h
 )
+
+
 target_include_directories(oblivious_routing BEFORE PRIVATE
         "$ENV{HOME}/local/protobuf-6.31.1/include"
 )
 
 target_include_directories(oblivious_routing
         PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/source
         ${CMAKE_SOURCE_DIR}/experiments
         ${CMAKE_SOURCE_DIR}/extern/amgcl
 )

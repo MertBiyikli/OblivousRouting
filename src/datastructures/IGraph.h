@@ -133,7 +133,7 @@ public:
         return n;
     }
 
-    virtual int getNumEdges() const {
+    virtual int getNumUndirectedEdges() const {
         return m;
     }
 
@@ -141,7 +141,7 @@ public:
         return vertices;
     }
 
-    virtual void resetEdgeWeights() {
+    virtual void resetEdgeDistance() {
         for (int v = 0; v < n; ++v) {
             for (size_t i = 0; i < neighbors(v).size(); ++i) {
                 updateEdgeDistance(v, neighbors(v)[i], 1.0);

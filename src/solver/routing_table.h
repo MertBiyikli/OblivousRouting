@@ -41,7 +41,7 @@ struct AllPairRoutingTable :public RoutingTable{
     std::vector<int> anti_edge; // anti_edge[e] = id of the anti-edge of e
 
     void init(const IGraph& g) override {
-        const int numEdges = g.getNumEdges();
+        const int numEdges = g.getNumDirectedEdges();
         n = g.getNumNodes();
         adj_ids.assign(numEdges, {});
         adj_vals.assign(numEdges, {});
@@ -241,7 +241,7 @@ struct AllPairRoutingTable :public RoutingTable{
                 if (s >= t) continue;
 
                 std::cout << "Flows for commodity " << s << " -> " << t << ":\n";
-                for (int e = 0; e < g.getNumEdges(); ++e) {
+                for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
                     double flow = getFlow(e, s, t);
                     if (std::abs(flow) > EPS) {
                         auto [u, v] = g.edgeEndpoints(e);
@@ -261,7 +261,7 @@ struct LinearRoutingTable : public RoutingTable {
     std::vector<std::vector<double>> src_flows; // src_flows[e] = [f_e(s1,x), f_e(s2,x), ...]
 
     void init(const IGraph& g) override {
-        const int numEdges = g.getNumEdges();
+        const int numEdges = g.getNumDirectedEdges();
         n = g.getNumNodes();
         src_ids.assign(numEdges, {});
         src_flows.assign(numEdges, {});
@@ -379,7 +379,7 @@ struct LinearRoutingTable : public RoutingTable {
     void printFlows(const IGraph& g) const override {
         for (int s = 0; s < n; ++s) {
             std::cout << "Flows for source " << s << ":\n";
-            for (int e = 0; e < g.getNumEdges(); ++e) {
+            for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
                 double flow = getFlow(e, s);
                 if (std::abs(flow) > EPS) {
                     auto [u, v] = g.edgeEndpoints(e);
@@ -405,7 +405,7 @@ public:
     RoutingScheme(const RoutingScheme&) = delete;
     RoutingScheme& operator=(const RoutingScheme&) = delete;
 
-    virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const = 0;
+    virtual void routeDemands(std::vector<double>& congestion, const demands& demands) const = 0;
 
     virtual double getMaxCongestion(const std::vector<double>& congestion) const {
         double max_cong = 0.0;
@@ -419,6 +419,9 @@ public:
 
     virtual double _getFlow(int e, int s, int t) const = 0;
     virtual void printRoutingTable() const = 0;
+    bool isValid() {
+        return table.isValid(g);
+    }
 };
 
 
@@ -433,8 +436,8 @@ public:
     double computeObliviousRatio() {
         // for the liner routing scheme, we can compute the oblivious ratio, by pushing for each
         // edge the capacity of along the edge points
-        const int m = g.getNumEdges();
-        DemandMap worst_case_demands;
+        const int m = g.getNumDirectedEdges();
+        demands worst_case_demands;
         double max_ratio = 0.0;
         for (int e = 0; e < m; ++e) {
             auto [u, v] = g.edgeEndpoints(e);
@@ -503,11 +506,11 @@ public:
     }
 
     void routeDemands(std::vector<double>& congestion,
-                      const DemandMap& demands) const override
+                      const demands& demands) const override
     {
 
 
-        const int m = g.getNumEdges(); // undirected edges
+        const int m = g.getNumDirectedEdges(); // undirected edges
         std::vector<double> total_flow;
         total_flow.resize(m, 0.0);
 
@@ -570,8 +573,8 @@ public:
         routing_table.addFlow(e, s,t, flow_sx);
     }
 
-    virtual void routeDemands(std::vector<double>& congestion, const DemandMap& demands) const override {
-        const int m = g.getNumEdges(); // undirected edges
+    virtual void routeDemands(std::vector<double>& congestion, const demands& demands) const override {
+        const int m = g.getNumDirectedEdges(); // undirected edges
         std::vector<double> total_flow;
         total_flow.resize(m, 0.0);
 

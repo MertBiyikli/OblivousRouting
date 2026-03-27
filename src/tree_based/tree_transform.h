@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <queue>
 #include <cassert>
+#include <set>
 
 // ---------------------------------------------------------------------------
 // TreeIteration<T>  —  works for T = std::shared_ptr<HSTNode>  or  T = FlatHST
@@ -119,8 +120,6 @@ private:
                 q.push(child);
             }
         }
-        //removeCyclesUsingTarjanSCCAlgorithm(table);
-        removeCyclesLinear(table);
     }
 
     // ------------------------------------------------------------------
@@ -155,8 +154,6 @@ private:
                 q.push(child_idx);
             }
         }
-        //removeCyclesUsingTarjanSCCAlgorithm(table);
-        removeCyclesLinear(table);
     }
 public:
     void removeCyclesLinear(LinearRoutingTable& linearTable) {
@@ -168,10 +165,23 @@ public:
             }
         }
 
+        bool flowGraphIsAcyclic = true;
+
         for (int s : all_sources) {
             while (true) {
                 auto cycle = findCycleLinear(s, linearTable);
+                if (cycle.empty()) {
+                    flowGraphIsAcyclic &= true;
+                }else {
+                    flowGraphIsAcyclic = false;
+                }
                 if (cycle.empty()) break;
+
+                std::cout << "Found cycle with source s: " << s << std::endl;
+                for (auto & [u, v] : cycle) {
+                    std::cout << "( " << u << " , " << v << ") ";
+                }
+                std::cout << std::endl;
 
                 // find the minimum flow along the cycle for source s
                 double minF = std::numeric_limits<double>::infinity();
@@ -204,6 +214,9 @@ public:
                     }
                 }
             }
+        }
+        if (flowGraphIsAcyclic) {
+            std::cout << "The flow graph is already acyclic. No cycles were found." << std::endl;
         }
     }
 

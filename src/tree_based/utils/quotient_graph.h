@@ -29,7 +29,7 @@ namespace MendelScaling {
             assert(G.getNumNodes() > 0);
             original_n = G.getNumNodes();
             weights.clear();
-            weights.reserve(G.getNumEdges());
+            weights.reserve(G.getNumUndirectedEdges());
             for (int u = 0; u < original_n; ++u) {
                 for (auto& v : G.neighbors(u)) {
                     if (u < v) {
@@ -43,11 +43,6 @@ namespace MendelScaling {
 
             std::sort(weights.begin(), weights.end(),
                       [](auto& a, auto& b){ return a.second < b.second; });
-        }
-
-        void reset() {
-            original_n = 0;
-            weights.clear();
         }
 
 

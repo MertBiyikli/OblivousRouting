@@ -19,7 +19,7 @@ struct GraphToLaplacian {
 
     void init(IGraph& graph) {
         int n = graph.getNumNodes();
-        int m = graph.getNumEdges();
+        int m = graph.getNumDirectedEdges();
 
         to.resize(m);
         from.resize(m);
@@ -29,8 +29,8 @@ struct GraphToLaplacian {
         laplacian_indices_for_diagonal_elements.resize(n);
 
         for (int e = 0; e < m; e++) {
-            from[e] = graph.edgeEndpoints(e).first;
-            to[e]   = graph.edgeEndpoints(e).second;
+            from[e] = graph.getEdgeEndpoints(e).first;
+            to[e]   = graph.getEdgeEndpoints(e).second;
         }
 
         int curr = 0;

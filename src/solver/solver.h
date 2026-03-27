@@ -9,7 +9,6 @@
 #include <memory>
 
 
-
 class ObliviousRoutingSolver {
 public:
     virtual ~ObliviousRoutingSolver() = default;
@@ -29,9 +28,8 @@ public:
 
         // solver must fill table via computeBasisFlows
         computeBasisFlows(table);
-        graph.resetEdgeWeights();
+        graph.resetEdgeDistance();
 
-        // assert(table.isValid(graph));
         return std::make_unique<LinearRoutingScheme>(
             graph,
             root,
@@ -57,7 +55,7 @@ public:
 
         computeBasisFlows(table);
 
-        graph.resetEdgeWeights();
+        graph.resetEdgeDistance();
 
         return std::make_unique<AllPairRoutingScheme>(
             graph,

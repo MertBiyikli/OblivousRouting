@@ -81,4 +81,3 @@ To perform a quick smoke test, you can run the following command:
 
 ##### Contributors (sorted alphabetically by last name):
 - Mert Biyikli (maintainer)
-- Gramoz Goranci

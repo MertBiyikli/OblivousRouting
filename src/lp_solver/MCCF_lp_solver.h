@@ -32,7 +32,7 @@ public:
     virtual void SetObjective() override;
     void PrintSolution(const IGraph& graph) override;
 
-    void AddDemandMap(const DemandMap& d_map);
+    void AddDemandMap(const demands& d_map);
     void AddDemands(const Demand& d, double value);
     virtual void storeFlow(AllPairRoutingTable& table) override;
 

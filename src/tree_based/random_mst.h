@@ -14,7 +14,7 @@ public:
     explicit TreeMST(IGraph& g) : TreeOracle<T>(g) {}
 
     // Override getTree: bypass the level-partition path entirely and
-    // build the MST-based Räcke tree directly, dispatching on T.
+    // build the MST-based decomposition tree directly, dispatching on T.
     T getTree(std::vector<double>& distances) override {
         this->updateDistances(distances);
         RandomMST mst_algo(this->graph);

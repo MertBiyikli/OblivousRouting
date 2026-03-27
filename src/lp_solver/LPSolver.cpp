@@ -397,7 +397,7 @@ void LPSolver::storeFlow(AllPairRoutingTable& table) {
     }
 }
 
-double LPSolver::getCongestion(DemandMap& _demands, IGraph& g) const{
+double LPSolver::getCongestion(demands& _demands, IGraph& g) const{
     // compute for the given demands and the stored flow values in f_st_e the generated congestion
     double max_cong = 0.0;
 

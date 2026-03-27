@@ -108,7 +108,7 @@ public:
 
 
 
-
+/*
     // Turn MST edges into a rooted MSTTree (root at 0 by default)
     MSTTree buildMSTTree(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
@@ -137,10 +137,10 @@ public:
         MSTTree t = {root, parent, children};
         return t;
     }
-
+*/
     std::shared_ptr<HSTNode> buildHST(const std::vector<std::pair<int,int>>& mst_edges,
                               int root=0) {
-        auto mst_tree = buildMSTTree(mst_edges, root);
+        //auto mst_tree = buildMSTTree(mst_edges, root);
         std::vector<std::shared_ptr<HSTNode>> cluster(n);
         for (int v = 0; v < n; ++v) {
             cluster[v] = std::make_shared<HSTNode>(v);
@@ -181,7 +181,6 @@ public:
         assert(cluster[dsu.find(root)]->children.size() > 0);
         return cluster[rep];
     }
-
 
 };
 

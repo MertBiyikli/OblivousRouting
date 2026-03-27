@@ -27,21 +27,32 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     std::vector<double> current_distances;
     std::vector<double> mendel_scaling_times;
     std::vector<int> scales;
+    double cycleCancellation_time;
 
 public:
     TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
         : LinearObliviousSolverBase(g, root)
         , oracle(std::move(_oracle))
         , transform(graph) {
-        current_distances.assign(graph.getNumEdges(), 1.0);
-        rload_current.assign(graph.getNumEdges(), 0.0);
-        rload_total.assign(graph.getNumEdges(), 0.0);
+        current_distances.assign(graph.getNumDirectedEdges(), 1.0);
+        rload_current.assign(graph.getNumDirectedEdges(), 0.0);
+        rload_total.assign(graph.getNumDirectedEdges(), 0.0);
         lambda_sum = 0.0;
+        cycleCancellation_time = 0.0;
     }
 
     void computeBasisFlows(LinearRoutingTable& table) override {
         table.init(graph);
         run(table);
+    }
+
+    void printAdditionalStats() override {
+        double sum_of_scales = 0.0;
+        for (int scales : scales) {
+            sum_of_scales += scales;
+        }
+        std::cout << "Average scales: " << sum_of_scales/scales.size() << "\n";
+        std::cout << "Cycle cancellation time: " << this->getCycleCancellationTime() << " micro seconds\n";
         if (oracle->applyMendelScaling) {
             double total = 0.0;
             for (auto t : mendel_scaling_times) total += t;
@@ -57,11 +68,14 @@ public:
             lambda_sum += treeOracle(table);
             iteration_count++;
         }
+        auto t0 = timeNow();
+        transform.removeCyclesUsingTarjanSCCAlgorithm(table);
+        transform.removeCyclesLinear(table);
+        cycleCancellation_time += duration(timeNow() - t0);
     }
 
     double treeOracle(LinearRoutingTable& table) {
         auto t0 = timeNow();
-
 
         HSTDatastructures t = oracle->getTree(current_distances);
         scales.push_back(oracle->scales.empty() ? 0.0 : oracle->scales.size());
@@ -136,9 +150,8 @@ public:
                 const HSTNode* child = child_ptr.get();
                 q.push(child);
 
-                if (node->getMembers().size() == child->getMembers().size()) continue;
+                if (node->getMembers().size() == child->getMembers().size() || child->getMembers().empty()) continue;
                 const std::vector<int>& clusterVertices = child->getMembers();
-                if (clusterVertices.empty()) continue;
 
                 std::vector<char> S(graph.getNumNodes(), 0);
                 for (int v : clusterVertices) S[v] = 1;
@@ -179,7 +192,7 @@ public:
     }
 
     void addCurrentLoad(double lambda) {
-        for (int e = 0; e < graph.getNumEdges(); ++e) {
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             rload_total[e] += rload_current[e] * lambda;
         }
     }
@@ -197,7 +210,7 @@ public:
         std::vector<double> newDist;
         newDist.reserve(rload_total.size());
 
-        for (int e = 0; e < graph.getNumEdges(); ++e) {
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             double r = rload_total[e];
 
             double cap = graph.getEdgeCapacity(e);
@@ -208,17 +221,28 @@ public:
         }
         if (min_d < EPS) min_d = EPS;
 
-        for (int e = 0; e < graph.getNumEdges(); ++e) {
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             double d = newDist[e];
             double norm = d / min_d;
             if (norm < 1.0) norm = 1.0;
-            graph.updateEdgeDistance(e, norm);
             current_distances[e] = norm;
+        }
+
+        updateDistances(current_distances);
+    }
+
+    void updateDistances(std::vector<double> &distances) override {
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+            graph.updateEdgeDistance(e, distances[e]);
         }
     }
 
     std::vector<int> getScales() const {
         return scales;
+    }
+
+    double getCycleCancellationTime() const {
+        return cycleCancellation_time;
     }
 };
 

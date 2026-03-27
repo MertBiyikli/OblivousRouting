@@ -122,7 +122,6 @@ makeSolver(SolverType type, IGraph& g) {
         case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
             return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g, true));
 
-
         default:
             throw std::runtime_error("Unknown solver type.");
     }
@@ -392,7 +391,7 @@ inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
 // Calls callback(model_name, demand_map) once per demand model in cfg->demand_models.
 inline void HandleDemandModels(const std::optional<Config>& cfg,
                                IGraph& g,
-                               std::function<void(const std::string&, const DemandMap&)> callback)
+                               std::function<void(const std::string&, const demands&)> callback)
 {
     if (!cfg || cfg->demand_models.empty()) return;
 
@@ -404,7 +403,7 @@ inline void HandleDemandModels(const std::optional<Config>& cfg,
 
     for (DemandModelType type : cfg->demand_models) {
         auto model      = makeDemandModel(type);
-        DemandMap dmap  = model->generate(g, demands);
+        demands dmap  = model->generate(g, demands);
         callback(demandModelName(type), dmap);
     }
 }
@@ -415,7 +414,7 @@ inline void HandleDemandModel(int /*argc*/,
                               char** /*argv*/,
                               const std::optional<Config>& cfg,
                               IGraph& g,
-                              DemandMap& demand_map)
+                              demands& demand_map)
 {
     if (!cfg || cfg->demand_models.empty()) return;
 
@@ -443,8 +442,8 @@ inline void printStatsForDemandModel(const std::string& model_name,
 
 inline double computeRoutingSchemeCongestion(IGraph& _g,
                                              const std::unique_ptr<RoutingScheme>& routing_scheme,
-                                             const DemandMap& demand_map) {
-    std::vector<double> congestion_per_edge(_g.getNumEdges(), 0.0);
+                                             const demands& demand_map) {
+    std::vector<double> congestion_per_edge(_g.getNumDirectedEdges(), 0.0);
     routing_scheme->routeDemands(congestion_per_edge, demand_map);
     double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
     for (const auto& cong : congestion_per_edge)
@@ -452,7 +451,7 @@ inline double computeRoutingSchemeCongestion(IGraph& _g,
     return max_cong;
 }
 
-inline double computeOfflineOptimalCongestion(IGraph& _g, const DemandMap& demand_map) {
+inline double computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
     CMMF_Solver mccf(_g);
     mccf.init(_g);
     mccf.AddDemandMap(demand_map);

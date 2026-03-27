@@ -52,7 +52,7 @@ protected:
 public:
 
     ElectricalMWU(IGraph& g, int root, bool debug = false)
-    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumEdges()/2) {
+    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumUndirectedEdges()) {
         this->debug = debug;
     }
 
@@ -65,12 +65,16 @@ public:
         this->solve_time = duration(timeNow() - start_run) - transformation_time;
     }
 
+    void printAdditionalStats() override {
+        //nothing here..
+    }
+
     virtual void run(LinearRoutingTable &table);
     virtual void scaleFlowDown(LinearRoutingTable &table);
     virtual void getApproxLoad(std::vector<double>& load);
     virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
     virtual void initAMGSolver(boost::property_tree::ptree _params);
-    virtual void updateEdgeDistances(const std::vector<double>& load);
+    virtual void updateEdgeDistances(const std::vector<double>& load) override;
 
 
 
