@@ -8,7 +8,7 @@
 #include "../data_structures/graph/Igraph.h"
 #include "../data_structures/graph/graph_csr.h"
 #include "../data_structures/graph/graph_adj.h"
-
+#include <memory>
 
 enum class GraphFormat {
     CSR,

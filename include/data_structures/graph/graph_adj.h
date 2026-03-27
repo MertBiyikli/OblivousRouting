@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_GRAPH_ADJ_H
 
 #include "Igraph.h"
+#include <string>
 
 class GraphADJList : public IGraph {
 public:
