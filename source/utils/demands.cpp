@@ -3,6 +3,7 @@
 #include <cassert>
 #include <random>
 #include <unordered_set>
+#include <stdexcept>
 
 void demands::addDemand(int s, int t, double demand) {
     assert(demand_values.size() == source.size() && demand_values.size() == target.size());
