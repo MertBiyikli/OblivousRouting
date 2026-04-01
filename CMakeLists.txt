@@ -82,6 +82,8 @@ add_executable(oblivious_routing
         include/io/solver_io.h
         include/io/parse_argurment_io.h
         include/io/demand_io.h
+        source/data_structures/hst/flat_hst.cpp
+        source/data_structures/hst/pointer_hst.cpp
 )
 
 
