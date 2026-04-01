@@ -237,3 +237,18 @@ int calculateFlatHSTHeight(const FlatHST& hst) {
 
     return maxHeight;
 }
+
+void print(const FlatHST& hst) {
+    for (int i = 0; i < hst.numNodes(); ++i) {
+        const auto& n = hst.nodes[i];
+        printf("Node %d: center=%d, members=[", i, n.center);
+        for (int j = n.members_begin; j < n.members_end; ++j) {
+            printf("%d ", hst.members[j]);
+        }
+        printf("], children=[");
+        for (int j = n.children_begin; j < n.children_end; ++j) {
+            printf("%d ", hst.children_idx[j]);
+        }
+        printf("]\n");
+    }
+}

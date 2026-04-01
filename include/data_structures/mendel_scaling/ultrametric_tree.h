@@ -23,7 +23,7 @@ struct UltraMetricNode {
  *
  * Importantly, note that in the original paper, they introduce a factor (n-1) to multiply the weights with
  * to ensure the ultrametric property holds. However, in our implementation, we can directly use the original weights
- * since in the original paper they first approximate the graph by a spanner which introduce the additional (n-1) approximation factor.
+ * since in the paper they first approximate the graph by a spanner which introduce the additional (n-1) approximation factor.
  */
 class UltrametricTree {
     public:

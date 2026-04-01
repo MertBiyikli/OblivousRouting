@@ -20,7 +20,8 @@
 #include <map>
 
 enum class SolverType {
-    ELECTRICAL,
+    ELECTRICAL_NAIVE,
+    ELECTRICAL_SKETCHING,
     RAECKE_FRT_FLAT,
     RAECKE_CKR_FLAT,
     RAECKE_RANDOM_MST_FLAT,
@@ -37,26 +38,28 @@ enum class SolverType {
 
 // Map-based token parsers for reduced code duplication
 static const std::map<std::string, SolverType> SOLVER_MAP{
-    {"electrical", SolverType::ELECTRICAL}, {"elec", SolverType::ELECTRICAL},
-    {"ef", SolverType::ELECTRICAL}, {"e", SolverType::ELECTRICAL}, {"0", SolverType::ELECTRICAL},
+    {"electrical_naive", SolverType::ELECTRICAL_NAIVE}, {"elec", SolverType::ELECTRICAL_NAIVE},
+    {"ef", SolverType::ELECTRICAL_NAIVE}, {"e", SolverType::ELECTRICAL_NAIVE}, {"0", SolverType::ELECTRICAL_NAIVE},
+    {"electrical_sketching", SolverType::ELECTRICAL_SKETCHING}, {"elec_sketching", SolverType::ELECTRICAL_SKETCHING},
+    {"ef_sketching", SolverType::ELECTRICAL_SKETCHING}, {"e_sketching", SolverType::ELECTRICAL_SKETCHING}, {"1", SolverType::ELECTRICAL_SKETCHING},
     {"raecke_frt", SolverType::RAECKE_FRT_FLAT}, {"frt", SolverType::RAECKE_FRT_FLAT},
-    {"f", SolverType::RAECKE_FRT_FLAT}, {"1", SolverType::RAECKE_FRT_FLAT},
+    {"f", SolverType::RAECKE_FRT_FLAT}, {"2", SolverType::RAECKE_FRT_FLAT},
     {"raecke_ckr", SolverType::RAECKE_CKR_FLAT}, {"ckr", SolverType::RAECKE_CKR_FLAT},
-    {"c", SolverType::RAECKE_CKR_FLAT}, {"2", SolverType::RAECKE_CKR_FLAT},
+    {"c", SolverType::RAECKE_CKR_FLAT}, {"3", SolverType::RAECKE_CKR_FLAT},
     {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_mst", SolverType::RAECKE_RANDOM_MST_FLAT},
-    {"rmst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"3", SolverType::RAECKE_RANDOM_MST_FLAT},
+    {"rmst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"4", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"cohen", SolverType::LP_APPLEGATE_COHEN}, {"lp", SolverType::LP_APPLEGATE_COHEN},
-    {"applegate", SolverType::LP_APPLEGATE_COHEN}, {"ac", SolverType::LP_APPLEGATE_COHEN}, {"l", SolverType::LP_APPLEGATE_COHEN}, {"4", SolverType::LP_APPLEGATE_COHEN},
+    {"applegate", SolverType::LP_APPLEGATE_COHEN}, {"ac", SolverType::LP_APPLEGATE_COHEN}, {"l", SolverType::LP_APPLEGATE_COHEN}, {"5", SolverType::LP_APPLEGATE_COHEN},
     {"electrical_parallel", SolverType::ELECTRICAL_PARALLEL_BATCHES}, {"elec_par", SolverType::ELECTRICAL_PARALLEL_BATCHES},
-    {"e_par", SolverType::ELECTRICAL_PARALLEL_BATCHES}, {"5", SolverType::ELECTRICAL_PARALLEL_BATCHES},
-    {"raecke_frt_mendel", SolverType::RAECKE_FRT_MENDELSCALING_FLAT}, {"frt_mendel", SolverType::RAECKE_FRT_MENDELSCALING_FLAT}, {"6", SolverType::RAECKE_FRT_MENDELSCALING_FLAT},
-    {"raecke_ckr_mendel", SolverType::RAECKE_CKR_MENDELSCALING_FLAT}, {"ckr_mendel", SolverType::RAECKE_CKR_MENDELSCALING_FLAT}, {"7", SolverType::RAECKE_CKR_MENDELSCALING_FLAT},
-    {"raecke_frt_pointer", SolverType::RAECKE_FRT_POINTER}, {"frt_pointer", SolverType::RAECKE_FRT_POINTER}, {"8", SolverType::RAECKE_FRT_POINTER},
-    {"raecke_ckr_pointer", SolverType::RAECKE_CKR_POINTER}, {"ckr_pointer", SolverType::RAECKE_CKR_POINTER}, {"9", SolverType::RAECKE_CKR_POINTER},
+    {"e_par", SolverType::ELECTRICAL_PARALLEL_BATCHES}, {"6", SolverType::ELECTRICAL_PARALLEL_BATCHES},
+    {"raecke_frt_mendel", SolverType::RAECKE_FRT_MENDELSCALING_FLAT}, {"frt_mendel", SolverType::RAECKE_FRT_MENDELSCALING_FLAT}, {"7", SolverType::RAECKE_FRT_MENDELSCALING_FLAT},
+    {"raecke_ckr_mendel", SolverType::RAECKE_CKR_MENDELSCALING_FLAT}, {"ckr_mendel", SolverType::RAECKE_CKR_MENDELSCALING_FLAT}, {"8", SolverType::RAECKE_CKR_MENDELSCALING_FLAT},
+    {"raecke_frt_pointer", SolverType::RAECKE_FRT_POINTER}, {"frt_pointer", SolverType::RAECKE_FRT_POINTER}, {"9", SolverType::RAECKE_FRT_POINTER},
+    {"raecke_ckr_pointer", SolverType::RAECKE_CKR_POINTER}, {"ckr_pointer", SolverType::RAECKE_CKR_POINTER}, {"10", SolverType::RAECKE_CKR_POINTER},
     {"raecke_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"random_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER},
-    {"rmst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"10", SolverType::RAECKE_RANDOM_MST_POINTER},
-    {"raecke_frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"11", SolverType::RAECKE_FRT_MENDELSCALING_POINTER},
-    {"raecke_ckr_mendel_pointer", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}, {"ckr_mendel_pointer", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}, {"12", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}
+    {"rmst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"11", SolverType::RAECKE_RANDOM_MST_POINTER},
+    {"raecke_frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"12", SolverType::RAECKE_FRT_MENDELSCALING_POINTER},
+    {"raecke_ckr_mendel_pointer", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}, {"ckr_mendel_pointer", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}, {"13", SolverType::RAECKE_CKR_MENDELSCALING_POINTER}
 };
 
 
@@ -64,8 +67,11 @@ inline std::optional<std::unique_ptr<ObliviousRoutingSolver>>
 makeSolver(SolverType type, IGraph& g, CycleRemovalStrategy cycle_strategy = CycleRemovalStrategy::NAIVE) {
     // Factory with cycle removal strategy support for TreeMWU-based solvers
     switch (type) {
-        case SolverType::ELECTRICAL:
-            return std::make_unique<ElectricalMWU>(g, 0);
+        case SolverType::ELECTRICAL_NAIVE:
+            return std::make_unique<ElectricalMWU>(g, 0, false);
+
+            case SolverType::ELECTRICAL_SKETCHING:
+            return std::make_unique<ElectricalMWU>(g, 0, true);
 
         case SolverType::RAECKE_FRT_FLAT:
             return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<FRT<FlatHST>>(g, false), cycle_strategy);

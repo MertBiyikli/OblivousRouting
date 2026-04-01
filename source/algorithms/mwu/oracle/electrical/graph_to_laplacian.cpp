@@ -3,6 +3,7 @@
 //
 #include "../../../../../include/algorithms/mwu/oracle/electrical/graph_to_laplacian.h"
 #include <cassert>
+#include <stdexcept>
 
 void GraphToLaplacian::init(const IGraph& graph) {
     int n = graph.getNumNodes();

@@ -101,5 +101,6 @@ private:
 };
 
 int calculateFlatHSTHeight(const FlatHST& hst);
+void print(const FlatHST& hst);
 
 #endif //OBLIVIOUSROUTING_FLAT_HST_H

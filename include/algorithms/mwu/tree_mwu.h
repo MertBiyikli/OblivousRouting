@@ -110,6 +110,8 @@ public:
         auto t0 = timeNow();
 
         HSTDatastructures t = oracle->getTree(current_distances);
+        double oracle_time = duration(timeNow() - t0);
+        this->oracle_running_times.push_back(oracle_time);
 
         int height = 0;
         if constexpr (std::is_same_v<HSTDatastructures, std::shared_ptr<HSTNode>>) {
@@ -117,23 +119,23 @@ public:
         } else {
             height = calculateFlatHSTHeight(t);
         }
-        double oracle_time = duration(timeNow() - t0);
-        this->oracle_running_times.push_back(oracle_time);
 
         tree_heights.push_back(height);
         scales.push_back(oracle->scales.empty() ? 0.0 : oracle->scales.size());
 
         t0 = timeNow();
         computeRLoads(t);
-
         double l = getMaxRload();
+        this->load_computation_time += duration(timeNow() - t0);
+
+        t0 = timeNow();
         double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
         computeNewDistances(lambda);
-        double compute_time = duration(timeNow() - t0);
-        this->mwu_weight_update_time = compute_time;
+        double weight_update_time = duration(timeNow() - t0);
+        this->mwu_weight_update_time += weight_update_time;
 
         // solve_time = oracle_time + compute time (computeRLoads + computeNewDistances)
-        solve_time += oracle_time + compute_time;
+        solve_time += oracle_time;
 
         t0 = timeNow();
 
@@ -292,63 +294,6 @@ public:
 
     double getCycleCancellationTime() const {
         return cycleCancellation_time;
-    }
-
-    // Helper function to calculate height of pointer HST
-    int calculatePointerHSTHeight(const std::shared_ptr<HSTNode>& node) {
-        if (!node) return 0;
-        if (node->children.empty()) return 1;
-        int maxChildHeight = 0;
-        for (const auto& child : node->children) {
-            maxChildHeight = std::max(maxChildHeight, calculatePointerHSTHeight(child));
-        }
-        return 1 + maxChildHeight;
-    }
-
-    // Helper function to calculate height of flat HST
-    int calculateFlatHSTHeight(const FlatHST& hst) {
-        if (hst.nodes.empty()) return 0;
-
-        // Start from the root and traverse the tree structure
-        int maxHeight = 0;
-        std::vector<int> stack;
-        stack.push_back(hst.root());
-
-        std::unordered_map<int, int> heights;
-
-        // Post-order traversal to calculate heights
-        std::vector<bool> visited(hst.nodes.size(), false);
-        std::vector<int> path;
-
-        while (!stack.empty()) {
-            int idx = stack.back();
-
-            if (visited[idx]) {
-                path.pop_back();
-                stack.pop_back();
-
-                int h = 1;
-                auto range = hst.children(idx);
-                for (auto it = range.begin(); it != range.end(); ++it) {
-                    int child_idx = *it;
-                    h = std::max(h, 1 + heights[child_idx]);
-                }
-                heights[idx] = h;
-                maxHeight = std::max(maxHeight, h);
-            } else {
-                visited[idx] = true;
-                path.push_back(idx);
-                auto range = hst.children(idx);
-                for (auto it = range.begin(); it != range.end(); ++it) {
-                    int child_idx = *it;
-                    if (!visited[child_idx]) {
-                        stack.push_back(child_idx);
-                    }
-                }
-            }
-        }
-
-        return maxHeight;
     }
 };
 

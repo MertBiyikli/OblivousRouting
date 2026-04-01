@@ -35,6 +35,7 @@ protected:
     bool debug = false;
     int x_fixed = 0; // fixed node
 
+    bool use_sketching;
 
     std::vector<std::pair<int, int> > edges; // u<v only
     std::vector<double> edge_weights;             // w_e
@@ -45,13 +46,14 @@ protected:
 
     // Preallocate as class members to avoid reallocs
     Eigen::SparseMatrix<double> X;          // n × ℓ precomputed RHS
-    Eigen::MatrixXd SketchMatrix, SketchMatrix_t; // sketch matrix transposed
+    Eigen::MatrixXd SketchMatrix_t; // sketch matrix transposed
 
 public:
 
-    ElectricalMWU(IGraph& g, int root, bool debug = false)
+    ElectricalMWU(IGraph& g, int root, bool use_sketching, bool debug = false)
     : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumUndirectedEdges()) {
         this->debug = debug;
+        this->use_sketching = use_sketching;
     }
 
     // entry point
@@ -70,6 +72,7 @@ public:
     virtual void run(LinearRoutingTable &table);
     virtual void scaleFlowDown(LinearRoutingTable &table);
     virtual void getApproxLoad(std::vector<double>& load);
+    void getExactLoad(std::vector<double>& load);
     virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
     virtual void initAMGSolver(boost::property_tree::ptree _params);
 
@@ -79,7 +82,7 @@ public:
     void extractEdges();
     void initEdgeDistances();
     Eigen::SparseMatrix<double> buildIncidence();
-    Eigen::MatrixXd getSketchMatrix(int m, int n, double epsilon = 0.5);
+    Eigen::MatrixXd getSketchMatrix(double epsilon = 0.5);
     void addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table);
 };
 

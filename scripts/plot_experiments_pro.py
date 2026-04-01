@@ -15,8 +15,8 @@ import matplotlib.ticker as mticker
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results_latest/real_world/small.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/real_world/small/")
+RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/results_combined.csv")
+OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/Rocketfuel_Naive/")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 ORACLE_TIME_COL = "avg_oracle_time_micro_seconds"
@@ -172,7 +172,11 @@ def aggregate_mean_std(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
 # ======================
 
 def pretty_solver_name(s: str) -> str:
-    # Keep this conservative; adjust to your naming if you want
+    # If it already has a nice format with parentheses, return as-is
+    if "(" in s and ")" in s:
+        return s
+
+    # Otherwise, apply the old mapping for legacy format
     mapping = {
         "electrical": "Electrical Flow",
         "electrical_parallel": "Electrical Flow (parallel)",
@@ -198,28 +202,35 @@ def solver_sort_key(s: str) -> tuple:
     """
     Global solver order used across *all* plots for consistency.
     electrical → CKR → CKR (Mendel) → FRT → FRT (Mendel) → MST → ... → LP (always last)
+    Handles both old format (electrical) and new format with variants (Electrical Flow (naive))
     """
-    order = {
-        "electrical":          0,
-        "electrical_parallel": 1,
-        "raecke_ckr":          2,
-        "ckr":                 2,
-        "raecke_ckr_mendel":   3,
-        "ckr_mendel":          3,
-        "raecke_frt":          4,
-        "frt":                 4,
-        "raecke_frt_mendel":   5,
-        "frt_mendel":          5,
-        "raecke_mst":          6,
-        "raecke_random_mst":   6,
-        "random_mst":          6,
-        "mst":                 6,
-        "raecke_mst_mendel":   6,
-        # LP variants always last
-        "cohen":               99,
-        "lp":                  99,
-    }
-    return (order.get(s, 90), s)
+    # Normalize solver name - extract base name if it has variants in parentheses
+    base_s = s.split("(")[0].strip().lower().replace(" ", "_")
+
+    # Handle new format names
+    if "electrical" in base_s:
+        if "parallel" in s.lower():
+            order_val = 1
+        else:
+            order_val = 0  # Both naive and sketching go first
+    elif "ckr" in base_s:
+        if "mendel" in s.lower():
+            order_val = 3
+        else:
+            order_val = 2
+    elif "frt" in base_s:
+        if "mendel" in s.lower():
+            order_val = 5
+        else:
+            order_val = 4
+    elif any(x in base_s for x in ["mst", "random"]):
+        order_val = 6
+    elif any(x in base_s for x in ["cohen", "lp", "applegate"]):
+        order_val = 99
+    else:
+        order_val = 90
+
+    return (order_val, s)
 
 
 # ======================
@@ -239,14 +250,61 @@ _PALETTE = [
     "#000000",  # black
     "#999999",  # grey
     "#882255",  # wine
+    "#117733",  # dark green
+    "#44AA99",  # cyan
+    "#DDCC77",  # khaki
+    "#AA4499",  # purple
 ]
+
+# Fixed color mapping for all possible solvers to ensure consistency across all runs
+_SOLVER_COLOR_MAP = {
+    # Electrical Flow variants
+    "Electrical Flow (naive)": "#0072B2",           # blue
+    "Electrical Flow (sketching)": "#D55E00",       # vermillion
+    "Electrical Flow (parallel)": "#E69F00",        # orange
+    
+    # Raecke CKR - Flat HST
+    "Raecke CKR (Flat HST)": "#009E73",             # green
+    "Raecke CKR + MendelScaling (Flat HST)": "#56B4E9",  # sky-blue
+    
+    # Raecke FRT - Flat HST
+    "Raecke FRT (Flat HST)": "#CC79A7",             # pink
+    "Raecke FRT + MendelScaling (Flat HST)": "#F0E442",  # yellow
+    
+    # Random MST - Flat HST
+    "Random MST (Flat HST)": "#000000",             # black
+    
+    # Raecke CKR - Pointer HST
+    "Raecke CKR (Pointer HST)": "#999999",          # grey
+    "Raecke CKR + MendelScaling (Pointer HST)": "#882255",  # wine
+    
+    # Raecke FRT - Pointer HST
+    "Raecke FRT (Pointer HST)": "#117733",          # dark green
+    "Raecke FRT + MendelScaling (Pointer HST)": "#44AA99",  # cyan
+    
+    # Random MST - Pointer HST
+    "Random MST (Pointer HST)": "#DDCC77",          # khaki
+    
+    # LP
+    "LP Applegate-Cohen": "#AA4499",                # purple
+}
 
 _LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1)), (0, (5, 1))]
 
 
 def solver_palette_unique(solvers: list[str]) -> dict[str, str]:
-    """Unique color per solver; cycles through colorblind-safe palette."""
-    return {s: _PALETTE[i % len(_PALETTE)] for i, s in enumerate(solvers)}
+    """
+    Unique color per solver using predefined mapping for consistency.
+    Falls back to dynamic palette if solver not in mapping.
+    """
+    colors = {}
+    for i, s in enumerate(solvers):
+        if s in _SOLVER_COLOR_MAP:
+            colors[s] = _SOLVER_COLOR_MAP[s]
+        else:
+            # Fallback: use dynamic palette for unknown solvers
+            colors[s] = _PALETTE[i % len(_PALETTE)]
+    return colors
 
 
 def solver_linestyles(solvers: list[str]) -> dict[str, str]:
@@ -1132,6 +1190,19 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
         linestyles=linestyles,
     )
 
+    # ── Solve time scaling (MWU solve time, excluding transformation) ─────────
+    agg_solve = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), "solve_time_micro_seconds")
+    plot_lines(
+        agg_solve, solvers_mwu, colors, markers,
+        xcol="num_edges", y_mean_col="mean", y_std_col="std",
+        xlabel="Number of edges",
+        ylabel="Solve time [microseconds]",
+        xlog=True, ylog=True,
+        figsize=FIGSIZE_SINGLE,
+        outpath=out_dir / "solve_time_lines_vs_edges",
+        linestyles=linestyles,
+    )
+
     # ── MWU iterations ───────────────────────────────────────────────────────
     agg_mwu = aggregate_mean_std(df[df["solver"].isin(solvers_mwu)].copy(), "mwu_iterations")
     plot_lines(
@@ -1157,6 +1228,24 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
         outpath=out_dir / "oracle_time_lines_vs_edges",
         linestyles=linestyles,
     )
+
+    # ── Load computation time (only for electrical flow) ────────────────────
+    if "load_computation_micro_seconds" in df.columns:
+        df_load = df[df["solver"].isin(solvers_mwu)].copy()
+        # Only plot if there are non-NaN load computation values
+        if df_load["load_computation_micro_seconds"].notna().any():
+            agg_load = aggregate_mean_std(df_load, "load_computation_micro_seconds")
+            if not agg_load.empty:
+                plot_lines(
+                    agg_load, solvers_mwu, colors, markers,
+                    xcol="num_edges", y_mean_col="mean", y_std_col="std",
+                    xlabel="Number of edges",
+                    ylabel="Load computation time [microseconds]",
+                    xlog=True, ylog=True,
+                    figsize=FIGSIZE_SINGLE,
+                    outpath=out_dir / "load_computation_time_lines_vs_edges",
+                    linestyles=linestyles,
+                )
 
     # ── Relative error box plots — always linear ─────────────────────────────
     plot_box_by_solver(
@@ -1435,51 +1524,130 @@ def main():
 
     print(f"DEBUG: After creating relative_error - df shape: {df.shape}, solvers in df: {df['solver'].nunique()}")
 
-    # All solvers present in data (no _pointer variants)
+    # All solvers present in data
+    # Filter out pointer HST variants (but keep flat HST and Pointer HST as separate entries)
     all_solvers = sorted(
-        [s for s in df["solver"].unique() if not s.endswith("_pointer")],
+        [s for s in df["solver"].unique() if "pointer" not in s.lower() or "HST)" in s],
         key=solver_sort_key,
     )
-    print(f"DEBUG: all_solvers (non-pointer): {all_solvers}")
+    print(f"DEBUG: all_solvers: {all_solvers}")
+    print(f"DEBUG: Number of unique solvers: {len(all_solvers)}")
 
     # Shared visual style — same color/marker/linestyle per solver in every plot
+    # IMPORTANT: Each solver variant (e.g., "Electrical Flow (naive)" vs "Electrical Flow (sketching)")
+    # is a unique string and will get a unique color from the palette
     colors     = solver_palette_unique(all_solvers)
     markers    = solver_markers(all_solvers)
     linestyles = solver_linestyles(all_solvers)
 
-    # ── Solver sets ───────────────────────────────────────────────────────────
-    # Pass 1: all solvers except any whose name ends with "_mendel"
-    solvers_no_mendel = [s for s in all_solvers if not s.endswith("_mendel")]
+    # Print color assignments for verification
+    print("DEBUG: Color assignments:")
+    for solver in all_solvers:
+        print(f"  {solver:50s} → {colors[solver]}")
 
-    # Pass 2: for each _mendel variant include its base + the mendel version
+    # ── Solver sets ───────────────────────────────────────────────────────────
+    # Pass 1: all solvers except Mendel/MendelScaling, naive electrical, and Pointer HST variants
+    solvers_no_mendel = [s for s in all_solvers
+                         if "Mendel" not in s and "MendelScaling" not in s
+                         and "Electrical Flow (naive)" not in s
+                         and "(Pointer HST)" not in s]
+
+    # Pass 2: for each Mendel variant include its base + the mendel version
     # so the plot directly compares "before vs after" Mendel scaling.
     solvers_mendel_cmp: list[str] = []
     for s in all_solvers:
-        if s.endswith("_mendel"):
-            base = s[: -len("_mendel")]
+        if "Mendel" in s or "MendelScaling" in s:
+            # Extract base name by removing the Mendel part
+            base = s.replace(" + MendelScaling", "").replace(" (Mendel)", "")
             if base in all_solvers and base not in solvers_mendel_cmp:
                 solvers_mendel_cmp.append(base)
             if s not in solvers_mendel_cmp:
                 solvers_mendel_cmp.append(s)
     solvers_mendel_cmp = sorted(solvers_mendel_cmp, key=solver_sort_key)
 
+    # Pass 3: for electrical flow variants, include both naive and sketching versions
+    # to compare the two implementations
+    solvers_electrical_cmp: list[str] = []
+    for s in all_solvers:
+        if "Electrical Flow" in s:
+            solvers_electrical_cmp.append(s)
+    solvers_electrical_cmp = sorted(solvers_electrical_cmp, key=solver_sort_key)
+
+    # Pass 4: for HST data structures, include both Flat HST and Pointer HST versions
+    # to compare the two tree implementations
+    solvers_hst_cmp: list[str] = []
+    for s in all_solvers:
+        if "Raecke" in s or "Random MST" in s or "MST" in s:
+            # Match Flat HST and Pointer HST pairs
+            if "(Flat HST)" in s or "(Pointer HST)" in s:
+                solvers_hst_cmp.append(s)
+    solvers_hst_cmp = sorted(solvers_hst_cmp, key=solver_sort_key)
+
+    # Pass 5: for cycle removal strategy comparison, include all tree-based solvers
+    # (they all have cycle removal strategies)
+    solvers_cycle_cmp: list[str] = []
+    for s in all_solvers:
+        if "Raecke" in s or "Random MST" in s or "MST" in s:
+            solvers_cycle_cmp.append(s)
+    solvers_cycle_cmp = sorted(solvers_cycle_cmp, key=solver_sort_key)
+
     # ── Pass 1: standard plots WITHOUT Mendel solvers (linear y-axes) ─────────
-    print(f"[1/2] Generating no-Mendel plots → {OUT_DIR}")
+    print(f"[1/5] Generating no-Mendel plots (Flat HST & sketching variant only) → {OUT_DIR}")
     run_plots(df, solvers_no_mendel, colors, markers, linestyles, OUT_DIR,
               ylog=False, mendel_mode=False)
 
     # ── Pass 2: Mendel-comparison plots (log y-axes + Mendel time plots) ─────
     if solvers_mendel_cmp:
         mendel_dir = OUT_DIR / "mendel"
-        print(f"[2/2] Generating Mendel-comparison plots → {mendel_dir}")
+        print(f"[2/5] Generating Mendel-comparison plots → {mendel_dir}")
         run_plots(df, solvers_mendel_cmp, colors, markers, linestyles, mendel_dir,
                   ylog=True, mendel_mode=True)
     else:
-        print("[2/2] No Mendel solvers found in data — skipping Mendel comparison plots.")
+        print("[2/5] No Mendel solvers found in data — skipping Mendel comparison plots.")
+
+    # ── Pass 3: Electrical Flow variant comparison (naive vs sketching) ──────
+    if solvers_electrical_cmp and len(solvers_electrical_cmp) > 1:
+        electrical_dir = OUT_DIR / "electrical"
+        print(f"[3/5] Generating Electrical Flow variant comparison plots → {electrical_dir}")
+        run_plots(df, solvers_electrical_cmp, colors, markers, linestyles, electrical_dir,
+                  ylog=False, mendel_mode=False)
+    elif solvers_electrical_cmp:
+        print("[3/5] Only one Electrical Flow variant found — skipping comparison plots.")
+    else:
+        print("[3/5] No Electrical Flow solvers found in data — skipping Electrical Flow comparison plots.")
+
+    # ── Pass 4: HST data structure comparison (Flat HST vs Pointer HST) ──────
+    if solvers_hst_cmp and len(solvers_hst_cmp) > len([s for s in solvers_hst_cmp if "(Flat HST)" in s]):
+        hst_dir = OUT_DIR / "hst"
+        print(f"[4/5] Generating HST data structure comparison plots → {hst_dir}")
+        run_plots(df, solvers_hst_cmp, colors, markers, linestyles, hst_dir,
+                  ylog=False, mendel_mode=False)
+    else:
+        print("[4/5] Only one HST data structure variant found — skipping HST comparison plots.")
+
+    # ── Pass 5: Cycle removal strategy comparison ────────────────────────────
+    if solvers_cycle_cmp:
+        cycle_dir = OUT_DIR / "cycle_removal"
+        print(f"[5/5] Generating cycle removal strategy comparison plots → {cycle_dir}")
+        run_plots(df, solvers_cycle_cmp, colors, markers, linestyles, cycle_dir,
+                  ylog=False, mendel_mode=False)
+    else:
+        print("[5/5] No tree-based solvers found in data — skipping cycle removal strategy plots.")
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
-    print("✔ Unique solver colors (no repeats up to 20 solvers; HSV beyond)")
+    print("✔ Unique solver colors (one per solver variant, consistent across all runs)")
     print("✔ Vector PDFs with embedded fonts (camera-ready)")
+    print()
+    print("Generated plot directories:")
+    print(f"  [1] Main plots (Flat HST & sketching only):  {OUT_DIR.resolve()}")
+    if solvers_mendel_cmp:
+        print(f"  [2] Mendel comparison plots:                {(OUT_DIR / 'mendel').resolve()}")
+    if solvers_electrical_cmp and len(solvers_electrical_cmp) > 1:
+        print(f"  [3] Electrical Flow variant comparison:     {(OUT_DIR / 'electrical').resolve()}")
+    if solvers_hst_cmp and len(solvers_hst_cmp) > len([s for s in solvers_hst_cmp if "(Flat HST)" in s]):
+        print(f"  [4] HST data structure comparison:          {(OUT_DIR / 'hst').resolve()}")
+    if solvers_cycle_cmp:
+        print(f"  [5] Cycle removal strategy comparison:      {(OUT_DIR / 'cycle_removal').resolve()}")
 
 
 if __name__ == "__main__":

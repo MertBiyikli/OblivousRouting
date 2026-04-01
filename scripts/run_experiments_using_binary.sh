@@ -14,7 +14,7 @@ DEMANDS=""
 DEMAND_PROVIDED=0
 CYCLE_REMOVAL="${CYCLE_REMOVAL:-none}"
 
-ALL_SOLVERS="${ALL_SOLVERS:-electrical,frt,ckr,mst,frt_mendel,ckr_mendel,frt_pointer,ckr_pointer,mst_pointer,frt_mendel_pointer,ckr_mendel_pointer,lp}"
+ALL_SOLVERS="${ALL_SOLVERS:-electrical_naive, electrical_sketching,frt,ckr,mst,frt_mendel,ckr_mendel,frt_pointer,ckr_pointer,mst_pointer,frt_mendel_pointer,ckr_mendel_pointer,lp}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0
@@ -83,7 +83,7 @@ mkdir -p "$OUT_DIR"
 CSV="$OUT_CSV"
 
 # Always write a fresh header — each invocation owns its output file
-echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_tree_height,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,mwu_weight_update_time_micro_seconds,cycle_removal_type,cycle_removal_time_micro_seconds,status" > "$CSV"
+echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_tree_height,load_computation_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,mwu_weight_update_time_micro_seconds,cycle_removal_type,cycle_removal_time_micro_seconds,status" > "$CSV"
 
 # Collect graphs
 DATASET_PATH="$DATASET"
@@ -190,10 +190,10 @@ for g in "${GRAPHS[@]}"; do
     -v demand_provided="$DEMAND_PROVIDED" \
   '
   function flush_no_demand_row() {
-    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
-      avg_tree_height, mendel_total, mendel_avg, oblivious_ratio,
+      avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
       "none", "NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
     n_rows++
   }
@@ -202,12 +202,14 @@ for g in "${GRAPHS[@]}"; do
     mwu="NaN"; avg_oracle="NaN"; avg_tree_height="NaN";
     mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
     mwu_weight_update_time="NaN";
+    load_computation_micro_seconds="NaN";
     cycle_removal_type="none"; cycle_removal_time="NaN";
   }
   BEGIN {
     nodes="NaN"; edges="NaN";
     solver=""; n_rows=0; solver_seen=0;
     mwu_weight_update_time="NaN";
+    load_computation_micro_seconds="NaN";
     cycle_removal_type="none"; cycle_removal_time="NaN";
     reset_solver_state()
   }
@@ -255,6 +257,9 @@ for g in "${GRAPHS[@]}"; do
   /^MWU iterations: [0-9]+$/ {
     tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
   }
+  /^MWU load computation: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
+      tmp=$0; sub(/^MWU load computation: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); load_computation_micro_seconds=tmp; next
+    }
   /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
     tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); avg_oracle=tmp; next
   }
@@ -282,10 +287,10 @@ for g in "${GRAPHS[@]}"; do
     n=split(vals, ab, " / ")
     offline_val  = (n>=1) ? ab[1] : "NaN"
     achieved_val = (n>=2) ? ab[2] : "NaN"
-    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+    printf "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
-      avg_tree_height, mendel_total, mendel_avg, oblivious_ratio,
+      avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
       dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
     n_rows++
     next
@@ -300,9 +305,9 @@ for g in "${GRAPHS[@]}"; do
         n_d = 1; dm_arr[1] = "none"
       }
       for (di=1; di<=n_d; di++) {
-        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
           dataset, graph, "unknown", nodes, edges,
-          "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
+          "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
           dm_arr[di], "NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
       }
     } else if (demand_provided != "1" && solver_seen) {

@@ -139,7 +139,7 @@ void UltrametricTree::preprocessLifting() {
 
 int UltrametricTree::sigmaDelta(int v_leaf, double Delta) const {
     if (N == 0 || v_leaf < 0 || v_leaf >= n) return v_leaf;
-    const double thr = Delta / (2.0 * (double) n);
+    const double thr = Delta / (2.0 );
 
     int u = v_leaf;
     if (gamma[u] > thr) return u; // safety

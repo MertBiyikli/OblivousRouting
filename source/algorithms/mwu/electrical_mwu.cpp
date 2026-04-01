@@ -40,16 +40,17 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     boost::property_tree::ptree params = make_amg_params();
     initAMGSolver(params);
 
-    // compute Sketch matrix
-    SketchMatrix_t = getSketchMatrix(m, n, 0.5).transpose();
+    if ( use_sketching ) {
+        // compute Sketch matrix
+        SketchMatrix_t = getSketchMatrix(0.5).transpose();
 
-    Eigen::MatrixXd UCt = SketchMatrix_t; // m × ℓ
-    for (int e = 0; e < m; ++e)
-        UCt.row(e) *= edge_capacities[e];
+        Eigen::MatrixXd UCt = SketchMatrix_t; // m × ℓ
+        for (int e = 0; e < m; ++e)
+            UCt.row(e) *= edge_capacities[e];
 
-    auto B = buildIncidence();
-    X = (B.transpose() * UCt).sparseView(); // n × ℓ
-
+        auto B = buildIncidence();
+        X = (B.transpose() * UCt).sparseView(); // n × ℓ
+    }
     solve_time += duration(timeNow()-t0);
 }
 
@@ -92,31 +93,33 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
             rhs.setZero();
             rhs[u]       =  1.0;
             rhs[x_fixed] = -1.0;
-            double setup_time = duration(timeNow() - t0);
 
-            auto start_oracle_pure = timeNow();
-            potentials = amg->solve(rhs, epsilon_L);
-            double oracle_time_iter = duration(timeNow() - start_oracle_pure);
+            potentials = amg->solve(rhs);
+            double oracle_time_iter = duration(timeNow() - t0);
             oracle_iteration += oracle_time_iter;
 
             // addFlowToTable measures its own time and adds to transformation_time
             addFlowToTable(u, potentials, table);
 
             // solve_time includes setup_time + oracle_time (but not transformation_time)
-            solve_time += setup_time + oracle_time_iter;
+            solve_time += oracle_time_iter;
         }
 
         t0 = timeNow();
-        getApproxLoad(load);
+        if (use_sketching) {
+            getApproxLoad(load);
+        }else {
+            getExactLoad(load);
+        }
+        this->load_computation_time += duration(timeNow()-t0);
+
+        t0 = timeNow();
         updateDistances(load);
         double weight_update_time = duration(timeNow() - t0);
         mwu_weight_update_time += weight_update_time;
-        solve_time += weight_update_time;
 
         oracle_running_times.push_back(oracle_iteration);
     }
-
-
 }
 
 
@@ -160,22 +163,18 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
 
     for (int i = 0; i < ell; ++i) {
         rhs = X.col(i);
-        sol = amg->solve(rhs, epsilon_L);
+        sol = amg->solve(rhs);
 
         for (int e = 0; e < m; ++e) {
             const auto& [u,v] = edges[e];
             d[e] = sol[v] - sol[u];             // signed diff consistent with B
             edge_diffs[size_t(e) * ell + i] = std::abs(d[e]); // keep abs for median
         }
-
-        if (!K_initialized) {
-            Eigen::VectorXd y = SketchMatrix_t.transpose() * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
-            K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
-        }
     }
-
-
+/*
     if (!K_initialized) {
+        Eigen::VectorXd y = SketchMatrix_t.transpose() * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
+        K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
         K = std::max(K, 1.5 * K_obs); // safety factor, monotone
         K_initialized = true;
     }
@@ -184,7 +183,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         epsilon_L = epsilon / (8.0 * m * std::pow(n, 4) * K);
         epsilon_L = std::max(epsilon_L, 1e-12);
     }
-
+*/
     // recover norm
     for (int e = 0; e < m; ++e) {
         double* __restrict arr = &edge_diffs[static_cast<size_t>(e) * ell];
@@ -194,6 +193,41 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
     }
 }
 
+/**
+ * Compute exact loads without sketching approximation.
+ * For each demand edge f, we solve the Laplacian with unit current injection/extraction at the endpoints.
+ * Then for each edge e, we accumulate the load contribution: load_w(e) += w_e * |b_e L† b_f^T|
+ * where b_e L† b_f^T is the potential difference across edge e when unit current is injected on edge f.
+ * Final formula: load_w(e) = w_e * Σ_f |b_e L† b_f^T|
+ */
+void ElectricalMWU::getExactLoad(std::vector<double>& load) {
+    Eigen::VectorXd rhs(n), sol(n);
+
+    // Initialize load to zero
+    std::fill(load.begin(), load.end(), 0.0);
+
+    // For each demand edge f
+    for (int f = 0; f < m; ++f) {
+        // Create RHS for unit current demand on edge f
+        // Unit current source at u_f and sink at v_f
+        rhs.setZero();
+        const auto& [u_f, v_f] = edges[f];
+        rhs[u_f] = 1.0;
+        rhs[v_f] = -1.0;
+
+        // Solve Laplacian system: L * potential = rhs
+        sol = amg->solve(rhs);
+
+        // For each edge e, compute load contribution from this demand
+        // load contribution = w_e * |potential_diff_e|
+        // where potential_diff_e = b_e^T * L† * b_f = sol[v_e] - sol[u_e]
+        for (int e = 0; e < m; ++e) {
+            const auto& [u_e, v_e] = edges[e];
+            double pot_diff = sol[v_e] - sol[u_e];  // b_e^T L† b_f^T
+            load[e] += edge_weights[e] * std::abs(pot_diff);
+        }
+    }
+}
 
 /*
  * This function updates the edge distances based on the computed load. It iterates over all edges,
@@ -294,9 +328,9 @@ Eigen::SparseMatrix<double> ElectricalMWU::buildIncidence()
  * Sketching matrix generation using Cauchy distribution for L1 norm approximation.
  * The goal is to create a matrix that can be used to project the flow differences into a lower-dimensional space while preserving the L1 norm properties.
  */
-Eigen::MatrixXd ElectricalMWU::getSketchMatrix(int _m, int _n, double eps) {
+Eigen::MatrixXd ElectricalMWU::getSketchMatrix(double eps) {
     double c = 1.1;
-    double delta = NegativeExponent(_n, 10);
+    double delta = NegativeExponent(n, 2);
     double epsilon = eps;
 
     int l = (c/(epsilon*epsilon) * std::log(1.0/delta) );
@@ -305,10 +339,10 @@ Eigen::MatrixXd ElectricalMWU::getSketchMatrix(int _m, int _n, double eps) {
     std::mt19937_64 gen(rd());
     std::cauchy_distribution<double> dist(0.0, 1.0);
 
-    Eigen::MatrixXd C(l, _m);
+    Eigen::MatrixXd C(l, m);
     double val = 0;
     for (int i = 0; i < l; ++i) {
-        for (int j = 0; j < _m; ++j) {
+        for (int j = 0; j <m; ++j) {
             val = dist(gen);
             C.coeffRef(i, j) = val;
         }

@@ -17,7 +17,8 @@
 // Helper to get solver name from type
 inline std::string getSolverName(SolverType type) {
     static const std::map<SolverType, std::string> names{
-        {SolverType::ELECTRICAL, "Electrical Flow"},
+        {SolverType::ELECTRICAL_NAIVE, "Electrical Flow (naive)"},
+        {SolverType::ELECTRICAL_SKETCHING, "Electrical Flow (sketching)"},
         {SolverType::RAECKE_FRT_FLAT, "Raecke FRT (Flat HST)"},
         {SolverType::RAECKE_CKR_FLAT, "Raecke CKR (Flat HST)"},
         {SolverType::RAECKE_RANDOM_MST_FLAT, "Random MST (Flat HST)"},
