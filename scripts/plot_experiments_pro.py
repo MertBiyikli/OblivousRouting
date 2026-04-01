@@ -1583,11 +1583,11 @@ def main():
                 solvers_hst_cmp.append(s)
     solvers_hst_cmp = sorted(solvers_hst_cmp, key=solver_sort_key)
 
-    # Pass 5: for cycle removal strategy comparison, include all tree-based solvers
-    # (they all have cycle removal strategies)
+    # Pass 5: cycle removal strategy comparison, include only Flat HST tree-based solvers
+    # (to compare naive vs Tarjan_SCC strategies)
     solvers_cycle_cmp: list[str] = []
     for s in all_solvers:
-        if "Raecke" in s or "Random MST" in s or "MST" in s:
+        if ("Raecke" in s or "Random MST" in s or "MST" in s) and "(Flat HST)" in s:
             solvers_cycle_cmp.append(s)
     solvers_cycle_cmp = sorted(solvers_cycle_cmp, key=solver_sort_key)
 
@@ -1625,14 +1625,62 @@ def main():
     else:
         print("[4/5] Only one HST data structure variant found — skipping HST comparison plots.")
 
-    # ── Pass 5: Cycle removal strategy comparison ────────────────────────────
+    # ── Pass 5: Cycle removal strategy comparison (Flat HST only) ───────────
     if solvers_cycle_cmp:
         cycle_dir = OUT_DIR / "cycle_removal"
-        print(f"[5/5] Generating cycle removal strategy comparison plots → {cycle_dir}")
-        run_plots(df, solvers_cycle_cmp, colors, markers, linestyles, cycle_dir,
-                  ylog=False, mendel_mode=False)
+        print(f"[5/5] Generating cycle removal strategy comparison plots (Flat HST only) → {cycle_dir}")
+        
+        # Prepare data for cycle removal comparison: filter to Flat HST and naive/Tarjan_SCC only
+        df_cycle = df.copy()
+        
+        # Filter to only Flat HST solvers
+        df_cycle = df_cycle[df_cycle["solver"].isin(solvers_cycle_cmp)].copy()
+        
+        if "cycle_removal_type" in df_cycle.columns:
+            # Filter to only naive and Tarjan_SCC strategies
+            df_cycle = df_cycle[df_cycle["cycle_removal_type"].isin(["naive", "Tarjan_SCC"])].copy()
+            
+            # Create augmented solver names that include the strategy
+            df_cycle["solver_with_strategy"] = (
+                df_cycle["solver"] + " (" + df_cycle["cycle_removal_type"] + ")"
+            )
+            
+            # Get unique solvers with strategies (only Flat HST)
+            solvers_cycle_with_strategy = sorted(
+                df_cycle["solver_with_strategy"].unique(),
+                key=lambda s: solver_sort_key(s.split(" (")[0])  # Sort by base solver name
+            )
+            
+            # Create color/marker/linestyle mappings for augmented solver names
+            # Map augmented names back to base solver names for consistent colors
+            colors_cycle = {}
+            markers_cycle = {}
+            linestyles_cycle = {}
+            for augmented_name in solvers_cycle_with_strategy:
+                base_name = augmented_name.rsplit(" (", 1)[0]  # Remove the (strategy) part
+                if base_name in colors:
+                    colors_cycle[augmented_name] = colors[base_name]
+                    markers_cycle[augmented_name] = markers[base_name]
+                    linestyles_cycle[augmented_name] = linestyles[base_name]
+                else:
+                    # Fallback to first color if base not found
+                    colors_cycle[augmented_name] = _PALETTE[0]
+                    markers_cycle[augmented_name] = ["o", "s", "^"][hash(augmented_name) % 3]
+                    linestyles_cycle[augmented_name] = _LINESTYLES[hash(augmented_name) % len(_LINESTYLES)]
+            
+            # Temporarily rename solver column for plotting
+            df_cycle_plot = df_cycle.copy()
+            df_cycle_plot["solver"] = df_cycle_plot["solver_with_strategy"]
+            
+            # Generate plots with augmented solver names and augmented color mappings
+            run_plots(df_cycle_plot, solvers_cycle_with_strategy, colors_cycle, markers_cycle, linestyles_cycle, cycle_dir,
+                      ylog=False, mendel_mode=False)
+        else:
+            # Fallback if no cycle_removal_type column
+            run_plots(df_cycle, solvers_cycle_cmp, colors, markers, 
+                      linestyles, cycle_dir, ylog=False, mendel_mode=False)
     else:
-        print("[5/5] No tree-based solvers found in data — skipping cycle removal strategy plots.")
+        print("[5/5] No Flat HST tree-based solvers found in data — skipping cycle removal strategy plots.")
 
     print(f"✔ Paper-ready plots written to {OUT_DIR.resolve()}")
     print("✔ Unique solver colors (one per solver variant, consistent across all runs)")
