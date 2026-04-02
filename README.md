@@ -20,13 +20,22 @@ Tree-based oracle variants implemented in this repository include:
 - **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**[[paper]](https://arxiv.org/abs/0809.1902)
 - **MST-based** decompositions
 
+In addition we provide two additions to the tree-based oracle variants:
+- **MendelScaling** - Mendel and Schwob (2009): scales down the required number of scales when computing the HST while retaining the stretch quality
+- **Data Structures for HST** - We implement two different data structures for storing the HST, one that is pointer-based and another that is array-based. The pointer-based data structure allows for more flexible tree manipulations, while the array-based data structure provides faster access times and reduced memory overhead.
+
 Electrical flow based oracle variant is based on the [[AMGCL solver]](https://github.com/ddemidov/amgcl).
 The default solver is set to use the algebraic multigrid method for preconditioning the Conjugate Gradient (CG) method.
 
+We provide two variants for the electrical flow solver:
+ - **Comuting the exact loads of the electrical flow**: This variant computes the exact loads on the edges of the network based on the electrical flow model.
+ - **Approximating the loads of the electrical flow**: This variant uses an approximation method to estimate the loads on the edges while being theoretically sound and empirically effective. This approach can significantly reduce the computational overhead while still providing good performance in practice.
 
 ### Repository Structure
 
-- `src/`: Contains the source code for the Oblivious Routing algorithms.
+- `app/`: Contains the main application code for running the Oblivious Routing algorithms and evaluating their performance.
+- `include/`: Contains header files for the Oblivious Routing algorithms and related utilities.
+- `source/`: Contains the source code for the Oblivious Routing algorithms.
 - `experiments/datasets`: Contains datasets and network topologies used for testing the algorithms.
 
 
@@ -75,7 +84,7 @@ For a simplified execution, you can run the Docker container with the following 
 ### Example smoke test
 To perform a quick smoke test, you can run the following command:
 ```bash
-    ./scripts/run_experiment.sh --solvers "electrical,frt,ckr,mst,cohen" --dataset /experiments/datasets/Backbone/1221.lgf --demand uniform --out results/test.csv
+    ./scripts/run_experiment.sh --solvers "electrical,frt,ckr,mst,cohen" --dataset /experiments/datasets/small/Backbone/1221.lgf --demand uniform --out results/test.csv
 ```
 
 
