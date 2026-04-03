@@ -28,8 +28,8 @@ Electrical flow based oracle variant is based on the [[AMGCL solver]](https://gi
 The default solver is set to use the algebraic multigrid method for preconditioning the Conjugate Gradient (CG) method.
 
 We provide two variants for the electrical flow solver:
- - **Comuting the exact loads of the electrical flow**: This variant computes the exact loads on the edges of the network based on the electrical flow model.
- - **Approximating the loads of the electrical flow**: This variant uses an approximation method to estimate the loads on the edges while being theoretically sound and empirically effective. This approach can significantly reduce the computational overhead while still providing good performance in practice.
+ - **Computing the exact loads**: This variant computes the exact loads on the edges of the network based on the electrical flow model.
+ - **Approximating the loads**: This variant uses an approximation method to estimate the loads on the edges while being theoretically sound and empirically effective. This approach can significantly reduce the computational overhead while still providing good performance in practice.
 
 ### Repository Structure
 

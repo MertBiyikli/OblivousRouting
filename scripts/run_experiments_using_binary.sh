@@ -308,7 +308,7 @@ for g in "${GRAPHS[@]}"; do
         printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
           dataset, graph, "unknown", nodes, edges,
           "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
-          dm_arr[di], "NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
+          dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
       }
     } else if (demand_provided != "1" && solver_seen) {
       # Flush the last solver (no demand model run)
