@@ -30,7 +30,8 @@ inline std::string getSolverName(SolverType type) {
         {SolverType::RAECKE_CKR_POINTER, "Raecke CKR (Pointer HST)"},
         {SolverType::RAECKE_RANDOM_MST_POINTER, "Random MST (Pointer HST)"},
         {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
-        {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"}
+        {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
+        {SolverType::RAECKE_CKR_FLAT_OPTIMIZED, "Raecke CKR optimized (Flat HST)"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";
@@ -45,12 +46,21 @@ int main(int argc, char **argv) {
     }
 
     // Load or create graph
+    /*
     auto graph = makegraph(cfg->graph_format);
     if (!cfg->filename.empty()) {
         readLGFFile(*graph, cfg->filename);
+    }*/
+    int n = 4;
+    std::unique_ptr<GraphCSR> graph = std::make_unique<GraphCSR>(n);
+    for (int i = 0; i < n; ++i) {
+        graph->addEdge(i, (i+1)%n, 1.0);
     }
+    graph->addEdge(0,2, 1.0);
+    graph->addEdge(1,3, 1.0);
     graph->finalize();
     std::cout << "Graph loaded: " << graph->getNumNodes() << " nodes, " << graph->getNumUndirectedEdges() <<" edges.\n";
+    graph->print();
     // Precompute offline optimal congestion if needed
     std::map<std::string, double> offline_opt_per_model;
     std::map<std::string, demands> demand_maps;
@@ -81,7 +91,7 @@ int main(int argc, char **argv) {
 
         std::cout << "Total time: " << total_time << " micro seconds\n";
 
-        //scheme->printRoutingTable();
+        scheme->printRoutingTable();
 
         // Print time statistics if available
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {

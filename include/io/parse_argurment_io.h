@@ -162,7 +162,7 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
     std::vector<DemandModelType> demands;
     GraphFormat fmt = GraphFormat::CSR;
     int threads = 1;
-    CycleRemovalStrategy cycle_strategy = CycleRemovalStrategy::NAIVE;
+    CycleRemovalStrategy cycle_strategy = CycleRemovalStrategy::TARJAN_SCC;
 
     // Parse optional arguments
     for (int i = 3; i < argc; ++i) {

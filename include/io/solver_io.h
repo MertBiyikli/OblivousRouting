@@ -11,6 +11,7 @@
 #include "../include/algorithms/mwu/oracle/tree/mst/mst_oracle.h"
 #include "../include/algorithms/mwu/oracle/tree/frt/frt.h"
 #include "../include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
+#include "../include/algorithms/mwu/oracle/tree/fast_ckr/engineering_fast_ckr.h"
 
 #include <string>
 #include <optional>
@@ -24,6 +25,7 @@ enum class SolverType {
     ELECTRICAL_SKETCHING,
     RAECKE_FRT_FLAT,
     RAECKE_CKR_FLAT,
+    RAECKE_CKR_FLAT_OPTIMIZED,
     RAECKE_RANDOM_MST_FLAT,
     RAECKE_FRT_MENDELSCALING_FLAT,
     RAECKE_CKR_MENDELSCALING_FLAT,
@@ -46,6 +48,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"f", SolverType::RAECKE_FRT_FLAT}, {"2", SolverType::RAECKE_FRT_FLAT},
     {"raecke_ckr", SolverType::RAECKE_CKR_FLAT}, {"ckr", SolverType::RAECKE_CKR_FLAT},
     {"c", SolverType::RAECKE_CKR_FLAT}, {"3", SolverType::RAECKE_CKR_FLAT},
+    {"raecke_ckr_opt", SolverType::RAECKE_CKR_FLAT_OPTIMIZED}, {"ckr_opt", SolverType::RAECKE_CKR_FLAT_OPTIMIZED},
     {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_mst", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"rmst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"4", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"cohen", SolverType::LP_APPLEGATE_COHEN}, {"lp", SolverType::LP_APPLEGATE_COHEN},
@@ -105,6 +108,9 @@ makeSolver(SolverType type, IGraph& g, CycleRemovalStrategy cycle_strategy = Cyc
 
         case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
             return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g, true), cycle_strategy);
+
+        case SolverType::RAECKE_CKR_FLAT_OPTIMIZED:
+            return std::make_unique<TreeMWU<FlatHST>>(g, 0, std::make_unique<OptimizedFastCKR<FlatHST>>(g, false), cycle_strategy);
 
         default:
             return std::nullopt;

@@ -69,10 +69,34 @@ private:
     // for every (src ∈ childMembers, dst ∈ V\A) pair where src==0 or dst==0.
     // ------------------------------------------------------------------
     void applyFlow(const std::vector<int>&        path,
-                   const std::vector<int>&        childMembers,
-                   const std::unordered_set<int>& A,
+                   const std::unordered_set<int>&        parent_set,
+                   const std::unordered_set<int>& child_member,
                    double                         lambda,
                    LinearRoutingTable&            table) {
+
+        if (child_member.contains(0)) {
+            for (int dst : parent_set) {
+                if (dst == 0) continue;
+                for (size_t i = 0; i + 1 < path.size(); ++i) {
+                    int e      = graph.getEdgeId(path[i],   path[i+1]);
+                    // print flow
+                    std::cout << "Adding flow from 0 to " << dst << " along edge (" << path[i] << ", " << path[i+1] << ") with lambda " << lambda << std::endl;
+                    table.addFlow(e, dst, lambda);
+                }
+            }
+        }
+
+        if (parent_set.contains(0)) {
+            for (int src : child_member) {
+                if (src == 0) continue;
+                for (int i = 0; i+1< path.size(); i++) {
+                    int rev_e = graph.getEdgeId(path[i+1], path[i]);
+                    std::cout << "Adding flow from 0 to " << src << " along edge (" << path[i+1] << ", " << path[i] << ") with lambda " << lambda << std::endl;
+                    table.addFlow(rev_e, src, lambda);
+                }
+            }
+        }
+        /*
         for (int src : childMembers) {
             for (int dst : graph.getVertices()) {
                 if (A.count(dst) || src == dst) continue;
@@ -89,7 +113,7 @@ private:
 
                 }
             }
-        }
+        }*/
     }
 
     // ------------------------------------------------------------------
@@ -124,7 +148,7 @@ private:
                 const std::vector<int>& childMembers = child->getMembers();
                 std::unordered_set<int> A(childMembers.begin(), childMembers.end());
 
-                applyFlow(path, childMembers, A, lambda, table);
+                //applyFlow(path, childMembers, A, lambda, table);
                 q.push(child);
             }
         }
@@ -140,6 +164,7 @@ private:
         const auto distance = iter.getDistance();
 
 
+        print(hst);
         std::queue<int> q;
         q.push(hst.root());
         while (!q.empty()) {
@@ -158,8 +183,14 @@ private:
                 if (path.size() < 2) { q.push(child_idx); continue; }
 
                 std::vector<int> members_vec(child_members.begin(), child_members.end());
-                std::unordered_set<int> A(members_vec.begin(), members_vec.end());
-                applyFlow(path, members_vec, A, lambda, table);
+                std::unordered_set<int> child_set(members_vec.begin(), members_vec.end());
+                std::unordered_set<int> parent_set;
+                for (int v : graph.getVertices()) {
+                    if (!child_set.contains(v)) {
+                        parent_set.insert(v);
+                    }
+                }
+                applyFlow(path, parent_set, child_set, lambda, table);
                 q.push(child_idx);
             }
         }

@@ -282,10 +282,89 @@ const double LinearRoutingTable::getFlow(int e, int s) const {
         return 0.0;
     }
 }
+/*
+void LinearRoutingTable::reduceFlow(int e, int s, double flow) {
+    assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
+    auto& ids  = src_ids[e];
+    auto& vals = src_flows[e];
+
+    // small linear scan first (your trick)
+    const int len = static_cast<int>(ids.size());
+    const int linear_bound = 8;
+    for (int i = 0; i < std::min(len, linear_bound); ++i) {
+        if (ids[i] == s) {
+            vals[i] -= flow;
+            if (vals[i] <= 0.0) {
+                src_ids[e].erase(src_ids[e].begin() + i);
+                src_flows[e].erase(src_flows[e].begin() + i);
+            }
+        }
+    }
+
+    // if you keep ids sorted by s, you can do binary search here
+    int lo = 0, hi = len;
+    while (lo < hi) {
+        const size_t mid = (lo + hi) >> 1;
+        const int mid_val = ids[mid];
+        if (mid_val < s)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    if (lo < len && ids[lo] == s) {
+        vals[lo] -= flow;
+        if (vals[lo] <= 0.0) {
+            src_ids[e].erase(src_ids[e].begin() + lo);
+            src_flows[e].erase(src_flows[e].begin() + lo);
+        }
+    } else {
+        // flow not found, do nothing
+    }
+}
 
 
+void LinearRoutingTable::eraseAt(int e, int s) {
+    // remove flow at edge e with commodity s
+    assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
+    const auto& ids  = src_ids[e];
+    const auto& vals = src_flows[e];
 
+    int index_s = -1;
 
+    // small linear scan first (your trick)
+    const int len = static_cast<int>(ids.size());
+    const int linear_bound = 8;
+    for (int i = 0; i < std::min(len, linear_bound); ++i) {
+        if (ids[i] == s) {
+            index_s = i;
+        }
+    }
+
+    if (index_s != -1) {
+        src_ids.erase(src_ids.begin()+index_s);
+        src_flows.erase(src_flows.begin()+index_s);
+        return;
+    }
+
+    // if you keep ids sorted by s, you can do binary search here
+    int lo = 0, hi = len;
+    while (lo < hi) {
+        const size_t mid = (lo + hi) >> 1;
+        const int mid_val = ids[mid];
+        if (mid_val < s)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    if (lo < len && ids[lo] == s) {
+        src_ids.erase(src_ids.begin()+lo);
+        src_flows.erase(src_flows.begin()+lo);
+        return;
+    }
+
+}
+
+*/
 bool LinearRoutingTable::isValid(const IGraph& g) const {
     const int m = src_ids.size();
     for (int e = 0; e < m; ++e) {
@@ -335,4 +414,7 @@ void LinearRoutingTable::printFlows(const IGraph& g) const {
         }
     }
 }
+
+
+
 

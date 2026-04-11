@@ -66,6 +66,12 @@ public:
         double average_tree_height = 0.0;
         for (int h : tree_heights) average_tree_height += h;
 
+        std::cout << "Partitioning stats" << std::endl;
+        std::cout << "Number of PQ pushes: " << oracle->number_pq_pushes << std::endl;
+        std::cout << "Number of PQ pops: " << oracle->number_pq_pushes << std::endl;
+        std::cout << "Number of successful relaxations: " << oracle->number_successful_relaxations << std::endl;
+        std::cout << "Number of touched nodes: " << oracle->number_touched_nodes << std::endl;
+
         std::cout << "Average tree height: " << average_tree_height/tree_heights.size() << "\n";
         auto it = ::map_cycle_strategy.find(cycle_strategy);
         if (it != ::map_cycle_strategy.end()) {
@@ -82,6 +88,7 @@ public:
     }
 
     void run(LinearRoutingTable& table) {
+
         lambda_sum = 0.0;
         while (lambda_sum < 1.0) {
             lambda_sum += treeOracle(table);
@@ -89,7 +96,7 @@ public:
         }
 
         auto t0 = timeNow();
-
+/*
         // Apply cycle removal based on selected strategy
         switch (cycle_strategy) {
             case CycleRemovalStrategy::NONE:
@@ -102,8 +109,10 @@ public:
                 transform.removeCyclesLinear(table);
                 break;
         }
-
+*/
         cycleCancellation_time += duration(timeNow() - t0);
+        std::cout << "Path -based table:" << std::endl;
+
     }
 
     double treeOracle(LinearRoutingTable& table) {

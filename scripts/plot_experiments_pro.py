@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import argparse
 from collections.abc import Callable
 from pathlib import Path
 import numpy as np
@@ -15,9 +16,13 @@ import matplotlib.ticker as mticker
 # ======================
 # CONFIG
 # ======================
-RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/combined.csv")
-OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/2dgrids/")
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+# Default paths (can be overridden via command-line arguments)
+DEFAULT_RESULTS_CSV = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/results/synth/fatclique/combined.csv")
+DEFAULT_OUT_DIR = Path("/Users/halilibrahim/Desktop/Thesis/ObliviousRouting/plots/synthetic/fatclique/")
+
+# These will be set by parse_arguments()
+RESULTS_CSV = DEFAULT_RESULTS_CSV
+OUT_DIR = DEFAULT_OUT_DIR
 
 ORACLE_TIME_COL = "avg_oracle_time_micro_seconds"
 
@@ -34,8 +39,9 @@ TIME_COLUMN_ALIASES: dict[str, tuple[str, float]] = {
 FIGSIZE_SINGLE = (2.87, 2.17)   # thesis single-column-ish
 FIGSIZE_DOUBLE = (5.91, 2.17)     # thesis double-column-ish
 
+# Export options (can be optimized for speed vs. quality)
 EXPORT_PNG = True
-DPI_RASTER = 450
+DPI_RASTER = 450  # Set to 150-200 for faster development, 450 for publication
 
 SHOW_ERROR_BARS = False
 LOG_EPS = 1e-3  # microseconds, safe lower bound for log-plots
@@ -50,6 +56,12 @@ EMBED_LEGEND = False
 # plot.  Axis/scale tick numbers are kept; all human-readable text is removed
 # so plots can be annotated via LaTeX captions / pgfplots overlay instead.
 EMBED_AXIS_LABELS = False
+
+# Performance options for faster plotting
+FAST_MODE = True  # Set to True to skip PNG export and use lower DPI for development
+if FAST_MODE:
+    DPI_RASTER = 150  # Lower DPI for faster rendering in development
+    EXPORT_PNG = False  # Skip PNG export to save time
 
 
 # ======================
@@ -124,9 +136,18 @@ def set_paper_style():
 
 
 def savefig_all(fig: plt.Figure, outbase: Path):
-    fig.savefig(outbase.with_suffix(".pdf"))
+    """Save figure to PDF and optionally PNG with optimizations for speed."""
+    # Save PDF (fastest vector format)
+    fig.savefig(outbase.with_suffix(".pdf"), bbox_inches='tight', pad_inches=0.05)
+    
+    # Save PNG only if enabled
     if EXPORT_PNG:
-        fig.savefig(outbase.with_suffix(".png"), dpi=DPI_RASTER)
+        fig.savefig(
+            outbase.with_suffix(".png"), 
+            dpi=DPI_RASTER,
+            bbox_inches='tight',
+            pad_inches=0.05
+        )
 
 
 def normalize_time_columns_to_microseconds(df: pd.DataFrame) -> pd.DataFrame:
@@ -410,6 +431,7 @@ def plot_lines(
         if SHOW_ERROR_BARS and np.any(e > 0):
             ax.fill_between(x, y - e, y + e, alpha=0.10, color=colors[s], linewidth=0)
 
+
     if xlog:
         ax.set_xscale("log")
     if ylog:
@@ -502,18 +524,57 @@ def plot_box_by_solver(
     """
     Box plot per solver (distribution across instances).
     Median shown as a colored line; mean as a small diamond marker.
+
+    If ylog is False but values span more than 2 orders of magnitude,
+    automatically enable logarithmic scaling for better visualization.
+    
+    IMPORTANT: Only includes instances where ALL solvers have data, to ensure
+    a fair comparison without distribution shifts from missing data.
     """
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
+    # ── Filter to instances present in ALL solvers ───────────────────────────
+    # Identify which instances (rows) have valid data for each solver
+    if "graph" in df.columns:
+        # Group by graph to identify instances that have data for all solvers
+        instance_col = "graph"
+    else:
+        # If no graph column, use row index as instance identifier
+        instance_col = None
+
+    # Collect instances that have data for each solver
+    valid_instances_per_solver = {}
+    for s in solvers:
+        df_s = df.loc[df["solver"] == s]
+        # Get instances (graphs or indices) that have non-null values for ycol
+        valid_rows = df_s[df_s[ycol].notna()]
+        if instance_col and instance_col in valid_rows.columns:
+            valid_instances_per_solver[s] = set(valid_rows[instance_col].unique())
+        else:
+            # Fall back to row indices
+            valid_instances_per_solver[s] = set(valid_rows.index)
+
+    # Find instances common to all solvers
+    if valid_instances_per_solver:
+        common_instances = set.intersection(*valid_instances_per_solver.values())
+        # Filter dataframe to only rows with instances in common_instances
+        if instance_col and instance_col in df.columns:
+            df_filtered = df[df[instance_col].isin(common_instances)].copy()
+        else:
+            df_filtered = df.loc[list(common_instances)].copy()
+    else:
+        df_filtered = df.copy()
+
     data = []
     valid_solvers = []
+    all_vals_for_range = []
+
     for s in solvers:
-        vals = df.loc[df["solver"] == s, ycol].dropna().to_numpy(dtype=float)
+        vals = df_filtered.loc[df_filtered["solver"] == s, ycol].dropna().to_numpy(dtype=float)
         if len(vals) > 0:  # Only include solvers with data
-            if ylog:
-                vals = np.maximum(vals, LOG_EPS)
             data.append(vals)
             valid_solvers.append(s)
+            all_vals_for_range.extend(vals)
 
     # Skip if no valid data
     if len(data) == 0:
@@ -521,10 +582,28 @@ def plot_box_by_solver(
         plt.close(fig)
         return
 
+    # Auto-detect if log scale is needed
+    actual_ylog = ylog
+    if not ylog and len(all_vals_for_range) > 0:
+        all_vals_array = np.array(all_vals_for_range)
+        # Filter out zero and negative values for range calculation
+        positive_vals = all_vals_array[all_vals_array > 0]
+        if len(positive_vals) > 0:
+            val_min = np.min(positive_vals)
+            val_max = np.max(positive_vals)
+            # If range spans more than 2 orders of magnitude (100x), use log scale
+            if val_max / val_min > 100:
+                actual_ylog = True
+
+    # Apply log transformation if needed
+    if actual_ylog:
+        data = [np.maximum(d, LOG_EPS) for d in data]
+
     bp = ax.boxplot(
         data,
         patch_artist=True,
         showfliers=False,
+        whis=[0, 100],
         widths=0.55,
         medianprops=dict(linewidth=1.6, color="black"),
         whiskerprops=dict(linewidth=0.7, linestyle="--", color="#555555"),
@@ -546,11 +625,78 @@ def plot_box_by_solver(
         rotation=30, ha="right",
     )
 
-    if ylog:
+    if actual_ylog:
         ax.set_yscale("log")
     _apply_labels(ax, ylabel=ylabel)
     ax.minorticks_on()
 
+    savefig_all(fig, outpath)
+    plt.close(fig)
+
+
+def plot_cycle_removal_percentage_by_solver(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, str],
+        figsize,
+        outpath: Path,
+):
+    """
+    Box plot showing cycle removal time as a percentage of total runtime per solver.
+    """
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    data = []
+    valid_solvers = []
+
+    for s in solvers:
+        s_df = df.loc[df["solver"] == s]
+        if len(s_df) > 0 and "cycle_removal_time_micro_seconds" in df.columns and "total_time_micro_seconds" in df.columns:
+            cycle_time = s_df["cycle_removal_time_micro_seconds"].to_numpy(dtype=float)
+            total_time = s_df["total_time_micro_seconds"].to_numpy(dtype=float)
+
+            # Calculate percentage (handle division by zero)
+            percentages = np.divide(cycle_time, total_time, where=total_time > 0, out=np.zeros_like(cycle_time)) * 100.0
+            percentages = percentages[np.isfinite(percentages) & (percentages > 0)]
+
+            if len(percentages) > 0:
+                data.append(percentages)
+                valid_solvers.append(s)
+
+    # Skip if no valid data
+    if len(data) == 0:
+        plt.close(fig)
+        return
+
+    bp = ax.boxplot(
+        data,
+        patch_artist=True,
+        showfliers=True,
+        whis=[0, 100],
+        widths=0.55,
+        medianprops=dict(linewidth=1.6, color="black"),
+        whiskerprops=dict(linewidth=0.7, linestyle="--", color="#555555"),
+        capprops=dict(linewidth=0.7, color="#555555"),
+        boxprops=dict(linewidth=0.7),
+        flierprops=dict(marker="o", markerfacecolor="gray", markersize=3, alpha=0.5),
+    )
+
+    # Handle color assignment safely
+    if bp.get("boxes"):
+        for i, box in enumerate(bp["boxes"]):
+            if i < len(valid_solvers):
+                box.set_facecolor(colors[valid_solvers[i]])
+                box.set_alpha(0.40)
+
+    x = np.arange(1, len(valid_solvers) + 1)
+    ax.set_xticks(x)
+    ax.set_xticklabels(
+        [pretty_solver_name(s) for s in valid_solvers] if EMBED_AXIS_LABELS else [""] * len(valid_solvers),
+        rotation=30, ha="right",
+    )
+
+    _apply_labels(ax, ylabel="Cycle removal time [% of total runtime]")
+    ax.minorticks_on()
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -667,10 +813,22 @@ def plot_runtime_decomposition_grouped_csv(
         sub = df[df["solver"] == s]
         if sub.empty:
             continue
+
+        # Get base times
+        transform_time = float(np.median(sub["transformation_time_micro_seconds"].fillna(0)))
+        solve_time = float(np.median(sub["solve_time_micro_seconds"].fillna(0)))
+
+        # Add cycle_removal_time for tree-based solvers (those with HST in name)
+        cycle_time = 0.0
+        if any(x in s for x in ["HST", "Raecke", "Random MST", "MST"]):
+            if "cycle_removal_time_micro_seconds" in df.columns:
+                cycle_time = float(np.median(sub["cycle_removal_time_micro_seconds"].fillna(0)))
+
         rows.append({
             "solver": s,
-            "transform": float(np.median(sub["transformation_time_micro_seconds"].fillna(0))),
-            "solve": float(np.median(sub["solve_time_micro_seconds"].fillna(0))),
+            "transform": transform_time,
+            "cycle": cycle_time,
+            "solve": solve_time,
         })
 
     if not rows:
@@ -679,12 +837,14 @@ def plot_runtime_decomposition_grouped_csv(
     agg = pd.DataFrame(rows).set_index("solver").reindex(solvers).dropna(how="all").reset_index()
 
     transform_vals = agg["transform"].fillna(0).to_numpy(dtype=float)
+    cycle_vals     = agg["cycle"].fillna(0).to_numpy(dtype=float)
     solve_vals     = agg["solve"].fillna(0).to_numpy(dtype=float)
-    totals         = transform_vals + solve_vals
+    totals         = transform_vals + cycle_vals + solve_vals
 
-    # Avoid division by zero for solvers where both are 0 / NaN
+    # Avoid division by zero for solvers where all are 0 / NaN
     safe_totals = np.where(totals > 0, totals, 1.0)
     pct_transform = transform_vals / safe_totals * 100.0
+    pct_cycle     = cycle_vals     / safe_totals * 100.0
     pct_solve     = solve_vals     / safe_totals * 100.0
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
@@ -696,8 +856,19 @@ def plot_runtime_decomposition_grouped_csv(
     ax.bar(x, pct_transform, width,
            label="Transformation time",
            color="#D55E00", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
+
+    # Only show cycle removal if any solver has it
+    if np.any(cycle_vals > 0):
+        ax.bar(x, pct_cycle, width,
+               bottom=pct_transform,
+               label="Cycle removal time",
+               color="#CC79A7", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
+        bottom_for_solve = pct_transform + pct_cycle
+    else:
+        bottom_for_solve = pct_transform
+
     ax.bar(x, pct_solve, width,
-           bottom=pct_transform,
+           bottom=bottom_for_solve,
            label="Computation time",
            color="#009E73", edgecolor="white", linewidth=0.4, alpha=0.88, zorder=3)
 
@@ -876,6 +1047,180 @@ def plot_metric_table_by_graph(
 
     savefig_all(fig, outpath)
     plt.close(fig)
+
+
+def plot_cycle_removal_comparison(
+        df: pd.DataFrame,
+        solvers: list[str],
+        colors: dict[str, str],
+        figsize,
+        out_dir: Path,
+):
+    """
+    Compare cycle removal strategies (naive vs Tarjan_SCC) with:
+    1. Bar plots showing average runtime per solver for each strategy
+    2. A completion rate chart showing % of instances solved by each strategy
+
+    Only uses instances where BOTH strategies have data for fair comparison.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if "cycle_removal_type" not in df.columns:
+        print(f"WARNING: cycle_removal_type column not found - skipping cycle removal comparison")
+        return
+
+    # Filter to only naive and Tarjan_SCC
+    df_cycles = df[df["cycle_removal_type"].isin(["naive", "Tarjan_SCC"])].copy()
+
+    if df_cycles.empty:
+        print(f"WARNING: No cycle removal strategy data found - skipping comparison")
+        return
+
+    # Get all unique instances
+    all_instances = df_cycles["graph"].unique() if "graph" in df_cycles.columns else df_cycles.index.unique()
+
+    # Find instances that have data for BOTH strategies for ALL solvers
+    # For each instance, check if it has both naive and Tarjan_SCC for each solver
+    common_instances = []
+
+    for instance in all_instances:
+        df_inst = df_cycles[df_cycles["graph"] == instance] if "graph" in df_cycles.columns else df_cycles.loc[[instance]]
+        strategies_present = df_inst["cycle_removal_type"].unique()
+
+        # Check if this instance has both strategies
+        if "naive" in strategies_present and "Tarjan_SCC" in strategies_present:
+            # Check if all solvers have data for this instance with both strategies
+            for solver in solvers:
+                df_solver_inst = df_inst[df_inst["solver"] == solver]
+                solver_strategies = df_solver_inst["cycle_removal_type"].unique()
+                if "naive" not in solver_strategies or "Tarjan_SCC" not in solver_strategies:
+                    break
+            else:
+                # All solvers have both strategies for this instance
+                common_instances.append(instance)
+
+    if not common_instances:
+        print(f"WARNING: No instances with both cycle removal strategies for all solvers")
+        return
+
+    # Filter to common instances
+    if "graph" in df_cycles.columns:
+        df_filtered = df_cycles[df_cycles["graph"].isin(common_instances)].copy()
+    else:
+        df_filtered = df_cycles.loc[df_cycles.index.isin(common_instances)].copy()
+
+    # ── Bar plots per strategy ─────────────────────────────────────────────────
+    for strategy in ["naive", "Tarjan_SCC"]:
+        df_strategy = df_filtered[df_filtered["cycle_removal_type"] == strategy].copy()
+
+        # Compute average runtime per solver
+        agg = df_strategy.groupby("solver", as_index=False)["total_time_micro_seconds"].agg(["mean", "std", "count"])
+        agg.columns = ["mean", "std", "count"]
+        agg = agg.reset_index()
+        agg["std"] = agg["std"].fillna(0.0)
+
+        # Reorder solvers
+        agg = agg.set_index("solver").reindex(solvers).reset_index()
+        agg = agg.dropna(subset=["mean"])
+
+        if agg.empty:
+            continue
+
+        # Create bar plot
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+        x = np.arange(len(agg))
+        y = agg["mean"].to_numpy(dtype=float)
+        e = agg["std"].to_numpy(dtype=float)
+
+        ax.bar(
+            x, y,
+            color=[colors[s] for s in agg["solver"]],
+            edgecolor="white",
+            linewidth=0.5,
+            alpha=0.88,
+            zorder=3,
+        )
+
+        # Error bars
+        ax.errorbar(
+            x, y, yerr=e,
+            fmt="none", ecolor="#333333",
+            capsize=2.5, capthick=0.7,
+            elinewidth=0.7, zorder=4,
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            [pretty_solver_name(s) for s in agg["solver"]] if EMBED_AXIS_LABELS else [""] * len(agg),
+            rotation=30, ha="right",
+        )
+
+        ax.set_yscale("log")
+        _apply_labels(ax, ylabel="Average total runtime [microseconds]")
+        ax.minorticks_on()
+
+        savefig_all(fig, out_dir / f"avg_runtime_by_solver_{strategy.lower()}")
+        plt.close(fig)
+
+     # ── Completion rate chart ──────────────────────────────────────────────────
+    # For each strategy, count how many instances (graphs) it completed
+    completion_data = []
+
+    for strategy in ["naive", "Tarjan_SCC"]:
+        df_strategy = df_cycles[df_cycles["cycle_removal_type"] == strategy].copy()
+        if "graph" in df_strategy.columns:
+            completed = df_strategy["graph"].nunique()
+        else:
+            completed = len(df_strategy.index.unique())
+        total = len(all_instances)
+        completion_pct = (completed / total * 100) if total > 0 else 0
+        completion_data.append({
+            "strategy": strategy,
+            "completed": completed,
+            "total": total,
+            "pct": completion_pct,
+        })
+
+    comp_df = pd.DataFrame(completion_data)
+
+    # Create bar chart for completion rates
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    x = np.arange(len(comp_df))
+    y = comp_df["pct"].to_numpy(dtype=float)
+
+    bars = ax.bar(
+        x, y,
+        color=["#0072B2", "#D55E00"],  # Blue for naive, orange for Tarjan
+        edgecolor="white",
+        linewidth=0.5,
+        alpha=0.88,
+        zorder=3,
+    )
+
+    # Add percentage labels on bars
+    for i, (bar, pct) in enumerate(zip(bars, y)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{pct:.1f}%\n({comp_df["completed"].iloc[i]}/{comp_df["total"].iloc[i]})',
+                ha='center', va='bottom', fontsize=8)
+
+    ax.set_ylim(0, 110)
+    ax.set_xticks(x)
+    ax.set_xticklabels(comp_df["strategy"].values if EMBED_AXIS_LABELS else [""] * len(comp_df))
+    ax.yaxis.set_major_formatter(mticker.PercentFormatter())
+
+    _apply_labels(ax, ylabel="Instance completion rate [%]")
+    ax.minorticks_on()
+
+    savefig_all(fig, out_dir / "completion_rate_by_strategy")
+    plt.close(fig)
+
+    print(f"✔ Cycle removal comparison plots written to {out_dir.resolve()}")
+    print(f"  Common instances (both strategies): {len(common_instances)} / {len(all_instances)}")
+    for row in completion_data:
+        print(f"  {row['strategy']}: {row['completed']}/{row['total']} instances ({row['pct']:.1f}%)")
 
 
 def plot_error_lines_vs_edges(
@@ -1229,6 +1574,24 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
         linestyles=linestyles,
     )
 
+    # ── Average tree height ──────────────────────────────────────────────────
+    if "avg_tree_height" in df.columns:
+        df_tree = df[df["solver"].isin(solvers_mwu)].copy()
+        # Only plot if there are non-NaN average tree height values
+        if df_tree["avg_tree_height"].notna().any():
+            agg_tree = aggregate_mean_std(df_tree, "avg_tree_height")
+            if not agg_tree.empty:
+                plot_lines(
+                    agg_tree, solvers_mwu, colors, markers,
+                    xcol="num_edges", y_mean_col="mean", y_std_col="std",
+                    xlabel="Number of edges",
+                    ylabel="Average tree height",
+                    xlog=True, ylog=True,
+                    figsize=FIGSIZE_SINGLE,
+                    outpath=out_dir / "avg_tree_height_lines_vs_edges",
+                    linestyles=linestyles,
+                )
+
     # ── Load computation time (only for electrical flow) ────────────────────
     if "load_computation_micro_seconds" in df.columns:
         df_load = df[df["solver"].isin(solvers_mwu)].copy()
@@ -1247,6 +1610,50 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
                     linestyles=linestyles,
                 )
 
+    # ── Cycle removal time ─────────────────────────────────────────────────────
+    if "cycle_removal_time_micro_seconds" in df.columns:
+        df_cycle = df[df["solver"].isin(solvers_mwu)].copy()
+        # Only plot if there are non-NaN cycle removal time values
+        if df_cycle["cycle_removal_time_micro_seconds"].notna().any():
+            agg_cycle = aggregate_mean_std(df_cycle, "cycle_removal_time_micro_seconds")
+            if not agg_cycle.empty:
+                plot_lines(
+                    agg_cycle, solvers_mwu, colors, markers,
+                    xcol="num_edges", y_mean_col="mean", y_std_col="std",
+                    xlabel="Number of edges",
+                    ylabel="Cycle removal time [microseconds]",
+                    xlog=True, ylog=True,
+                    figsize=FIGSIZE_SINGLE,
+                    outpath=out_dir / "cycle_removal_time_lines_vs_edges",
+                    linestyles=linestyles,
+                )
+
+    # ── MWU weight update time (iteration update) ────────────────────────────
+    if "mwu_weight_update_time_micro_seconds" in df.columns:
+        df_mwu_update = df[df["solver"].isin(solvers_mwu)].copy()
+        # Only plot if there are non-NaN MWU update time values
+        if df_mwu_update["mwu_weight_update_time_micro_seconds"].notna().any():
+            agg_mwu_update = aggregate_mean_std(df_mwu_update, "mwu_weight_update_time_micro_seconds")
+            if not agg_mwu_update.empty:
+                plot_lines(
+                    agg_mwu_update, solvers_mwu, colors, markers,
+                    xcol="num_edges", y_mean_col="mean", y_std_col="std",
+                    xlabel="Number of edges",
+                    ylabel="MWU iteration update time [microseconds]",
+                    xlog=True, ylog=True,
+                    figsize=FIGSIZE_SINGLE,
+                    outpath=out_dir / "mwu_weight_update_time_lines_vs_edges",
+                    linestyles=linestyles,
+                )
+
+    # ── Cycle removal time percentage box plots ──────────────────────────────
+    if "cycle_removal_time_micro_seconds" in df.columns:
+        plot_cycle_removal_percentage_by_solver(
+            df[df["solver"].isin(solvers_mwu)], solvers_mwu, colors,
+            figsize=FIGSIZE_SINGLE,
+            outpath=out_dir / "cycle_removal_time_percentage_box_by_solver",
+        )
+
     # ── Relative error box plots — always linear ─────────────────────────────
     plot_box_by_solver(
         df[df["solver"].isin(solvers)], solvers, colors,
@@ -1256,6 +1663,28 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
         figsize=FIGSIZE_SINGLE,
         outpath=out_dir / "relative_error_box_by_solver",
     )
+
+    # ── Average tree height box plots — always linear ─────────────────────────
+    if "avg_tree_height" in df.columns:
+        plot_box_by_solver(
+            df[df["solver"].isin(solvers)], solvers, colors,
+            ycol="avg_tree_height",
+            ylabel="Average tree height",
+            ylog=True,
+            figsize=FIGSIZE_SINGLE,
+            outpath=out_dir / "avg_tree_height_box_by_solver",
+        )
+
+    # ── Cycle removal time box plots ──────────────────────────────────────────
+    if "cycle_removal_time_micro_seconds" in df.columns:
+        plot_box_by_solver(
+            df[df["solver"].isin(solvers)], solvers, colors,
+            ycol="cycle_removal_time_micro_seconds",
+            ylabel="Cycle removal time [microseconds]",
+            ylog=True,
+            figsize=FIGSIZE_SINGLE,
+            outpath=out_dir / "cycle_removal_time_box_by_solver",
+        )
 
     if "demand_model" in df.columns:
         demand_models = sorted(df["demand_model"].dropna().unique())
@@ -1275,16 +1704,25 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
             )
 
     # ── Transformation time ──────────────────────────────────────────────────
+
     df_t = df[df["solver"].isin(solvers_mwu)].copy()
+    
+    # For transformation_time box plot, include cycle_removal_time if it exists
+    # (cycle_removal_time is NaN for electrical flow, so it will be treated as 0)
+    df_t["total_transform_cycle_time"] = (
+        df_t["transformation_time_micro_seconds"].fillna(0.0) +
+        df_t["cycle_removal_time_micro_seconds"].fillna(0.0)
+    )
+    
     df_t["percent_transform_time"] = (
-        df_t["transformation_time_micro_seconds"] / df_t["total_time_micro_seconds"] * 100.0
+        df_t["total_transform_cycle_time"] / df_t["total_time_micro_seconds"] * 100.0
     )
 
     plot_box_by_solver(
         df_t, solvers_mwu, colors,
         ycol="percent_transform_time",
-        ylabel="Transformation time in %",
-        ylog=ylog,
+        ylabel="Transformation + cycle removal time in %",
+        ylog=True,
         figsize=FIGSIZE_SINGLE,
         outpath=out_dir / "transformation_time_box_by_solver",
     )
@@ -1294,15 +1732,6 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
     )
     df_t = df_t.dropna(subset=["percent_transform_time"])
 
-    agg_transform_share = aggregate_mean_std_by_solver(df_t, "percent_transform_time")
-    plot_solver_average_bars(
-        agg_transform_share, solvers_mwu, colors,
-        y_mean_col="mean", y_std_col="std",
-        ylabel="Percentage of transformation time [%]",
-        ylog=ylog,
-        figsize=FIGSIZE_SINGLE,
-        outpath=out_dir / "avg_transformation_time_share_by_solver",
-    )
 
     plot_runtime_decomposition_grouped_csv(
         df[df["solver"].isin(solvers_mwu)], solvers_mwu,
@@ -1341,6 +1770,20 @@ def run_plots(df: pd.DataFrame, solvers: list, colors: dict, markers: dict,
         fmt=lambda v: f"{v:.4f}",
         outpath=out_dir / "table_oblivious_ratio_by_graph",
         dedup_by_graph=True,
+    )
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="avg_tree_height",
+        metric_label="Average tree height",
+        fmt=lambda v: f"{v:.2f}",
+        outpath=out_dir / "table_avg_tree_height_by_graph",
+    )
+    plot_metric_table_by_graph(
+        _df_mwu, solvers_mwu,
+        metric_col="cycle_removal_time_micro_seconds",
+        metric_label="Cycle removal time [microseconds]",
+        fmt=lambda v: f"{v:,.1f}",
+        outpath=out_dir / "table_cycle_removal_time_by_graph",
     )
 
     # ── Mendel total time (only in Mendel comparison pass) ───────────────────
@@ -1448,6 +1891,10 @@ def main():
 
     df = pd.read_csv(RESULTS_CSV)
     df = normalize_time_columns_to_microseconds(df)
+    
+    # Clean up graph names: remove dataset prefix (e.g., "Rocketfuel_Topologies/3967.lgf" → "3967")
+    if "graph" in df.columns:
+        df["graph"] = df["graph"].apply(_graph_short_name)
 
     if "status" in df.columns:
         # Only filter by status if there are non-NaN values
@@ -1517,10 +1964,8 @@ def main():
 
     df = df.dropna(subset=["solver", "num_edges"]).copy()
 
-    df["ratio_pct"] = (
-        df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
-    )
-    df["relative_error"] = (df["ratio_pct"] ).clip(lower=0.0)
+
+    df["relative_error"] = df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
 
     print(f"DEBUG: After creating relative_error - df shape: {df.shape}, solvers in df: {df['solver'].nunique()}")
 
@@ -1545,7 +1990,7 @@ def main():
     for solver in all_solvers:
         print(f"  {solver:50s} → {colors[solver]}")
 
-    # ── Solver sets ───────────────────────────────────────────────────────────
+     # ── Solver sets ───────────────────────────────────────────────────────────
     # Pass 1: all solvers except Mendel/MendelScaling, naive electrical, and Pointer HST variants
     solvers_no_mendel = [s for s in all_solvers
                          if "Mendel" not in s and "MendelScaling" not in s
@@ -1554,15 +1999,13 @@ def main():
 
     # Pass 2: for each Mendel variant include its base + the mendel version
     # so the plot directly compares "before vs after" Mendel scaling.
+    # Filter to only FRT and CKR in Flat HST versions
     solvers_mendel_cmp: list[str] = []
     for s in all_solvers:
-        if "Mendel" in s or "MendelScaling" in s:
-            # Extract base name by removing the Mendel part
-            base = s.replace(" + MendelScaling", "").replace(" (Mendel)", "")
-            if base in all_solvers and base not in solvers_mendel_cmp:
-                solvers_mendel_cmp.append(base)
-            if s not in solvers_mendel_cmp:
-                solvers_mendel_cmp.append(s)
+        # Only consider FRT and CKR solvers in Flat HST
+        if ("Raecke FRT" in s or "Raecke CKR" in s) and "(Flat HST)" in s:
+            solvers_mendel_cmp.append(s)
+
     solvers_mendel_cmp = sorted(solvers_mendel_cmp, key=solver_sort_key)
 
     # Pass 3: for electrical flow variants, include both naive and sketching versions
@@ -1625,60 +2068,23 @@ def main():
     else:
         print("[4/5] Only one HST data structure variant found — skipping HST comparison plots.")
 
-    # ── Pass 5: Cycle removal strategy comparison (Flat HST only) ───────────
+     # ── Pass 5: Cycle removal strategy comparison (Flat HST only) ───────────
     if solvers_cycle_cmp:
         cycle_dir = OUT_DIR / "cycle_removal"
         print(f"[5/5] Generating cycle removal strategy comparison plots (Flat HST only) → {cycle_dir}")
         
-        # Prepare data for cycle removal comparison: filter to Flat HST and naive/Tarjan_SCC only
-        df_cycle = df.copy()
-        
-        # Filter to only Flat HST solvers
-        df_cycle = df_cycle[df_cycle["solver"].isin(solvers_cycle_cmp)].copy()
-        
+        # Prepare data for cycle removal comparison: filter to Flat HST solvers
+        df_cycle = df[df["solver"].isin(solvers_cycle_cmp)].copy()
+
         if "cycle_removal_type" in df_cycle.columns:
-            # Filter to only naive and Tarjan_SCC strategies
-            df_cycle = df_cycle[df_cycle["cycle_removal_type"].isin(["naive", "Tarjan_SCC"])].copy()
-            
-            # Create augmented solver names that include the strategy
-            df_cycle["solver_with_strategy"] = (
-                df_cycle["solver"] + " (" + df_cycle["cycle_removal_type"] + ")"
+            # Use specialized function for cycle removal comparison
+            plot_cycle_removal_comparison(
+                df_cycle, solvers_cycle_cmp, colors,
+                figsize=FIGSIZE_SINGLE,
+                out_dir=cycle_dir,
             )
-            
-            # Get unique solvers with strategies (only Flat HST)
-            solvers_cycle_with_strategy = sorted(
-                df_cycle["solver_with_strategy"].unique(),
-                key=lambda s: solver_sort_key(s.split(" (")[0])  # Sort by base solver name
-            )
-            
-            # Create color/marker/linestyle mappings for augmented solver names
-            # Map augmented names back to base solver names for consistent colors
-            colors_cycle = {}
-            markers_cycle = {}
-            linestyles_cycle = {}
-            for augmented_name in solvers_cycle_with_strategy:
-                base_name = augmented_name.rsplit(" (", 1)[0]  # Remove the (strategy) part
-                if base_name in colors:
-                    colors_cycle[augmented_name] = colors[base_name]
-                    markers_cycle[augmented_name] = markers[base_name]
-                    linestyles_cycle[augmented_name] = linestyles[base_name]
-                else:
-                    # Fallback to first color if base not found
-                    colors_cycle[augmented_name] = _PALETTE[0]
-                    markers_cycle[augmented_name] = ["o", "s", "^"][hash(augmented_name) % 3]
-                    linestyles_cycle[augmented_name] = _LINESTYLES[hash(augmented_name) % len(_LINESTYLES)]
-            
-            # Temporarily rename solver column for plotting
-            df_cycle_plot = df_cycle.copy()
-            df_cycle_plot["solver"] = df_cycle_plot["solver_with_strategy"]
-            
-            # Generate plots with augmented solver names and augmented color mappings
-            run_plots(df_cycle_plot, solvers_cycle_with_strategy, colors_cycle, markers_cycle, linestyles_cycle, cycle_dir,
-                      ylog=False, mendel_mode=False)
         else:
-            # Fallback if no cycle_removal_type column
-            run_plots(df_cycle, solvers_cycle_cmp, colors, markers, 
-                      linestyles, cycle_dir, ylog=False, mendel_mode=False)
+            print("[5/5] No cycle_removal_type column found — skipping cycle removal strategy plots.")
     else:
         print("[5/5] No Flat HST tree-based solvers found in data — skipping cycle removal strategy plots.")
 
@@ -1698,6 +2104,53 @@ def main():
         print(f"  [5] Cycle removal strategy comparison:      {(OUT_DIR / 'cycle_removal').resolve()}")
 
 
+def parse_arguments():
+    """
+    Parse command-line arguments for input CSV and output plot directory.
+    """
+    parser = argparse.ArgumentParser(
+        description="Generate publication-grade plots for oblivious routing experiments.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use default paths
+  python3 plot_experiments_pro.py
+  
+  # Specify custom input CSV and output directory
+  python3 plot_experiments_pro.py \\
+    --input results/synth/fatclique/combined.csv \\
+    --output plots/synthetic/fatclique/
+  
+  # Specify only input (use default output)
+  python3 plot_experiments_pro.py --input my_results.csv
+        """
+    )
+    
+    parser.add_argument(
+        "-i", "--input",
+        type=str,
+        default=str(DEFAULT_RESULTS_CSV),
+        help=f"Path to input CSV file (default: {DEFAULT_RESULTS_CSV})"
+    )
+    
+    parser.add_argument(
+        "-o", "--output",
+        type=str,
+        default=str(DEFAULT_OUT_DIR),
+        help=f"Path to output plot directory (default: {DEFAULT_OUT_DIR})"
+    )
+    
+    args = parser.parse_args()
+    return Path(args.input), Path(args.output)
+
+
 if __name__ == "__main__":
+    # Parse command-line arguments
+    RESULTS_CSV, OUT_DIR = parse_arguments()
+    
+    # Create output directory
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Run main plotting routine
     main()
 
