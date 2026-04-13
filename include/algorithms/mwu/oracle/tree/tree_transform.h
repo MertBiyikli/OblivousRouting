@@ -15,9 +15,6 @@
 
 // ---------------------------------------------------------------------------
 // TreeIteration<T>  —  works for T = std::shared_ptr<HSTNode>  or  T = FlatHST
-// path_table[v] = precomputed path 0→v from a single SPT, built once per
-// oracle call in tree_mwu and passed in here — avoids per-cut Dijkstra and
-// makes all cut-paths share one consistent SPT → no cycles by construction.
 // ---------------------------------------------------------------------------
 template<typename T>
 class TreeIteration {
