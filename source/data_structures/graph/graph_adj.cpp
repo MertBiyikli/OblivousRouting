@@ -290,6 +290,85 @@ const double GraphADJList::getDiameter() const {
     return diameter;
 }
 
+const double GraphADJList::getDiameterApprox() const {
+    if (n == 0) return 0.0;
+    if (n == 1) return 0.0;
+
+    const double INF = std::numeric_limits<double>::infinity();
+
+    // --- PHASE 1: Two-sweep heuristic for fast approximation ---
+    // Start from an arbitrary node (0) and find the farthest node
+    std::vector<double> dist(n, INF);
+    std::vector<int> parent(n, -1);
+    dist[0] = 0.0;
+
+    MinHeap<double, int> pq(n);
+    pq.insert(0, 0.0);
+
+    while (!pq.empty()) {
+        int node = pq.top();
+        double du = pq.topKey();
+        pq.deleteTop();
+
+        if (du > dist[node]) continue; // stale entry
+
+        for (size_t i = 0; i < adjList[node].size(); ++i) {
+            int neighbor = adjList[node][i];
+            double weight = distance[node][i];
+            double new_dist = du + weight;
+            if (new_dist < dist[neighbor]) {
+                dist[neighbor] = new_dist;
+                pq.insertOrAdjustKey(neighbor, new_dist);
+            }
+        }
+    }
+
+    // Find farthest node from node 0
+    int farthest_u = 0;
+    double max_dist_from_0 = 0.0;
+    for (int i = 0; i < n; ++i) {
+        if (dist[i] < INF && dist[i] > max_dist_from_0) {
+            max_dist_from_0 = dist[i];
+            farthest_u = i;
+        }
+    }
+
+    // --- PHASE 2: From the farthest node, find the next farthest node ---
+    std::fill(dist.begin(), dist.end(), INF);
+    std::fill(parent.begin(), parent.end(), -1);
+    dist[farthest_u] = 0.0;
+
+    pq.insert(farthest_u, 0.0);
+
+    while (!pq.empty()) {
+        int node = pq.top();
+        double du = pq.topKey();
+        pq.deleteTop();
+
+        if (du > dist[node]) continue; // stale entry
+
+        for (size_t i = 0; i < adjList[node].size(); ++i) {
+            int neighbor = adjList[node][i];
+            double weight = distance[node][i];
+            double new_dist = du + weight;
+            if (new_dist < dist[neighbor]) {
+                dist[neighbor] = new_dist;
+                pq.insertOrAdjustKey(neighbor, new_dist);
+            }
+        }
+    }
+
+    // Find the diameter as the maximum distance from farthest_u
+    double diameter = 0.0;
+    for (int i = 0; i < n; ++i) {
+        if (dist[i] < INF && dist[i] > diameter) {
+            diameter = dist[i];
+        }
+    }
+
+    return diameter;
+}
+
 
 
 std::vector<int> GraphADJList::getShortestPath(int u, int v) const {

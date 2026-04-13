@@ -401,6 +401,25 @@ const double GraphCSR::getDiameter() const {
     return diameter;
 }
 
+const double GraphCSR::getDiameterApprox() const {
+    if (n == 0) return 0.0;
+    if (n == 1) return 0.0;
+
+    const double INF = std::numeric_limits<double>::infinity();
+
+    // --- PHASE 1: Two-sweep heuristic for fast approximation ---
+    // Start from an arbitrary node (0)
+    auto path = getShortestPath(0, 1);
+    double max_weight = 0;
+    for (int i = 0; i+1<path.size(); i++) {
+        if (this->getEdgeDistance(path[i], path[i+1]) > max_weight) {
+            max_weight = this->getEdgeDistance(path[i], path[i+1]);
+        }
+    }
+
+    return max_weight*n;
+}
+
 
 std::vector<int> GraphCSR::getShortestPath(int src, int tgt, const std::vector<double>& dist_e) const {
     using P = std::pair<double, int>;

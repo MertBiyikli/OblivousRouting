@@ -56,14 +56,278 @@ public:
 
     explicit TreeTransform(const IGraph& _graph) : graph(_graph) {}
 
-    void transform(TreeIteration<std::shared_ptr<HSTNode>>& iter, LinearRoutingTable& table) {
-        distributeDemands(iter, table);
+    void transform(TreeIteration<std::shared_ptr<HSTNode>>& iter, LinearRoutingTable& table, std::map<std::pair<int, int> , std::vector<int>>& path_cache) {
+        //distributeDemands(iter, table, path_cache);
+        buildLinearRoutingFromSpanningTree(iter, table, path_cache);
     }
-    void transform(TreeIteration<FlatHST>& iter, LinearRoutingTable& table) {
-        distributeDemands(iter, table);
+    void transform(TreeIteration<FlatHST>& iter, LinearRoutingTable& table, std::map<std::pair<int, int> , std::vector<int>>& path_cache) {
+        //distributeDemands(iter, table, path_cache);
+        buildLinearRoutingFromSpanningTree(iter, table, path_cache);
     }
 
 private:
+
+struct UndirectedEdge {
+        int u = -1;
+        int v = -1;
+
+        UndirectedEdge() = default;
+        UndirectedEdge(int a, int b) {
+            if (a < b) { u = a; v = b; }
+            else       { u = b; v = a; }
+        }
+
+        bool operator==(const UndirectedEdge& other) const {
+            return u == other.u && v == other.v;
+        }
+    };
+
+    struct UndirectedEdgeHash {
+        std::size_t operator()(const UndirectedEdge& e) const {
+            return (static_cast<std::size_t>(e.u) << 32) ^ static_cast<std::size_t>(e.v);
+        }
+    };
+
+    // ------------------------------------------------------------
+    // Add all undirected edges of a path to the candidate set.
+    // ------------------------------------------------------------
+    void addPathEdgesToCandidateSet(
+        const std::vector<int>& path,
+        std::unordered_set<UndirectedEdge, UndirectedEdgeHash>& candidate_edges
+    ) const {
+        if (path.size() < 2) return;
+
+        for (size_t i = 0; i + 1 < path.size(); ++i) {
+            const int a = path[i];
+            const int b = path[i + 1];
+            assert(graph.getEdgeId(a, b) != INVALID_EDGE_ID);
+            candidate_edges.emplace(a, b);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Extract a spanning tree from the candidate edge union.
+    // Kruskal over the realized edges is enough here.
+    // ------------------------------------------------------------
+    std::vector<UndirectedEdge> extractSpanningTree(
+        const std::unordered_set<UndirectedEdge, UndirectedEdgeHash>& candidate_edges
+    ) const {
+        std::vector<UndirectedEdge> edges(candidate_edges.begin(), candidate_edges.end());
+
+        std::sort(edges.begin(), edges.end(), [&](const UndirectedEdge& e1, const UndirectedEdge& e2) {
+            const double d1 = graph.getEdgeDistance(e1.u, e1.v);
+            const double d2 = graph.getEdgeDistance(e2.u, e2.v);
+            if (d1 != d2) return d1 < d2;
+            if (e1.u != e2.u) return e1.u < e2.u;
+            return e1.v < e2.v;
+        });
+
+        DSU dsu(graph.getNumNodes());
+        std::vector<UndirectedEdge> tree_edges;
+        tree_edges.reserve(graph.getNumNodes() - 1);
+
+        for (const auto& e : edges) {
+            if (dsu.unite(e.u, e.v)) {
+                tree_edges.push_back(e);
+                if (static_cast<int>(tree_edges.size()) == graph.getNumNodes() - 1) {
+                    break;
+                }
+            }
+        }
+
+        return tree_edges;
+    }
+
+    // ------------------------------------------------------------
+    // Root the spanning tree at root=0 and compute parent[].
+    // ------------------------------------------------------------
+    std::vector<int> computeParentArray(
+        const std::vector<UndirectedEdge>& tree_edges,
+        int root = 0
+    ) const {
+        const int n = graph.getNumNodes();
+        std::vector<std::vector<int>> adj(n);
+
+        for (const auto& e : tree_edges) {
+            adj[e.u].push_back(e.v);
+            adj[e.v].push_back(e.u);
+        }
+
+        std::vector<int> parent(n, -1);
+        std::queue<int> q;
+        q.push(root);
+        parent[root] = root;
+
+        while (!q.empty()) {
+            const int u = q.front();
+            q.pop();
+
+            for (int v : adj[u]) {
+                if (parent[v] != -1) continue;
+                parent[v] = u;
+                q.push(v);
+            }
+        }
+
+        return parent;
+    }
+
+    // ------------------------------------------------------------
+    // Convert rooted tree into the linear routing table:
+    // add lambda on every edge of the unique path s -> root.
+    // ------------------------------------------------------------
+    void addTreePathsToLinearTable(
+        const std::vector<int>& parent,
+        double lambda,
+        LinearRoutingTable& table,
+        int root = 0
+    ) const {
+        const int n = graph.getNumNodes();
+
+        for (int s = 0; s < n; ++s) {
+            if (s == root) continue;
+            assert(parent[s] != -1 && "Spanning tree does not reach all vertices.");
+
+            // std::cout << "Pushing " << lambda <<" flow for commodity: " << s << std::endl;
+            int cur = s;
+            while (cur != root) {
+                const int par = parent[cur];
+                assert(par != -1);
+
+                const int e = graph.getEdgeId(cur, par);
+                // std::cout << "Edge : ( " << cur << " / " << par << " )";
+                assert(e != INVALID_EDGE_ID);
+
+                table.addFlow(e, s, lambda);
+                cur = par;
+            }
+            // std::cout << std::endl;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Pointer-HST: collect all realized parent-child center paths.
+    // ------------------------------------------------------------
+    void collectCandidateEdges(
+        const TreeIteration<std::shared_ptr<HSTNode>>& iter,
+        std::unordered_set<UndirectedEdge, UndirectedEdgeHash>& candidate_edges,
+        std::map<std::pair<int, int>, std::vector<int>> path_cache
+    ) const {
+        const HSTNode* root = iter.getTree().get();
+        const auto& distance = iter.getDistance();
+
+        std::queue<const HSTNode*> q;
+        q.push(root);
+
+        while (!q.empty()) {
+            const HSTNode* current = q.front();
+            q.pop();
+
+            if (!current) continue;
+
+            for (const auto& child_ptr : current->getChildren()) {
+                const HSTNode* child = child_ptr.get();
+                assert(child != nullptr);
+
+                q.push(child);
+
+                if (child->getMembers().size() == current->getMembers().size()) {
+                    continue;
+                }
+
+                const int parentCenter = current->center;
+                const int childCenter  = child->center;
+
+                assert(parentCenter != -1 && childCenter != -1);
+
+                if (parentCenter == childCenter) {
+                    continue;
+                }
+
+                const auto& path = path_cache[{parentCenter, childCenter}];
+                if (path.empty()) {
+                    // Cache miss: compute the path and store it in the cache.
+                    const auto computed_path = graph.getShortestPath(parentCenter, childCenter, distance);
+                    path_cache[{parentCenter, childCenter}] = computed_path;
+                }
+
+                addPathEdgesToCandidateSet(path, candidate_edges);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // FlatHST: collect all realized parent-child center paths.
+    // ------------------------------------------------------------
+    void collectCandidateEdges(
+        const TreeIteration<FlatHST>& iter,
+        std::unordered_set<UndirectedEdge, UndirectedEdgeHash>& candidate_edges,
+        std::map<std::pair<int, int>, std::vector<int>> path_cache
+    ) const {
+        const FlatHST& hst = iter.getTree();
+        const auto& distance = iter.getDistance();
+
+        std::queue<int> q;
+        q.push(hst.root());
+
+        while (!q.empty()) {
+            const int cur = q.front();
+            q.pop();
+
+            for (const int child_idx : hst.children(cur)) {
+                q.push(child_idx);
+
+                const auto cur_members   = hst.memberRange(cur);
+                const auto child_members = hst.memberRange(child_idx);
+
+                if (child_members.size() == cur_members.size()) {
+                    continue;
+                }
+
+                const int parentCenter = hst.nodes[cur].center;
+                const int childCenter  = hst.nodes[child_idx].center;
+
+                assert(parentCenter != -1 && childCenter != -1);
+
+                if (parentCenter == childCenter) {
+                    continue;
+                }
+
+                const auto& path = path_cache[{parentCenter, childCenter}];
+                if (path.empty()) {
+                    // Cache miss: compute the path and store it in the cache.
+                    const auto computed_path = graph.getShortestPath(parentCenter, childCenter, distance);
+                    path_cache[{parentCenter, childCenter}] = computed_path;
+                }
+                addPathEdgesToCandidateSet(path, candidate_edges);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Generic pipeline:
+    // HST -> union of realized paths -> spanning tree -> root paths.
+    // ------------------------------------------------------------
+    template<typename HSTType>
+    void buildLinearRoutingFromSpanningTree(
+        const TreeIteration<HSTType>& iter,
+        LinearRoutingTable& table,
+        std::map<std::pair<int, int>, std::vector<int>>& path_cache
+    ) const {
+        std::unordered_set<UndirectedEdge, UndirectedEdgeHash> candidate_edges;
+        collectCandidateEdges(iter, candidate_edges, path_cache);
+
+        auto tree_edges = extractSpanningTree(candidate_edges);
+
+        // Safety: in a valid connected realization we should get n-1 edges.
+        // If not, something in the HST realization is disconnected.
+        assert(static_cast<int>(tree_edges.size()) == graph.getNumNodes() - 1 &&
+               "HST realization did not produce a connected spanning structure.");
+
+        auto parent = computeParentArray(tree_edges, /*root=*/0);
+        addTreePathsToLinearTable(parent, iter.getLambda(), table, /*root=*/0);
+    }
+
     // ------------------------------------------------------------------
     // Shared helper: apply flow along `path` (= 0 → childCenter from SPT)
     // for every (src ∈ childMembers, dst ∈ V\A) pair where src==0 or dst==0.
@@ -77,11 +341,36 @@ private:
         if (child_member.contains(0)) {
             for (int dst : parent_set) {
                 if (dst == 0) continue;
+                //std::cout << "Destination node: " << dst << std::endl;
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
                     int e      = graph.getEdgeId(path[i],   path[i+1]);
                     // print flow
-                    std::cout << "Adding flow from 0 to " << dst << " along edge (" << path[i] << ", " << path[i+1] << ") with lambda " << lambda << std::endl;
-                    table.addFlow(e, dst, lambda);
+                    //std::cout << "Adding flow from 0 to " << dst << " along edge (" << path[i] << ", " << path[i+1] << ") with lambda " << lambda << std::endl;
+                    // first check if there is already flow pushed along its reverse direction
+                    int rev_edge = graph.getAntiEdge(e);
+                    double rev_flow = table.getFlow(rev_edge, dst);
+                    if (rev_flow > 0) {
+                        //std::cout << "Existing flow in reverse direction: " << rev_flow << std::endl;
+                        // subtract the flow contribution along anti edge e' by lambda
+                        if (rev_flow > lambda) {
+                            table.addFlow(rev_edge, dst, -lambda);
+                            //std::cout << "Subtracting flow " << lambda << " from reverse edge (" << path[i+1] << ", " << path[i] << ")\n";
+                        }else {
+                            if (std::abs(rev_flow-lambda)<EPS) {
+                                // we push the same amount of flow, so we can remove the flow contribution along e entirely
+                                table.eraseFlow(rev_edge, dst);
+                                //std::cout << "Removing flow entirely: " << rev_edge << " from reverse edge (" << path[i+1] << ", " << path[i] << ")\n";
+                            }else {
+                                // lambda is larger, so we remove flow contribution along but only push the net flow along e
+                                double net_flow = lambda - rev_flow;
+                                table.eraseFlow(rev_edge, dst);
+                                table.addFlow(e, dst, net_flow);
+                                //std::cout << "Subtracting flow " << rev_flow << " from reverse edge (" << path[i+1] << ", " << path[i] << ") and adding net flow " << net_flow << std::endl;
+                            }
+                        }
+                    }else {
+                        table.addFlow(e, dst, lambda);
+                    }
                 }
             }
         }
@@ -89,10 +378,35 @@ private:
         if (parent_set.contains(0)) {
             for (int src : child_member) {
                 if (src == 0) continue;
+                //std::cout << "Source node: " << src << std::endl;
                 for (int i = 0; i+1< path.size(); i++) {
                     int rev_e = graph.getEdgeId(path[i+1], path[i]);
-                    std::cout << "Adding flow from 0 to " << src << " along edge (" << path[i+1] << ", " << path[i] << ") with lambda " << lambda << std::endl;
-                    table.addFlow(rev_e, src, lambda);
+                    //std::cout << "Adding flow from 0 to " << src << " along edge (" << path[i+1] << ", " << path[i] << ") with lambda " << lambda << std::endl;
+                    int rev_edge = graph.getAntiEdge(rev_e);
+                    double rev_flow = table.getFlow(graph.getAntiEdge(rev_e), src);
+                    //table.addFlow(rev_e, src, lambda);
+                    if (rev_flow > 0) {
+                        //std::cout << "Existing flow in reverse direction: " << rev_flow << std::endl;
+                        // subtract the flow contribution along anti edge e' by lambda
+                        if (rev_flow > lambda) {
+                            table.addFlow(rev_edge, src, -lambda);
+                            //std::cout << "Subtracting flow " << lambda << " from reverse edge (" << path[i+1] << ", " << path[i] << ")\n";
+                        }else {
+                            if (std::abs(rev_flow-lambda)<EPS) {
+                                // we push the same amount of flow, so we can remove the flow contribution along e entirely
+                                table.eraseFlow(rev_edge, src);
+                                //std::cout << "Removing flow entirely: " << rev_edge << " from reverse edge (" << path[i+1] << ", " << path[i] << ")\n";
+                            }else {
+                                // lambda is larger, so we remove flow contribution along but only push the net flow along e
+                                double net_flow = lambda - rev_flow;
+                                table.eraseFlow(rev_edge, src);
+                                table.addFlow(rev_e, src, net_flow);
+                                //std::cout << "Subtracting flow " << rev_flow << " from reverse edge (" << path[i+1] << ", " << path[i] << ") and adding net flow " << net_flow << std::endl;
+                            }
+                        }
+                    }else {
+                        table.addFlow(rev_e, src, lambda);
+                    }
                 }
             }
         }
@@ -118,13 +432,23 @@ private:
 
     // ------------------------------------------------------------------
     // Overload 1: pointer-based HSTNode tree
+    // WITH PATH CACHING to handle arbitrary parent-child center pairs
     // ------------------------------------------------------------------
     void distributeDemands(TreeIteration<std::shared_ptr<HSTNode>>& iter,
-                           LinearRoutingTable& table) {
+                           LinearRoutingTable& table, std::map<std::pair<int,int>, std::vector<int>>& path_cache) {
         const HSTNode*                       root       = iter.getTree().get();
         const double                         lambda     = iter.getLambda();
         const auto distance = iter.getDistance();
 
+        int n = 0;
+        for (auto v : root->getMembers()) n = std::max(n, v);
+        n++;
+
+        // --- Cache for computed shortest paths (parentCenter → childCenter) ---
+        // Use map to avoid hash collisions; key = (parentCenter, childCenter)
+        //std::map<std::pair<int,int>, std::vector<int>> path_cache;
+
+        std::vector<bool> child_membership(n, false);
 
         std::queue<const HSTNode*> q;
         q.push(root);
@@ -142,13 +466,22 @@ private:
                 assert(parentCenter != -1 && childCenter != -1);
                 if (parentCenter == childCenter) { q.push(child); continue; }
 
-                auto path = graph.getShortestPath(parentCenter, childCenter, distance);
+                // --- Check cache first, compute and cache if not found ---
+                auto cache_key = std::make_pair(parentCenter, childCenter);
+                auto& path = path_cache[cache_key];
+                if (path.empty()) {
+                    path = graph.getShortestPath(parentCenter, childCenter, distance);
+                }
+
                 if (path.size() < 2) { q.push(child); continue; }
 
-                const std::vector<int>& childMembers = child->getMembers();
-                std::unordered_set<int> A(childMembers.begin(), childMembers.end());
+                // --- Build membership vector for O(1) lookups ---
+                std::fill(child_membership.begin(), child_membership.end(), false);
+                for (int member : child->getMembers()) {
+                    child_membership[member] = true;
+                }
 
-                //applyFlow(path, childMembers, A, lambda, table);
+                applyFlowOptimized(path, child_membership, lambda, table, n);
                 q.push(child);
             }
         }
@@ -156,15 +489,24 @@ private:
 
     // ------------------------------------------------------------------
     // Overload 2: flat FlatHST tree
+    // WITH PATH CACHING to handle arbitrary parent-child center pairs
     // ------------------------------------------------------------------
     void distributeDemands(TreeIteration<FlatHST>& iter,
-                           LinearRoutingTable& table) {
+                           LinearRoutingTable& table,
+                           std::map<std::pair<int,int>, std::vector<int>>& path_cache) {
         const FlatHST&                           hst        = iter.getTree();
         const double                         lambda     = iter.getLambda();
         const auto distance = iter.getDistance();
 
+        int n = hst.nodes.size();
 
-        print(hst);
+        // --- Cache for computed shortest paths (parentCenter → childCenter) ---
+        // Use map to avoid hash collisions; key = (parentCenter, childCenter)
+
+
+        std::vector<bool> child_membership(n, false);
+
+        //print(hst);
         std::queue<int> q;
         q.push(hst.root());
         while (!q.empty()) {
@@ -179,22 +521,107 @@ private:
                 assert(parentCenter != -1 && childCenter != -1);
                 if (parentCenter == childCenter) { q.push(child_idx); continue; }
 
-                auto path = graph.getShortestPath(parentCenter, childCenter, distance);
+                // --- Check cache first, compute and cache if not found ---
+                auto cache_key = std::make_pair(parentCenter, childCenter);
+                auto& path = path_cache[cache_key];
+                if (path.empty()) {
+                    path = graph.getShortestPath(parentCenter, childCenter, distance);
+                }
+
                 if (path.size() < 2) { q.push(child_idx); continue; }
 
-                std::vector<int> members_vec(child_members.begin(), child_members.end());
-                std::unordered_set<int> child_set(members_vec.begin(), members_vec.end());
-                std::unordered_set<int> parent_set;
-                for (int v : graph.getVertices()) {
-                    if (!child_set.contains(v)) {
-                        parent_set.insert(v);
-                    }
+                // --- Build membership vector for O(1) lookups ---
+                std::fill(child_membership.begin(), child_membership.end(), false);
+                for (int member : child_members) {
+                    child_membership[member] = true;
                 }
-                applyFlow(path, parent_set, child_set, lambda, table);
+
+                applyFlowOptimized(path, child_membership, lambda, table, n);
                 q.push(child_idx);
             }
         }
     }
+
+    // ------------------------------------------------------------------
+    // Optimized flow application using vector<bool> for O(1) membership tests
+    // and precomputed edge IDs to avoid redundant lookups
+    // ------------------------------------------------------------------
+    void applyFlowOptimized(const std::vector<int>&  path,
+                            const std::vector<bool>& child_membership,
+                            double                   lambda,
+                            LinearRoutingTable&      table,
+                            int                      n) {
+
+        // --- Precompute all edge IDs on the path to avoid repeated lookups ---
+        std::vector<int> edge_ids;
+        std::vector<int> rev_edge_ids;
+        edge_ids.reserve(path.size() - 1);
+        rev_edge_ids.reserve(path.size() - 1);
+
+        for (size_t i = 0; i + 1 < path.size(); ++i) {
+            int e = graph.getEdgeId(path[i], path[i+1]);
+            int rev_e = graph.getEdgeId(path[i+1], path[i]);
+            edge_ids.push_back(e);
+            rev_edge_ids.push_back(rev_e);
+        }
+
+        bool child_has_0 = child_membership[0];
+
+        // --- Case 1: Child contains node 0 → push flow towards other nodes ---
+        if (child_has_0) {
+            for (int dst = 0; dst < n; ++dst) {
+                if (dst == 0 || child_membership[dst]) continue;
+
+                for (size_t i = 0; i < edge_ids.size(); ++i) {
+                    int e = edge_ids[i];
+                    int rev_edge = graph.getAntiEdge(e);
+                    double rev_flow = table.getFlow(rev_edge, dst);
+
+                    if (rev_flow > EPS) {
+                        if (rev_flow > lambda + EPS) {
+                            table.addFlow(rev_edge, dst, -lambda);
+                        } else if (std::abs(rev_flow - lambda) < EPS) {
+                            table.eraseFlow(rev_edge, dst);
+                        } else {
+                            double net_flow = lambda - rev_flow;
+                            table.eraseFlow(rev_edge, dst);
+                            table.addFlow(e, dst, net_flow);
+                        }
+                    } else {
+                        table.addFlow(e, dst, lambda);
+                    }
+                }
+            }
+        }
+
+        // --- Case 2: Child does NOT contain 0 → push flow from child nodes to root ---
+        if (!child_has_0) {
+            for (int src = 0; src < n; ++src) {
+                if (src == 0 || !child_membership[src]) continue;
+
+                for (size_t i = 0; i < rev_edge_ids.size(); ++i) {
+                    int rev_e = rev_edge_ids[i];
+                    int rev_edge = graph.getAntiEdge(rev_e);
+                    double rev_flow = table.getFlow(rev_edge, src);
+
+                    if (rev_flow > EPS) {
+                        if (rev_flow > lambda + EPS) {
+                            table.addFlow(rev_edge, src, -lambda);
+                        } else if (std::abs(rev_flow - lambda) < EPS) {
+                            table.eraseFlow(rev_edge, src);
+                        } else {
+                            double net_flow = lambda - rev_flow;
+                            table.eraseFlow(rev_edge, src);
+                            table.addFlow(rev_e, src, net_flow);
+                        }
+                    } else {
+                        table.addFlow(rev_e, src, lambda);
+                    }
+                }
+            }
+        }
+    }
+
 public:
     void removeCyclesLinear(LinearRoutingTable& linearTable) {
         // Collect all sources s that have any flow in the linear table

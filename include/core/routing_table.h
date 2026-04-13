@@ -51,10 +51,12 @@ public:
 
     void init(const IGraph& g) override;
     void addFlow(int e, int s, double flow_sx);
+    void eraseFlow(int e, int s);
 
     // return flow for unit demand s→x on edge e, or 0 if not present
     const double getFlow(int e, int s) const;
     bool isValid(const IGraph& g) const override;
     void printFlows(const IGraph& g) const override;
+
 };
 #endif //OBLIVIOUSROUTING_ROUTING_TABLE_H

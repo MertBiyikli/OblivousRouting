@@ -5,6 +5,9 @@
 #ifndef OBLIVIOUSROUTING_ENGINEERING_FAST_CKR_H
 #define OBLIVIOUSROUTING_ENGINEERING_FAST_CKR_H
 
+#include "../tree_oracle.h"
+#include "../../../../../data_structures/mendel_scaling/ultrametric_tree.h"
+
 template<typename T>
 class OptimizedFastCKR : public TreeOracle<T> {
 public:
@@ -12,6 +15,28 @@ public:
     }
     explicit OptimizedFastCKR(IGraph& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
 
+    void preprocess() override {
+        this->n = this->graph.getNumNodes();
+        if (this->n == 0) throw std::invalid_argument("The graph has no nodes.");
+        this->diameter = 2*this->graph.getDiameterApprox(); // computing the eccentric instead of the exact diameter
+
+        this->perm.clear();
+        for (int v = 0; v < this->n; ++v) this->perm.push_back(v);
+
+        if (this->applyMendelScaling) {
+            auto start = timeNow();
+            MST mst(this->graph);
+            auto mst_edges = mst.computeMST();
+            std::vector<double> mst_weights;
+            mst_weights.reserve(mst_edges.size());
+            for (auto [u, v] : mst_edges)
+                mst_weights.push_back(this->graph.getEdgeDistance(u, v));
+
+            this->ultrametric.buildFromMST(this->graph.getNumNodes(), mst_edges, mst_weights);
+            this->total_time_spent_on_mendel_scaling += duration(timeNow() - start);
+            assert(this->ultrametric.root != -1);
+        }
+    }
 
     void computeLevelPartition(IGraph& _g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
         const int n = _g.getNumNodes();

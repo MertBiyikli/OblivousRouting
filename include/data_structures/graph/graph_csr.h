@@ -5,6 +5,8 @@
 #ifndef OBLIVIOUSROUTING_GRAPH_CSR_H
 #define OBLIVIOUSROUTING_GRAPH_CSR_H
 
+#include <map>
+
 #include "Igraph.h"
 
 class GraphCSR : public IGraph {
@@ -36,6 +38,10 @@ public:
      */
     std::vector<double> capacity;
     std::vector<double> distance;
+
+    // --- Path caching for getShortestPath(src, tgt, dist_e) ---
+    mutable std::map<std::pair<int,int>, std::vector<int>> path_cache;
+    mutable std::vector<int> parent_buf_rev;  // For bidirectional Dijkstra
 
 
     GraphCSR() = default;
@@ -85,6 +91,7 @@ public:
     double getShortestDistance(int src, int tgt) const;
 
     const double getDiameter() const override;
+    const double getDiameterApprox() const override;
     std::vector<int> getPathEdges(int src, int tgt) const;
 
     /**

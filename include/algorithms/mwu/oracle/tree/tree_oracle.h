@@ -25,7 +25,7 @@
 // T = std::shared_ptr<HSTNode>  → pointer-based tree (computeHST path)
 // T = FlatHST                       → flat array tree   (getFlatTree path)
 //
-// Subclasses (FRT, FastCKR, RandomMST) only override computeLevelPartition,
+// Subclasses (FRT, FastCKR, RandomMST, FastCKR_Optimized) only override computeLevelPartition,
 // which is independent of T, so they become TreeOracle<T> subclasses.
 // ---------------------------------------------------------------------------
 template<typename T>
@@ -37,7 +37,7 @@ public:
     int number_touched_nodes;
     explicit TreeOracle(IGraph& graph) : graph(graph) {
         n = graph.getNumNodes();
-        diameter = graph.getDiameter();
+        diameter = 0;
         applyMendelScaling = false;
 
         number_pq_pushes = 0;
@@ -48,7 +48,7 @@ public:
 
     TreeOracle(IGraph& graph, bool activateMendelScaling) : graph(graph) {
         n = graph.getNumNodes();
-        diameter = graph.getDiameter();
+        diameter = 0;
         this->applyMendelScaling = activateMendelScaling;
         total_time_spent_on_mendel_scaling = 0.0;
 
@@ -188,7 +188,7 @@ public:
     // -----------------------------------------------------------------------
     // Shared helpers (unchanged from original)
     // -----------------------------------------------------------------------
-    void preprocess() {
+    virtual void preprocess() {
         n = graph.getNumNodes();
         if (n == 0) throw std::invalid_argument("The graph has no nodes.");
         diameter = graph.getDiameter();

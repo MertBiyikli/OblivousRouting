@@ -321,13 +321,13 @@ void LinearRoutingTable::reduceFlow(int e, int s, double flow) {
         // flow not found, do nothing
     }
 }
+*/
 
-
-void LinearRoutingTable::eraseAt(int e, int s) {
+void LinearRoutingTable::eraseFlow(int e, int s) {
     // remove flow at edge e with commodity s
     assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
-    const auto& ids  = src_ids[e];
-    const auto& vals = src_flows[e];
+    auto& ids  = src_ids[e];
+    auto& vals = src_flows[e];
 
     int index_s = -1;
 
@@ -341,8 +341,8 @@ void LinearRoutingTable::eraseAt(int e, int s) {
     }
 
     if (index_s != -1) {
-        src_ids.erase(src_ids.begin()+index_s);
-        src_flows.erase(src_flows.begin()+index_s);
+        ids.erase(ids.begin()+index_s);
+        vals.erase(vals.begin()+index_s);
         return;
     }
 
@@ -357,14 +357,14 @@ void LinearRoutingTable::eraseAt(int e, int s) {
             hi = mid;
     }
     if (lo < len && ids[lo] == s) {
-        src_ids.erase(src_ids.begin()+lo);
-        src_flows.erase(src_flows.begin()+lo);
+        ids.erase(ids.begin()+lo);
+        vals.erase(vals.begin()+lo);
         return;
     }
 
 }
 
-*/
+
 bool LinearRoutingTable::isValid(const IGraph& g) const {
     const int m = src_ids.size();
     for (int e = 0; e < m; ++e) {

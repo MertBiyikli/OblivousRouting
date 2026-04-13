@@ -130,6 +130,7 @@ public:
      */
     virtual std::vector<int> getShortestPath(int source, int target) const = 0;
     virtual const double getDiameter() const = 0;
+    virtual const double getDiameterApprox() const = 0;
     virtual std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist) const = 0;
     double getShortestPathDistance(int s, int t) const {
         auto path = getShortestPath(s, t);

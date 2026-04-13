@@ -37,11 +37,13 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
     CycleRemovalStrategy cycle_strategy;
     double lambda_sum;
     std::vector<double> rload_current, rload_total;
-    std::vector<double> current_distances;
-    std::vector<double> mendel_scaling_times;
+    std::vector<double> current_distances, mendel_scaling_times;
     std::vector<int> scales;
     std::vector<int> tree_heights;
     double cycleCancellation_time;
+
+    // --- Path cache for computeRLoads to avoid redundant Dijkstra calls ---
+    std::map<std::pair<int,int>, std::vector<int>> path_cache;
 
 public:
     TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle,
@@ -66,12 +68,13 @@ public:
         double average_tree_height = 0.0;
         for (int h : tree_heights) average_tree_height += h;
 
+        /*
         std::cout << "Partitioning stats" << std::endl;
         std::cout << "Number of PQ pushes: " << oracle->number_pq_pushes << std::endl;
         std::cout << "Number of PQ pops: " << oracle->number_pq_pushes << std::endl;
         std::cout << "Number of successful relaxations: " << oracle->number_successful_relaxations << std::endl;
         std::cout << "Number of touched nodes: " << oracle->number_touched_nodes << std::endl;
-
+        */
         std::cout << "Average tree height: " << average_tree_height/tree_heights.size() << "\n";
         auto it = ::map_cycle_strategy.find(cycle_strategy);
         if (it != ::map_cycle_strategy.end()) {
@@ -109,14 +112,15 @@ public:
                 transform.removeCyclesLinear(table);
                 break;
         }
-*/
+        */
+
         cycleCancellation_time += duration(timeNow() - t0);
-        std::cout << "Path -based table:" << std::endl;
 
     }
 
     double treeOracle(LinearRoutingTable& table) {
         auto t0 = timeNow();
+
 
         HSTDatastructures t = oracle->getTree(current_distances);
         double oracle_time = duration(timeNow() - t0);
@@ -137,11 +141,7 @@ public:
         double l = getMaxRload();
         this->load_computation_time += duration(timeNow() - t0);
 
-        t0 = timeNow();
         double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
-        computeNewDistances(lambda);
-        double weight_update_time = duration(timeNow() - t0);
-        this->mwu_weight_update_time += weight_update_time;
 
         // solve_time = oracle_time + compute time (computeRLoads + computeNewDistances)
         solve_time += oracle_time;
@@ -149,8 +149,13 @@ public:
         t0 = timeNow();
 
         TreeIteration<HSTDatastructures> iter(std::move(t), current_distances, lambda);
-        transform.transform(iter, table);
+        transform.transform(iter, table,path_cache);
         this->transformation_time += duration(timeNow() - t0);
+
+        t0 = timeNow();
+        computeNewDistances(lambda);
+        double weight_update_time = duration(timeNow() - t0);
+        this->mwu_weight_update_time += weight_update_time;
 
         if (oracle->applyMendelScaling)
             mendel_scaling_times.push_back(oracle->getMendelScalingTime());
@@ -160,6 +165,7 @@ public:
 
     void computeRLoads(const FlatHST& hst) {
         std::fill(rload_current.begin(), rload_current.end(), 0.0);
+        path_cache.clear();
 
         std::queue<int> q;
         q.push(hst.root());
@@ -184,7 +190,13 @@ public:
                 int repParent = node_members.empty() ? child_members[0] : node_members[0];
                 int repChild  = child_members[0];
 
-                auto path = graph.getShortestPath(repParent, repChild);
+                // --- Check cache first, compute and cache if not found ---
+                auto cache_key = std::make_pair(repParent, repChild);
+                auto& path = path_cache[cache_key];
+                if (path.empty()) {
+                    path = graph.getShortestPath(repParent, repChild, current_distances);
+                }
+
                 if (path.size() < 2) continue;
 
                 for (size_t i = 0; i + 1 < path.size(); ++i) {
@@ -225,7 +237,13 @@ public:
                 int repParent = node->getMembers().empty() ? clusterVertices[0] : node->getMembers()[0];
                 int repChild  = clusterVertices[0];
 
-                auto path = graph.getShortestPath(repParent, repChild);
+                // --- Check cache first, compute and cache if not found ---
+                auto cache_key = std::make_pair(repParent, repChild);
+                auto& path = path_cache[cache_key];
+                if (path.empty()) {
+                    path = graph.getShortestPath(repParent, repChild);
+                }
+
                 if (path.size() < 2) continue;
 
                 for (size_t i = 0; i + 1 < path.size(); ++i) {

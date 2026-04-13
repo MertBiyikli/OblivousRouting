@@ -49,6 +49,7 @@ public:
 
     // Shortest path computations
     const double getDiameter() const override;
+    const double getDiameterApprox() const override;
     std::vector<int> getShortestPath(int u, int v) const override;
     std::vector<double> getDistances(int u) const;
     double getShortestDistance(int u, int v) const;
