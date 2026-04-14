@@ -181,14 +181,14 @@ for g in "${GRAPHS[@]}"; do
     -v demands_arg="$DEMANDS_ARG" \
     -v demand_provided="$DEMAND_PROVIDED" \
   '
-  function flush_no_demand_row() {
-    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-      dataset, graph, solver, nodes, edges,
-      total_time, solve_time, transf_time, mwu, avg_oracle,
-      avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-      "none", "NaN","NaN","NaN", mwu_weight_update_time, status
-    n_rows++
-  }
+   function flush_no_demand_row() {
+     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+       dataset, graph, solver, nodes, edges,
+       total_time, solve_time, transf_time, mwu, avg_oracle,
+       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
+       "none", "NaN","NaN","NaN", mwu_weight_update_time, status
+     n_rows++
+   }
   function reset_solver_state() {
     total_time="NaN"; solve_time="NaN"; transf_time="NaN";
     mwu="NaN"; avg_oracle="NaN"; avg_tree_height="NaN";
@@ -259,42 +259,42 @@ for g in "${GRAPHS[@]}"; do
     tmp=$0; sub(/^Oblivious ratio: /,"",tmp); oblivious_ratio=tmp; next
   }
 
-  # Ratio line — one row per (solver × demand_model)
-  /^Ratio off the optimal offline solution \[/ {
-    dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
-    ratio_pct=$0; sub(/^.*: /,"",ratio_pct); sub(/%.*$/,"",ratio_pct)
-    vals=$0; sub(/^.*\(/,"",vals); sub(/\).*$/,"",vals)
-    n=split(vals, ab, " / ")
-    offline_val  = (n>=1) ? ab[1] : "NaN"
-    achieved_val = (n>=2) ? ab[2] : "NaN"
-    printf "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
-      dataset, graph, solver, nodes, edges,
-      total_time, solve_time, transf_time, mwu, avg_oracle,
-      avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-      dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, status
-    n_rows++
-    next
-  }
+   # Ratio line — one row per (solver × demand_model)
+   /^Ratio off the optimal offline solution \[/ {
+     dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
+     ratio_pct=$0; sub(/^.*: /,"",ratio_pct); sub(/%.*$/,"",ratio_pct)
+     vals=$0; sub(/^.*\(/,"",vals); sub(/\).*$/,"",vals)
+     n=split(vals, ab, " / ")
+     offline_val  = (n>=1) ? ab[1] : "NaN"
+     achieved_val = (n>=2) ? ab[2] : "NaN"
+     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+       dataset, graph, solver, nodes, edges,
+       total_time, solve_time, transf_time, mwu, avg_oracle,
+       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
+       dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, status
+     n_rows++
+     next
+   }
 
-  END {
-    if (n_rows == 0 && !solver_seen) {
-      # Binary produced no output at all (crash before any solver ran)
-      if (demand_provided == "1" && demands_arg != "") {
-        n_d = split(demands_arg, dm_arr, ",")
-      } else {
-        n_d = 1; dm_arr[1] = "none"
-      }
-      for (di=1; di<=n_d; di++) {
-        printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-          dataset, graph, "unknown", nodes, edges,
-          "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
-          dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, status
-      }
-    } else if (demand_provided != "1" && solver_seen) {
-      # Flush the last solver (no demand model run)
-      flush_no_demand_row()
-    }
-  }
+   END {
+     if (n_rows == 0 && !solver_seen) {
+       # Binary produced no output at all (crash before any solver ran)
+       if (demand_provided == "1" && demands_arg != "") {
+         n_d = split(demands_arg, dm_arr, ",")
+       } else {
+         n_d = 1; dm_arr[1] = "none"
+       }
+       for (di=1; di<=n_d; di++) {
+         printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+           dataset, graph, "unknown", nodes, edges,
+           "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
+           dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, status
+       }
+     } else if (demand_provided != "1" && solver_seen) {
+       # Flush the last solver (no demand model run)
+       flush_no_demand_row()
+     }
+   }
   ' "$log" > "$_tmp_rows"
   cat "$_tmp_rows" >> "$CSV"
   rm -f "$_tmp_rows"
