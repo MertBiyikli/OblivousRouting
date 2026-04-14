@@ -95,6 +95,14 @@ public:
     std::vector<int> getPathEdges(int src, int tgt) const;
 
     /**
+     * Bidirectional Dijkstra: searches from both source and target simultaneously.
+     * More efficient than unidirectional Dijkstra, typically 2x faster for point-to-point queries.
+     * Uses the parameterized distance vector.
+     */
+    std::vector<int> getShortestPathBidirectionalSearch(int src, int tgt, const std::vector<double>& dist_e) const override;
+    std::vector<int> getShortestPathBidirectionalSearch(int src, int tgt) const override;
+
+    /**
      * Debugging methods
      */
     virtual void print() const override;

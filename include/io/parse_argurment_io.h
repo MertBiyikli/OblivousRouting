@@ -18,7 +18,6 @@ struct Config {
     std::vector<DemandModelType> demand_models;
     GraphFormat                  graph_format;
     int num_threads = 1;
-    CycleRemovalStrategy         cycle_strategy = CycleRemovalStrategy::NAIVE;
 };
 
 inline std::string to_lower(std::string s) {
@@ -41,15 +40,7 @@ inline std::optional<DemandModelType> parse_demand_model_token(std::string s) {
     return (it != DEMAND_MAP.end()) ? std::optional(it->second) : std::nullopt;
 }
 
-inline std::optional<CycleRemovalStrategy> parse_cycle_strategy_token(std::string s) {
-    static const std::map<std::string, CycleRemovalStrategy> CYCLE_STRATEGY_MAP{
-        {"none", CycleRemovalStrategy::NONE},
-        {"tarjan", CycleRemovalStrategy::TARJAN_SCC}, {"tarjan_scc", CycleRemovalStrategy::TARJAN_SCC},
-        {"naive", CycleRemovalStrategy::NAIVE}
-    };
-    auto it = CYCLE_STRATEGY_MAP.find(to_lower(std::move(s)));
-    return (it != CYCLE_STRATEGY_MAP.end()) ? std::optional(it->second) : std::nullopt;
-}
+
 
 // Generic list parser template
 template<typename T, typename Parser>
@@ -135,11 +126,7 @@ inline std::string usage(const char* prog) {
        << "  *_pointer variants (8-12)                        -> Pointer-based HST versions\n"
        << "Demand Models (optional, comma-separated):\n"
        << "  gravity | bimodal | gaussian | uniform\n"
-       << "Graph Format (optional): csr | adjlist\n"
-       << "Cycle Removal Strategy (optional, for Tree-based solvers only):\n"
-       << "  none                                             -> No cycle removal\n"
-       << "  tarjan | tarjan_scc                              -> Tarjan SCC algorithm\n"
-       << "  naive                                            -> Naive cycle removal (default)\n";
+       << "Graph Format (optional): csr | adjlist\n";
     return os.str();
 }
 
@@ -162,7 +149,6 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
     std::vector<DemandModelType> demands;
     GraphFormat fmt = GraphFormat::CSR;
     int threads = 1;
-    CycleRemovalStrategy cycle_strategy = CycleRemovalStrategy::TARJAN_SCC;
 
     // Parse optional arguments
     for (int i = 3; i < argc; ++i) {
@@ -180,15 +166,12 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
         auto t = parse_num_threads(arg);
         if (t) { threads = *t; continue; }
 
-        // Try cycle removal strategy
-        auto c = parse_cycle_strategy_token(arg);
-        if (c) { cycle_strategy = *c; continue; }
 
         if (err) *err = "Unknown argument: " + arg + "\n" + usage(argv[0]);
         return std::nullopt;
     }
 
-    return Config{ *solvers_opt, std::string(argv[2]), demands, fmt, threads, cycle_strategy };
+    return Config{ *solvers_opt, std::string(argv[2]), demands, fmt, threads};
 }
 
 

@@ -13,7 +13,6 @@ BIN="${BIN:-./build/oblivious_routing}"
 
 DEMANDS=""
 DEMAND_PROVIDED=0
-CYCLE_REMOVAL="${CYCLE_REMOVAL:-none}"
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
@@ -27,7 +26,6 @@ while [[ $# -gt 0 ]]; do
     --solvers)      SOLVERS="${2-}"; shift 2 ;;
     --demand)       DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
     --demands)      DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
-    --cycle-removal) CYCLE_REMOVAL="${2-}"; shift 2 ;;
     -j|--jobs)      JOBS="${2-}"; shift 2 ;;
     --out)          OUT_CSV="${2-}"; shift 2 ;;
     --timeout)      TIMEOUT="${2-}"; shift 2 ;;
@@ -36,11 +34,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage:"
       echo "  $0 --dataset <dir-or-file> [--solvers \"frt,ckr\"] [-j 8] [--out results.csv]"
       echo "  $0 --dataset <dir-or-file> [--solvers \"frt,ckr\"] --demands \"gravity,uniform\" [-j 8]"
-      echo "  $0 --dataset <dir-or-file> [--solvers \"frt,ckr\"] --cycle-removal <strategy> [-j 8]"
-      echo ""
-      echo "Cycle removal strategies: none, tarjan, linear (default: none)"
-      echo ""
-      echo "Each graph is one job. All solvers, demands, and cycle removal strategy are passed in one binary call per graph."
+      echo "Each graph is one job. All solvers and demands are passed in one binary call per graph."
       echo "CSV has one row per (graph × solver × demand_model)."
       exit 0
       ;;
@@ -90,11 +84,6 @@ if [[ "$DEMAND_PROVIDED" -eq 1 && -n "${DEMANDS:-}" ]]; then
   DEMANDS_FLAG="--demands $(echo "$DEMANDS" | tr -d '[:space:]')"
 fi
 
-# Build the cycle removal flag to forward
-CYCLE_REMOVAL_FLAG=""
-if [[ -n "$CYCLE_REMOVAL" && "$CYCLE_REMOVAL" != "none" ]]; then
-  CYCLE_REMOVAL_FLAG="--cycle-removal $CYCLE_REMOVAL"
-fi
 
 run_one() {
   local g_abs="$1" out_part="$2"
@@ -105,11 +94,10 @@ run_one() {
       --dataset "$g_abs" \
       --out     "$out_part" \
       --bin     "$BIN" \
-      $DEMANDS_FLAG \
-      $CYCLE_REMOVAL_FLAG
+      $DEMANDS_FLAG
 }
 export -f run_one
-export BIN TIMEOUT SOLVERS DEMANDS_FLAG CYCLE_REMOVAL_FLAG SCRIPT_DIR
+export BIN TIMEOUT SOLVERS DEMANDS_FLAG SCRIPT_DIR
 
 if command -v parallel >/dev/null 2>&1; then
   parallel -j "$JOBS" --colsep '\|' run_one {1} {2} :::: "$RUNLIST"

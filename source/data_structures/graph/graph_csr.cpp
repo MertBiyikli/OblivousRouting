@@ -267,11 +267,8 @@ std::vector<int> GraphCSR::getShortestPath(int src, int tgt = -1) const {
     if (src < 0 || src >= n)
         throw std::out_of_range("GraphCSR::getShortestPath: src or tgt out of range");
 
-    // --- resize reusable buffers only if needed ---
-    if ((int)dist_buf.size() != n) {
-        dist_buf.resize(n);
-        parent_buf.resize(n);
-    }
+    dist_buf.resize(n);
+    parent_buf.resize(n);
 
     auto& dist   = dist_buf;
     auto& parent = parent_buf;
@@ -409,7 +406,7 @@ const double GraphCSR::getDiameterApprox() const {
 
     // --- PHASE 1: Two-sweep heuristic for fast approximation ---
     // Start from an arbitrary node (0)
-    auto path = getShortestPath(0, 1);
+    auto path = getShortestPathBidirectionalSearch(0, 1);
     double max_weight = 0;
     for (int i = 0; i+1<path.size(); i++) {
         if (this->getEdgeDistance(path[i], path[i+1]) > max_weight) {
@@ -481,6 +478,167 @@ std::vector<int> GraphCSR::getShortestPath(int src, int tgt, const std::vector<d
     }
     std::reverse(path.begin(), path.end());
     return path;
+}
+
+
+/**
+ * Bidirectional Dijkstra: searches from both source and target simultaneously.
+ * Stops when the two search frontiers meet (or overlap).
+ * Approximately 2x faster than unidirectional Dijkstra for point-to-point queries.
+ */
+std::vector<int> GraphCSR::getShortestPathBidirectionalSearch(int src, int tgt, const std::vector<double>& dist_e) const {
+    using P = std::pair<double, int>;
+    const double INF = std::numeric_limits<double>::infinity();
+
+    if (src < 0 || src >= n || tgt < 0 || tgt >= n) {
+        throw std::out_of_range("GraphCSR::getShortestPathBidirectional: node index out of range");
+    }
+
+    if (src == tgt) {
+        return {src};
+    }
+    dist_buf.resize(n);
+    parent_buf.resize(n);
+    parent_buf_rev.resize(n);
+
+    // Forward direction: src -> tgt
+    std::vector<double> dist_fwd(n, INF);
+    std::vector<int>    parent_fwd(n, -1);
+
+    // Backward direction: tgt -> src
+    std::vector<double> dist_bwd(n, INF);
+    std::vector<int>    parent_bwd(n, -1);
+
+    dist_fwd[src] = 0.0;
+    dist_bwd[tgt] = 0.0;
+
+    MinHeap<double, int> pq_fwd(n), pq_bwd(n);
+    pq_fwd.insert(src, 0.0);
+    pq_bwd.insert(tgt, 0.0);
+
+    int best_meeting_node = -1;
+    double best_path_length = INF;
+
+    while (!pq_fwd.empty() || !pq_bwd.empty()) {
+        // --- Forward step ---
+        if (!pq_fwd.empty()) {
+            int u = pq_fwd.top();
+            double du = pq_fwd.topKey();
+            pq_fwd.deleteTop();
+
+            if (du > dist_fwd[u]) continue;  // stale entry
+
+            // Check if we've met the backward search
+            if (dist_bwd[u] < INF) {
+                double path_len = dist_fwd[u] + dist_bwd[u];
+                if (path_len < best_path_length) {
+                    best_path_length = path_len;
+                    best_meeting_node = u;
+                }
+            }
+
+            // Expand forward frontier
+            for (int e = head[u]; e < head[u + 1]; ++e) {
+                int v = to[e];
+                double w = dist_e[e];
+                if (w < 0.0) continue;
+
+                double nd = du + w;
+                if (nd < dist_fwd[v]) {
+                    dist_fwd[v] = nd;
+                    parent_fwd[v] = u;
+                    pq_fwd.insertOrAdjustKey(v, nd);
+
+                    // Early termination: if backward has visited this node
+                    if (dist_bwd[v] < INF) {
+                        double path_len = nd + dist_bwd[v];
+                        if (path_len < best_path_length) {
+                            best_path_length = path_len;
+                            best_meeting_node = v;
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Backward step ---
+        if (!pq_bwd.empty()) {
+            int u = pq_bwd.top();
+            double du = pq_bwd.topKey();
+            pq_bwd.deleteTop();
+
+            if (du > dist_bwd[u]) continue;  // stale entry
+
+            // Check if we've met the forward search
+            if (dist_fwd[u] < INF) {
+                double path_len = dist_fwd[u] + dist_bwd[u];
+                if (path_len < best_path_length) {
+                    best_path_length = path_len;
+                    best_meeting_node = u;
+                }
+            }
+
+            // Expand backward frontier (iterate reverse edges)
+            for (int e = head[u]; e < head[u + 1]; ++e) {
+                int v = to[e];
+                double w = dist_e[e];
+                if (w < 0.0) continue;
+
+                double nd = du + w;
+                if (nd < dist_bwd[v]) {
+                    dist_bwd[v] = nd;
+                    parent_bwd[v] = u;
+                    pq_bwd.insertOrAdjustKey(v, nd);
+
+                    // Early termination: if forward has visited this node
+                    if (dist_fwd[v] < INF) {
+                        double path_len = dist_fwd[v] + nd;
+                        if (path_len < best_path_length) {
+                            best_path_length = path_len;
+                            best_meeting_node = v;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Early termination: if both frontiers are inactive or paths are worse than best found
+        if ((pq_fwd.empty() || pq_fwd.topKey() >= best_path_length) &&
+            (pq_bwd.empty() || pq_bwd.topKey() >= best_path_length)) {
+            break;
+        }
+    }
+
+    // --- Reconstruct path ---
+    std::vector<int> path;
+    if (best_meeting_node == -1 || best_path_length == INF) {
+        return path;  // No path found
+    }
+
+    // Build path from src to meeting node (forward)
+    std::vector<int> fwd_path;
+    for (int v = best_meeting_node; v != -1; v = parent_fwd[v]) {
+        fwd_path.push_back(v);
+    }
+    std::reverse(fwd_path.begin(), fwd_path.end());
+
+    // Build path from meeting node to tgt (backward)
+    std::vector<int> bwd_path;
+    for (int v = best_meeting_node; v != -1; v = parent_bwd[v]) {
+        bwd_path.push_back(v);
+    }
+    // bwd_path is already in reverse order (tgt to best_meeting_node)
+
+    // Combine: fwd_path + bwd_path (skip duplicate meeting node)
+    path.insert(path.end(), fwd_path.begin(), fwd_path.end());
+    path.insert(path.end(), bwd_path.begin()+1, bwd_path.end()); // ensure not to include the meeting node
+
+    return path;
+}
+
+
+std::vector<int> GraphCSR::getShortestPathBidirectionalSearch(int src, int tgt) const {
+    return getShortestPathBidirectionalSearch(src, tgt, distance);
 }
 
 

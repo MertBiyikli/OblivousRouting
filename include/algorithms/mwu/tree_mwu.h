@@ -10,18 +10,6 @@
 #include "oracle/tree/tree_oracle.h"
 #include "oracle/tree/tree_transform.h"
 
-// Enum for cycle removal strategy
-enum class CycleRemovalStrategy {
-    NONE,           // No cycle removal
-    TARJAN_SCC,     // Remove cycles using Tarjan SCC algorithm
-    NAIVE          // Remove cycles linearly
-};
-
-const static std::map<CycleRemovalStrategy, std::string> map_cycle_strategy{
-    {CycleRemovalStrategy::NONE, "none"},
-    {CycleRemovalStrategy::TARJAN_SCC, "Tarjan_SCC"},
-    {CycleRemovalStrategy::NAIVE, "naive"},
-};
 
 /*
  *
@@ -34,29 +22,23 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
     std::unique_ptr<TreeOracle<HSTDatastructures>> oracle;
     TreeTransform transform;
-    CycleRemovalStrategy cycle_strategy;
     double lambda_sum;
     std::vector<double> rload_current, rload_total;
     std::vector<double> current_distances, mendel_scaling_times;
     std::vector<int> scales;
     std::vector<int> tree_heights;
-    double cycleCancellation_time;
 
-    // --- Path cache for computeRLoads to avoid redundant Dijkstra calls ---
-    std::map<std::pair<int,int>, std::vector<int>> path_cache;
+    std::map<std::pair<int,int>, CachedPath> path_cache;
 
 public:
-    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle,
-            CycleRemovalStrategy strategy = CycleRemovalStrategy::NAIVE)
+    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
         : LinearObliviousSolverBase(g, root)
         , oracle(std::move(_oracle))
-        , transform(graph)
-        , cycle_strategy(strategy) {
+        , transform(graph){
         current_distances.assign(graph.getNumDirectedEdges(), 1.0);
         rload_current.assign(graph.getNumDirectedEdges(), 0.0);
         rload_total.assign(graph.getNumDirectedEdges(), 0.0);
         lambda_sum = 0.0;
-        cycleCancellation_time = 0.0;
     }
 
     void computeBasisFlows(LinearRoutingTable& table) override {
@@ -68,19 +50,8 @@ public:
         double average_tree_height = 0.0;
         for (int h : tree_heights) average_tree_height += h;
 
-        /*
-        std::cout << "Partitioning stats" << std::endl;
-        std::cout << "Number of PQ pushes: " << oracle->number_pq_pushes << std::endl;
-        std::cout << "Number of PQ pops: " << oracle->number_pq_pushes << std::endl;
-        std::cout << "Number of successful relaxations: " << oracle->number_successful_relaxations << std::endl;
-        std::cout << "Number of touched nodes: " << oracle->number_touched_nodes << std::endl;
-        */
         std::cout << "Average tree height: " << average_tree_height/tree_heights.size() << "\n";
-        auto it = ::map_cycle_strategy.find(cycle_strategy);
-        if (it != ::map_cycle_strategy.end()) {
-            std::cout << "Using cycle cancellation strategy: " << it->second << std::endl;
-        }
-        std::cout << "Cycle cancellation time: " << this->getCycleCancellationTime() << " micro seconds\n";
+
         if (oracle->applyMendelScaling) {
             double total = 0.0;
             for (auto t : mendel_scaling_times) total += t;
@@ -97,25 +68,6 @@ public:
             lambda_sum += treeOracle(table);
             iteration_count++;
         }
-
-        auto t0 = timeNow();
-/*
-        // Apply cycle removal based on selected strategy
-        switch (cycle_strategy) {
-            case CycleRemovalStrategy::NONE:
-                // No cycle removal
-                break;
-            case CycleRemovalStrategy::TARJAN_SCC:
-                transform.removeCyclesUsingTarjanSCCAlgorithm(table);
-                break;
-            case CycleRemovalStrategy::NAIVE:
-                transform.removeCyclesLinear(table);
-                break;
-        }
-        */
-
-        cycleCancellation_time += duration(timeNow() - t0);
-
     }
 
     double treeOracle(LinearRoutingTable& table) {
@@ -192,17 +144,23 @@ public:
 
                 // --- Check cache first, compute and cache if not found ---
                 auto cache_key = std::make_pair(repParent, repChild);
-                auto& path = path_cache[cache_key];
-                if (path.empty()) {
-                    path = graph.getShortestPath(repParent, repChild, current_distances);
+                auto& cached_path = path_cache[cache_key];
+                if (cached_path.nodes.empty()) {
+                    cached_path.nodes = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    // Pre-compute edge IDs for all edges on the path
+                    cached_path.edge_ids.clear();
+                    for (size_t i = 0; i + 1 < cached_path.nodes.size(); ++i) {
+                        int e = graph.getEdgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
+                        cached_path.edge_ids.push_back(e);
+                    }
                 }
 
-                if (path.size() < 2) continue;
+                if (cached_path.nodes.size() < 2) continue;
 
-                for (size_t i = 0; i + 1 < path.size(); ++i) {
-                    int u = path[i], v = path[i+1];
-                    int e = graph.getEdgeId(u, v), anti_e = graph.getEdgeId(v, u);
-                    double cap = std::max(graph.getEdgeCapacity(u, v), 1e-12);
+                for (size_t i = 0; i < cached_path.edge_ids.size(); ++i) {
+                    int e = cached_path.edge_ids[i];
+                    int anti_e = graph.getAntiEdge(e);
+                    double cap = std::max(graph.getEdgeCapacity(e), 1e-12);
                     double rload = rload_current[e] + cut / cap;
                     rload_current[e] = rload_current[anti_e] = rload;
                 }
@@ -239,17 +197,23 @@ public:
 
                 // --- Check cache first, compute and cache if not found ---
                 auto cache_key = std::make_pair(repParent, repChild);
-                auto& path = path_cache[cache_key];
-                if (path.empty()) {
-                    path = graph.getShortestPath(repParent, repChild);
+                auto& cached_path = path_cache[cache_key];
+                if (cached_path.nodes.empty()) {
+                    cached_path.nodes = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    // Pre-compute edge IDs for all edges on the path
+                    cached_path.edge_ids.clear();
+                    for (size_t i = 0; i + 1 < cached_path.nodes.size(); ++i) {
+                        int e = graph.getEdgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
+                        cached_path.edge_ids.push_back(e);
+                    }
                 }
 
-                if (path.size() < 2) continue;
+                if (cached_path.nodes.size() < 2) continue;
 
-                for (size_t i = 0; i + 1 < path.size(); ++i) {
-                    int u = path[i], v = path[i+1];
-                    int e = graph.getEdgeId(u, v), anti_e = graph.getEdgeId(v, u);
-                    double cap = std::max(graph.getEdgeCapacity(u, v), 1e-12);
+                for (size_t i = 0; i < cached_path.edge_ids.size(); ++i) {
+                    int e = cached_path.edge_ids[i];
+                    int anti_e = graph.getAntiEdge(e);
+                    double cap = std::max(graph.getEdgeCapacity(e), 1e-12);
                     double rload = rload_current[e] + cut / cap;
                     rload_current[e] = rload_current[anti_e] = rload;
                 }
@@ -319,9 +283,6 @@ public:
         return scales;
     }
 
-    double getCycleCancellationTime() const {
-        return cycleCancellation_time;
-    }
 };
 
 #endif //OBLIVIOUSROUTING_TREE_MWU_H

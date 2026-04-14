@@ -31,19 +31,11 @@
 template<typename T>
 class TreeOracle {
 public:
-    int number_pq_pushes;
-    int number_pq_pops;
-    int number_successful_relaxations;
-    int number_touched_nodes;
     explicit TreeOracle(IGraph& graph) : graph(graph) {
         n = graph.getNumNodes();
         diameter = 0;
         applyMendelScaling = false;
 
-        number_pq_pushes = 0;
-        number_pq_pops = 0;
-        number_successful_relaxations = 0;
-        number_touched_nodes = 0;
     }
 
     TreeOracle(IGraph& graph, bool activateMendelScaling) : graph(graph) {
@@ -52,10 +44,6 @@ public:
         this->applyMendelScaling = activateMendelScaling;
         total_time_spent_on_mendel_scaling = 0.0;
 
-        number_pq_pushes = 0;
-        number_pq_pops = 0;
-        number_successful_relaxations = 0;
-        number_touched_nodes = 0;
     }
     virtual ~TreeOracle() = default;
 
@@ -191,7 +179,7 @@ public:
     virtual void preprocess() {
         n = graph.getNumNodes();
         if (n == 0) throw std::invalid_argument("The graph has no nodes.");
-        diameter = graph.getDiameter();
+        diameter = graph.getDiameterApprox();
 
         perm.clear();
         for (int v = 0; v < n; ++v) perm.push_back(v);

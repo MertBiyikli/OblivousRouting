@@ -54,7 +54,12 @@ public:
     std::vector<double> getDistances(int u) const;
     double getShortestDistance(int u, int v) const;
     std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist_e) const override;
-
+    virtual std::vector<int> getShortestPathBidirectionalSearch(int source, int target, const std::vector<double>& distance) const override {
+        return {};
+    }
+    virtual std::vector<int> getShortestPathBidirectionalSearch(int source, int target) const override {
+        return {};
+    }
 
 
 

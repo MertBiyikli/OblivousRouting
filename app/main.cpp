@@ -30,8 +30,7 @@ inline std::string getSolverName(SolverType type) {
         {SolverType::RAECKE_CKR_POINTER, "Raecke CKR (Pointer HST)"},
         {SolverType::RAECKE_RANDOM_MST_POINTER, "Random MST (Pointer HST)"},
         {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
-        {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
-        {SolverType::RAECKE_CKR_FLAT_OPTIMIZED, "Raecke CKR optimized (Flat HST)"}
+        {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";
@@ -77,7 +76,7 @@ int main(int argc, char **argv) {
     for (SolverType type : cfg->solvers) {
         std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
 
-        auto solver_opt = makeSolver(type, *graph, cfg->cycle_strategy);
+        auto solver_opt = makeSolver(type, *graph);
         if (!solver_opt) {
             std::cerr << "Failed to create solver of type " << static_cast<int>(type) << "\n";
             continue;
@@ -91,7 +90,7 @@ int main(int argc, char **argv) {
 
         std::cout << "Total time: " << total_time << " micro seconds\n";
 
-        // scheme->printRoutingTable();
+        //scheme->printRoutingTable();
 
         // Print time statistics if available
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {

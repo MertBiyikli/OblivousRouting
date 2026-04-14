@@ -12,7 +12,6 @@ SOLVERS=""
 DATASET=""
 DEMANDS=""
 DEMAND_PROVIDED=0
-CYCLE_REMOVAL="${CYCLE_REMOVAL:-none}"
 
 ALL_SOLVERS="${ALL_SOLVERS:-electrical_naive, electrical_sketching,frt,ckr,mst,frt_mendel,ckr_mendel,frt_pointer,ckr_pointer,mst_pointer,frt_mendel_pointer,ckr_mendel_pointer,lp}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
@@ -26,7 +25,6 @@ while [[ $# -gt 0 ]]; do
     --dataset)       DATASET="${2-}"; shift 2 ;;
     --demand)        DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
     --demands)       DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
-    --cycle-removal) CYCLE_REMOVAL="${2-}"; shift 2 ;;
     --bin)           BIN="${2-}"; shift 2 ;;
     --out)           OUT_CSV="${2-}"; shift 2 ;;
     -h|--help)
@@ -34,11 +32,7 @@ while [[ $# -gt 0 ]]; do
       echo "  $0 --all --dataset <dir-or-file> [--out results.csv]"
       echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> [--out results.csv]"
       echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian\" [--out results.csv]"
-      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> --cycle-removal <strategy> [--out results.csv]"
-      echo ""
-      echo "Cycle removal strategies: none, tarjan, linear (default: none)"
-      echo ""
-      echo "All solvers, demands, and cycle removal strategy are passed in one binary call per graph."
+      echo "All solvers and demands are passed in one binary call per graph."
       echo "CSV has one row per (graph × solver × demand_model)."
       exit 0
       ;;
@@ -83,7 +77,7 @@ mkdir -p "$OUT_DIR"
 CSV="$OUT_CSV"
 
 # Always write a fresh header — each invocation owns its output file
-echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_tree_height,load_computation_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,mwu_weight_update_time_micro_seconds,cycle_removal_type,cycle_removal_time_micro_seconds,status" > "$CSV"
+echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_tree_height,load_computation_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,mwu_weight_update_time_micro_seconds,status" > "$CSV"
 
 # Collect graphs
 DATASET_PATH="$DATASET"
@@ -129,16 +123,14 @@ for g in "${GRAPHS[@]}"; do
   safe_rel="${rel_path//\//__}"
   log="$OUT_DIR/${safe_rel%.lgf}_${RUN_ID}.log"
 
-  # Build command: binary <solvers> <graph> [<demands>] [<cycle-removal>]
+  # Build command: binary <solvers> <graph> [<demands>]
   cmd=( "$BIN" "$SOLVERS_ARG" "$g_abs" )
   if [[ "$DEMAND_PROVIDED" -eq 1 && -n "$DEMANDS_ARG" ]]; then
     cmd+=( "$DEMANDS_ARG" )
   fi
-  if [[ -n "$CYCLE_REMOVAL" && "$CYCLE_REMOVAL" != "none" ]]; then
-    cmd+=( "$CYCLE_REMOVAL" )
-  fi
 
-  echo "[RUN] $rel_path | solvers=$SOLVERS_ARG | demands=${DEMANDS_ARG:-none} | cycle_removal=$CYCLE_REMOVAL | timeout=$TIMEOUT"
+
+  echo "[RUN] $rel_path | solvers=$SOLVERS_ARG | demands=${DEMANDS_ARG:-none} | timeout=$TIMEOUT"
 
   status="OK"
   if "$TIMEOUT_BIN" --signal=SIGTERM --kill-after=30s "$TIMEOUT" \
@@ -194,7 +186,7 @@ for g in "${GRAPHS[@]}"; do
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-      "none", "NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
+      "none", "NaN","NaN","NaN", mwu_weight_update_time, status
     n_rows++
   }
   function reset_solver_state() {
@@ -203,14 +195,12 @@ for g in "${GRAPHS[@]}"; do
     mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
     mwu_weight_update_time="NaN";
     load_computation_micro_seconds="NaN";
-    cycle_removal_type="none"; cycle_removal_time="NaN";
   }
   BEGIN {
     nodes="NaN"; edges="NaN";
     solver=""; n_rows=0; solver_seen=0;
     mwu_weight_update_time="NaN";
     load_computation_micro_seconds="NaN";
-    cycle_removal_type="none"; cycle_removal_time="NaN";
     reset_solver_state()
   }
 
@@ -222,16 +212,6 @@ for g in "${GRAPHS[@]}"; do
     sub(/^[0-9]+ nodes, /, "", tmp)
     edges=tmp; sub(/ edges.*$/, "", edges)
     next
-  }
-
-  # Cycle cancellation strategy
-  /^Using cycle cancellation strategy: / {
-    tmp=$0; sub(/^Using cycle cancellation strategy: /, "", tmp); cycle_removal_type=tmp; next
-  }
-
-  # Cycle cancellation time
-  /^Cycle cancellation time: [0-9][0-9.]*([eE][+-]?[0-9]+)?  *micro  *seconds/ {
-    tmp=$0; sub(/^Cycle cancellation time: /, "", tmp); sub(/ *micro  *seconds/, "", tmp); cycle_removal_time=tmp; next
   }
 
   # New solver section — flush previous solver row if no demands, then reset
@@ -291,7 +271,7 @@ for g in "${GRAPHS[@]}"; do
       dataset, graph, solver, nodes, edges,
       total_time, solve_time, transf_time, mwu, avg_oracle,
       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-      dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
+      dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, status
     n_rows++
     next
   }
@@ -308,7 +288,7 @@ for g in "${GRAPHS[@]}"; do
         printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
           dataset, graph, "unknown", nodes, edges,
           "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
-          dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, cycle_removal_type, cycle_removal_time, status
+          dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, status
       }
     } else if (demand_provided != "1" && solver_seen) {
       # Flush the last solver (no demand model run)
@@ -319,7 +299,7 @@ for g in "${GRAPHS[@]}"; do
   cat "$_tmp_rows" >> "$CSV"
   rm -f "$_tmp_rows"
 
-  echo "[DONE] $base | solvers=$SOLVERS_ARG | ${DEMANDS_ARG:-none} | $CYCLE_REMOVAL | $status"
+  echo "[DONE] $base | solvers=$SOLVERS_ARG | ${DEMANDS_ARG:-none} | $status"
 done
 
 echo "CSV written to: $CSV"

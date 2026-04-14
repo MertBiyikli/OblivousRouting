@@ -10,6 +10,12 @@
 
 #define INVALID_EDGE_ID -1
 
+// --- Cached path data: nodes + pre-computed edge IDs to avoid repeated getEdgeId() calls ---
+struct CachedPath {
+    std::vector<int> nodes;
+    std::vector<int> edge_ids;  // edge_ids[i] = edge from nodes[i] to nodes[i+1]
+};
+
 class IGraph {
 public:
     IGraph() = default;
@@ -129,6 +135,8 @@ public:
      * If no path exists, returns an empty vector. The underlying shortest path algorithm is by default Dijkstra algorithm.
      */
     virtual std::vector<int> getShortestPath(int source, int target) const = 0;
+    virtual std::vector<int> getShortestPathBidirectionalSearch(int source, int target, const std::vector<double>& distance) const = 0;
+    virtual std::vector<int> getShortestPathBidirectionalSearch(int source, int target) const = 0;
     virtual const double getDiameter() const = 0;
     virtual const double getDiameterApprox() const = 0;
     virtual std::vector<int> getShortestPath(int s, int t, const std::vector<double>& dist) const = 0;
