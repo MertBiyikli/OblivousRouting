@@ -84,7 +84,6 @@ add_executable(oblivious_routing
         include/io/demand_io.h
         source/data_structures/hst/flat_hst.cpp
         source/data_structures/hst/pointer_hst.cpp
-        include/algorithms/mwu/oracle/tree/fast_ckr/engineering_fast_ckr.h
         include/core/routing_table.h
 )
 
