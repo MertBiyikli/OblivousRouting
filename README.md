@@ -1,8 +1,7 @@
 ## Oblivious Routing algorithms
 
 This repository contains implementations of various Oblivious Routing algorithms. Oblivious Routing is a technique used in network routing where the path taken by packets is determined without knowledge of the current network state or traffic conditions.
-The goal is to compare two MWU style algorithm each instantiating different oracles.
-More precisely, we examine how electrical flow and tree based oracles solve the Oblivious Routing.
+More precisely, we implemented an electrical flow-based and tree-based algorithm for solving the Oblivious Routing problem.
 The observed algorithms include:
 
 **MWU-based Oblivious Routing Approximation Algorithms:**
@@ -17,12 +16,11 @@ LP-based evaluation of the optimal Oblivious Routing:
 
 Tree-based oracle variants implemented in this repository include:
 - **FRT** — Fakcharoenphol, Rao, Talwar (2004) **A tight bound on approximating arbitrary metrics by tree metrics**[[paper]](https://dl.acm.org/doi/abs/10.1145/780542.780608)
-- **CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**[[paper]](https://arxiv.org/abs/0809.1902)
+- **Fast-CKR** — Mendel and Schwob (2009) **Fast C-K-R Partitions of Sparse Graphs ∗**[[paper]](https://arxiv.org/abs/0809.1902)
 - **MST-based** decompositions
 
-In addition we provide two additions to the tree-based oracle variants:
+In addition we provide the following scaling refinement mechanism to the tree-based oracle variants:
 - **MendelScaling** - Mendel and Schwob (2009): scales down the required number of scales when computing the HST while retaining the stretch quality
-- **Data Structures for HST** - We implement two different data structures for storing the HST, one that is pointer-based and another that is array-based. The pointer-based data structure allows for more flexible tree manipulations, while the array-based data structure provides faster access times and reduced memory overhead.
 
 Electrical flow based oracle variant is based on the [[AMGCL solver]](https://github.com/ddemidov/amgcl).
 The default solver is set to use the algebraic multigrid method for preconditioning the Conjugate Gradient (CG) method.
@@ -33,7 +31,7 @@ We provide two variants for the electrical flow solver:
 
 ### Repository Structure
 
-- `app/`: Contains the main application code for running the Oblivious Routing algorithms and evaluating their performance.
+- `app/main.cpp`: Contains the main application code for running the Oblivious Routing algorithms and evaluating their performance.
 - `include/`: Contains header files for the Oblivious Routing algorithms and related utilities.
 - `source/`: Contains the source code for the Oblivious Routing algorithms.
 - `experiments/datasets`: Contains datasets and network topologies used for testing the algorithms.
@@ -68,10 +66,10 @@ Change the preset configuration from `release` to `debug` for a debug build.
    ```
    Replace `<graph>` with the path to your network topology file and `<algorithm>` with `"electrical,frt,ckr,mst,cohen"`.
    Replace `<demand_model>` with the desired traffic demand model (e.g., `uniform, gravity, bimodal, gaussian`). The demand model 
-   evaluates how traffic is distributed across the network givent the precomputed routing scheme.
+   evaluates how traffic is distributed across the network given the precomputed routing scheme.
 
 
-### Running with Docker (recommended)
+### Running with Docker
 You can also run the project using Docker. First, build the Docker image:
 ```bash
     docker build -t oblivious-routing .

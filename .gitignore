@@ -5,3 +5,5 @@ experiments/datasets/synth_dc/*.lgf
 result
 results
 /results_latest/
+/results/
+/plots/

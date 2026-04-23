@@ -49,17 +49,11 @@ int main(int argc, char **argv) {
     auto graph = makegraph(cfg->graph_format);
     if (!cfg->filename.empty()) {
         readLGFFile(*graph, cfg->filename);
-    }/*
-    int n = 5;
-    std::unique_ptr<GraphCSR> graph = std::make_unique<GraphCSR>(n);
-    for (int i = 0; i < n; ++i) {
-        graph->addEdge(i, (i+1)%n, 1.0);
     }
-    graph->addEdge(0,2, 1.0);
-    graph->addEdge(1,3, 1.0);*/
     graph->finalize();
     std::cout << "Graph loaded: " << graph->getNumNodes() << " nodes, " << graph->getNumUndirectedEdges() <<" edges.\n";
-    //graph->print();
+
+
     // Precompute offline optimal congestion if needed
     std::map<std::string, double> offline_opt_per_model;
     std::map<std::string, demands> demand_maps;

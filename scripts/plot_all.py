@@ -34,8 +34,8 @@ def set_paper_style():
         "ytick.labelsize": 8,
 
         # ── Lines / markers ──────────────────────────────────────────────────
-        "lines.linewidth": 0.5,
-        "lines.markersize": 2.5,
+        "lines.linewidth": 0.8,
+        "lines.markersize": 3.5,
         "lines.markeredgewidth": 0.4,
 
         # ── Axes & spines ────────────────────────────────────────────────────
@@ -581,19 +581,13 @@ def plot_stacked_time_breakdown(
         ax.bar(x, values, width, label=component_labels.get(col, col),
                bottom=bottom, color=component_colors.get(col, "#999999"), alpha=0.8)
 
-        # Add percentage labels on bars
-        for i, (val, b) in enumerate(zip(values, bottom)):
-            if val > 3:  # Only show label if segment is large enough
-                ax.text(x[i], b + val/2, f"{val:.1f}%", ha="center", va="center",
-                       fontsize=6, color="white", weight="bold")
-
         bottom += values
 
     #ax.set_xlabel("Solver")
     #ax.set_ylabel("Percentage (%)")
     ax.set_ylim(0, 100)
     ax.set_xticks(x)
-    ax.set_xticklabels([pretty_solver_name(s) for s in solver_order], rotation=45, ha="right")
+    # ax.set_xticklabels([pretty_solver_name(s) for s in solver_order], rotation=45, ha="right")
     # ax.legend(loc="upper right", frameon=False, fontsize=7)
     ax.minorticks_on()
 
@@ -728,14 +722,10 @@ Examples:
 def _graph_short_name(name: str) -> str:
     """Return a compact display name for a graph path/identifier.
 
-    Always strips the file extension (e.g. .lgf, .gr, .dimacs) and any
-    trailing run-index suffixes (_0, _1, …).
+    Keeps the instance-distinguishing suffixes like _01, _02, ...
+    Only strips path and file extension.
     """
-    # Always take the last path component and drop the extension
-    base = Path(name).stem
-    # Remove trailing _N suffixes like _0, _1 that come from repeated runs
-    base = re.sub(r"_\d+$", "", base)
-    return base
+    return Path(name).stem
 
 def main():
     set_paper_style()
@@ -852,23 +842,26 @@ def main():
     df_oblivious = df[df["solver"].isin(solver_mwu)].dropna(
         subset=["oblivious_ratio"]
     ).copy()
+
     df_oblivious["oblivious_ratio"] = pd.to_numeric(
         df_oblivious["oblivious_ratio"], errors="coerce"
     )
     df_oblivious = df_oblivious.dropna(subset=["oblivious_ratio"])
 
-    dedup_cols = [c for c in ["graph", "solver","num_nodes", "num_edges", "oblivious_ratio"]
-                  if c in df_oblivious.columns]
-    df_oblivious_dedup = df_oblivious[dedup_cols].drop_duplicates(
-        subset=["graph", "solver"] if "graph" in dedup_cols else None
-    )
+    # Keep only columns needed for plotting, but do NOT collapse distinct instances
+    dedup_cols = [
+        c for c in ["graph", "solver", "num_nodes", "num_edges", "oblivious_ratio"]
+        if c in df_oblivious.columns
+    ]
+    df_oblivious_plot = df_oblivious[dedup_cols].drop_duplicates()
 
-    solvers_oblivious = [s for s in solver_mwu
-                         if not df_oblivious_dedup[
-            df_oblivious_dedup["solver"] == s].empty]
+    solvers_oblivious = [
+        s for s in solver_mwu
+        if not df_oblivious_plot[df_oblivious_plot["solver"] == s].empty
+    ]
 
     plot_scatter_cloud(
-        df_oblivious_dedup, solvers_oblivious, colors, markers,
+        df_oblivious_plot, solvers_oblivious, colors, markers,
         xcol="num_nodes", ycol="oblivious_ratio",
         xlabel="Number of nodes",
         ylabel="Oblivious ratio",

@@ -248,55 +248,79 @@ def plot_lines(
 ):
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
-    handles = []
-    labels = []
-
     for s in solvers:
         sub = df_agg[df_agg["solver"] == s].sort_values(xcol)
         if sub.empty:
             continue
 
-        x = sub[xcol].to_numpy()
-        y = sub[y_mean_col].to_numpy()
-        e = sub[y_std_col].to_numpy()
+        x = pd.to_numeric(sub[xcol], errors="coerce").to_numpy(dtype=float)
+        y = pd.to_numeric(sub[y_mean_col], errors="coerce").to_numpy(dtype=float)
+        e = pd.to_numeric(sub[y_std_col], errors="coerce").to_numpy(dtype=float)
+
+        mask = np.isfinite(x) & np.isfinite(y) & np.isfinite(e)
+        if xlog:
+            mask &= (x > 0)
+        if ylog:
+            mask &= (y > 0)
+
+        x = x[mask]
+        y = y[mask]
+        e = e[mask]
+
+        if len(x) == 0:
+            continue
 
         if ylog:
             y = np.maximum(y, LOG_EPS)
-            e = np.minimum(e, y - LOG_EPS)
+            e = np.minimum(e, np.maximum(y - LOG_EPS, 0))
 
-        ls = linestyles[s] if linestyles else "-"
-        h, = ax.plot(
+        # lighter confidence band instead of visually dominant error bars
+        if len(e) > 0 and np.any(e > 0):
+            y_low = np.maximum(y - e, LOG_EPS if ylog else -np.inf)
+            y_high = y + e
+            ax.fill_between(
+                x, y_low, y_high,
+                color=colors[s],
+                alpha=0.08,
+                linewidth=0,
+                zorder=1,
+            )
+
+        # thin, slightly transparent line
+        ax.plot(
             x, y,
-            linestyle=ls,
-            marker=markers[s],
-            markersize=2.5,
-            markeredgewidth=0.4,
-            markeredgecolor="white",
-            label=pretty_solver_name(s),
+            linestyle=linestyles[s] if linestyles else "-",
+            linewidth=0.7,
             color=colors[s],
+            alpha=0.7,
+            zorder=2,
         )
-        handles.append(h)
-        labels.append(pretty_solver_name(s))
 
-
+        # emphasize points more than line
+        ax.scatter(
+            x, y,
+            marker=markers[s],
+            s=14,
+            color=colors[s],
+            edgecolors="white",
+            linewidths=0.25,
+            alpha=0.9,
+            zorder=3,
+        )
 
     if xlog:
         ax.set_xscale("log")
     if ylog:
         ax.set_yscale("log")
 
-    # _apply_labels(ax, xlabel, ylabel)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     ax.minorticks_on()
 
-    # Show more x-axis ticks for better readability without clutter
     if xlog:
-        # For log scale, use LogLocator to respect logarithmic spacing
         ax.xaxis.set_major_locator(mticker.LogLocator(base=10, numticks=6))
     else:
-        # For linear scale, use MaxNLocator with moderate number of ticks
-        ax.xaxis.set_major_locator(mticker.MaxNLocator(nbins=6, integer=False))
-
-
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(nbins=5))
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -455,7 +479,7 @@ def plot_legend_plate(
             linestyle=ls,
             linewidth=1.2,
             marker=markers[s],
-            markersize=5,
+            markersize=2,
             markeredgewidth=0.5,
             markeredgecolor="white",
             label=pretty_solver_name(s),
@@ -491,6 +515,143 @@ def plot_legend_plate(
     fig.tight_layout(pad=0.0)
     savefig_all(fig, outpath)
     plt.close(fig)
+
+def export_electrical_sketching_summary_table(
+        df: pd.DataFrame,
+        out_dir: Path,
+):
+    """
+    Create a compact comparison table for Electrical Flow (naive) vs
+    Electrical Flow (sketching).
+
+    Output is aggregated into 3 fixed edge-range buckets:
+    [1, 500], [500, 15000], [15000, ...)
+
+    Columns:
+    - Number of edges
+    - Naive [s]
+    - Sketching [s]
+    - Speedup
+    - Delta oblivious ratio
+    """
+    naive_df = df[df["solver"] == "Electrical Flow (naive)"].copy()
+    sketch_df = df[df["solver"] == "Electrical Flow (sketching)"].copy()
+
+    if naive_df.empty or sketch_df.empty:
+        print("WARNING: Missing naive or sketching electrical flow data")
+        return
+
+    # Ensure numeric columns
+    for frame in (naive_df, sketch_df):
+        frame["num_edges"] = pd.to_numeric(frame["num_edges"], errors="coerce")
+        frame["total_time_micro_seconds"] = pd.to_numeric(
+            frame["total_time_micro_seconds"], errors="coerce"
+        )
+        if "oblivious_ratio" in frame.columns:
+            frame["oblivious_ratio"] = pd.to_numeric(
+                frame["oblivious_ratio"], errors="coerce"
+            )
+
+    naive_grouped = (
+        naive_df.groupby("num_edges").agg(
+            naive_mean_us=("total_time_micro_seconds", "mean"),
+            naive_obl_mean=("oblivious_ratio", "mean"),
+        ).reset_index()
+    )
+
+    sketch_grouped = (
+        sketch_df.groupby("num_edges").agg(
+            sketch_mean_us=("total_time_micro_seconds", "mean"),
+            sketch_obl_mean=("oblivious_ratio", "mean"),
+        ).reset_index()
+    )
+
+    summary = naive_grouped.merge(sketch_grouped, on="num_edges", how="inner")
+
+    if summary.empty:
+        print("WARNING: No overlapping num_edges values between naive and sketching runs")
+        return
+
+    summary["naive_mean_s"] = summary["naive_mean_us"] / 1e6
+    summary["sketch_mean_s"] = summary["sketch_mean_us"] / 1e6
+    summary["speedup"] = summary["naive_mean_us"] / summary["sketch_mean_us"]
+    summary["obl_ratio_diff"] = summary["sketch_obl_mean"] - summary["naive_obl_mean"]
+
+    # Fixed buckets to match your desired table style
+    bins = [1, 500, 15000, np.inf]
+    labels = [r"$[1, 500]$", r"$[500,15000]$", r"$[15000, \cdots]$"]
+
+    summary = summary[summary["num_edges"] >= 1].copy()
+    summary["edge_bucket"] = pd.cut(
+        summary["num_edges"],
+        bins=bins,
+        labels=labels,
+        include_lowest=True,
+        right=True,
+    )
+
+    compact = (
+        summary.groupby("edge_bucket", observed=True)
+        .agg(
+            naive_s=("naive_mean_s", "mean"),
+            sketch_s=("sketch_mean_s", "mean"),
+            speedup=("speedup", "mean"),
+            obl_diff=("obl_ratio_diff", "mean"),
+        )
+        .reset_index()
+    )
+
+    compact = compact.rename(columns={
+        "edge_bucket": "Number of edges",
+        "naive_s": "Naive [s]",
+        "sketch_s": "Sketching [s]",
+        "speedup": "Speedup",
+        "obl_diff": r"$\Delta$ oblivious ratio",
+    })
+
+    compact.to_csv(out_dir / "electrical_flow_sketching_summary_compact.csv", index=False)
+
+    # formatted strings for LaTeX
+    display_df = compact.copy()
+    display_df["Naive [s]"] = display_df["Naive [s]"].map(lambda x: f"{x:.3f}")
+    display_df["Sketching [s]"] = display_df["Sketching [s]"].map(lambda x: f"{x:.3f}")
+    display_df["Speedup"] = display_df["Speedup"].map(lambda x: f"{x:.2f}x")
+    display_df[r"$\Delta$ oblivious ratio"] = display_df[r"$\Delta$ oblivious ratio"].map(
+        lambda x: "-" if pd.isna(x) else f"{x:+.3f}"
+    )
+
+    # manual LaTeX generation in your preferred style
+    lines = []
+    lines.append(r"\begin{table}[H]")
+    lines.append(r"\centering")
+    lines.append(r"\small")
+    lines.append(r"\renewcommand{\arraystretch}{1.15}")
+    lines.append(r"\begin{tabular}{l|r|r|r|r}")
+    lines.append(r"\hline")
+    lines.append(r"Number of edges & Naive [s] & Sketching [s] & Speedup & $\Delta$ oblivious ratio \\")
+    lines.append(r"\hline")
+
+    for _, row in display_df.iterrows():
+        lines.append(
+            f"{row['Number of edges']} & "
+            f"{row['Naive [s]']} & "
+            f"{row['Sketching [s]']} & "
+            f"{row['Speedup']} & "
+            f"{row[r'$\\Delta$ oblivious ratio']} \\\\"
+        )
+
+    lines.append(r"\hline")
+    lines.append(r"\end{tabular}")
+    lines.append(r"\caption{Summary of the comparison between na\"ive and sketching-based electrical flow algorithms.}")
+    lines.append(r"\label{tab:electrical_flow_sketching_summary}")
+    lines.append(r"\end{table}")
+
+    with open(out_dir / "electrical_flow_sketching_summary_compact.tex", "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+    print("\nCompact sketching vs naive summary:")
+    print(display_df.to_string(index=False))
+
 
 def aggregate_mean_std(df: pd.DataFrame, ycol: str) -> pd.DataFrame:
     g = (
@@ -632,14 +793,7 @@ def plot_scatter_cloud(
         add_scaling_line: bool = True,
         linestyles: dict[str, str] | None = None,
 ):
-    """
-    Scatter plot where each dot is one instance.
-    Optionally overlays a per-solver power-law scaling trend line.
-    """
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-
-    handles = []
-    labels = []
 
     for s in solvers:
         sub = df[df["solver"] == s].copy()
@@ -649,43 +803,74 @@ def plot_scatter_cloud(
         x = pd.to_numeric(sub[xcol], errors="coerce").to_numpy(dtype=float)
         y = pd.to_numeric(sub[ycol], errors="coerce").to_numpy(dtype=float)
 
+        mask = np.isfinite(x) & np.isfinite(y)
+        if xlog:
+            mask &= (x > 0)
+        if ylog:
+            mask &= (y > 0)
+
+        x = x[mask]
+        y = y[mask]
+
+        if len(x) == 0:
+            continue
+
         if ylog:
             y = np.maximum(y, LOG_EPS)
 
-        h = ax.scatter(
+        # points should dominate
+        ax.scatter(
             x, y,
             marker=markers[s],
-            s=5,
-            alpha=0.55,
+            s=12,
+            alpha=0.7,
             color=colors[s],
-            edgecolors="none",
-            label=pretty_solver_name(s),
+            edgecolors="white",
+            linewidths=0.2,
             zorder=3,
         )
-        handles.append(h)
-        labels.append(pretty_solver_name(s))
 
-        if add_scaling_line and x.size >= 3:
+        # trend line should be subtle
+        if add_scaling_line and len(x) >= 3:
             a, b = _fit_powerlaw_line(x, y)
             if a is not None:
-                xpos = x[x > 0]
-                x_min, x_max = np.nanmin(xpos), np.nanmax(xpos)
+                x_min, x_max = np.nanmin(x), np.nanmax(x)
                 if xlog:
-                    xs = np.logspace(np.log10(x_min), np.log10(x_max), 500)
+                    xs = np.logspace(np.log10(x_min), np.log10(x_max), 300)
                 else:
-                    xs = np.linspace(x_min, x_max, 500)
+                    xs = np.linspace(x_min, x_max, 300)
+
                 ys = a * (xs ** b)
                 if ylog:
                     ys = np.maximum(ys, LOG_EPS)
-                ax.plot(xs, ys, linestyle="-", linewidth=0.7, color=colors[s], alpha=0.85, zorder=2)
+
+                ax.plot(
+                    xs, ys,
+                    linestyle="--",
+                    linewidth=0.55,
+                    color=colors[s],
+                    alpha=0.45,
+                    zorder=2,
+                )
 
     if xlog:
         ax.set_xscale("log")
     if ylog:
         ax.set_yscale("log")
 
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     ax.minorticks_on()
 
+    if xlog:
+        ax.xaxis.set_major_locator(mticker.LogLocator(base=10))
+    else:
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(nbins=6))
+
+    if ylog:
+        ax.yaxis.set_major_locator(mticker.LogLocator(base=10))
+    else:
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(nbins=6))
 
     savefig_all(fig, outpath)
     plt.close(fig)
@@ -737,6 +922,46 @@ def _graph_short_name(name: str) -> str:
     base = re.sub(r"_\d+$", "", base)
     return base
 
+def export_electrical_sketching_overall_table(
+        df: pd.DataFrame,
+        out_dir: Path,
+):
+    naive_df = df[df["solver"] == "Electrical Flow (naive)"].copy()
+    sketch_df = df[df["solver"] == "Electrical Flow (sketching)"].copy()
+
+    if naive_df.empty or sketch_df.empty:
+        return
+
+    naive_mean = naive_df["total_time_micro_seconds"].mean() / 1e6
+    sketch_mean = sketch_df["total_time_micro_seconds"].mean() / 1e6
+
+    naive_grouped = naive_df.groupby("num_edges")["total_time_micro_seconds"].mean()
+    sketch_grouped = sketch_df.groupby("num_edges")["total_time_micro_seconds"].mean()
+
+    merged = pd.DataFrame({
+        "naive": naive_grouped,
+        "sketch": sketch_grouped,
+    }).dropna()
+
+    merged["speedup"] = merged["naive"] / merged["sketch"]
+
+    overall = pd.DataFrame([{
+        "Naive overall mean [s]": f"{naive_mean:.3f}",
+        "Sketching overall mean [s]": f"{sketch_mean:.3f}",
+        "Overall mean speedup": f"{(naive_mean / sketch_mean):.2f}x",
+        "Median grouped speedup": f"{merged['speedup'].median():.2f}x",
+        "Best grouped speedup": f"{merged['speedup'].max():.2f}x",
+        "Worst grouped speedup": f"{merged['speedup'].min():.2f}x",
+    }])
+
+    overall.to_csv(out_dir / "electrical_flow_sketching_overall_summary.csv", index=False)
+
+    with open(out_dir / "electrical_flow_sketching_overall_summary.tex", "w") as f:
+        f.write(overall.to_latex(index=False, escape=False))
+
+    print("\nOverall sketching vs naive summary:")
+    print(overall.to_string(index=False))
+
 def main():
     set_paper_style()
     RESULT_CSV, OUT_DIR = parse_arguments()
@@ -785,7 +1010,7 @@ def main():
         xcol="num_edges", y_mean_col="mean", y_std_col="std",
         xlabel="Number of edges",
         ylabel="Total running time [microseconds]",
-        xlog=False, ylog=True,
+        xlog=True, ylog=True,
         figsize=FIGSIZE_SINGLE,
         outpath=OUT_DIR / "runtime_lines_vs_edges",
         linestyles=linestyles,
@@ -867,7 +1092,85 @@ def main():
         out_dir=OUT_DIR,
         figsize=FIGSIZE_SINGLE,
     )
+    plot_electrical_sketching_quality(
+        df,
+        out_dir=OUT_DIR,
+        figsize=FIGSIZE_SINGLE,
+    )
 
+    plot_electrical_sketching_quality_gap(
+        df,
+        out_dir=OUT_DIR,
+        figsize=FIGSIZE_SINGLE,
+    )
+
+def plot_electrical_sketching_quality_gap(
+        df: pd.DataFrame,
+        out_dir: Path,
+        figsize,
+):
+    naive_df = df[df["solver"] == "Electrical Flow (naive)"].copy()
+    sketch_df = df[df["solver"] == "Electrical Flow (sketching)"].copy()
+
+    for frame in (naive_df, sketch_df):
+        frame["num_nodes"] = pd.to_numeric(frame["num_nodes"], errors="coerce")
+        frame["oblivious_ratio"] = pd.to_numeric(frame["oblivious_ratio"], errors="coerce")
+
+    naive_grouped = (
+        naive_df.dropna(subset=["num_nodes", "oblivious_ratio"])
+        .groupby("num_nodes")["oblivious_ratio"]
+        .mean()
+        .reset_index(name="naive_oblivious_ratio")
+    )
+
+    sketch_grouped = (
+        sketch_df.dropna(subset=["num_nodes", "oblivious_ratio"])
+        .groupby("num_nodes")["oblivious_ratio"]
+        .mean()
+        .reset_index(name="sketch_oblivious_ratio")
+    )
+
+    merged = naive_grouped.merge(sketch_grouped, on="num_nodes", how="inner")
+    merged["quality_gap"] = ((merged["sketch_oblivious_ratio"]-merged["naive_oblivious_ratio"])/merged["naive_oblivious_ratio"])*100
+
+    x = merged["num_nodes"].to_numpy(dtype=float)
+    y = merged["quality_gap"].to_numpy(dtype=float)
+
+    mask = np.isfinite(x) & np.isfinite(y) & (x > 0)
+    x = x[mask]
+    y = y[mask]
+
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    ax.scatter(
+        x, y,
+        s=18,
+        color="#AA4499",
+        edgecolors="white",
+        marker=".",
+        linewidths=0.3,
+        alpha=0.85,
+        zorder=3,
+    )
+
+    if len(x) >= 2:
+        lx = np.log10(x)
+        m, b = np.polyfit(lx, y, deg=1)
+        xs = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), 300)
+        ys = m * np.log10(xs) + b
+
+        ax.plot(xs, ys, linestyle="--", linewidth=0.9, color="#AA4499", alpha=0.9, zorder=2)
+
+    ax.axhline(0.0, color="gray", linestyle=":", linewidth=0.7, alpha=0.8, zorder=1)
+
+    ax.set_xscale("log")
+    #ax.set_xlabel("Number of edges")
+    #ax.set_ylabel(r"$\Delta$ oblivious ratio (Sketching - Naive)")
+    ax.minorticks_on()
+    ax.xaxis.set_major_locator(mticker.LogLocator(base=10))
+
+    savefig_all(fig, out_dir / "electrical_flow_quality_gap_vs_edges")
+    plt.close(fig)
 
 def plot_electrical_sketching_speedup(
         df: pd.DataFrame,
@@ -877,18 +1180,11 @@ def plot_electrical_sketching_speedup(
     """
     Plot speedup of sketching vs naive for Electrical Flow solvers.
     Speedup = time_naive / time_sketching
+
+    Uses:
+    - scatter points (no connecting polyline)
+    - best-fit line in log(num_edges)
     """
-    # Filter to electrical flow solvers
-    electrical_solvers = [s for s in df["solver"].unique()
-                         if "Electrical Flow" in s]
-
-    if len(electrical_solvers) < 2:
-        print("WARNING: Need at least 2 electrical flow variants for speedup comparison")
-        return
-
-    print(f"Computing speedup for: {electrical_solvers}")
-
-    # Identify naive and sketching versions
     naive_df = df[df["solver"] == "Electrical Flow (naive)"].copy()
     sketching_df = df[df["solver"] == "Electrical Flow (sketching)"].copy()
 
@@ -896,53 +1192,200 @@ def plot_electrical_sketching_speedup(
         print("WARNING: Missing naive or sketching electrical flow data")
         return
 
-    # Group by num_edges and compute average times
-    naive_grouped = naive_df.groupby("num_edges")["total_time_micro_seconds"].agg(["mean", "count"]).reset_index()
-    sketching_grouped = sketching_df.groupby("num_edges")["total_time_micro_seconds"].agg(["mean", "count"]).reset_index()
+    # Make numeric
+    for frame in (naive_df, sketching_df):
+        frame["num_edges"] = pd.to_numeric(frame["num_edges"], errors="coerce")
+        frame["total_time_micro_seconds"] = pd.to_numeric(
+            frame["total_time_micro_seconds"], errors="coerce"
+        )
 
-    # Merge on num_edges to align instances
-    speedup_df = naive_grouped.merge(
-        sketching_grouped, on="num_edges", suffixes=("_naive", "_sketching")
+    # Aggregate by num_edges
+    naive_grouped = (
+        naive_df.groupby("num_edges")["total_time_micro_seconds"]
+        .agg(["mean", "count"])
+        .reset_index()
+    )
+    sketching_grouped = (
+        sketching_df.groupby("num_edges")["total_time_micro_seconds"]
+        .agg(["mean", "count"])
+        .reset_index()
     )
 
-    # Compute speedup: speedup = time_naive / time_sketching
-    speedup_df["speedup"] = speedup_df["mean_naive"] / speedup_df["mean_sketching"]
+    # Merge on num_edges
+    speedup_df = naive_grouped.merge(
+        sketching_grouped,
+        on="num_edges",
+        suffixes=("_naive", "_sketching"),
+        how="inner",
+    )
 
-    # Sort by num_edges
+    if speedup_df.empty:
+        print("WARNING: No overlapping num_edges values for naive and sketching")
+        return
+
+    speedup_df["speedup"] = speedup_df["mean_naive"] / speedup_df["mean_sketching"]
     speedup_df = speedup_df.sort_values("num_edges")
 
-    x = speedup_df["num_edges"].to_numpy()
-    y = speedup_df["speedup"].to_numpy()
+    x = speedup_df["num_edges"].to_numpy(dtype=float)
+    y = speedup_df["speedup"].to_numpy(dtype=float)
+
+    mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+    x = x[mask]
+    y = y[mask]
+
+    if len(x) == 0:
+        print("WARNING: No valid speedup points to plot")
+        return
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
 
-    ax.plot(
+    # Scatter only
+    ax.scatter(
         x, y,
-        linestyle="-",
-        marker="o",
-        markersize=2.5,
-        markeredgewidth=0.4,
-        markeredgecolor="white",
-        label="Sketching vs Naive Speedup",
+        marker=".",
+        s=18,
         color="#0072B2",
-        linewidth=0.9,
+        edgecolors="white",
+        linewidths=0.3,
+        alpha=0.85,
+        zorder=3,
     )
 
-    # Add horizontal line at y=1 (no speedup)
-    ax.axhline(y=1.0, color="gray", linestyle=":", linewidth=0.7, alpha=0.7, label="No speedup")
+    # Best-fit line in log(x)
+    if len(x) >= 2:
+        lx = np.log10(x)
+        m, b = np.polyfit(lx, y, deg=1)
 
-    ax.set_xscale("linear")
+        xs = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), 300)
+        ys = m * np.log10(xs) + b
+
+        ax.plot(
+            xs, ys,
+            linestyle="--",
+            linewidth=0.9,
+            color="#D55E00",
+            alpha=0.9,
+            zorder=2,
+        )
+
+        # Optional: print fit info
+        print(f"Speedup trend fit: speedup ≈ {m:.3f} * log10(|E|) + {b:.3f}")
+
+    # Reference line: no speedup
+    ax.axhline(
+        y=1.0,
+        color="gray",
+        linestyle=":",
+        linewidth=0.7,
+        alpha=0.8,
+        zorder=1,
+    )
+
+    ax.set_xscale("log")
     ax.set_yscale("linear")
     #ax.set_xlabel("Number of edges")
     #ax.set_ylabel("Speedup (Naive / Sketching)")
     ax.set_ylim(bottom=0)
     ax.minorticks_on()
-    #ax.legend(loc="best", frameon=False, fontsize=8)
-    ax.grid(True, alpha=0.3)
+    ax.xaxis.set_major_locator(mticker.LogLocator(base=10))
 
     savefig_all(fig, out_dir / "electrical_flow_sketching_speedup")
     plt.close(fig)
 
+def plot_electrical_sketching_quality(
+        df: pd.DataFrame,
+        out_dir: Path,
+        figsize,
+):
+    """
+    Compare oblivious-ratio quality of Electrical Flow (naive) vs
+    Electrical Flow (sketching).
 
+    Uses:
+    - grouped scatter points by num_edges
+    - best-fit line in log(num_edges) for each variant
+    """
+    naive_df = df[df["solver"] == "Electrical Flow (naive)"].copy()
+    sketch_df = df[df["solver"] == "Electrical Flow (sketching)"].copy()
+
+    if naive_df.empty or sketch_df.empty:
+        print("WARNING: Missing naive or sketching electrical flow data")
+        return
+
+    for frame in (naive_df, sketch_df):
+        frame["num_edges"] = pd.to_numeric(frame["num_edges"], errors="coerce")
+        frame["oblivious_ratio"] = pd.to_numeric(frame["oblivious_ratio"], errors="coerce")
+
+    naive_grouped = (
+        naive_df.dropna(subset=["num_edges", "oblivious_ratio"])
+        .groupby("num_edges")["oblivious_ratio"]
+        .agg(["mean", "count"])
+        .reset_index()
+    )
+
+    sketch_grouped = (
+        sketch_df.dropna(subset=["num_edges", "oblivious_ratio"])
+        .groupby("num_edges")["oblivious_ratio"]
+        .agg(["mean", "count"])
+        .reset_index()
+    )
+
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+
+    series = [
+        ("Electrical Flow (naive)", naive_grouped, "#0072B2", "o"),
+        ("Electrical Flow (sketching)", sketch_grouped, "#D55E00", "s"),
+    ]
+
+    for label, grouped, color, marker in series:
+        x = grouped["num_edges"].to_numpy(dtype=float)
+        y = grouped["mean"].to_numpy(dtype=float)
+
+        mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+        x = x[mask]
+        y = y[mask]
+
+        if len(x) == 0:
+            continue
+
+        ax.scatter(
+            x, y,
+            marker=marker,
+            s=18,
+            color=color,
+            edgecolors="white",
+            linewidths=0.3,
+            alpha=0.85,
+            zorder=3,
+            label=label,
+        )
+
+        if len(x) >= 2:
+            lx = np.log10(x)
+            m, b = np.polyfit(lx, y, deg=1)
+
+            xs = np.logspace(np.log10(np.min(x)), np.log10(np.max(x)), 300)
+            ys = m * np.log10(xs) + b
+
+            ax.plot(
+                xs, ys,
+                linestyle="--",
+                linewidth=0.9,
+                color=color,
+                alpha=0.9,
+                zorder=2,
+            )
+
+            print(f"{label} quality trend: oblivious_ratio ≈ {m:.3f} * log10(|E|) + {b:.3f}")
+
+    ax.set_xscale("log")
+    ax.set_yscale("linear")
+    ax.set_xlabel("Number of edges")
+    ax.set_ylabel("Oblivious ratio")
+    ax.minorticks_on()
+    ax.xaxis.set_major_locator(mticker.LogLocator(base=10))
+
+    savefig_all(fig, out_dir / "electrical_flow_quality_vs_edges")
+    plt.close(fig)
 if __name__ == "__main__":
     main()
