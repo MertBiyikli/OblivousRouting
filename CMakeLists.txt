@@ -85,6 +85,7 @@ add_executable(oblivious_routing
         source/data_structures/hst/flat_hst.cpp
         source/data_structures/hst/pointer_hst.cpp
         include/core/routing_table.h
+        include/utils/config.h
 )
 
 

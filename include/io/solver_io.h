@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 
+
 enum class SolverType {
     ELECTRICAL_NAIVE,
     ELECTRICAL_SKETCHING,
@@ -109,5 +110,32 @@ makeSolver(SolverType type, IGraph& g) {
             return std::nullopt;
     }
 }
+
+
+
+
+// Helper to get solver name from type
+inline std::string getSolverName(SolverType type) {
+    static const std::map<SolverType, std::string> names{
+            {SolverType::ELECTRICAL_NAIVE, "Electrical Flow (naive)"},
+            {SolverType::ELECTRICAL_SKETCHING, "Electrical Flow (sketching)"},
+            {SolverType::RAECKE_FRT_FLAT, "Raecke FRT (Flat HST)"},
+            {SolverType::RAECKE_CKR_FLAT, "Raecke CKR (Flat HST)"},
+            {SolverType::RAECKE_RANDOM_MST_FLAT, "Random MST (Flat HST)"},
+            {SolverType::RAECKE_FRT_MENDELSCALING_FLAT, "Raecke FRT + MendelScaling (Flat HST)"},
+            {SolverType::RAECKE_CKR_MENDELSCALING_FLAT, "Raecke CKR + MendelScaling (Flat HST)"},
+            {SolverType::LP_APPLEGATE_COHEN, "LP Applegate-Cohen"},
+            {SolverType::ELECTRICAL_PARALLEL_BATCHES, "Electrical Flow (Parallel)"},
+            {SolverType::RAECKE_FRT_POINTER, "Raecke FRT (Pointer HST)"},
+            {SolverType::RAECKE_CKR_POINTER, "Raecke CKR (Pointer HST)"},
+            {SolverType::RAECKE_RANDOM_MST_POINTER, "Random MST (Pointer HST)"},
+            {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
+            {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"}
+    };
+    auto it = names.find(type);
+    return (it != names.end()) ? it->second : "Unknown Solver";
+}
+
+
 
 #endif //OBLIVIOUSROUTING_SOLVER_IO_H

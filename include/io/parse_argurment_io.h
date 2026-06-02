@@ -15,7 +15,10 @@
 struct Config {
     std::vector<SolverType>      solvers;
     std::string                  filename;
+    bool evaluate_demand_models = false;
     std::vector<DemandModelType> demand_models;
+    std::map<std::string, double> offline_opt_per_model;
+    std::map<std::string, demands> demand_maps;
     GraphFormat                  graph_format;
     int num_threads = 1;
 };
@@ -135,6 +138,7 @@ inline std::string usage(const char* prog) {
 
 // Returns Config on success; prints an error to `err` string on failure.
 inline std::optional<Config> parse_parameter(int argc, char** argv, std::string* err) {
+    bool evaluate_demand = false;
     if (argc < 3) {
         if (err) *err = usage(argv[0]);
         return std::nullopt;
@@ -156,7 +160,7 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
 
         // Try demand models first
         auto d = parse_demand_model_list(arg);
-        if (d) { demands = *d; continue; }
+        if (d) { demands = *d; evaluate_demand = true; continue; }
 
         // Try graph format
         auto g = parse_graph_format_token(arg);
@@ -171,8 +175,39 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
         return std::nullopt;
     }
 
-    return Config{ *solvers_opt, std::string(argv[2]), demands, fmt, threads};
+    return Config{ *solvers_opt, std::string(argv[2]), evaluate_demand, demands, {}, {},fmt, threads};
 }
 
+
+inline std::unique_ptr<IGraph> load_graph(Config& cfg, int argc, char** argv) {
+    std::string err;
+    auto tmp = parse_parameter(argc, argv, &err);
+
+    if (!tmp) {
+        std::cerr << err << std::endl;
+    }else {
+        cfg = std::move(*tmp);
+    }
+
+    // Load or create graph
+    auto graph = makegraph(cfg.graph_format);
+    if (!cfg.filename.empty()) {
+        readLGFFile(*graph, cfg.filename);
+    }
+
+    graph->finalize();
+    return graph;
+}
+
+
+inline void offlineOptimal(std::unique_ptr<IGraph>& g, Config cfg) {
+    if (cfg.evaluate_demand_models) {
+        HandleDemandModels(cfg, *g,
+            [&](const std::string& model_name, const demands& dmap) {
+                cfg.demand_maps[model_name] = dmap;
+                cfg.offline_opt_per_model[model_name] = computeOfflineOptimalCongestion(*g, dmap);
+            });
+    }
+}
 
 #endif //OBLIVIOUSROUTING_PARSE_ARGURMENT_IO_H

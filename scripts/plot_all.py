@@ -1,6 +1,4 @@
-import re
 import argparse
-from collections.abc import Callable
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -380,8 +378,8 @@ def plot_box_by_solver(
         # Filter out zero and negative values for range calculation
         positive_vals = all_vals_array[all_vals_array > 0]
         if len(positive_vals) > 0:
-            val_min = np.min(positive_vals)
-            val_max = np.max(positive_vals)
+            val_min = float(np.min(positive_vals))
+            val_max = float(np.max(positive_vals))
             # If range spans more than 2 orders of magnitude (100x), use log scale
             if val_max / val_min > 100:
                 actual_ylog = True
@@ -640,8 +638,8 @@ def plot_scatter_cloud(
         if sub.empty:
             continue
 
-        x = pd.to_numeric(sub[xcol], errors="coerce").to_numpy(dtype=float)
-        y = pd.to_numeric(sub[ycol], errors="coerce").to_numpy(dtype=float)
+        x = pd.to_numeric(sub[xcol], errors="coerce").astype(float).values
+        y = pd.to_numeric(sub[ycol], errors="coerce").astype(float).values
 
         if ylog:
             y = np.maximum(y, LOG_EPS)
@@ -686,38 +684,62 @@ def plot_scatter_cloud(
 
 def parse_arguments():
     """
-    Parse command-line arguments for input CSV and output plot directory.
+    Parse command-line arguments for input CSV (or directory) and output plot directory.
+    Supports both single CSV file and directory containing multiple CSVs.
     """
     parser = argparse.ArgumentParser(
         description="Generate publication-grade plots for oblivious routing experiments.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use default paths
-  python3 plot_experiments_pro.py
-  
-  # Specify custom input CSV and output directory
-  python3 plot_experiments_pro.py \\
+  # Single dataset
+  python3 plot_all.py \\
     --input results/synth/fatclique/combined.csv \\
     --output plots/synthetic/fatclique/
   
-  # Specify only input (use default output)
-  python3 plot_experiments_pro.py --input my_results.csv
+  # Multiple datasets (accumulating)
+  python3 plot_all.py \\
+    --input results/ \\
+    --output plots/combined/ \\
+    --accumulate
         """
     )
 
     parser.add_argument(
         "-i", "--input",
-        type=str
+        type=str,
+        required=True,
+        help="Path to CSV file or directory containing CSVs"
     )
 
     parser.add_argument(
         "-o", "--output",
-        type=str
+        type=str,
+        required=True,
+        help="Output directory for plots"
+    )
+
+    parser.add_argument(
+        "--pattern",
+        type=str,
+        default="*/combined.csv",
+        help="Glob pattern to find CSV files when input is a directory (default: */combined.csv)"
+    )
+
+    parser.add_argument(
+        "--accumulate",
+        action="store_true",
+        help="When input is a directory, generate both per-dataset and accumulated plots"
+    )
+
+    parser.add_argument(
+        "--aggregate-only",
+        action="store_true",
+        help="For accumulated plots, only show aggregated trends (no individual instance points)"
     )
 
     args = parser.parse_args()
-    return Path(args.input), Path(args.output)
+    return Path(args.input), Path(args.output), args.pattern, args.accumulate, args.aggregate_only
 
 def _graph_short_name(name: str) -> str:
     """Return a compact display name for a graph path/identifier.
@@ -727,13 +749,54 @@ def _graph_short_name(name: str) -> str:
     """
     return Path(name).stem
 
-def main():
-    set_paper_style()
-    RESULT_CSV, OUT_DIR = parse_arguments()
-    df = pd.read_csv(RESULT_CSV)
+def _load_data(input_path: Path, pattern: str, accumulate: bool) -> dict:
+    """
+    Load data from either a single CSV or multiple CSVs in a directory.
 
+    Returns:
+        dict with 'single' and 'accumulated' keys containing DataFrames
+        'single' is a dict mapping dataset names to DataFrames
+        'accumulated' is combined DataFrame of all datasets (if applicable)
+    """
+    result = {'single': {}, 'accumulated': None}
 
-    # Clean up graph names: remove dataset prefix (e.g., "Rocketfuel_Topologies/3967.lgf" → "3967")
+    if input_path.is_file() and input_path.suffix == '.csv':
+        # Single CSV file
+        df = pd.read_csv(input_path)
+        dataset_name = input_path.parent.name
+        result['single'][dataset_name] = df
+
+    elif input_path.is_dir():
+        # Directory: find all matching CSV files
+        # Remove trailing slash if present
+        pattern = pattern.rstrip('/')
+
+        # Path.glob() automatically handles ** for recursive matching
+        csv_files = sorted(input_path.glob(pattern))
+
+        if not csv_files:
+            raise ValueError(f"No CSV files found matching pattern '{pattern}' in {input_path}")
+
+        all_dfs = []
+        for csv_file in csv_files:
+            df = pd.read_csv(csv_file)
+            # Extract dataset type from path (e.g., "expander", "small", etc.)
+            dataset_name = csv_file.parent.name
+            df['dataset'] = dataset_name
+            result['single'][dataset_name] = df
+            all_dfs.append(df)
+
+        # Create accumulated DataFrame
+        if accumulate and all_dfs:
+            result['accumulated'] = pd.concat(all_dfs, ignore_index=True)
+    else:
+        raise ValueError(f"Input path must be a CSV file or directory: {input_path}")
+
+    return result
+
+def _generate_plots_for_dataframe(df: pd.DataFrame, OUT_DIR: Path, dataset_name: str = None, aggregate_only: bool = False):
+    """Generate all plots for a given DataFrame."""
+    # Clean up graph names
     if "graph" in df.columns:
         df["graph"] = df["graph"].apply(_graph_short_name)
 
@@ -759,12 +822,20 @@ def main():
     solver_mwu = [s for s in solvers_no_mendel
                   if "LP" not in s and "Applegate and Cohen" not in s]
 
+    # Create output subdirectory for accumulated plots
+    if dataset_name:
+        plot_out_dir = OUT_DIR / dataset_name
+        plot_out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        plot_out_dir = OUT_DIR
+        plot_out_dir.mkdir(parents=True, exist_ok=True)
 
-
-    plot_legend_plate(
-        solvers_no_mendel, colors, markers, linestyles,
-        outpath=OUT_DIR / "legend_plate",
-    )
+    # Legend plate (only once per run)
+    if not (plot_out_dir / "legend_plate.pdf").exists():
+        plot_legend_plate(
+            solvers_no_mendel, colors, markers, linestyles,
+            outpath=plot_out_dir / "legend_plate",
+        )
 
     df["relative_error"] = df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
 
@@ -774,15 +845,19 @@ def main():
         ylabel="Relative error [%]",
         ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "relative_error_box_by_solver",
+        outpath=plot_out_dir / "relative_error_box_by_solver",
     )
 
+    # noinspection PyTypeChecker
     if "demand_model" in df.columns:
         demand_models = sorted(df["demand_model"].dropna().unique())
         for demand in demand_models:
-            df_demand = df[(df["demand_model"] == demand) & df["solver"].isin(solvers_no_mendel)]
-            solvers_demand = [s for s in solvers_no_mendel
-                              if not df_demand[df_demand["solver"] == s].empty]
+            condition = ((df["demand_model"] == demand) & (df["solver"].isin(solvers_no_mendel)))
+            df_demand = df.loc[condition].copy()
+            solvers_demand = []
+            for s in solvers_no_mendel:
+                if any(df_demand["solver"] == s):
+                    solvers_demand.append(s)
             if not solvers_demand:
                 continue
             plot_box_by_solver(
@@ -791,9 +866,8 @@ def main():
                 ylabel="Relative error [%]",
                 ylog=False,
                 figsize=FIGSIZE_SINGLE,
-                outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
+                outpath=plot_out_dir / f"relative_error_box_by_solver_{demand}",
             )
-
 
     agg_runtime = aggregate_mean_std(df[df["solver"].isin(solvers_no_mendel)].copy(), "total_time_micro_seconds")
     plot_lines(
@@ -803,7 +877,7 @@ def main():
         ylabel="Total running time [microseconds]",
         xlog=False, ylog=True,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "runtime_lines_vs_edges",
+        outpath=plot_out_dir / "runtime_lines_vs_edges",
         linestyles=linestyles,
     )
 
@@ -815,7 +889,7 @@ def main():
         ylabel="MWU iterations",
         xlog=False, ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "mwu_iterations_lines_vs_edges",
+        outpath=plot_out_dir / "mwu_iterations_lines_vs_edges",
         linestyles=linestyles,
     )
 
@@ -827,16 +901,14 @@ def main():
         ylabel="Average oracle running time [microseconds]",
         xlog=False, ylog=True,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "oracle_time_lines_vs_edges",
+        outpath=plot_out_dir / "oracle_time_lines_vs_edges",
         linestyles=linestyles,
     )
-
-
 
     plot_stacked_time_breakdown(
         df[df["solver"].isin(solver_mwu)], solver_mwu, colors,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "time_breakdown_stacked",
+        outpath=plot_out_dir / "time_breakdown_stacked",
     )
 
     df_oblivious = df[df["solver"].isin(solver_mwu)].dropna(
@@ -867,10 +939,41 @@ def main():
         ylabel="Oblivious ratio",
         xlog=False, ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "oblivious_ratio_scatter_vs_nodes",
+        outpath=plot_out_dir / "oblivious_ratio_scatter_vs_nodes",
         add_scaling_line=True,
         linestyles=linestyles,
     )
+
+
+
+def main():
+    set_paper_style()
+    INPUT_PATH, OUT_DIR, PATTERN, ACCUMULATE, AGGREGATE_ONLY = parse_arguments()
+
+    # Create output directory
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Load data
+    data = _load_data(INPUT_PATH, PATTERN, ACCUMULATE)
+
+    # Generate plots for each individual dataset
+    for dataset_name, df in data['single'].items():
+        print(f"\n{'='*60}")
+        print(f"Generating plots for dataset: {dataset_name}")
+        print(f"{'='*60}")
+        _generate_plots_for_dataframe(df.copy(), OUT_DIR, dataset_name)
+
+    # Generate accumulated plots if enabled and available
+    if ACCUMULATE and data['accumulated'] is not None:
+        print(f"\n{'='*60}")
+        print("Generating ACCUMULATED plots for all datasets")
+        if AGGREGATE_ONLY:
+            print("(Aggregate-only mode: showing trends only)")
+        print(f"{'='*60}")
+        _generate_plots_for_dataframe(data['accumulated'].copy(), OUT_DIR, "accumulated")
+
+    print(f"\n✓ All plots saved to: {OUT_DIR}")
+
 
 
 if __name__ == "__main__":

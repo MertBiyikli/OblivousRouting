@@ -12,6 +12,8 @@
 #include <queue>
 #include <cassert>
 #include <set>
+#include <map>
+#include <utility>
 
 // ---------------------------------------------------------------------------
 // TreeIteration<T>  —  works for T = std::shared_ptr<HSTNode>  or  T = FlatHST
