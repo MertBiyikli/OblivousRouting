@@ -7,7 +7,10 @@
 
 #include "../io/solver_io.h"
 
-
+enum class OutPutFormat {
+    TEXT,
+    JASON
+};
 
 class RoutingResult {
     public:
@@ -17,6 +20,41 @@ class RoutingResult {
     double oblivious_ratio;
     double total_runtime;
     int mwu_iterations;
+
+    void storeAsFile(const std::string& str, const OutPutFormat& format) {
+        std::ofstream file;
+        file.open(str);
+
+        if (!file.is_open()) {
+            std::cerr << "[ERROR] Failed to open file for writing: " << str << "\n";
+            return;
+        }
+/*
+        if (!scheme->isValid()) {
+            std::cerr << "[ERROR] Routing scheme is broken." << std::endl;
+        }
+*/
+        // store result in
+        switch (format) {
+            case OutPutFormat::TEXT:
+                file << "Solver: " << getSolverName(type) << "\n";
+                file << "Total runtime (micro seconds): " << total_runtime << "\n";
+                file << "Oblivious ratio: " << oblivious_ratio << "\n";
+                break;
+
+            case OutPutFormat::JASON:
+                file << "{\n";
+                file << "  \"solver\": \"" << getSolverName(type) << "\",\n";
+                file << "  \"total_runtime_microseconds\": " << total_runtime << ",\n";
+                file << "  \"oblivious_ratio\": " << oblivious_ratio << "\n";
+                file << "}\n";
+                break;
+
+            default:
+                std::cerr << "[ERROR] Unknown output format.\n";
+        }
+        file.close();
+    }
 };
 
 
@@ -34,7 +72,7 @@ public:
 
         auto solver_opt = makeSolver(type, graph);
         if (!solver_opt) {
-            std::cerr << "Failed to create solver of type " << static_cast<int>(type) << "\n";
+            std::cerr << "[ERROR] Failed to create solver of type " << static_cast<int>(type) << "\n";
         }
         auto& solver = *solver_opt;
 
@@ -43,7 +81,7 @@ public:
         auto t1 = timeNow();
         result.total_runtime = duration(t1-t0);
 
-        std::cout << "Total time: " << result.total_runtime << " micro seconds\n";
+        //std::cout << "Total time: " << result.total_runtime << " micro seconds\n";
 
 
         // Print time statistics if available
@@ -54,7 +92,7 @@ public:
         // Compute oblivious ratio for linear schemes
         if (auto linear_scheme = dynamic_cast<LinearRoutingScheme*>(result.scheme.get())) {
             result.oblivious_ratio = linear_scheme->computeObliviousRatio();
-            std::cout << "Oblivious ratio: " << result.oblivious_ratio << "\n";
+            //std::cout << "Oblivious ratio: " << result.oblivious_ratio << "\n";
         }
 
         // Evaluate demand models if provided

@@ -1,7 +1,6 @@
 #include "../include/algorithms/mwu/tree_mwu.h"
 #include "../include/io/parse_argurment_io.h"
 #include "../include/utils/config.h"
-#include "../include/algorithms/mwu/tree_mwu.h"
 
 int main(int argc, char **argv) {
     // Parse command line arguments
@@ -13,7 +12,15 @@ int main(int argc, char **argv) {
 
     RoutingEngine engine;
     for (SolverType type : cfg.solvers ) {
-        engine.solve(*graph, cfg, type);
+        auto result = engine.solve(*graph, cfg, type);
+        if (result) {
+            for (const auto& [str, _type] : SOLVER_MAP) {
+                if ( _type == type ) {
+                    result->storeAsFile(str + "_result.json", OutPutFormat::JASON);
+                    break;
+                }
+            }
+        }
     }
     return 0;
 }
