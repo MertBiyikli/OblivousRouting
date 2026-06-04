@@ -84,6 +84,7 @@ public:
     Eigen::SparseMatrix<double> buildIncidence();
     Eigen::MatrixXd getSketchMatrix(double epsilon = 0.5);
     void addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table);
+    void setEpsilon(double eps);
 };
 
 

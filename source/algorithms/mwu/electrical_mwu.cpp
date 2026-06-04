@@ -148,6 +148,10 @@ void ElectricalMWU::addFlowToTable(const int& u, Eigen::VectorXd& potential, Lin
     this->transformation_time += duration(timeNow() - t0);
 }
 
+void ElectricalMWU::setEpsilon(double eps) {
+    this->epsilon_L = eps;
+}
+
 
 /*
  * This function computes the approximate load on each edge based on the current potentials obtained from solving the Laplacian system.

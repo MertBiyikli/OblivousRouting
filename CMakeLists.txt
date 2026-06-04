@@ -14,13 +14,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # --- Dependencies ---
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
-# Point CMake to your protobuf 6.31.1 package config
-set(Protobuf_DIR "$ENV{HOME}/local/protobuf-6.31.1/lib/cmake/protobuf" CACHE PATH "")
+# Point CMake to your ortools package which includes all dependencies
+set(Protobuf_DIR "$ENV{HOME}/local/ortools/lib/cmake/protobuf" CACHE PATH "")
+set(utf8_range_DIR "$ENV{HOME}/local/ortools/lib/cmake/utf8_range" CACHE PATH "")
+set(ortools_DIR "$ENV{HOME}/local/ortools/lib/cmake/ortools" CACHE PATH "")
+set(SCIP_DIR "$ENV{HOME}/local/ortools/lib/cmake/scip" CACHE PATH "")
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ortools REQUIRED CONFIG)
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
-find_package(ortools REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
 
 

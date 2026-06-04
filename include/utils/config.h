@@ -29,11 +29,11 @@ class RoutingResult {
             std::cerr << "[ERROR] Failed to open file for writing: " << str << "\n";
             return;
         }
-/*
+
         if (!scheme->isValid()) {
             std::cerr << "[ERROR] Routing scheme is broken." << std::endl;
         }
-*/
+
         // store result in
         switch (format) {
             case OutPutFormat::TEXT:
@@ -75,13 +75,13 @@ public:
             std::cerr << "[ERROR] Failed to create solver of type " << static_cast<int>(type) << "\n";
         }
         auto& solver = *solver_opt;
-
         auto t0 = timeNow();
         result.scheme = solver->solve();
         auto t1 = timeNow();
         result.total_runtime = duration(t1-t0);
 
-        //std::cout << "Total time: " << result.total_runtime << " micro seconds\n";
+
+        //result.scheme->printRoutingTable();
 
 
         // Print time statistics if available
@@ -92,22 +92,22 @@ public:
         // Compute oblivious ratio for linear schemes
         if (auto linear_scheme = dynamic_cast<LinearRoutingScheme*>(result.scheme.get())) {
             result.oblivious_ratio = linear_scheme->computeObliviousRatio();
-            //std::cout << "Oblivious ratio: " << result.oblivious_ratio << "\n";
         }
 
         // Evaluate demand models if provided
         if (cfg.evaluate_demand_models) {
             for (const auto& [model_name, offline_cong] : cfg.offline_opt_per_model) {
+
                 auto it = cfg.demand_maps.find(model_name);
                 if (it == cfg.demand_maps.end()) {
-                    std::cerr << "Missing demand map for model: " << model_name << "\n";
+                    std::cerr << "[ERROR]: Missing demand for evaluating demand model. " << model_name << "\n";
                     return std::nullopt;
                 }
 
                 const demands& dmap = it->second;
 
                 if (!result.scheme) {
-                    std::cerr << "Solver returned null routing scheme\n";
+                    std::cerr << "[ERROR]: Solver returned null routing scheme\n";
                     return std::nullopt;
                 }
                 double scheme_cong = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
