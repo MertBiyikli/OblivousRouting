@@ -78,18 +78,29 @@ jobs:
       - name: Pull OR-Tools image
         run: docker pull $ORTOOLS_IMAGE
 
-      - name: Build inside OR-Tools image
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app \
-            $ORTOOLS_IMAGE \
-            bash -c "
-              cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DUSE_OPENMP=ON &&
-              cmake --build build -j\$(nproc)
-            "
+       - name: Build inside OR-Tools image
+         run: |
+           docker run --rm \
+             -v ${{ github.workspace }}:/app \
+             -w /app \
+             $ORTOOLS_IMAGE \
+             bash -c "
+               cmake -S . -B build -G Ninja \
+                 -DCMAKE_BUILD_TYPE=Release \
+                 -DUSE_OPENMP=ON \
+                 -DBUILD_TESTS=ON &&
+               cmake --build build -j\$(nproc)
+             "
+
+       - name: Run Unit Tests
+         run: |
+           docker run --rm \
+             -v ${{ github.workspace }}:/app \
+             -w /app \
+             $ORTOOLS_IMAGE \
+             bash -c "
+               cmake --build build --target run_tests
+             "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

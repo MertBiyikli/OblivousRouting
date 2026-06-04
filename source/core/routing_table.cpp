@@ -364,7 +364,8 @@ void LinearRoutingTable::eraseFlow(int e, int s) {
 
 }
 
-
+// TODO: isValid returns true only for valid oblivious routing table, e.g. all linear flows must be stored
+//   Hence, if the table should also return true for tables that only satisfy the flow conservation constraints.
 bool LinearRoutingTable::isValid(const IGraph& g) const {
     const int m = src_ids.size();
     for (int e = 0; e < m; ++e) {

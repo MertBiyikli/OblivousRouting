@@ -23,6 +23,7 @@ void GraphADJList::addEdge(int u, int v, double cap, double dist) {
     adjList[v].push_back(u);
     capacity[v].push_back(cap);
     distance[v].push_back(dist);
+    m+=2;
 }
 
 
@@ -239,6 +240,33 @@ bool GraphADJList::updateEdgeDistance(int e, double dist) {
     return updateEdgeDistance(u, v, dist);
 }
 
+
+std::vector<double> GraphADJList::getDistances(int u) const {
+    // Compute shortest distances from u to all nodes
+    std::vector<double> dist(n, std::numeric_limits<double>::infinity());
+    dist[u] = 0.0;
+    MinHeap<double, int> pq(n);
+    pq.insert(u, 0.0);
+
+    while (!pq.empty()) {
+        int node = pq.top();
+        double du = pq.topKey();
+        pq.deleteTop();
+
+        if (du > dist[node]) continue; // stale entry
+
+        for (size_t i = 0; i < adjList[node].size(); ++i) {
+            int neighbor = adjList[node][i];
+            double weight = distance[node][i];
+            double new_dist = du + weight;
+            if (new_dist < dist[neighbor]) {
+                dist[neighbor] = new_dist;
+                pq.insertOrAdjustKey(neighbor, new_dist);
+            }
+        }
+    }
+    return dist;
+}
 
 double GraphADJList::getShortestDistance(int u, int v) const {
     double result = std::numeric_limits<double>::infinity();

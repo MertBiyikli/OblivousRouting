@@ -4,6 +4,7 @@
 
 #include "../tree_oracle.h"
 #include "../../../../../data_structures/priority_queue.h"
+#include <random>
 
 template<typename T>
 class FastCKR : public TreeOracle<T> {
