@@ -15,10 +15,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 # Point CMake to your ortools package which includes all dependencies
-set(Protobuf_DIR "$ENV{HOME}/local/ortools/lib/cmake/protobuf" CACHE PATH "")
-set(utf8_range_DIR "$ENV{HOME}/local/ortools/lib/cmake/utf8_range" CACHE PATH "")
-set(ortools_DIR "$ENV{HOME}/local/ortools/lib/cmake/ortools" CACHE PATH "")
-set(SCIP_DIR "$ENV{HOME}/local/ortools/lib/cmake/scip" CACHE PATH "")
+if(DEFINED ENV{ORTOOLS_ROOT})
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{ORTOOLS_ROOT}")
+endif()
 
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ortools REQUIRED CONFIG)

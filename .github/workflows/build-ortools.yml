@@ -1,0 +1,43 @@
+name: Build OR-Tools Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - Dockerfile.ortools.linux
+      - .github/workflows/build-ortools.yml
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  ORTOOLS_IMAGE: ghcr.io/mertbiyikli/ortools:linux
+  ORTOOLS_CACHE: ghcr.io/mertbiyikli/ortools:linux-cache
+
+jobs:
+  build-ortools-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push OR-Tools base image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.ortools.linux
+          push: true
+          tags: ${{ env.ORTOOLS_IMAGE }}
+          cache-from: type=registry,ref=${{ env.ORTOOLS_CACHE }}
+          cache-to: type=registry,ref=${{ env.ORTOOLS_CACHE }},mode=max

@@ -16,8 +16,11 @@
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/re2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/scip-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/zlib-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/spdlog-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/spdlog-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-tests/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
