@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_CONFIG_H
 
 #include "../io/solver_io.h"
+#include "../io/parse_argurment_io.h"
 
 enum class OutPutFormat {
     TEXT,
@@ -68,7 +69,7 @@ public:
 
         RoutingResult result;
         result.type = type;
-        std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
+        //std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
 
         auto solver_opt = makeSolver(type, graph);
         if (!solver_opt) {
@@ -110,9 +111,8 @@ public:
                     std::cerr << "[ERROR]: Solver returned null routing scheme\n";
                     return std::nullopt;
                 }
-                double scheme_cong = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
-
-                printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
+                result.congestion = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
+                //printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
             }
         }
         return result;

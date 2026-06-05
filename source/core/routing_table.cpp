@@ -131,6 +131,8 @@ double AllPairRoutingTable::getFlow(int e , int s, int t) const {
     }
 }
 
+
+
 bool AllPairRoutingTable::isValid(const IGraph& g) const {
     const int m = adj_ids.size();
     for (int e = 0; e < m; ++e) {

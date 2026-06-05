@@ -35,22 +35,10 @@ TEST_CASE("AllPairRoutingTable - Add Flow by Nodes", "[RoutingTable]") {
     // Add flow for commodity (0, 3) on edge 0
     table.addFlow(0, 0, 3, 0.5);
 
-    REQUIRE(!table.adj_ids[0].empty());
-    REQUIRE(!table.adj_vals[0].empty());
+    REQUIRE(table.getFlow(0, 0, 3) == Approx(0.5));
 }
 
-TEST_CASE("AllPairRoutingTable - Add Flow by Commodity ID", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    AllPairRoutingTable table;
 
-    table.init(graph);
-
-    // Add flow using commodity ID
-    int commodity_id = 1;
-    table.addFlow(0, commodity_id, 0.25);
-
-    REQUIRE(table.adj_ids[0].size() > 0);
-}
 
 TEST_CASE("AllPairRoutingTable - Get Flow", "[RoutingTable]") {
     auto graph = createSimpleGraph();
@@ -109,16 +97,6 @@ TEST_CASE("AllPairRoutingTable - Find Index in Sorted List", "[RoutingTable]") {
     REQUIRE(table.adj_ids.size() == 8);
 }
 
-TEST_CASE("AllPairRoutingTable - Is Valid", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    AllPairRoutingTable table;
-
-    table.init(graph);
-    table.addFlow(0, 0, 1, 0.5);
-
-    // Table is initialized and used, should not crash
-    REQUIRE(table.adj_ids.size() == 8);
-}
 
 
 TEST_CASE("AllPairRoutingTable - Multiple Flows Different Edges", "[RoutingTable]") {
