@@ -10,7 +10,7 @@
 #include "oracle/tree/tree_oracle.h"
 #include "oracle/tree/tree_transform.h"
 #include "../../utils/my_math.h"
-
+#include <cmath>
 /*
  *
  * This is the implementation of the tree-based oblivious routing algorithm using the Multiplicative Weights Update (MWU) framework presented by Räcke in 2008.
