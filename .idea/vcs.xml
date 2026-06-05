@@ -3,6 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build/_deps/catch-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build_tests/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/abseil-cpp-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cbc-src" vcs="Git" />
