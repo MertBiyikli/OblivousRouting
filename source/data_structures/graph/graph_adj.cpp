@@ -13,8 +13,9 @@ IGraph::NeighborRange GraphADJList::neighbors(int node) const {
 
 
 void GraphADJList::addEdge(int u, int v, double cap, double dist) {
-    assert(u >= 0 && u < n);
-    assert(v >= 0 && v < n);
+    if (u<0 || u>=n || v<0 || v>=n)
+        throw std::out_of_range("GraphADJList::addEdge: node index");
+
 
     adjList[u].push_back(v);
     capacity[u].push_back(cap);

@@ -30,7 +30,6 @@ This directory contains comprehensive unit tests for the ObliviousRouting projec
   - Path-based clustering
   - Various delta values
 
-### Network Flow
 - **test_electrical_flow.cpp**: Tests for Electrical Flow (Laplacian Solver)
   - Laplacian matrix construction
   - Electrical potential computation

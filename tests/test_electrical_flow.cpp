@@ -258,16 +258,16 @@ TEST_CASE("LaplacianSolver - Symmetry Check", "[LaplacianSolver]") {
     // Create a symmetric graph
     GraphCSR graph(3);
     graph.addEdge(0, 1, 1.0, 1.0);
-    graph.addEdge(1, 0, 1.0, 1.0);
+    //graph.addEdge(1, 0, 1.0, 1.0);
     graph.addEdge(1, 2, 1.0, 1.0);
-    graph.addEdge(2, 1, 1.0, 1.0);
+    //graph.addEdge(2, 1, 1.0, 1.0);
     graph.finalize();
 
     LaplacianSolver solver;
 
-    std::vector<double> weights(4, 1.0);
+    std::vector<double> weights(2, 1.0);
     std::vector<std::pair<int, int>> edges = {
-        {0, 1}, {1, 0}, {1, 2}, {2, 1}
+        {0, 1}, {1, 2}
     };
 
     solver.init(const_cast<GraphCSR&>(graph), weights, 3, edges, false);

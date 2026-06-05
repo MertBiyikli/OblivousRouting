@@ -15,6 +15,7 @@ TEST_CASE("GraphADJList - Edge Addition", "[GraphADJList]") {
     graph.addEdge(0, 1, 2.0, 1.5);
     graph.addEdge(1, 2, 3.0, 2.5);
     graph.addEdge(2, 3, 4.0, 3.5);
+    graph.finalize();
 
     REQUIRE(graph.getNumUndirectedEdges() == 3);
 }

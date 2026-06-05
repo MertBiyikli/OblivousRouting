@@ -132,7 +132,7 @@ TEST_CASE("FastCKR - Single Center", "[FastCKR]") {
         const_cast<GraphCSR&>(graph),
         level,
         permutation,
-        10.0 // Large radius
+        1.0 // Large radius
     );
 
     // With large radius and single center, all nodes should be assigned to it

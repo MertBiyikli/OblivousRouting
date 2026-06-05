@@ -20,7 +20,7 @@ public:
     explicit GraphADJList(int n) : IGraph(n) {
         adjList.resize(n);
         capacity.resize(n);
-        distance.reserve(n);
+        distance.resize(n);
     }
 
     void finalize() override;

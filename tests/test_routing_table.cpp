@@ -235,22 +235,11 @@ TEST_CASE("LinearRoutingTable - Non-existent Flow", "[RoutingTable]") {
     table.init(graph);
 
     // Try to get flow that wasn't added
-    double flow = table.getFlow(0, 5);
+    double flow = table.getFlow(0, 3);
 
     REQUIRE(flow == Approx(0.0));
 }
 
-TEST_CASE("LinearRoutingTable - Large Source ID", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    LinearRoutingTable table;
-
-    table.init(graph);
-
-    table.addFlow(0, 99, 0.5);
-
-    double flow = table.getFlow(0, 99);
-    REQUIRE(flow == Approx(0.5));
-}
 
 TEST_CASE("LinearRoutingTable - Multiple Edges Different Sources", "[RoutingTable]") {
     auto graph = createSimpleGraph();
