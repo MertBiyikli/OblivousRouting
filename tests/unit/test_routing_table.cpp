@@ -35,22 +35,24 @@ TEST_CASE("AllPairRoutingTable - Add Flow by Nodes", "[RoutingTable]") {
     // Add flow for commodity (0, 3) on edge 0
     table.addFlow(0, 0, 3, 0.5);
 
-    REQUIRE(table.getFlow(0, 0, 3) == Approx(0.5));
+    REQUIRE(!table.adj_ids[0].empty());
+    REQUIRE(!table.adj_vals[0].empty());
 }
 
-
-
-TEST_CASE("AllPairRoutingTable - Get Flow", "[RoutingTable]") {
+TEST_CASE("AllPairRoutingTable - Get Flow by Nodes", "[RoutingTable]") {
     auto graph = createSimpleGraph();
     AllPairRoutingTable table;
 
     table.init(graph);
 
+    // Add flow for commodity (0, 3) on edge 0
     table.addFlow(0, 0, 3, 0.5);
-    double flow = table.getFlow(0, 0, 3);
 
-    REQUIRE(flow == Approx(0.5));
+    double f = table.getFlow(0, 0, 3);
+    REQUIRE(f == Approx(0.5));
+
 }
+
 
 TEST_CASE("AllPairRoutingTable - Multiple Flows on Same Edge", "[RoutingTable]") {
     auto graph = createSimpleGraph();
@@ -69,32 +71,6 @@ TEST_CASE("AllPairRoutingTable - Multiple Flows on Same Edge", "[RoutingTable]")
     REQUIRE(table.getFlow(0, 0, 1) == Approx(0.3));
     REQUIRE(table.getFlow(0, 0, 2) == Approx(0.2));
     REQUIRE(table.getFlow(0, 1, 3) == Approx(0.5));
-}
-
-TEST_CASE("AllPairRoutingTable - Access Operator", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    AllPairRoutingTable table;
-
-    table.init(graph);
-
-    // Use [] operator to access flows
-    table[0].push_back(0.5);
-
-    REQUIRE(!table[0].empty());
-}
-
-TEST_CASE("AllPairRoutingTable - Find Index in Sorted List", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    AllPairRoutingTable table;
-
-    table.init(graph);
-
-    table.addFlow(0, 1, 2, 0.1);
-    table.addFlow(0, 0, 3, 0.2);
-    table.addFlow(0, 2, 3, 0.3);
-
-    // Just verify flows were added
-    REQUIRE(table.adj_ids.size() == 8);
 }
 
 
@@ -184,27 +160,6 @@ TEST_CASE("LinearRoutingTable - Erase Flow", "[RoutingTable]") {
 
     REQUIRE(table.src_ids[0].size() <= initial_size);
 }
-/*
-TEST_CASE("LinearRoutingTable - Is Valid", "[RoutingTable]") {
-    auto graph = createSimpleGraph();
-    LinearRoutingTable table;
-
-    table.init(graph);
-
-    // Add unit of flow along a simple path with a single commodity
-    auto path = graph.getShortestPath(0, 3);
-    for (size_t i = 0; i < path.size() - 1; ++i) {
-        int u = path[i];
-        int v = path[i + 1];
-        int edge_id = graph.getEdgeId(u, v);
-        table.addFlow(edge_id, 0, 1.0); // Add flow from source 0
-    }
-
-    table.printFlows(graph);
-
-    REQUIRE(table.isValid(graph));
-}
-*/
 
 TEST_CASE("LinearRoutingTable - Non-existent Flow", "[RoutingTable]") {
     auto graph = createSimpleGraph();

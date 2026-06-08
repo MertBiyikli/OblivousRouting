@@ -152,12 +152,21 @@ if(BUILD_TESTS)
     # Unit tests
     # ------------------------------------------------------------------------
     add_executable(unit_tests
-            tests/unit/test_graph_csr.cpp
-            tests/unit/test_graph_adj.cpp
-            tests/unit/test_fast_ckr.cpp
-            tests/unit/test_frt.cpp
+            # Graph data structures
+            tests/unit/graph/test_graph_common.cpp
+            tests/unit/graph/test_graph_csr.cpp
+            tests/unit/graph/test_graph_adj.cpp
+            # Tree oracles
+            tests/unit/tree/test_tree_oracle_common.cpp
+            tests/unit/tree/test_fast_ckr.cpp
+            tests/unit/tree/test_frt.cpp
+            tests/unit/tree/test_mst.cpp
             tests/unit/test_electrical_flow.cpp
             tests/unit/test_routing_table.cpp
+    )
+
+    target_include_directories(
+            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/
     )
 
     target_link_libraries(unit_tests
