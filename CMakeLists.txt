@@ -184,13 +184,24 @@ if(BUILD_TESTS)
     # Integration tests
     # ------------------------------------------------------------------------
     add_executable(integration_tests
-            tests/integration/test_electrical.cpp
+            tests/integration/electrical/test_electrical_mwu.cpp
+            tests/integration/electrical/test_electrical_mwu_io.cpp
     )
 
     target_link_libraries(integration_tests
             PRIVATE
             oblivious_routing_core
             Catch2::Catch2WithMain
+    )
+
+    target_include_directories(
+            integration_tests PRIVATE tests/integration/electrical/
+    )
+
+    target_compile_definitions(integration_tests
+            PRIVATE
+            PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            PROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}"
     )
 
     catch_discover_tests(integration_tests

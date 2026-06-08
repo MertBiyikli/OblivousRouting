@@ -13,8 +13,15 @@ enum class OutPutFormat {
     JASON
 };
 
+enum class ResultStatus {
+    OK,
+    ERROR_INVALID_SOLVER,
+    ERROR_INVALID_ROUTING_SCHEME
+};
+
 class RoutingResult {
     public:
+    ResultStatus status;
     SolverType type;
     std::unique_ptr<RoutingScheme> scheme;
     double congestion;
@@ -74,6 +81,7 @@ public:
         auto solver_opt = makeSolver(type, graph);
         if (!solver_opt) {
             std::cerr << "[ERROR] Failed to create solver of type " << static_cast<int>(type) << "\n";
+            result.status = ResultStatus::ERROR_INVALID_SOLVER;
         }
         auto& solver = *solver_opt;
         auto t0 = timeNow();
@@ -87,7 +95,7 @@ public:
 
         // Print time statistics if available
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
-            mwu->printTimeStats();
+            //mwu->printTimeStats();
         }
 
         // Compute oblivious ratio for linear schemes
@@ -102,6 +110,7 @@ public:
                 auto it = cfg.demand_maps.find(model_name);
                 if (it == cfg.demand_maps.end()) {
                     std::cerr << "[ERROR]: Missing demand for evaluating demand model. " << model_name << "\n";
+
                     return std::nullopt;
                 }
 
@@ -115,6 +124,7 @@ public:
                 //printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
             }
         }
+        result.status = ResultStatus::OK;
         return result;
     }
 };
