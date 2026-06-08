@@ -1,4 +1,5 @@
 #include "test_electrical_mwu_helper.h"
+#include <filesystem>
 
 TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][electrical][dataset][lgf]")
 {

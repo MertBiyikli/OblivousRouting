@@ -2,6 +2,7 @@
 // Created by Mert Biyikli on 05.06.26.
 //
 #include "test_electrical_mwu_helper.h"
+#include <filesystem>
 
 TEST_CASE("Electrical Flow - Simple Oblivious Routing solve", "[ElectricalFlowMWU]")
 {
