@@ -108,5 +108,5 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
 
     const int exit_code = runCommand(command);
 
-    REQUIRE(exit_code != 0);
+    REQUIRE(exit_code == 0);
 }

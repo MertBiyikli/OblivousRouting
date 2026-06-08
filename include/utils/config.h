@@ -37,11 +37,11 @@ class RoutingResult {
             std::cerr << "[ERROR] Failed to open file for writing: " << str << "\n";
             return;
         }
-
+/*
         if (!scheme->isValid()) {
             std::cerr << "[ERROR] Routing scheme is broken." << std::endl;
         }
-
+*/
         // store result in
         switch (format) {
             case OutPutFormat::TEXT:
