@@ -1,15 +1,16 @@
 #include "../include/algorithms/mwu/tree_mwu.h"
 #include "../include/io/parse_argurment_io.h"
 #include "../include/core/routing_engine.h"
-
+#include "../include/algorithms/parallel/mwu/par_electrical_flow.h"
 int main(int argc, char **argv) {
+
     // Parse command line arguments
     Config cfg;
     auto graph = load_graph(cfg, argc, argv);
 
     // Precompute offline optimal congestion if needed
     offlineOptimal(graph, cfg);
-
+/*
     RoutingEngine engine;
     for (SolverType type : cfg.solvers ) {
         auto result = engine.solve(*graph, cfg, type);
@@ -23,4 +24,10 @@ int main(int argc, char **argv) {
         }
     }
     return 0;
+    */
+
+    auto parallel = std::make_unique<ParElectricalFlowMWU>(*graph, 0, true, true);
+    auto scheme = parallel->solve();
+
+    scheme->printRoutingTable();
 }
