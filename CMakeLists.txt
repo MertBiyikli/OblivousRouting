@@ -37,6 +37,7 @@ add_library(oblivious_routing_core STATIC
         source/core/routing_table.cpp
         include/core/routing_scheme.h
         source/core/routing_scheme.cpp
+        include/core/routing_engine.h
 
         include/io/graph_io.h
         source/io/graph_io.cpp
@@ -92,7 +93,6 @@ add_library(oblivious_routing_core STATIC
         include/utils/demands.h
         source/utils/demands.cpp
         include/utils/hash.h
-        include/utils/config.h
 )
 
 target_include_directories(oblivious_routing_core
@@ -186,6 +186,14 @@ if(BUILD_TESTS)
     add_executable(integration_tests
             tests/integration/electrical/test_electrical_mwu.cpp
             tests/integration/electrical/test_electrical_mwu_io.cpp
+
+            tests/integration/tree/test_tree_oracle.cpp
+            tests/integration/tree/test_tree_transform.cpp
+            tests/integration/tree/test_mst.cpp
+            tests/integration/tree/test_tree_mwu.cpp
+
+            tests/integration/lp/test_lp.cpp
+            tests/integration/test_routing_engine.cpp
     )
 
     target_link_libraries(integration_tests
@@ -195,7 +203,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            integration_tests PRIVATE tests/integration/electrical/
+            integration_tests PRIVATE tests/integration/common/
     )
 
     target_compile_definitions(integration_tests
@@ -206,6 +214,7 @@ if(BUILD_TESTS)
 
     catch_discover_tests(integration_tests
             TEST_PREFIX "integration."
+            PROPERTIES LABELS "integration"
             REPORTER console
     )
 

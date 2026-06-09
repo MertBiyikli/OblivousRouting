@@ -39,6 +39,7 @@ struct FlatHST {
     int root()     const;
     int numNodes() const;
     bool isLeaf(int i) const;
+    int size() const;
 
     void print();
 };

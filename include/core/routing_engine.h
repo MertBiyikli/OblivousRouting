@@ -1,9 +1,9 @@
 //
-// Created by Mert Biyikli on 02.06.26.
+// Created by Mert Biyikli on 09.06.26.
 //
 
-#ifndef OBLIVIOUSROUTING_CONFIG_H
-#define OBLIVIOUSROUTING_CONFIG_H
+#ifndef OBLIVIOUSROUTING_ROUTING_ENGINE_H
+#define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
 #include "../io/solver_io.h"
 #include "../io/parse_argurment_io.h"
@@ -102,6 +102,9 @@ public:
         if (auto linear_scheme = dynamic_cast<LinearRoutingScheme*>(result.scheme.get())) {
             result.oblivious_ratio = linear_scheme->computeObliviousRatio();
         }
+        if ( auto lp = dynamic_cast<LP*>(solver.get())) {
+            result.oblivious_ratio = lp->alpha->solution_value();
+        }
 
         // Evaluate demand models if provided
         if (cfg.evaluate_demand_models) {
@@ -128,5 +131,4 @@ public:
         return result;
     }
 };
-
-#endif //OBLIVIOUSROUTING_CONFIG_H
+#endif //OBLIVIOUSROUTING_ROUTING_ENGINE_H

@@ -11,11 +11,16 @@ constexpr static int INVALID_COMMODITY_ID = -1;
 
 class RoutingTable {
 public:
+    int n=0;
+
     virtual ~RoutingTable() = default;
     virtual void init(const IGraph& g) = 0;
 
     virtual bool isValid(const IGraph& g) const = 0;
     virtual void printFlows(const IGraph& g) const = 0;
+
+    const int getNumNodes() const { return n; }
+    virtual const int getSize() const = 0;
 };
 
 struct AllPairRoutingTable :public RoutingTable{
@@ -23,7 +28,6 @@ struct AllPairRoutingTable :public RoutingTable{
     // store the flows for each commodity
     std::vector<std::vector<int>> adj_ids; // adj_ids[e] = [s1, s2, ...] list of commodities for edge e
     std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
-    int n;
     std::vector<int> anti_edge; // anti_edge[e] = id of the anti-edge of e
 
     void init(const IGraph& g) override;
@@ -40,12 +44,12 @@ struct AllPairRoutingTable :public RoutingTable{
 
     bool isValid(const IGraph& g) const override;
     void printFlows(const IGraph& g) const override;
+    const int getSize() const override;
 };
 
 // For each edge e: list of (s → flow_e(s,x))
 class LinearRoutingTable : public RoutingTable {
 public:
-    int n = 0; // number of nodes
     std::vector<std::vector<int>>    src_ids;   // src_ids[e]   = [s1, s2, ...]
     std::vector<std::vector<double>> src_flows; // src_flows[e] = [f_e(s1,x), f_e(s2,x), ...]
 
@@ -57,6 +61,6 @@ public:
     const double getFlow(int e, int s) const;
     bool isValid(const IGraph& g) const override;
     void printFlows(const IGraph& g) const override;
-
+    const int getSize() const override;
 };
 #endif //OBLIVIOUSROUTING_ROUTING_TABLE_H

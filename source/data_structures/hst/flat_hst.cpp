@@ -23,6 +23,10 @@ int FlatHST::root() const {
     return 0;
 }
 
+int FlatHST::size() const {
+    return nodes.size();
+}
+
 bool FlatHST::isLeaf(int i) const {
     return nodes[i].children_begin == nodes[i].children_end;
 }

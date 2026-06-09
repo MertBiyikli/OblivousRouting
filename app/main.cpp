@@ -1,6 +1,6 @@
 #include "../include/algorithms/mwu/tree_mwu.h"
 #include "../include/io/parse_argurment_io.h"
-#include "../include/utils/config.h"
+#include "../include/core/routing_engine.h"
 
 int main(int argc, char **argv) {
     // Parse command line arguments

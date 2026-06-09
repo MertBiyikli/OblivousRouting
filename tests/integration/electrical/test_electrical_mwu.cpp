@@ -1,8 +1,10 @@
 //
 // Created by Mert Biyikli on 05.06.26.
 //
-#include "test_electrical_mwu_helper.h"
+#include "../common/utils.h"
 #include <filesystem>
+
+using namespace integration;
 
 TEST_CASE("Electrical Flow - Simple Oblivious Routing solve", "[ElectricalFlowMWU]")
 {
@@ -64,5 +66,5 @@ TEST_CASE("Electrical flow solver handles non-uniform capacities",
     RoutingEngine engine;
     auto result = engine.solve(*g, cfg, cfg.solvers.front());
 
-    requireValidElectricalResult(result);
+    requireValidRoutingResult(result);
 }

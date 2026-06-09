@@ -207,6 +207,11 @@ void AllPairRoutingTable::printFlows(const IGraph& g) const {
     }
 }
 
+const int AllPairRoutingTable::getSize() const {
+    assert(adj_ids.size() == adj_vals.size());
+    return adj_ids.size();
+}
+
 
 
 void LinearRoutingTable::init(const IGraph& g) {
@@ -284,6 +289,12 @@ const double LinearRoutingTable::getFlow(int e, int s) const {
         return 0.0;
     }
 }
+
+const int LinearRoutingTable::getSize() const {
+    assert(src_ids.size() == src_ids.size());
+    return src_ids.size();
+}
+
 /*
 void LinearRoutingTable::reduceFlow(int e, int s, double flow) {
     assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);

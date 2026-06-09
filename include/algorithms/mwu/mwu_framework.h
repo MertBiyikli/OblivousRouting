@@ -42,6 +42,10 @@ public:
         printAdditionalStats();
     }
 
+    const int getIterationCount() const {
+        return iteration_count;
+    }
+
     virtual void printAdditionalStats() = 0;
 };
 

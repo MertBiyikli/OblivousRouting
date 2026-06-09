@@ -1,11 +1,11 @@
-#include "test_electrical_mwu_helper.h"
+#include "../common/utils.h"
 #include <filesystem>
+
+using namespace integration;
 
 TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][electrical][dataset][lgf]")
 {
-    const std::filesystem::path dataset =
-        std::filesystem::path(PROJECT_SOURCE_DIR) /
-            "tests/tiny_dataset/data/tiny_1221.lgf";
+    const std::filesystem::path dataset = tinyLgfDataset();
 
     REQUIRE(std::filesystem::exists(dataset));
 
@@ -26,15 +26,13 @@ TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][ele
     RoutingEngine engine;
     auto result = engine.solve(*graph, cfg, cfg.solvers.front());
 
-    requireValidElectricalResult(result);
+    requireValidRoutingResult(result);
 }
 
 TEST_CASE("Electrical flow solver works with gravity demand model",
           "[integration][electrical][demand][gravity]")
 {
-    const std::filesystem::path dataset =
-        std::filesystem::path(PROJECT_SOURCE_DIR) /
-            "tests/tiny_dataset/data/tiny_1221.lgf";
+    const std::filesystem::path dataset = tinyLgfDataset();
 
     REQUIRE(std::filesystem::exists(dataset));
 
@@ -71,9 +69,7 @@ TEST_CASE("Electrical solver CLI runs on a small LGF file with gravity demand",
     const std::filesystem::path executable =
     std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
 
-    const std::filesystem::path dataset =
-        std::filesystem::path(PROJECT_SOURCE_DIR) /
-            "tests/tiny_dataset/data/tiny_1221.lgf";
+    const std::filesystem::path dataset = tinyLgfDataset();
 
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
@@ -95,9 +91,7 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
     const std::filesystem::path executable =
     std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
 
-    const std::filesystem::path dataset =
-        std::filesystem::path(PROJECT_SOURCE_DIR) /
-            "tests/tiny_dataset/data/tiny_1221.lgf";
+    const std::filesystem::path dataset = tinyLgfDataset();
 
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
