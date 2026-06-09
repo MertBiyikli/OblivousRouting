@@ -24,17 +24,7 @@ boost::property_tree::ptree make_amg_params() {
 void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
     auto t0 = timeNow();
-    n = graph.getNumNodes();
-    m = graph.getNumUndirectedEdges();
-
-    // set algorithm parameters
-    roh = std::sqrt(2.0*static_cast<double>(m));
-    alpha_local = std::log2(n)*std::log2(n);
-    this->cap_X = m;
-    this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
-    this->inv_m = 1.0 / static_cast<double>(m);
-    this->x_fixed = 0;
-
+    initVariables();
     initEdgeDistances();
 
     boost::property_tree::ptree params = make_amg_params();
@@ -60,7 +50,7 @@ void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
     amg = std::make_unique<LaplacianSolver>();
     if (amg == nullptr) {
         std::cerr << "Failed to create AMG solver instance.\n";
-        return;
+        throw std::runtime_error("[ERROR] Failed to create AMG solver instance.");
     }
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
     amg->setSolverParams(_params);
@@ -352,4 +342,18 @@ Eigen::MatrixXd ElectricalMWU::getSketchMatrix(double eps) {
         }
     }
     return C;
+}
+
+void ElectricalMWU::initVariables() {
+    n = graph.getNumNodes();
+    m = graph.getNumUndirectedEdges();
+
+    // set algorithm parameters
+    roh = std::sqrt(2.0*static_cast<double>(m));
+    alpha_local = std::log2(n)*std::log2(n);
+    this->cap_X = m;
+    this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
+    this->inv_m = 1.0 / static_cast<double>(m);
+    this->x_fixed = 0;
+
 }

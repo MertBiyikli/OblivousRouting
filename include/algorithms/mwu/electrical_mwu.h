@@ -74,6 +74,7 @@ public:
     virtual void getApproxLoad(std::vector<double>& load);
     void getExactLoad(std::vector<double>& load);
     virtual void init(bool debug = false, boost::property_tree::ptree _params = boost::property_tree::ptree() );
+    void initVariables();
     virtual void initAMGSolver(boost::property_tree::ptree _params);
 
 
