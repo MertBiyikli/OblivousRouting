@@ -3,7 +3,7 @@
 //
 
 #include "../common/utils.h"
-
+#include <catch2/catch_approx.hpp>
 #include "algorithms/lp/lp_ac.h"
 #include "algorithms/lp/lp_mcf.h"
 
