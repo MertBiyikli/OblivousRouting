@@ -26,8 +26,15 @@ int main(int argc, char **argv) {
     return 0;
     */
 
-    auto parallel = std::make_unique<ParElectricalFlowMWU>(*graph, 0, true, true);
-    auto scheme = parallel->solve();
+    std::cout <<"Sequential Electrical MWU:\n";
+    ParElectricalFlowMWU<SequentialExecution> sequential(*graph, 0, true, SequentialExecution{});
+    auto seq_scheme = sequential.solve();
 
-    scheme->printRoutingTable();
+    seq_scheme->printRoutingTable();
+
+    std::cout <<"OMP Electrical MWU:\n";
+    ParElectricalFlowMWU<OpenMPExecution> omp(*graph, 0, true, OpenMPExecution{});
+    auto omp_scheme = omp.solve();
+
+    omp_scheme->printRoutingTable();
 }
