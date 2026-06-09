@@ -2,7 +2,6 @@
 // Created by Mert Biyikli on 09.06.26.
 //
 
-#include "../../../cmake-build-relwithdebinfo_parallel/_deps/catch2-src/src/catch2/catch_approx.hpp"
 #include "../common/utils.h"
 
 #include "algorithms/lp/lp_ac.h"
