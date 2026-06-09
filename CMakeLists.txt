@@ -93,6 +93,10 @@ add_library(oblivious_routing_core STATIC
         include/utils/demands.h
         source/utils/demands.cpp
         include/utils/hash.h
+
+        # parallel
+        include/algorithms/parallel/mwu/par_electrical_flow.h
+        source/algorithms/parallel/mwu/par_electrical_flow.cpp
 )
 
 target_include_directories(oblivious_routing_core
