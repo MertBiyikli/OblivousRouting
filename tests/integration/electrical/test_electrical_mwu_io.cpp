@@ -5,7 +5,7 @@ TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][ele
 {
     const std::filesystem::path dataset =
         std::filesystem::path(PROJECT_SOURCE_DIR) /
-        "experiments/datasets/small/BackBone/1221.lgf";
+            "tests/tiny_dataset/data/tiny_1221.lgf";
 
     REQUIRE(std::filesystem::exists(dataset));
 
@@ -34,7 +34,7 @@ TEST_CASE("Electrical flow solver works with gravity demand model",
 {
     const std::filesystem::path dataset =
         std::filesystem::path(PROJECT_SOURCE_DIR) /
-        "experiments/datasets/small/BackBone/1221.lgf";
+            "tests/tiny_dataset/data/tiny_1221.lgf";
 
     REQUIRE(std::filesystem::exists(dataset));
 
@@ -73,7 +73,7 @@ TEST_CASE("Electrical solver CLI runs on a small LGF file with gravity demand",
 
     const std::filesystem::path dataset =
         std::filesystem::path(PROJECT_SOURCE_DIR) /
-        "experiments/datasets/small/BackBone/1221.lgf";
+            "tests/tiny_dataset/data/tiny_1221.lgf";
 
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
@@ -93,11 +93,11 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
           "[integration][cli][electrical][error-handling]")
 {
     const std::filesystem::path executable =
-        std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
+    std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
 
     const std::filesystem::path dataset =
         std::filesystem::path(PROJECT_SOURCE_DIR) /
-        "experiments/datasets/small/BackBone/1221.lgf";
+            "tests/tiny_dataset/data/tiny_1221.lgf";
 
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
