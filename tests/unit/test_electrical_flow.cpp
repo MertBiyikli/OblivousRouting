@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include "data_structures/graph/graph_csr.h"
 #include "algorithms/mwu/oracle/electrical/laplacian_solver.h"
+#include "../common/utils.h"
 
 using Catch::Approx;
 using Eigen::VectorXd;

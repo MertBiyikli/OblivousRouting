@@ -5,7 +5,7 @@
 
 #include <memory>
 
-#include "../common/utils.h"
+#include "../../common/utils.h"
 
 #include "algorithms/mwu/tree_mwu.h"
 #include "algorithms/mwu/oracle/tree/frt/frt.h"

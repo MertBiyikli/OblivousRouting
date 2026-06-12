@@ -166,7 +166,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/
+            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/ tests/common/
     )
 
     target_link_libraries(unit_tests
@@ -175,10 +175,16 @@ if(BUILD_TESTS)
             Catch2::Catch2WithMain
     )
 
+    target_compile_definitions(unit_tests PRIVATE
+            PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+            PROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
+    )
+
     catch_discover_tests(unit_tests
             TEST_PREFIX "unit."
             REPORTER console
     )
+
 
     # ------------------------------------------------------------------------
     # Integration tests
@@ -203,7 +209,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            integration_tests PRIVATE tests/integration/common/
+            integration_tests PRIVATE tests/common/
     )
 
     target_compile_definitions(integration_tests

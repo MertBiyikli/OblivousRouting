@@ -38,6 +38,11 @@ namespace integration {
         return testDataRoot() / "data" / "tiny_1221.lgf";
     }
 
+    inline std::filesystem::path Backbone_1239_LgfDataset()
+    {
+        return testDataRoot() / "data" / "tiny_1239.lgf";
+    }
+
     inline void requireExistingFile(const std::filesystem::path& path)
     {
         INFO("PROJECT_SOURCE_DIR = " << PROJECT_SOURCE_DIR);

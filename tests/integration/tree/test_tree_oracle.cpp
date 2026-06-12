@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "../common/utils.h"
+#include "../../common/utils.h"
 
 #include "algorithms/mwu/oracle/tree/frt/frt.h"
 #include "algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"

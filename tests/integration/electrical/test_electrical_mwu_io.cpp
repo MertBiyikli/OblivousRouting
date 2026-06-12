@@ -1,4 +1,5 @@
-#include "../common/utils.h"
+#include "../../common/utils.h"
+#include <catch2/catch_approx.hpp>
 #include <filesystem>
 
 using namespace integration;
@@ -104,4 +105,41 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
     const int exit_code = runCommand(command);
 
     REQUIRE(exit_code == 0);
+}
+
+TEST_CASE("Electrical solver conserves unit flow per source",
+          "[integration][electrical][error-handling]") {
+    const std::filesystem::path dataset = Backbone_1239_LgfDataset();
+
+    REQUIRE(std::filesystem::exists(dataset));
+
+    Config cfg = makeElectricalConfig();
+    cfg.filename = dataset;
+    auto graph = makegraph(cfg.graph_format);
+    if (!cfg.filename.empty()) {
+        readLGFFile(*graph, cfg.filename);
+    }
+
+    graph->finalize();
+
+    ElectricalMWU solver(*graph, 0, true);
+    auto table = solver.solve();
+
+    constexpr double tol = EPS;
+
+    for (int s = 0; s < graph->getNumNodes(); ++s) {
+        double out = 0.0;
+        double in = 0.0;
+        for (int e = 0; e < graph->getNumDirectedEdges(); ++e) {
+            auto [u, v] = graph->getEdgeEndpoints(e);
+            double f = table->getFlow(e, s, 0);
+
+            REQUIRE(std::isfinite(f));
+
+            if (u == s) out += f;
+            if (v == s) in += f;
+        }
+
+        REQUIRE((std::abs(out)-std::abs(in)) <= SOFT_EPS);
+    }
 }

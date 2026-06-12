@@ -2,7 +2,7 @@
 // Created by Mert Biyikli on 09.06.26.
 //
 
-#include "../common/utils.h"
+#include "../../common/utils.h"
 #include <catch2/catch_approx.hpp>
 #include "algorithms/lp/lp_ac.h"
 #include "algorithms/lp/lp_mcf.h"

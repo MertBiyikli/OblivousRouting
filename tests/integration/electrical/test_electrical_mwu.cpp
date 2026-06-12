@@ -1,7 +1,7 @@
 //
 // Created by Mert Biyikli on 05.06.26.
 //
-#include "../common/utils.h"
+#include "../../common/utils.h"
 #include <filesystem>
 
 using namespace integration;
@@ -68,3 +68,4 @@ TEST_CASE("Electrical flow solver handles non-uniform capacities",
 
     requireValidRoutingResult(result);
 }
+
