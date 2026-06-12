@@ -263,3 +263,24 @@ void LaplacianSolver::setSolverParams(const boost::property_tree::ptree& new_par
 void LaplacianSolver::print_params(const boost::property_tree::ptree& prm) {
     boost::property_tree::write_json(std::cout, prm);
 }
+
+void LaplacianSolver::configureSingleThreadedAMG() {
+#ifdef OR_ENABLE_OPENMP
+    omp_set_dynamic(0);
+    omp_set_max_active_levels(1);
+    omp_set_num_threads(1);
+#endif
+}
+
+void LaplacianSolver::printOpenMPDiagnostics(const std::string& context) {
+#ifdef OR_ENABLE_OPENMP
+    std::cout << "[OpenMP][" << context << "] "
+              << "max_threads=" << omp_get_max_threads()
+              << ", in_parallel=" << omp_in_parallel()
+              << ", max_active_levels=" << omp_get_max_active_levels()
+              << ", dynamic=" << omp_get_dynamic()
+              << std::endl;
+#else
+    std::cout << "[OpenMP][" << context << "] disabled at compile time\n";
+#endif
+}

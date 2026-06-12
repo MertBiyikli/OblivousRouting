@@ -49,7 +49,6 @@ void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
     // init AMG
     amg = std::make_unique<LaplacianSolver>();
     if (amg == nullptr) {
-        std::cerr << "Failed to create AMG solver instance.\n";
         throw std::runtime_error("[ERROR] Failed to create AMG solver instance.");
     }
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
@@ -64,6 +63,8 @@ void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
  * After processing all sources, we compute the approximate load and update edge distances accordingly.
  */
 void ElectricalMWU::run(LinearRoutingTable &table) {
+    OpenMPThreadGuard singleThreadGuard(1);
+    LaplacianSolver::printOpenMPDiagnostics("ElectricalMWU::run sequential");
 
     auto t0 = timeNow();
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
@@ -85,6 +86,7 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
             rhs[x_fixed] = -1.0;
 
             potentials = amg->solve(rhs);
+
             double oracle_time_iter = duration(timeNow() - t0);
             oracle_iteration += oracle_time_iter;
 

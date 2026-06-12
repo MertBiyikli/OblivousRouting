@@ -10,6 +10,7 @@ project(ObliviousRouting
 # ============================================================================
 option(BUILD_TESTS "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
+option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,10 +25,11 @@ endif()
 # ============================================================================
 # Dependencies
 # ============================================================================
+find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(ortools REQUIRED CONFIG)
-find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen3 REQUIRED)
+
 
 # ============================================================================
 # Core library: all production code except app/main.cpp
@@ -93,11 +95,8 @@ add_library(oblivious_routing_core STATIC
         include/utils/demands.h
         source/utils/demands.cpp
         include/utils/hash.h
-
-        # parallel
-        include/algorithms/parallel/mwu/par_electrical_flow.h
-        source/algorithms/parallel/mwu/par_electrical_flow.cpp
 )
+
 
 target_include_directories(oblivious_routing_core
         PUBLIC
@@ -115,6 +114,13 @@ target_link_libraries(oblivious_routing_core
         Boost::program_options
         Boost::serialization
 )
+if(OR_ENABLE_OPENMP)
+    find_package(OpenMP)
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(oblivious_routing_core PUBLIC OpenMP::OpenMP_CXX)
+    endif()
+    target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP EIGEN_DONT_PARALLELIZE)
+endif()
 
 # ============================================================================
 # Main executable
@@ -127,6 +133,7 @@ target_link_libraries(oblivious_routing
         PRIVATE
         oblivious_routing_core
 )
+
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 

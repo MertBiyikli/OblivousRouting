@@ -76,7 +76,8 @@ public:
 
         RoutingResult result;
         result.type = type;
-        //std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
+
+        if (cfg.debug) std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
 
         auto solver_opt = makeSolver(type, graph);
         if (!solver_opt) {
@@ -95,7 +96,8 @@ public:
 
         // Print time statistics if available
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
-            //mwu->printTimeStats();
+            if (cfg.debug)
+                mwu->printTimeStats();
         }
 
         // Compute oblivious ratio for linear schemes
@@ -124,7 +126,7 @@ public:
                     return std::nullopt;
                 }
                 result.congestion = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
-                //printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
+                if (cfg.debug) printStatsForDemandModel(model_name, {offline_cong, result.congestion});
             }
         }
         result.status = ResultStatus::OK;

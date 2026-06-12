@@ -24,6 +24,9 @@
 
 #include "graph_to_laplacian.h"
 #include "../../../../utils/my_math.h"
+#ifdef OR_ENABLE_OPENMP
+#include <omp.h>
+#endif
 
 class LaplacianSolver {
 protected:
@@ -83,7 +86,39 @@ public:
     void print_params(const boost::property_tree::ptree& prm);
 
     void applyDirichletInPlace(std::vector<double>& vals);
+
+    static void configureSingleThreadedAMG();
+    static void printOpenMPDiagnostics(const std::string& context);
 };
 
+class OpenMPThreadGuard {
+public:
+    explicit OpenMPThreadGuard(int temporaryThreads) {
+#ifdef OR_ENABLE_OPENMP
+        previousThreads = omp_get_max_threads();
+        previousDynamic = omp_get_dynamic();
+        previousMaxActiveLevels = omp_get_max_active_levels();
+
+        omp_set_dynamic(0);
+        omp_set_max_active_levels(1);
+        omp_set_num_threads(temporaryThreads);
+#endif
+    }
+
+    ~OpenMPThreadGuard() {
+#ifdef OR_ENABLE_OPENMP
+        omp_set_dynamic(previousDynamic);
+        omp_set_max_active_levels(previousMaxActiveLevels);
+        omp_set_num_threads(previousThreads);
+#endif
+    }
+
+private:
+#ifdef OR_ENABLE_OPENMP
+    int previousThreads = 1;
+    int previousDynamic = 0;
+    int previousMaxActiveLevels = 1;
+#endif
+};
 
 #endif //OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
