@@ -25,6 +25,7 @@ public:
     virtual void routeDemands(std::vector<double>& congestion, const demands& demands) const = 0;
     virtual double getFlow(int e, int s, int t) const = 0;
     virtual void printRoutingTable() const = 0;
+    virtual void printFlowForSource(const int& s) const = 0;
 
     double getMaxCongestion(const std::vector<double>& congestion) const;
     virtual bool isValid() = 0;
@@ -55,7 +56,9 @@ public:
                       const demands& demands) const override;
 
     virtual void printRoutingTable() const override;
+
     bool isValid() override;
+    virtual void printFlowForSource(const int& s) const override;
 };
 
 
@@ -76,6 +79,8 @@ public:
     virtual void printRoutingTable() const override;
 
     bool isValid() override;
+
+    void printFlowForSource(const int& s) const override {};
 };
 
 

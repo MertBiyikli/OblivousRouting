@@ -37,24 +37,26 @@ class RoutingResult {
             std::cerr << "[ERROR] Failed to open file for writing: " << str << "\n";
             return;
         }
-/*
+
         if (!scheme->isValid()) {
             std::cerr << "[ERROR] Routing scheme is broken." << std::endl;
         }
-*/
+
         // store result in
         switch (format) {
             case OutPutFormat::TEXT:
                 file << "Solver: " << getSolverName(type) << "\n";
                 file << "Total runtime (micro seconds): " << total_runtime << "\n";
                 file << "Oblivious ratio: " << oblivious_ratio << "\n";
+                file << "MWU iterations:" << mwu_iterations << "\n";
                 break;
 
             case OutPutFormat::JASON:
                 file << "{\n";
                 file << "  \"solver\": \"" << getSolverName(type) << "\",\n";
                 file << "  \"total_runtime_microseconds\": " << total_runtime << ",\n";
-                file << "  \"oblivious_ratio\": " << oblivious_ratio << "\n";
+                file << "  \"oblivious_ratio\": " << oblivious_ratio << ",\n";
+                file << "  \"MWU Iterations: \": " << mwu_iterations << "\n";
                 file << "}\n";
                 break;
 
@@ -96,6 +98,9 @@ public:
         // Print time statistics if available
         if (auto mwu = dynamic_cast<MWUFramework*>(solver.get())) {
             //mwu->printTimeStats();
+            result.mwu_iterations = mwu->getIterationCount();
+        }else {
+            result.mwu_iterations = -1;
         }
 
         // Compute oblivious ratio for linear schemes

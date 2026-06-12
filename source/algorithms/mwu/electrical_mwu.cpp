@@ -94,7 +94,19 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
             rhs[u]       =  1.0;
             rhs[x_fixed] = -1.0;
 
-            potentials = amg->solve(rhs);
+            potentials = amg->solve(rhs, epsilon_L);/*
+            if (!potentials.allFinite()) {
+                std::cerr << "[ElectricalMWU] first non-finite solve\n"
+                          << "  iteration = " << t << "\n"
+                          << "  source    = " << u << "\n"
+                          << "  rhs.sum() = " << rhs.sum() << "\n"
+                          << "  min_weight = " << *std::min_element(edge_weights.begin(), edge_weights.end()) << "\n"
+                          << "  max_weight = " << *std::max_element(edge_weights.begin(), edge_weights.end()) << "\n"
+                          << "  min_distance = " << *std::min_element(edge_distances.begin(), edge_distances.end()) << "\n"
+                          << "  max_distance = " << *std::max_element(edge_distances.begin(), edge_distances.end()) << "\n"
+                          << "  cap_X = " << cap_X << "\n";
+                throw std::runtime_error("ElectricalMWU: AMG solve produced non-finite potentials");
+            }*/
             double oracle_time_iter = duration(timeNow() - t0);
             oracle_iteration += oracle_time_iter;
 
@@ -122,29 +134,87 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
     }
 }
 
-
+double out_going_9 = 0;
 /*
  * This function takes the potentials obtained from solving the Laplacian system
  * and computes the flow on each edge based on the potential difference and edge resistances.
  */
-void ElectricalMWU::addFlowToTable(const int& u, Eigen::VectorXd& potential, LinearRoutingTable &table) {
+void ElectricalMWU::addFlowToTable(const int& source,
+                                   const Eigen::VectorXd& potential,
+                                   LinearRoutingTable& table) {
     auto t0 = timeNow();
+
     for (int e = 0; e < m; ++e) {
-        double fval = edge_weights[e] * (potential[edges[e].first] - potential[edges[e].second]);
+        const auto [a, b] = edges[e];
 
-        if (std::abs(fval) > SOFT_EPS) {
-            // if value is negative, we push along the anti-edge
-            const auto& [head, tail] = edges[e];
+        /*
+         * Important convention:
+         *
+         * Your incidence matrix uses B[e,a] = -1 and B[e,b] = +1.
+         * Therefore B * phi on edge e is phi[b] - phi[a].
+         *
+         * If signed_flow > 0, the electrical current corresponds to
+         * source-side flow from b to a in the routing table.
+         *
+         * If signed_flow < 0, it corresponds to flow from a to b.
+         */
+        const double signed_flow =
+            edge_weights[e] * (potential[b] - potential[a]);
 
-            // note that the edges in this loop iterates over all undirected edges, whereas we store the negative
-            // as the anti-edge in the graph, so we need to get the original edge id and then get the anti-edge if needed
-            const int& original_edge_id = graph.getEdgeId(head, tail);
-
-            int e_orig = (fval < 0 ? graph.getAntiEdge(original_edge_id) : original_edge_id);
-
-            table.addFlow(e_orig, u, std::abs(fval));
+        if (!std::isfinite(signed_flow)) {
+            continue;
+            std::cerr << "[ElectricalMWU::addFlowToTable] non-finite signed flow\n"
+                      << "  source=" << source << "\n"
+                      << "  edge_index=" << e << "\n"
+                      << "  mapped_edge=(" << a << "," << b << ")\n"
+                      << "  edge_weight=" << edge_weights[e] << "\n"
+                      << "  potential[a]=" << potential[a] << "\n"
+                      << "  potential[b]=" << potential[b] << "\n";
+            //throw std::runtime_error("ElectricalMWU: non-finite signed flow");
         }
+
+        if (std::abs(signed_flow) <= EPS) {
+            continue;
+        }
+
+        int from;
+        int to;
+        const double amount = std::abs(signed_flow);
+
+        if (signed_flow > 0.0) {
+            // Positive B-flow: store b -> a.
+            from = b;
+            to   = a;
+        } else {
+            // Negative B-flow: store a -> b.
+            from = a;
+            to   = b;
+        }
+
+        const int directed_edge_id = graph.getEdgeId(from, to);
+
+#ifndef NDEBUG
+        const auto [stored_from, stored_to] =
+            graph.getEdgeEndpoints(directed_edge_id);
+
+        if (stored_from != from || stored_to != to) {
+            std::cerr << "[ElectricalMWU::addFlowToTable] directed edge lookup mismatch\n"
+                      << "  requested=(" << from << "," << to << ")\n"
+                      << "  returned=(" << stored_from << "," << stored_to << ")\n";
+            throw std::runtime_error("ElectricalMWU: directed edge lookup mismatch");
+        }
+#endif
+
+        table.addFlow(directed_edge_id, source, amount);
+/*
+        if (source == 9 && (from == 9 || to == 9)) {
+            std::cout << "[ElectricalMWU] source 9 stores "
+                      << amount << " on " << from << " -> " << to
+                      << " from mapped edge (" << a << "," << b << ")"
+                      << " signed_flow=" << signed_flow << "\n";
+        }*/
     }
+
     this->transformation_time += duration(timeNow() - t0);
 }
 
@@ -175,7 +245,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
             edge_diffs[size_t(e) * ell + i] = std::abs(d[e]); // keep abs for median
         }
     }
-/*
+
     if (!K_initialized) {
         Eigen::VectorXd y = SketchMatrix_t.transpose() * d; // (ℓ×m)*(m) = ℓ   (clearer than using transpose)
         K_obs = std::max(K_obs, y.cwiseAbs().maxCoeff());
@@ -187,7 +257,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         epsilon_L = epsilon / (8.0 * m * std::pow(n, 4) * K);
         epsilon_L = std::max(epsilon_L, 1e-12);
     }
-*/
+
     // recover norm
     for (int e = 0; e < m; ++e) {
         double* __restrict arr = &edge_diffs[static_cast<size_t>(e) * ell];

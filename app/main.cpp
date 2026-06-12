@@ -14,6 +14,9 @@ int main(int argc, char **argv) {
     for (SolverType type : cfg.solvers ) {
         auto result = engine.solve(*graph, cfg, type);
         if (result) {
+            //result->scheme->printRoutingTable();
+            //result->scheme->printFlowForSource(9);
+            result->scheme->isValid();
             for (const auto& [str, _type] : SOLVER_MAP) {
                 if ( _type == type ) {
                     result->storeAsFile(str + "_result.json", OutPutFormat::JASON);

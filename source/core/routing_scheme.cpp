@@ -23,6 +23,10 @@ void LinearRoutingScheme::printRoutingTable() const {
     routing_table.printFlows(g);
 }
 
+void LinearRoutingScheme::printFlowForSource(const int& s) const {
+    routing_table.printFlowsForSource(g, s);
+}
+
 double LinearRoutingScheme::computeObliviousRatio() {
     // for the liner routing scheme, we can compute the oblivious ratio, by pushing for each
     // edge the capacity of along the edge points

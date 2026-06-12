@@ -397,6 +397,9 @@ bool LinearRoutingTable::isValid(const IGraph& g) const {
         const auto& [u, v] = g.getEdgeEndpoints(e);
         // int sign = (u < v) ? 1 : -1;
         for (int s = 1; s < n; ++s) { // By default the root node is 0
+            if ( s == 9) {
+                bool stop = true;
+            }
             if ( u == s) {
                 double flow = getFlow(e, s);
                 net_flow[s] += flow;
@@ -425,6 +428,17 @@ void LinearRoutingTable::printFlows(const IGraph& g) const {
                 auto [u, v] = g.getEdgeEndpoints(e);
                 std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
             }
+        }
+    }
+}
+
+void LinearRoutingTable::printFlowsForSource(const IGraph& g, const int& s) const {
+    std::cout << "Flows for source " << s << ":\n";
+    for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
+        double flow = getFlow(e, s);
+        if (std::abs(flow) > EPS) {
+            auto [u, v] = g.getEdgeEndpoints(e);
+            std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
         }
     }
 }

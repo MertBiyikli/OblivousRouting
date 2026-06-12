@@ -61,6 +61,7 @@ public:
     const double getFlow(int e, int s) const;
     bool isValid(const IGraph& g) const override;
     void printFlows(const IGraph& g) const override;
+    void printFlowsForSource(const IGraph& g, const int& source) const;
     const int getSize() const override;
 };
 #endif //OBLIVIOUSROUTING_ROUTING_TABLE_H
