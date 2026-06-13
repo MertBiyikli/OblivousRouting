@@ -200,7 +200,7 @@ inline std::unique_ptr<IGraph> load_graph(Config& cfg, int argc, char** argv) {
 }
 
 
-inline void offlineOptimal(std::unique_ptr<IGraph>& g, Config cfg) {
+inline void offlineOptimal(std::unique_ptr<IGraph>& g, Config& cfg) {
     if (cfg.evaluate_demand_models) {
         HandleDemandModels(cfg, *g,
             [&](const std::string& model_name, const demands& dmap) {

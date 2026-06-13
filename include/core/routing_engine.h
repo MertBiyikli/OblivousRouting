@@ -5,80 +5,25 @@
 #ifndef OBLIVIOUSROUTING_ROUTING_ENGINE_H
 #define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
-#include "../io/solver_io.h"
-#include "../io/parse_argurment_io.h"
-
-enum class OutPutFormat {
-    TEXT,
-    JASON
-};
-
-enum class ResultStatus {
-    OK,
-    ERROR_INVALID_SOLVER,
-    ERROR_INVALID_ROUTING_SCHEME
-};
-
-class RoutingResult {
-    public:
-    ResultStatus status;
-    SolverType type;
-    std::unique_ptr<RoutingScheme> scheme;
-    double congestion;
-    double oblivious_ratio;
-    double total_runtime;
-    int mwu_iterations;
-
-    void storeAsFile(const std::string& str, const OutPutFormat& format) {
-        std::ofstream file;
-        file.open(str);
-
-        if (!file.is_open()) {
-            std::cerr << "[ERROR] Failed to open file for writing: " << str << "\n";
-            return;
-        }
-
-        if (!scheme->isValid()) {
-            std::cerr << "[ERROR] Routing scheme is broken." << std::endl;
-        }
-
-        // store result in
-        switch (format) {
-            case OutPutFormat::TEXT:
-                file << "Solver: " << getSolverName(type) << "\n";
-                file << "Total runtime (micro seconds): " << total_runtime << "\n";
-                file << "Oblivious ratio: " << oblivious_ratio << "\n";
-                file << "MWU iterations:" << mwu_iterations << "\n";
-                break;
-
-            case OutPutFormat::JASON:
-                file << "{\n";
-                file << "  \"solver\": \"" << getSolverName(type) << "\",\n";
-                file << "  \"total_runtime_microseconds\": " << total_runtime << ",\n";
-                file << "  \"oblivious_ratio\": " << oblivious_ratio << ",\n";
-                file << "  \"MWU Iterations: \": " << mwu_iterations << "\n";
-                file << "}\n";
-                break;
-
-            default:
-                std::cerr << "[ERROR] Unknown output format.\n";
-        }
-        file.close();
-    }
-};
-
+#include "utils.h"
 
 class RoutingEngine
 {
 public:
-    std::optional<RoutingResult> solve(
+    std::optional<RoutingRunResult> solve(
         IGraph& graph,
         const Config& cfg,
         const SolverType& type) {
 
-        RoutingResult result;
+
+        if (isSemiObliviousSolver(type)) {
+            return solveSemiOblivious(graph, cfg, type);
+        }
+
+
+        RoutingRunResult result;
         result.type = type;
-        //std::cout << "\n=== Running solver: " << getSolverName(type) << " ===\n";
+        result.solver_name = getSolverName(type);
 
         auto solver_opt = makeSolver(type, graph);
         if (!solver_opt) {
@@ -89,7 +34,7 @@ public:
         auto t0 = timeNow();
         result.scheme = solver->solve();
         auto t1 = timeNow();
-        result.total_runtime = duration(t1-t0);
+        result.total_runtime_microseconds = duration(t1-t0);
 
 
         //result.scheme->printRoutingTable();
@@ -113,27 +58,112 @@ public:
 
         // Evaluate demand models if provided
         if (cfg.evaluate_demand_models) {
-            for (const auto& [model_name, offline_cong] : cfg.offline_opt_per_model) {
+            auto pairs = generateAllDemandPairs(graph);
+            for (const auto& type : cfg.demand_models) {
 
-                auto it = cfg.demand_maps.find(model_name);
-                if (it == cfg.demand_maps.end()) {
-                    std::cerr << "[ERROR]: Missing demand for evaluating demand model. " << model_name << "\n";
-
-                    return std::nullopt;
-                }
-
-                const demands& dmap = it->second;
+                auto model = makeDemandModel(type);
+                demands dmap = model->generate(graph, pairs);
 
                 if (!result.scheme) {
                     std::cerr << "[ERROR]: Solver returned null routing scheme\n";
                     return std::nullopt;
                 }
-                result.congestion = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
+                double scheme_congestion = computeRoutingSchemeCongestion(graph, result.scheme, dmap);
+                result.demand_evaluations.push_back({.demand_type = type, .congestion = scheme_congestion});
                 //printStatsForDemandModel(model_name, {offline_cong, scheme_cong});
             }
         }
         result.status = ResultStatus::OK;
         return result;
     }
+
+private:
+    static bool isSemiObliviousSolver(SolverType type) {
+        return type == SolverType::SEMI_ELECTRICAL ||
+               type == SolverType::SEMI_TREE;
+    }
+
+    static std::shared_ptr<IRoutingEngine> makeSemiRoutingEngine(
+        SolverType type,
+        IGraph& graph
+    ) {
+        switch (type) {
+            case SolverType::SEMI_ELECTRICAL:
+                return std::make_shared<ExistingSolverRoutingEngine>(std::make_shared<ElectricalMWU>(graph, 0, true));
+
+            case SolverType::SEMI_TREE:
+                return std::make_shared<ExistingSolverRoutingEngine>(std::make_shared<TreeMWU<FlatHST>>(graph,0, std::make_unique<FastCKR<FlatHST>>(graph)));
+
+            default:
+                throw std::invalid_argument(
+                    "Requested semi-oblivious routing engine for non-semi solver"
+                );
+        }
+    }
+
+    std::optional<RoutingRunResult> solveSemiOblivious(
+    IGraph& graph,
+    const Config& cfg,
+    SolverType type
+) {
+        RoutingRunResult result;
+        result.type = type;
+        result.solver_name = getSolverName(type);
+
+        result.status = ResultStatus::OK;
+        result.oblivious_ratio = -1.0;
+        result.mwu_iterations = -1;
+        result.total_runtime_microseconds = 0.0;
+
+        auto routingEngine = makeSemiRoutingEngine(type, graph);
+        auto optimizer = std::make_shared<OrToolsSemiObliviousLoadOptimizer>();
+
+        SemiObliviousRoutingSolver solver(
+            routingEngine,
+            optimizer
+        );
+
+        const auto preprocessStart = timeNow();
+        auto candidateScheme = solver.preprocess(graph);
+        result.preprocessing_runtime_microseconds = duration(timeNow() - preprocessStart);
+
+        if (!cfg.evaluate_demand_models) {
+            std::cerr << "[ERROR] Semi-oblivious solver requires demand models.\n";
+            result.status = ResultStatus::ERROR_INVALID_SOLVER;
+            return std::nullopt;
+        }
+
+        auto pairs = generateAllDemandPairs(graph);
+
+        result.solve_runtime_microseconds = 0;
+        for (const auto& demandType : cfg.demand_models) {
+            auto model = makeDemandModel(demandType);
+            demands dmap = model->generate(graph, pairs);
+
+            auto t0 = timeNow();
+            auto semiResult = solver.route(dmap, demandType);
+            result.solve_runtime_microseconds += duration(timeNow() - t0);
+            // store the scheme for each demand
+
+            result.demand_schemes[demandModelName(demandType)] = std::move(semiResult.scheme);
+
+            printSemiObliviousResult(semiResult);
+
+            result.demand_evaluations.push_back({
+                .demand_type = demandType,
+                .congestion = semiResult.congestion,
+                .runtime_microseconds = semiResult.runtime_microseconds
+                    });
+
+        }
+        result.total_runtime_microseconds =
+            result.preprocessing_runtime_microseconds +
+            result.solve_runtime_microseconds;
+
+        return result;
+    }
 };
+
+
+
 #endif //OBLIVIOUSROUTING_ROUTING_ENGINE_H

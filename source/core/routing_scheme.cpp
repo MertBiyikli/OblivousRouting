@@ -91,32 +91,45 @@ void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, t, -flow_sx);
 }
 
-void LinearRoutingScheme::routeDemands(std::vector<double>& congestion,
-                      const demands& demands) const {
+void LinearRoutingScheme::routeDemands(
+    std::vector<double>& congestion,
+    const demands& demands
+) const {
     const int m = g.getNumDirectedEdges();
+    const int n = g.getNumNodes();
 
-    // Initialize congestion for undirected edges only
     std::vector<double> directed_congestion(m, 0.0);
 
-    // Process all directed edges, accumulating flow into undirected edge entries
     for (int e = 0; e < m; ++e) {
         double flow = 0.0;
-        for (int d = 0; d < demands.size(); ++d) {
-            const auto& [s, t] = demands.getDemandPair(d);
-            const double coeff = demands.getDemandValue(d);
-            if (coeff == 0.0) continue;
 
-            flow += coeff * std::abs(getFlow(e, s, t));
+        for (int s = 0; s < n; ++s) {
+            for (int t = 0; t < n; ++t) {
+                if (s == t) {
+                    continue;
+                }
+
+                const auto demandValueOpt = demands.getDemandValue(s, t);
+
+                if (!demandValueOpt || *demandValueOpt <= 0.0) {
+                    continue;
+                }
+
+                flow += *demandValueOpt * std::abs(
+                    this->getFlow(e, s, t)
+                );
+            }
         }
-        // Add flow (normalize by capacity)
-        directed_congestion[e] += flow / g.getEdgeCapacity(e);
+
+        directed_congestion[e] = flow / g.getEdgeCapacity(e);
     }
 
-    // map the directed congestion back to the undirected edges
-    congestion.assign(m , 0.0); // reset congestion to store undirected congestion
+    congestion.assign(m, 0.0);
+
     for (int e = 0; e < m; ++e) {
         const auto& [u, v] = g.getEdgeEndpoints(e);
-        int undirected_idx = (u < v ? e : g.getAntiEdge(e));
+        const int undirected_idx = (u < v ? e : g.getAntiEdge(e));
+
         congestion[undirected_idx] += directed_congestion[e];
     }
 }
@@ -140,31 +153,46 @@ void AllPairRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, s,t, flow_sx);
 }
 
-void AllPairRoutingScheme::routeDemands(std::vector<double>& congestion, const demands& demands) const {
+void AllPairRoutingScheme::routeDemands(
+    std::vector<double>& congestion,
+    const demands& demands
+) const {
     const int m = g.getNumDirectedEdges();
-    const int num_undirected = m / 2;  // number of undirected edges
+    const int n = g.getNumNodes();
 
-    // Initialize congestion for undirected edges only
-    congestion.assign(num_undirected, 0.0);
+    std::vector<double> directed_congestion(m, 0.0);
 
-    // Process all directed edges, accumulating flow into undirected edge entries
     for (int e = 0; e < m; ++e) {
         double flow = 0.0;
-        for (int d = 0; d < demands.size(); ++d) {
-            const auto& [s, t] = demands.getDemandPair(d);
-            const double coeff = demands.getDemandValue(d);
-            if (coeff == 0.0) continue;
 
-            flow += coeff * std::abs(routing_table.getFlow(e, s, t));
+        for (int s = 0; s < n; ++s) {
+            for (int t = 0; t < n; ++t) {
+                if (s == t) {
+                    continue;
+                }
+
+                const auto demandValueOpt = demands.getDemandValue(s, t);
+
+                if (!demandValueOpt || *demandValueOpt <= 0.0) {
+                    continue;
+                }
+
+                flow += *demandValueOpt * std::abs(
+                    routing_table.getFlow(e, s, t)
+                );
+            }
         }
 
-        // Map directed edge to undirected edge index
-        // Map directed edge to undirected edge index
-        const auto& [u, v] = g.getEdgeEndpoints(e);
-        int undirected_idx = (u < v ? e : g.getAntiEdge(e));
+        directed_congestion[e] = flow / g.getEdgeCapacity(e);
+    }
 
-        // Add flow (normalize by capacity)
-        congestion[undirected_idx] += flow / g.getEdgeCapacity(e);
+    congestion.assign(m, 0.0);
+
+    for (int e = 0; e < m; ++e) {
+        const auto& [u, v] = g.getEdgeEndpoints(e);
+        const int undirected_idx = (u < v ? e : g.getAntiEdge(e));
+
+        congestion[undirected_idx] += directed_congestion[e];
     }
 }
 

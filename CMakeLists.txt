@@ -93,6 +93,16 @@ add_library(oblivious_routing_core STATIC
         include/utils/demands.h
         source/utils/demands.cpp
         include/utils/hash.h
+        include/algorithms/semi_oblivious/semi_routing_engine.h
+        include/algorithms/semi_oblivious/candidate_routing_scheme.h
+        include/algorithms/semi_oblivious/load_optimizer.h
+        include/algorithms/semi_oblivious/semi_oblivious_solver.h
+        include/algorithms/semi_oblivious/or_tools_optimizer.h
+        source/algorithms/semi_oblivious/or_tools_optimizer.cpp
+        include/algorithms/semi_oblivious/or_tools_linear_optimizer.h
+        source/algorithms/semi_oblivious/or_tools_linear_optimizer.cpp
+        include/algorithms/semi_oblivious/linear_candidate_routing_scheme.h
+        include/core/utils.h
 )
 
 target_include_directories(oblivious_routing_core
@@ -200,6 +210,7 @@ if(BUILD_TESTS)
 
             tests/integration/lp/test_lp.cpp
             tests/integration/test_routing_engine.cpp
+            source/algorithms/semi_oblivious/or_tools_optimizer.cpp
     )
 
     target_link_libraries(integration_tests

@@ -10,6 +10,7 @@ void demands::addDemand(int s, int t, double demand) {
     source.push_back(s);
     target.push_back(t);
     demand_values.push_back(demand);
+    demand_map[{s, t}] = demand;
 }
 
 
@@ -26,6 +27,15 @@ std::pair<int, int> demands::getDemandPair(size_t idx) const {
 double demands::getDemandValue(size_t idx) const {
     assert(idx <= demand_values.size());
     return demand_values[idx];
+}
+
+std::optional<double> demands::getDemandValue(int s, int t) const {
+    auto it = demand_map.find({s, t});
+    if (it != demand_map.end()) {
+        return it->second;
+    }else {
+        return std::nullopt;
+    }
 }
 
 

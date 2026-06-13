@@ -36,6 +36,10 @@ public:
             std::move(table));
     }
 
+    const int getRootNode() const{
+        return root;
+    }
+
 protected:
     IGraph& graph;
     int root;

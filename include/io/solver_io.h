@@ -19,6 +19,9 @@
 #include <functional>
 #include <map>
 
+#include "algorithms/semi_oblivious/or_tools_optimizer.h"
+#include "algorithms/semi_oblivious/semi_oblivious_solver.h"
+
 
 enum class SolverType {
     ELECTRICAL_NAIVE,
@@ -34,7 +37,9 @@ enum class SolverType {
     RAECKE_CKR_POINTER,
     RAECKE_RANDOM_MST_POINTER,
     RAECKE_FRT_MENDELSCALING_POINTER,
-    RAECKE_CKR_MENDELSCALING_POINTER
+    RAECKE_CKR_MENDELSCALING_POINTER,
+    SEMI_ELECTRICAL,
+    SEMI_TREE
 };
 
 // Map-based token parsers for reduced code duplication
@@ -60,6 +65,8 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"raecke_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"random_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER},
     {"rmst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"11", SolverType::RAECKE_RANDOM_MST_POINTER},
     {"raecke_frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"12", SolverType::RAECKE_FRT_MENDELSCALING_POINTER},
+        {"semi_elec", SolverType::SEMI_ELECTRICAL}, {"semi_electrical", SolverType::SEMI_ELECTRICAL}, {"13", SolverType::SEMI_ELECTRICAL},
+        {"semi_tree", SolverType::SEMI_TREE}, {"14", SolverType::SEMI_TREE}
 };
 
 
@@ -130,7 +137,9 @@ inline std::string getSolverName(SolverType type) {
             {SolverType::RAECKE_CKR_POINTER, "Raecke CKR (Pointer HST)"},
             {SolverType::RAECKE_RANDOM_MST_POINTER, "Random MST (Pointer HST)"},
             {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
-            {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"}
+            {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
+            {SolverType::SEMI_ELECTRICAL, "Semi-Oblivious Routing (Electrical base)"},
+            {SolverType::SEMI_TREE, "Semi-Oblivious Routing (Tree base)"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";

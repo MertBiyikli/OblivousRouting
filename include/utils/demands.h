@@ -6,18 +6,22 @@
 #define OBLIVIOUSROUTING_DEMANDMAP_H
 
 #include <vector>
+#include <unordered_map>
 #include "../data_structures/graph/Igraph.h"
+#include "hash.h"
 
 class demands {
     public:
     std::vector<int> source, target;
     std::vector<double> demand_values;
+    std::unordered_map<std::pair<int, int>, double, PairHash> demand_map;
 
     void addDemand(int s, int t, double demand);
 
     size_t size() const;
     std::pair<int, int> getDemandPair(size_t idx) const;
     double getDemandValue(size_t idx) const;
+    std::optional<double> getDemandValue(int s, int t) const;
 };
 
 // base classe for the demand models
