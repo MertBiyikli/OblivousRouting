@@ -174,7 +174,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/ tests/common/
+            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/ tests/common/ include/
     )
 
     target_link_libraries(unit_tests
@@ -218,7 +218,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            integration_tests PRIVATE tests/common/
+            integration_tests PRIVATE tests/common/ include/
     )
 
     target_compile_definitions(integration_tests
