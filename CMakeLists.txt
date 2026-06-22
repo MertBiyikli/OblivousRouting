@@ -159,6 +159,7 @@ if(BUILD_TESTS)
     # Unit tests
     # ------------------------------------------------------------------------
     add_executable(unit_tests
+            tests/common/utils.h
             # Graph data structures
             tests/unit/graph/test_graph_common.cpp
             tests/unit/graph/test_graph_csr.cpp
@@ -197,6 +198,7 @@ if(BUILD_TESTS)
     # Integration tests
     # ------------------------------------------------------------------------
     add_executable(integration_tests
+            tests/common/utils.h
             tests/integration/electrical/test_electrical_mwu.cpp
             tests/integration/electrical/test_electrical_mwu_io.cpp
 
