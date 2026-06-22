@@ -5,9 +5,10 @@
 #ifndef OBLIVIOUSROUTING_UTILS_H
 #define OBLIVIOUSROUTING_UTILS_H
 
+#pragma once
+
 #include <fstream>
-#include "../io/solver_io.h"
-#include "../io/demand_io.h"
+
 enum class OutputFormat {
     TEXT,
     JSON
