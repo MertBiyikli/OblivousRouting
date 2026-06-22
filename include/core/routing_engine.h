@@ -7,6 +7,8 @@
 
 #include "utils.h"
 #include "../io/solver_io.h"
+#include <optional>
+
 class RoutingEngine
 {
 public:
