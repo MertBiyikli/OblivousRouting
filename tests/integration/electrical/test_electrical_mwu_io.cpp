@@ -2,6 +2,7 @@
 #include <catch2/catch_approx.hpp>
 #include <filesystem>
 
+
 using namespace integration;
 
 TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][electrical][dataset][lgf]")

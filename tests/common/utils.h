@@ -16,6 +16,7 @@
 
 #include "data_structures/graph/graph_csr.h"
 #include "core/routing_engine.h"
+#include "io/parse_argurment_io.h"
 
 namespace integration {
     inline std::filesystem::path projectSourceDir()
