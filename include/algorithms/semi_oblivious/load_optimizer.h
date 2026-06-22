@@ -9,7 +9,6 @@
 #include "../../utils/demands.h"
 #include "../../core/routing_scheme.h"
 #include "candidate_routing_scheme.h"
-#include "linear_candidate_routing_scheme.h"
 #include <optional>
 
 

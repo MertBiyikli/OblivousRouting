@@ -99,9 +99,6 @@ add_library(oblivious_routing_core STATIC
         include/algorithms/semi_oblivious/semi_oblivious_solver.h
         include/algorithms/semi_oblivious/or_tools_optimizer.h
         source/algorithms/semi_oblivious/or_tools_optimizer.cpp
-        include/algorithms/semi_oblivious/or_tools_linear_optimizer.h
-        source/algorithms/semi_oblivious/or_tools_linear_optimizer.cpp
-        include/algorithms/semi_oblivious/linear_candidate_routing_scheme.h
         include/core/utils.h
 )
 
