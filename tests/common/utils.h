@@ -14,10 +14,10 @@
 #include <memory>
 #include <string>
 
-#include "core/utils.h"
-#include "core/routing_engine.h"
-#include "data_structures/graph/graph_csr.h"
-#include "io/parse_argurment_io.h"
+#include "../../include/core/utils.h"
+#include "../../include/core/routing_engine.h"
+#include "../../include/data_structures/graph/graph_csr.h"
+#include "../../include/io/parse_argurment_io.h"
 
 namespace integration {
     inline std::filesystem::path projectSourceDir()
