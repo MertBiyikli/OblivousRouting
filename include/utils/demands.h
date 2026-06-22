@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_DEMANDMAP_H
 
 #include <vector>
+#include <optional>
 #include <unordered_map>
 #include "../data_structures/graph/Igraph.h"
 #include "hash.h"
