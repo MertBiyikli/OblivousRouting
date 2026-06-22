@@ -207,7 +207,6 @@ if(BUILD_TESTS)
 
             tests/integration/lp/test_lp.cpp
             tests/integration/test_routing_engine.cpp
-            source/algorithms/semi_oblivious/or_tools_optimizer.cpp
     )
 
     target_link_libraries(integration_tests

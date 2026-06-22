@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
 #include "utils.h"
-
+#include "../io/solver_io.h"
 class RoutingEngine
 {
 public:
