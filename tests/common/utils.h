@@ -14,9 +14,9 @@
 #include <memory>
 #include <string>
 
-#include "data_structures/graph/graph_csr.h"
-#include "core/routing_engine.h"
 #include "core/utils.h"
+#include "core/routing_engine.h"
+#include "data_structures/graph/graph_csr.h"
 #include "io/parse_argurment_io.h"
 
 namespace integration {
