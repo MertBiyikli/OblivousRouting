@@ -5,8 +5,8 @@
 #ifndef OBLIVIOUSROUTING_ROUTING_ENGINE_H
 #define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
+#include "routing_result.h"
 #include "utils.h"
-#include "../io/solver_io.h"
 #include <optional>
 
 class RoutingEngine

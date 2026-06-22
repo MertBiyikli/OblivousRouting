@@ -100,6 +100,7 @@ add_library(oblivious_routing_core STATIC
         include/algorithms/semi_oblivious/or_tools_optimizer.h
         source/algorithms/semi_oblivious/or_tools_optimizer.cpp
         include/core/utils.h
+        include/core/routing_result.h
 )
 
 target_include_directories(oblivious_routing_core
