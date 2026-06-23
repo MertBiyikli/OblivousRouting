@@ -8,7 +8,7 @@
 #pragma once
 
 #include <fstream>
-#include "routing_result.h"
+#include "../routing/routing_result.h"
 
 
 class RoutingResultWriter {
@@ -44,6 +44,7 @@ private:
         const RoutingRunResult& result,
         std::ostream& out
     ) {
+        out << "Date: " << std::chrono::system_clock::now() << '\n';
         out << "Solver: " << result.solver_name << '\n';
 
         if (!result.routing_base.empty()) {
@@ -107,6 +108,7 @@ private:
         std::ostream& out
     ) {
         out << "{\n";
+        out << "  \"date\": \"" << (std::chrono::system_clock::now()) << "\",\n";
         out << "  \"solver\": \"" << (result.solver_name) << "\",\n";
         out << "  \"status\": " << static_cast<int>(result.status) << ",\n";
 
@@ -155,4 +157,42 @@ private:
         out << "}\n";
     }
 };
+
+
+class MWUMetrics{
+public:
+    MWUMetrics() {
+        iteration_count = 0;
+        solve_time = 0;
+        transformation_time = 0;
+        mwu_weight_update_time = 0;
+    }
+
+    virtual ~MWUMetrics() = default;
+    std::vector<double> oracle_running_times;
+    int iteration_count;
+    double solve_time;
+    double transformation_time;
+    double mwu_weight_update_time;
+    double load_computation_time{};
+
+
+    void printTimeStats() {
+        std::cout << "Solve time: " << this->solve_time << " micro seconds\n";
+        std::cout << "Transformation time: " << transformation_time << " micro seconds\n";
+        std::cout << "MWU iterations: " << this->iteration_count << "\n";
+        std::cout << "MWU load computation: " << this->load_computation_time << " micro seconds\n";
+        double average_oracle_time = 0.0;
+        for (double t : this->oracle_running_times) {
+            average_oracle_time += t;
+        }
+        std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(this->iteration_count)) << " micro seconds\n";
+        std::cout << "Total MWU weight update time: " << mwu_weight_update_time << " micro seconds\n";
+    }
+
+    const int getIterationCount() const {
+        return iteration_count;
+    }
+};
+
 #endif //OBLIVIOUSROUTING_UTILS_H

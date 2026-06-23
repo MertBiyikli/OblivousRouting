@@ -7,7 +7,7 @@
 
 #include "../../data_structures/graph/Igraph.h"
 #include "../../utils/demands.h"
-#include "../../core/routing_scheme.h"
+#include "../../routing/routing_table.h"
 #include "candidate_routing_scheme.h"
 #include <optional>
 

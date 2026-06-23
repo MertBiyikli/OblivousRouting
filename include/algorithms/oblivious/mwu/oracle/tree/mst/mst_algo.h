@@ -7,10 +7,10 @@
 
 #include <vector>
 #include <tuple>
-#include "../../../../../data_structures/graph/Igraph.h"
-#include "../../../../../data_structures/hst/pointer_hst.h"
-#include "../../../../../data_structures/hst/flat_hst.h"
-#include "../../../../../data_structures/union_find/union_find.h"
+#include "data_structures/graph/Igraph.h"
+#include "data_structures/hst/pointer_hst.h"
+#include "data_structures/hst/flat_hst.h"
+#include "data_structures/union_find/union_find.h"
 
 
 /**

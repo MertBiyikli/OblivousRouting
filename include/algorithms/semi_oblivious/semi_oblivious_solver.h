@@ -11,42 +11,59 @@
 #include "semi_routing_engine.h"
 #include "load_optimizer.h"
 #include "../../io/demand_io.h"
-
-struct SemiObliviousRoutingResult {
-    std::unique_ptr<RoutingScheme> scheme;
-    DemandModelType demand_type{};
-    double congestion = -1.0;
-    double runtime_microseconds = -1.0;
-
-    std::size_t candidate_paths = 0;
-    double average_paths_per_pair = 0.0;
-    std::string path_selection_strategy;
-};
+#include "core/solver.h"
+#include "semi_oblivious_result.h"
 
 
 
-class SemiObliviousRoutingSolver {
+class SemiObliviousRoutingSolver : public ISolver {
 public:
-    SemiObliviousRoutingSolver(
-        std::shared_ptr<IRoutingEngine> routingEngine,
-        std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer
-    )
-        : routingEngine_(std::move(routingEngine)),
+    SemiObliviousRoutingSolver(IGraph& graph, std::shared_ptr<IRoutingEngine> routingEngine, std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer)
+        : ISolver(graph),
+          routingEngine_(std::move(routingEngine)),
           loadOptimizer_(std::move(loadOptimizer)) {
         if (!routingEngine_ || !loadOptimizer_) {
-            throw std::invalid_argument("SemiObliviousRoutingSolver received null dependency");
+            throw std::invalid_argument(
+                "SemiObliviousRoutingSolver received null dependency"
+            );
         }
     }
 
-    CandidateRoutingScheme preprocess(const IGraph& graph) {
-        graph_ = &graph;
-        candidateScheme_ = routingEngine_->preprocess(graph);
-        return candidateScheme_.value();
+    void setDemand(const demands& demand, DemandModelType demandType) {
+        demand_ = demand;
+        demandType_ = demandType;
     }
 
-    SemiObliviousRoutingResult route(const demands& demand, DemandModelType demandType) const {
-        if (!graph_ || !candidateScheme_) {
-            throw std::logic_error("SemiObliviousRoutingSolver::preprocess must be called before route");
+    CandidateRoutingScheme preprocess() {
+        candidateScheme_ = routingEngine_->preprocess(graph);
+        return *candidateScheme_;
+    }
+
+    std::unique_ptr<RoutingScheme> solve() override {
+        if (!demand_ || !demandType_) {
+            throw std::logic_error(
+                "SemiObliviousRoutingSolver::setDemand must be called before solve"
+            );
+        }
+
+        if (!candidateScheme_) {
+            candidateScheme_ = routingEngine_->preprocess(graph);
+        }
+
+        auto optResult = loadOptimizer_->optimize(
+            graph,
+            *candidateScheme_,
+            *demand_
+        );
+
+        return std::move(optResult.scheme);
+    }
+
+    SemiObliviousRoutingResult route(const demands& demand,DemandModelType demandType) {
+        setDemand(demand, demandType);
+
+        if (!candidateScheme_) {
+            candidateScheme_ = routingEngine_->preprocess(graph);
         }
 
         SemiObliviousRoutingResult res;
@@ -54,14 +71,13 @@ public:
         res.path_selection_strategy = routingEngine_->getSolverBase();
 
         res.candidate_paths = candidateScheme_->numPaths();
-        res.average_paths_per_pair = candidateScheme_->averagePathsPerPair(
-            graph_->getNumNodes()
-        );
+        res.average_paths_per_pair =
+            candidateScheme_->averagePathsPerPair(graph.getNumNodes());
 
         const auto start = timeNow();
 
         auto optResult = loadOptimizer_->optimize(
-            *graph_,
+            graph,
             *candidateScheme_,
             demand
         );
@@ -81,23 +97,14 @@ public:
     }
 
 private:
-    const IGraph* graph_ = nullptr;
-
     std::shared_ptr<IRoutingEngine> routingEngine_;
     std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer_;
 
     std::optional<CandidateRoutingScheme> candidateScheme_;
+    std::optional<demands> demand_;
+    std::optional<DemandModelType> demandType_;
 };
 
-inline void printSemiObliviousResult(
-    const SemiObliviousRoutingResult& r
-) {
-    std::cout << "Routing base: " << r.path_selection_strategy << std::endl;
-    std::cout << "Demand [" << demandModelName(r.demand_type) << "]\n";
-    std::cout << "  Congestion: " << r.congestion << '\n';
-    std::cout << "  Runtime: " << r.runtime_microseconds << " us\n";
-    std::cout << "  Candidate paths: " << r.candidate_paths << '\n';
-    std::cout << "  Avg paths/pair: " << r.average_paths_per_pair << '\n';
-}
+
 
 #endif //OBLIVIOUSROUTING_SEMI_OBLIVIOUS_SOLVER_H

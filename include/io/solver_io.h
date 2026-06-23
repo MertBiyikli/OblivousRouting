@@ -5,12 +5,14 @@
 #ifndef OBLIVIOUSROUTING_SOLVER_IO_H
 #define OBLIVIOUSROUTING_SOLVER_IO_H
 
-#include "../include/algorithms/lp/lp_ac.h"
-#include "../include/algorithms/mwu/electrical_mwu.h"
-#include "../include/algorithms/mwu/tree_mwu.h"
-#include "../include/algorithms/mwu/oracle/tree/mst/mst_oracle.h"
-#include "../include/algorithms/mwu/oracle/tree/frt/frt.h"
-#include "../include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
+#include "core/solver.h"
+#include "algorithms/oblivious/oblivious_solver.h"
+#include "algorithms/lp/lp_ac.h"
+#include "algorithms/oblivious/mwu/electrical_mwu.h"
+#include "algorithms/oblivious/mwu/tree_mwu.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
+#include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
+#include "algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h"
 
 #include <string>
 #include <optional>
@@ -21,26 +23,7 @@
 
 #include "algorithms/semi_oblivious/or_tools_optimizer.h"
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
-
-
-enum class SolverType {
-    ELECTRICAL_NAIVE,
-    ELECTRICAL_SKETCHING,
-    RAECKE_FRT_FLAT,
-    RAECKE_CKR_FLAT,
-    RAECKE_RANDOM_MST_FLAT,
-    RAECKE_FRT_MENDELSCALING_FLAT,
-    RAECKE_CKR_MENDELSCALING_FLAT,
-    LP_APPLEGATE_COHEN,
-    ELECTRICAL_PARALLEL_BATCHES,
-    RAECKE_FRT_POINTER,
-    RAECKE_CKR_POINTER,
-    RAECKE_RANDOM_MST_POINTER,
-    RAECKE_FRT_MENDELSCALING_POINTER,
-    RAECKE_CKR_MENDELSCALING_POINTER,
-    SEMI_ELECTRICAL,
-    SEMI_TREE
-};
+#include "core/types.h"
 
 // Map-based token parsers for reduced code duplication
 static const std::map<std::string, SolverType> SOLVER_MAP{
@@ -70,7 +53,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
 };
 
 
-inline std::optional<std::unique_ptr<ObliviousRoutingSolver>>
+inline std::optional<std::unique_ptr<ISolver>>
 makeSolver(SolverType type, IGraph& g) {
     // Factory with cycle removal strategy support for TreeMWU-based solvers
     switch (type) {

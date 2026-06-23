@@ -5,9 +5,9 @@
 #ifndef OBLIVIOUSROUTING_ELECTRICAL_MWU_H
 #define OBLIVIOUSROUTING_ELECTRICAL_MWU_H
 
-#include "../solver.h"
+#include "../oblivious_solver.h"
 #include "mwu_framework.h"
-#include "../../utils/time_tracking.h"
+#include "utils/time_tracking.h"
 #include <Eigen/Sparse>
 #include "oracle/electrical/laplacian_solver.h"
 
@@ -16,7 +16,7 @@
 * The idea is to repeatedly invoke an electrical flow computation (Laplacian solve)
 * and then update the edge resistances based on the load on the edges. The process is repeated until convergence.
 */
-class ElectricalMWU : public LinearObliviousSolverBase, public MWUFramework {
+class ElectricalMWU : public MWUFramework {
 protected:
     // AMG solver instance
     std::unique_ptr<LaplacianSolver> amg;
@@ -51,19 +51,19 @@ protected:
 public:
 
     ElectricalMWU(IGraph& g, int root, bool use_sketching, bool debug = false)
-    : LinearObliviousSolverBase(g, root), n(g.getNumNodes()), m(g.getNumUndirectedEdges()) {
+    : MWUFramework(g, root), n(g.getNumNodes()), m(g.getNumUndirectedEdges()) {
         this->debug = debug;
         this->use_sketching = use_sketching;
     }
 
     // entry point
-    void computeBasisFlows(LinearRoutingTable& table) override {
+    virtual void computeBasisFlows(LinearRoutingTable& table) override {
         init(debug);
         run(table);
         scaleFlowDown(table);
     }
 
-    void printAdditionalStats() override {
+    virtual void printAdditionalStats() override {
         //nothing here..
     }
 

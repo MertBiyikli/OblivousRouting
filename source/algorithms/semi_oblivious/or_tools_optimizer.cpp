@@ -3,6 +3,7 @@
 //
 
 #include "../../include/algorithms/semi_oblivious/or_tools_optimizer.h"
+#include "routing/storage/allpair_routing_table.h"
 
 using operations_research::MPSolver;
 using operations_research::MPVariable;

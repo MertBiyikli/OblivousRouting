@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_GRAPH_TO_LAPLACIAN_H
 
 #include <vector>
-#include "../../../../data_structures/graph/Igraph.h"
+#include "data_structures/graph/Igraph.h"
 
 class GraphToLaplacian {
 public:

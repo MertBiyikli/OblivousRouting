@@ -5,11 +5,11 @@
 #ifndef OBLIVIOUSROUTING_TREE_MWU_H
 #define OBLIVIOUSROUTING_TREE_MWU_H
 
-#include "../solver.h"
+#include "../oblivious_solver.h"
 #include "mwu_framework.h"
 #include "oracle/tree/tree_oracle.h"
 #include "oracle/tree/tree_transform.h"
-#include "../../utils/my_math.h"
+#include "utils/my_math.h"
 #include <cmath>
 /*
  *
@@ -18,7 +18,7 @@
  * until the total weight (lambda_sum) of the trees added to the routing table reaches 1.
  */
 template<typename HSTDatastructures>
-class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
+class TreeMWU : public MWUFramework {
 
     std::unique_ptr<TreeOracle<HSTDatastructures>> oracle;
     TreeTransform transform;
@@ -32,7 +32,7 @@ class TreeMWU : public LinearObliviousSolverBase, public MWUFramework {
 
 public:
     TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
-        : LinearObliviousSolverBase(g, root)
+        : MWUFramework(g, root)
         , oracle(std::move(_oracle))
         , transform(graph){
         current_distances.assign(graph.getNumDirectedEdges(), 1.0);
@@ -41,12 +41,12 @@ public:
         lambda_sum = 0.0;
     }
 
-    void computeBasisFlows(LinearRoutingTable& table) override {
+    virtual void computeBasisFlows(LinearRoutingTable& table) override {
         table.init(graph);
         run(table);
     }
 
-    void printAdditionalStats() override {
+    virtual void printAdditionalStats() override {
         double average_tree_height = 0.0;
         for (int h : tree_heights) average_tree_height += h;
 
@@ -66,7 +66,7 @@ public:
         lambda_sum = 0.0;
         while (lambda_sum < 1.0) {
             lambda_sum += treeOracle(table);
-            iteration_count++;
+            metrics.iteration_count++;
         }
     }
 
@@ -76,7 +76,7 @@ public:
 
         HSTDatastructures t = oracle->getTree(current_distances);
         double oracle_time = duration(timeNow() - t0);
-        this->oracle_running_times.push_back(oracle_time);
+        metrics.oracle_running_times.push_back(oracle_time);
 
         int height = 0;
         if constexpr (std::is_same_v<HSTDatastructures, std::shared_ptr<HSTNode>>) {
@@ -91,23 +91,23 @@ public:
         t0 = timeNow();
         computeRLoads(t);
         double l = getMaxRload();
-        this->load_computation_time += duration(timeNow() - t0);
+        metrics.load_computation_time += duration(timeNow() - t0);
 
         double lambda = std::min(1.0 / l, 1.0 - lambda_sum);
 
         // solve_time = oracle_time + compute time (computeRLoads + computeNewDistances)
-        solve_time += oracle_time;
+        metrics.solve_time += oracle_time;
 
         t0 = timeNow();
 
         TreeIteration<HSTDatastructures> iter(std::move(t), current_distances, lambda);
         transform.transform(iter, table,path_cache);
-        this->transformation_time += duration(timeNow() - t0);
+        metrics.transformation_time += duration(timeNow() - t0);
 
         t0 = timeNow();
         computeNewDistances(lambda);
         double weight_update_time = duration(timeNow() - t0);
-        this->mwu_weight_update_time += weight_update_time;
+        metrics.mwu_weight_update_time += weight_update_time;
 
         if (oracle->applyMendelScaling)
             mendel_scaling_times.push_back(oracle->getMendelScalingTime());
@@ -273,7 +273,7 @@ public:
         updateDistances(current_distances);
     }
 
-    void updateDistances(const std::vector<double> &distances) override {
+    virtual void updateDistances(const std::vector<double> &distances) override {
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             graph.updateEdgeDistance(e, distances[e]);
         }

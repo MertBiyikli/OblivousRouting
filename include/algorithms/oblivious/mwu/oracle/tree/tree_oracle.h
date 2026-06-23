@@ -6,12 +6,12 @@
 #define OBLIVIOUSROUTING_TREE_ORACLE_H
 
 
-#include "../../../../data_structures/hst/pointer_hst.h"
-#include "../../../../data_structures/hst/flat_hst.h"
-#include "../../../../data_structures/graph/Igraph.h"
-#include "../../../../data_structures/mendel_scaling/ultrametric_tree.h"
-#include "../../../../data_structures/mendel_scaling/quotient_graph.h"
-#include "../../../../utils/time_tracking.h"
+#include "data_structures/hst/pointer_hst.h"
+#include "data_structures/hst/flat_hst.h"
+#include "data_structures/graph/Igraph.h"
+#include "data_structures/mendel_scaling/ultrametric_tree.h"
+#include "data_structures/mendel_scaling/quotient_graph.h"
+#include "utils/time_tracking.h"
 #include "mst/mst_algo.h"
 
 #include <vector>

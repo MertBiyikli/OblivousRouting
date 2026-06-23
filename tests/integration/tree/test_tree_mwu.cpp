@@ -13,7 +13,7 @@
 #include "algorithms/mwu/oracle/tree/mst/mst_oracle.h"
 
 #include "data_structures/hst/flat_hst.h"
-#include "core/routing_table.h"
+#include "../../../include/routing/routing_table.h"
 
 using namespace integration;
 

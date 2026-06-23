@@ -2,7 +2,7 @@
 // Created by Mert Biyikli on 20.03.26.
 //
 
-#include "../../../include/algorithms/mwu/electrical_mwu.h"
+#include "../../../include/algorithms/oblivious/mwu/electrical_mwu.h"
 #include "../../../include/utils/my_math.h"
 #include <random>
 
@@ -31,7 +31,7 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     roh = std::sqrt(2.0*static_cast<double>(m));
     alpha_local = std::log2(n)*std::log2(n);
     this->cap_X = m;
-    this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
+    metrics.iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
     this->inv_m = 1.0 / static_cast<double>(m);
     this->x_fixed = 0;
 
@@ -51,7 +51,7 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
         auto B = buildIncidence();
         X = (B.transpose() * UCt).sparseView(); // n × ℓ
     }
-    solve_time += duration(timeNow()-t0);
+    metrics.solve_time += duration(timeNow()-t0);
 }
 
 
@@ -79,10 +79,10 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
     Eigen::VectorXd potentials(n);
     std::vector<double> load(m, 0.0);
-    solve_time += duration(timeNow() - t0);
+    metrics.solve_time += duration(timeNow() - t0);
 
 
-    for (int t = 0; t < this->iteration_count; ++t) {
+    for (int t = 0; t < metrics.iteration_count; ++t) {
 
         auto oracle_iteration = 0.0;
         // --- main loop over sources (u -> x_fixed) ---
@@ -114,7 +114,7 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
             addFlowToTable(u, potentials, table);
 
             // solve_time includes setup_time + oracle_time (but not transformation_time)
-            solve_time += oracle_time_iter;
+            metrics.solve_time += oracle_time_iter;
         }
 
         t0 = timeNow();
@@ -123,14 +123,14 @@ void ElectricalMWU::run(LinearRoutingTable &table) {
         }else {
             getExactLoad(load);
         }
-        this->load_computation_time += duration(timeNow()-t0);
+        metrics.load_computation_time += duration(timeNow()-t0);
 
         t0 = timeNow();
         updateDistances(load);
         double weight_update_time = duration(timeNow() - t0);
-        mwu_weight_update_time += weight_update_time;
+        metrics.mwu_weight_update_time += weight_update_time;
 
-        oracle_running_times.push_back(oracle_iteration);
+        metrics.oracle_running_times.push_back(oracle_iteration);
     }
 }
 
@@ -215,7 +215,7 @@ void ElectricalMWU::addFlowToTable(const int& source,
         }*/
     }
 
-    this->transformation_time += duration(timeNow() - t0);
+    metrics.transformation_time += duration(timeNow() - t0);
 }
 
 void ElectricalMWU::setEpsilon(double eps) {
@@ -340,12 +340,12 @@ void ElectricalMWU::updateDistances(const std::vector<double>& load) {
 void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     // scale the flow from the adjacency list flow
     auto start_transfo = timeNow();
-    if (iteration_count > 0) {
-        const double inv_iters = 1.0 / static_cast<double>(iteration_count);
+    if (metrics.iteration_count > 0) {
+        const double inv_iters = 1.0 / static_cast<double>(metrics.iteration_count);
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) // dont use m here. m is undirected edges only
             for (double &val : table.src_flows[e]) val *= (inv_iters);
     }
-    this->transformation_time += duration(timeNow() - start_transfo);
+    metrics.transformation_time += duration(timeNow() - start_transfo);
 }
 
 void ElectricalMWU::initEdgeDistances() {

@@ -1,6 +1,6 @@
-#include "../include/algorithms/mwu/tree_mwu.h"
+#include "../include/algorithms/oblivious/mwu/tree_mwu.h"
 #include "../include/io/parse_argurment_io.h"
-#include "../include/core/routing_engine.h"
+#include "../include/routing/routing_engine.h"
 #include "../include/core/utils.h"
 
 int main(int argc, char **argv) {

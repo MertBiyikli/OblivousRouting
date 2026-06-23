@@ -2,7 +2,7 @@
 // Created by Mert Biyikli on 20.03.26.
 //
 
-#include "../../../../../include/algorithms/mwu/oracle/electrical/laplacian_solver.h"
+#include "../../../../../include/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h"
 #include "../../../../../include/utils/my_math.h"
 #include "../../../../../include/utils/hash.h"
 #include <amgcl/backend/builtin.hpp>

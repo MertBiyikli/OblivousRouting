@@ -7,7 +7,7 @@
 #include "algorithms/lp/lp_ac.h"
 #include "algorithms/lp/lp_mcf.h"
 
-#include "core/routing_table.h"
+#include "../../../include/routing/routing_table.h"
 
 using namespace integration;
 

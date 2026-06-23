@@ -33,11 +33,8 @@ find_package(Eigen3 REQUIRED)
 # Core library: all production code except app/main.cpp
 # ============================================================================
 add_library(oblivious_routing_core STATIC
-        include/core/routing_table.h
-        source/core/routing_table.cpp
-        include/core/routing_scheme.h
-        source/core/routing_scheme.cpp
-        include/core/routing_engine.h
+        include/routing/routing_table.h
+        include/routing/routing_engine.h
 
         include/io/graph_io.h
         source/io/graph_io.cpp
@@ -64,28 +61,27 @@ add_library(oblivious_routing_core STATIC
         include/data_structures/union_find/union_find.h
         source/data_structures/union_find/union_find.cpp
 
-        include/algorithms/mwu/electrical_mwu.h
+        include/algorithms/oblivious/mwu/electrical_mwu.h
         source/algorithms/mwu/electrical_mwu.cpp
-        include/algorithms/mwu/tree_mwu.h
+        include/algorithms/oblivious/mwu/tree_mwu.h
         source/algorithms/mwu/tree_mwu.cpp
 
-        include/algorithms/mwu/oracle/electrical/laplacian_solver.h
+        include/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h
         source/algorithms/mwu/oracle/electrical/laplacian_solver.cpp
-        include/algorithms/mwu/oracle/electrical/graph_to_laplacian.h
+        include/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.h
         source/algorithms/mwu/oracle/electrical/graph_to_laplacian.cpp
 
-        include/algorithms/mwu/oracle/tree/tree_transform.h
-        include/algorithms/mwu/oracle/tree/tree_oracle.h
-        include/algorithms/mwu/oracle/tree/mst/mst_oracle.h
-        include/algorithms/mwu/oracle/tree/mst/mst_algo.h
+        include/algorithms/oblivious/mwu/oracle/tree/tree_transform.h
+        include/algorithms/oblivious/mwu/oracle/tree/tree_oracle.h
+        include/algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h
+        include/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h
         source/algorithms/mwu/oracle/tree/mst/mst_algo.cpp
-        include/algorithms/mwu/oracle/tree/frt/frt.h
-        include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h
+        include/algorithms/oblivious/mwu/oracle/tree/frt/frt.h
+        include/algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h
 
         include/algorithms/lp/lp_base.h
         include/algorithms/lp/lp_ac.h
         include/algorithms/lp/lp_mcf.h
-        source/algorithms/lp/lp_base.cpp
         source/algorithms/lp/lp_ac.cpp
         source/algorithms/lp/lp_mcf.cpp
 
@@ -100,7 +96,16 @@ add_library(oblivious_routing_core STATIC
         include/algorithms/semi_oblivious/or_tools_optimizer.h
         source/algorithms/semi_oblivious/or_tools_optimizer.cpp
         include/core/utils.h
-        include/core/routing_result.h
+        include/routing/routing_result.h
+        include/core/solver.h
+        include/algorithms/lp/offline_solver.h
+        include/core/types.h
+        source/core/routing_engine.cpp
+        include/routing/storage/linear_routing_table.h
+        include/routing/storage/allpair_routing_table.h
+        source/routing/storage/linear_routing_table.cpp
+        source/routing/storage/allpair_routing_table.cpp
+        include/algorithms/semi_oblivious/semi_oblivious_result.h
 )
 
 target_include_directories(oblivious_routing_core

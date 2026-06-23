@@ -1,5 +1,5 @@
 #include "../common/utils.h"
-#include "core/routing_engine.h"
+#include "../../include/routing/routing_engine.h"
 
 using namespace integration;
 

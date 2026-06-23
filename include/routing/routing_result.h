@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include "../io/solver_io.h"
 #include "../io/demand_io.h"
-#include "routing_scheme.h"
+#include "routing_table.h"
+#include "core/types.h"
 
 enum class OutputFormat {
     TEXT,

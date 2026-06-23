@@ -1,18 +1,10 @@
 //
-// Created by Mert Biyikli on 09.06.26.
+// Created by Mert Biyikli on 23.06.26.
 //
 
-#ifndef OBLIVIOUSROUTING_ROUTING_ENGINE_H
-#define OBLIVIOUSROUTING_ROUTING_ENGINE_H
+#include "routing/routing_engine.h"
 
-#include "routing_result.h"
-#include "utils.h"
-#include <optional>
-
-class RoutingEngine
-{
-public:
-    std::optional<RoutingRunResult> solve(
+std::optional<RoutingRunResult> RoutingEngine::solve(
         IGraph& graph,
         const Config& cfg,
         const SolverType& type) {
@@ -79,31 +71,15 @@ public:
         return result;
     }
 
-private:
-    static bool isSemiObliviousSolver(SolverType type) {
+
+    bool RoutingEngine::isSemiObliviousSolver(SolverType type) {
         return type == SolverType::SEMI_ELECTRICAL ||
                type == SolverType::SEMI_TREE;
     }
 
-    static std::shared_ptr<IRoutingEngine> makeSemiRoutingEngine(
-        SolverType type,
-        IGraph& graph
-    ) {
-        switch (type) {
-            case SolverType::SEMI_ELECTRICAL:
-                return std::make_shared<ExistingSolverRoutingEngine>(std::make_shared<ElectricalMWU>(graph, 0, true));
 
-            case SolverType::SEMI_TREE:
-                return std::make_shared<ExistingSolverRoutingEngine>(std::make_shared<TreeMWU<FlatHST>>(graph,0, std::make_unique<FastCKR<FlatHST>>(graph)));
 
-            default:
-                throw std::invalid_argument(
-                    "Requested semi-oblivious routing engine for non-semi solver"
-                );
-        }
-    }
-
-    std::optional<RoutingRunResult> solveSemiOblivious(
+    std::optional<RoutingRunResult> RoutingEngine::solveSemiOblivious(
     IGraph& graph,
     const Config& cfg,
     SolverType type
@@ -121,12 +97,13 @@ private:
         auto optimizer = std::make_shared<OrToolsSemiObliviousLoadOptimizer>();
 
         SemiObliviousRoutingSolver solver(
+            graph,
             routingEngine,
             optimizer
         );
 
         const auto preprocessStart = timeNow();
-        auto candidateScheme = solver.preprocess(graph);
+        auto candidateScheme = solver.preprocess();
         result.preprocessing_runtime_microseconds = duration(timeNow() - preprocessStart);
 
         if (!cfg.evaluate_demand_models) {
@@ -164,8 +141,3 @@ private:
 
         return result;
     }
-};
-
-
-
-#endif //OBLIVIOUSROUTING_ROUTING_ENGINE_H

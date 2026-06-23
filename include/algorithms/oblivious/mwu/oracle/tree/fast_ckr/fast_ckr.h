@@ -3,7 +3,7 @@
 #define OBLIVIOUSROUTING_FAST_CKR_H
 
 #include "../tree_oracle.h"
-#include "../../../../../data_structures/priority_queue.h"
+#include "data_structures/priority_queue.h"
 #include <random>
 
 template<typename T>

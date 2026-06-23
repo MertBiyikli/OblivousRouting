@@ -14,7 +14,7 @@
 #include "algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
 #include "algorithms/mwu/oracle/tree/tree_transform.h"
 
-#include "core/routing_table.h"
+#include "../../../include/routing/routing_table.h"
 #include "data_structures/hst/flat_hst.h"
 #include "data_structures/hst/pointer_hst.h"
 

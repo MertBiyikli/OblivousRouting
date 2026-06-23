@@ -23,7 +23,7 @@
 #include <Eigen/Dense>
 
 #include "graph_to_laplacian.h"
-#include "../../../../utils/my_math.h"
+#include "utils/my_math.h"
 
 class LaplacianSolver {
 protected:

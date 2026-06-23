@@ -2,9 +2,23 @@
 // Created by Mert Biyikli on 25.03.26.
 //
 
-#include "../../../include/algorithms/lp/lp_mcf.h"
-#include "../../../include/utils/demands.h"
-#include "../../../include/utils/my_math.h"
+#include "algorithms/lp/lp_mcf.h"
+#include "utils/demands.h"
+#include "utils/my_math.h"
+
+void CMMF_Solver::computeBasisFlows(AllPairRoutingTable& table) {
+    this->n = graph.getNumNodes();
+    CreateVariables();
+    CreateConstraints();
+    SetObjective();
+    // === Solve the LP ===
+    status = solver->Solve();
+    if (status != MPSolver::OPTIMAL) {
+        throw std::runtime_error("[Minimum Congestion Solver]: Solve failed.");
+    } else {
+        storeFlow(table);
+    }
+}
 
 
 void CMMF_Solver::AddDemandMap(const demands &d_map) {
@@ -29,25 +43,18 @@ void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
         throw std::invalid_argument("Cannot add demand from a vertex to itself.");
     }
 
-    if(m_demand_map.find(d) != m_demand_map.end()) {
-        throw std::invalid_argument("Demand between these vertices already exists.");
-    }
-
-
-    m_demand_map[d] = demand;
+    this->addDemand(u, v, demand);
 }
 
 
-// C++
 void CMMF_Solver::CreateVariables() {
-    // α: maximum congestion
+
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
 
-    // f[eid, t] >= 0 for every undirected edge and destination t
     for (int s = 0; s<n; s++) {
         for (int t = 0; t < n; ++t) {
             if (s == t) continue;
-            auto &edge2var = map_vertex2edge[{s,t}];
+            auto &edge2var = map_commodities2edge[{s,t}];
             edge2var.clear();
             for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
                 edge2var[e] = solver->MakeNumVar(
@@ -67,20 +74,20 @@ void CMMF_Solver::CreateConstraints() {
             if (s == t) continue;
 
             double rhs = 0.0;
-            auto it = m_demand_map.find({s, t});
-            if (it != m_demand_map.end()) rhs = it->second;
+            double it = this->getDemandValue(s, t);
+            if (it > EPS  ) rhs = it;
 
             MPConstraint* c = solver->MakeRowConstraint(rhs, rhs);
 
             for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
                 const auto &edge = graph.getEdgeEndpoints(e);
-                if (edge.first == s)  c->SetCoefficient(map_vertex2edge[{s, t}][e], +1.0); // out
-                if (edge.second == s) c->SetCoefficient(map_vertex2edge[{s, t}][e], -1.0); // in
+                if (edge.first == s)  c->SetCoefficient(map_commodities2edge[{s, t}][e], +1.0); // out
+                if (edge.second == s) c->SetCoefficient(map_commodities2edge[{s, t}][e], -1.0); // in
             }
         }
     }
 
-    // 2) Congestion (capacity) constraints for undirected edges {u,v} handled once
+    // 2) Congestion constraints for undirected edges {u,v} handled once
     //    sum_t f(u->v,t) + f(v->u,t) - alpha * cap(u,v) <= 0
     for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
         int u = graph.getEdgeEndpoints(e).first;
@@ -100,9 +107,9 @@ void CMMF_Solver::CreateConstraints() {
         for (int s = 0; s<n; s++) {
             for (int t = 0; t < n; ++t) {
                 if (s == t) continue;
-                c->SetCoefficient(map_vertex2edge[{s, t}][e], +1.0);
+                c->SetCoefficient(map_commodities2edge[{s, t}][e], +1.0);
                 if (rev_id != -1) {
-                    c->SetCoefficient(map_vertex2edge[{s, t}][rev_id], +1.0);
+                    c->SetCoefficient(map_commodities2edge[{s, t}][rev_id], +1.0);
                 }
             }
         }
@@ -127,7 +134,7 @@ void CMMF_Solver::PrintSolution() {
         for (int t = 0; t < n; ++t) {
             if ( s == t) continue;
             std::cout << "Flows for commodity dest=" << s << " -> " << t << ":\n";
-            auto &edge2var = map_vertex2edge[{s, t}];
+            auto &edge2var = map_commodities2edge[{s, t}];
             bool any = false;
             for (auto &kv : edge2var) {
                 int arcId    = kv.first;
@@ -154,7 +161,7 @@ void CMMF_Solver::PrintSolution() {
     for (int s = 0; s < n; s++) {
         for (int t = 0; t < n; ++t) {
             if (s == t) continue;
-            for (auto &kv : map_vertex2edge[{s,t}]) {
+            for (auto &kv : map_commodities2edge[{s,t}]) {
                 int arcId = kv.first;
                 double f  = kv.second->solution_value();
                 if (f <= SOFT_EPS) continue;
@@ -178,7 +185,7 @@ void CMMF_Solver::storeFlow(AllPairRoutingTable& table) {
     for (int s = 0; s < n; s++) {
         for (int t = 0; t < n; ++t) {
             if (s == t) continue;
-            auto &edge2var = map_vertex2edge[{s, t}];
+            auto &edge2var = map_commodities2edge[{s, t}];
             for (auto &kv : edge2var) {
                 int arcId    = kv.first;
                 MPVariable* v= kv.second;
@@ -191,7 +198,7 @@ void CMMF_Solver::storeFlow(AllPairRoutingTable& table) {
     }
 }
 
-double CMMF_Solver::getCongestionForPassedDemandMap() {
+double CMMF_Solver::getCongestionForPassedDemandMap() const {
     if ( solver && alpha
         && status == MPSolver::OPTIMAL) {
         return alpha->solution_value();

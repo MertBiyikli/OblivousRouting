@@ -10,9 +10,25 @@
 using namespace operations_research;
 
 
+void LPSolver::computeBasisFlows(AllPairRoutingTable& table) {
+    this->n = graph.getNumNodes();
+    CreateVariables();
+    CreateConstraints();
+    SetObjective();
+
+    // === Solve the LP ===
+    status = solver->Solve();
+    if (status != MPSolver::OPTIMAL) {
+        throw std::runtime_error("[LPSolver]: Solve failed.");
+    } else {
+        storeFlow(table);
+    }
+}
+
+
 void LPSolver::CreateVariables() {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
-    if (!solver) throw std::runtime_error("GLOP solver unavailable.");
+    if (!solver) throw std::runtime_error("[LPSolver]: GLOP solver unavailable.");
 
 
     // CREATE Alpha variable
@@ -39,10 +55,6 @@ void LPSolver::CreateVariables() {
         }
     }
 
-
-
-
-
     // π_e_f variables
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
         const auto& [u, v] = graph.getEdgeEndpoints(e);
@@ -55,8 +67,6 @@ void LPSolver::CreateVariables() {
 
         }
     }
-
-
     // f_e_st variables for all arcs
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
         for(const auto& d : m_demands) {
@@ -74,7 +84,6 @@ void LPSolver::CreateConstraints() {
         if ( graph.getEdgeEndpoints(e).first > graph.getEdgeEndpoints(e).second) continue;
 
         MPConstraint* constraint = solver->MakeRowConstraint(-solver->infinity(), 0.0);
-        //std::cout << "Dual optimization constraint for arc " << id_e << " and arc " << id_f << ":\n";
 
         for(int f = 0; f < graph.getNumDirectedEdges(); f++) {
             if ( graph.getEdgeEndpoints(f).first > graph.getEdgeEndpoints(f).second ) continue;
@@ -210,44 +219,6 @@ void LPSolver::SetObjective()
     // === Objective: maximize alpha ===
     solver->MutableObjective()->SetCoefficient(alpha, 1);
     solver->MutableObjective()->SetMinimization();
-}
-
-
-
-void LPSolver::PrintSolution() {
-
-    max_cong = 0;
-    // === Print the solution ===
-    std::unordered_map<int, double> total_flow_per_arc;
-
-    for (const auto& [key, var] : m_var_f_e_) {
-        if (!var) continue;
-        double val = var->solution_value();
-        int arc_id = std::get<0>(key);
-        total_flow_per_arc[arc_id] += val;
-    }
-
-    for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
-        int u = graph.getEdgeEndpoints(e).first, v = graph.getEdgeEndpoints(e).second;
-
-        if (u > v) continue;
-
-        int rev_edge = graph.getAntiEdge(e);
-        double total_flow = total_flow_per_arc[e];
-
-        // to ensure that flow along anti-parallel arcs
-        // will be added as absolute flow to its corresponding undirected link
-        total_flow += total_flow_per_arc[rev_edge];
-
-        double capacity = graph.getEdgeCapacity(e);
-
-        if(max_cong < total_flow/capacity) {
-            max_cong = total_flow/capacity;
-        }
-
-    }
-    std::cout << "Max congestion across all undirected arcs: " << max_cong << std::endl;
-
 }
 
 

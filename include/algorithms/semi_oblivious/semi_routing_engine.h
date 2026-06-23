@@ -18,7 +18,8 @@ public:
 
 class ExistingSolverRoutingEngine final : public IRoutingEngine {
 public:
-    explicit ExistingSolverRoutingEngine(std::shared_ptr<LinearObliviousSolverBase> solver)
+    // TODO: in the future maybe make it also applicable for general oblivious routing as well
+    explicit ExistingSolverRoutingEngine(std::shared_ptr<ILinearObliviousSolverBase> solver)
         : solver_(std::move(solver)) {}
 
     CandidateRoutingScheme preprocess(const IGraph& graph) override {
@@ -145,7 +146,7 @@ public:
     }
 
 private:
-    std::shared_ptr<LinearObliviousSolverBase> solver_;
+    std::shared_ptr<ILinearObliviousSolverBase> solver_;
 };
 
 #endif //OBLIVIOUSROUTING_SEMI_ROUTING_ENGINE_H

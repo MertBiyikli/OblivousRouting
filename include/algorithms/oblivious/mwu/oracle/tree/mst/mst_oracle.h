@@ -6,7 +6,7 @@
 #define OBLIVIOUSROUTING_MST_ORACLE_H
 
 #include "../tree_oracle.h"
-#include "../../../../../data_structures/union_find/union_find.h"
+#include "data_structures/union_find/union_find.h"
 
 
 

@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include "data_structures/graph/graph_csr.h"
-#include "core/routing_table.h"
+#include "../../include/routing/routing_table.h"
 
 using Catch::Approx;
 

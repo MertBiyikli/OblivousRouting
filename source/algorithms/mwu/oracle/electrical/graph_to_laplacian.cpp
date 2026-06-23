@@ -1,7 +1,7 @@
 //
 // Created by Mert Biyikli on 20.03.26.
 //
-#include "../../../../../include/algorithms/mwu/oracle/electrical/graph_to_laplacian.h"
+#include "../../../../../include/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.h"
 #include <cassert>
 #include <stdexcept>
 

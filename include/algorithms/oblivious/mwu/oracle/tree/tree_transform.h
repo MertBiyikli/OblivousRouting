@@ -6,8 +6,8 @@
 #define OBLIVIOUSROUTING_TREE_TRANSFORM_H
 
 
-#include "../../../../data_structures/hst/pointer_hst.h"
-#include "../../../../data_structures/hst/flat_hst.h"
+#include "data_structures/hst/pointer_hst.h"
+#include "data_structures/hst/flat_hst.h"
 #include <unordered_set>
 #include <queue>
 #include <cassert>
