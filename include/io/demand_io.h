@@ -66,23 +66,6 @@ inline void printStatsForDemandModel(const std::string& model_name,
     }
 }
 
-inline double computeRoutingSchemeCongestion(IGraph& _g,
-                                             const std::unique_ptr<RoutingScheme>& routing_scheme,
-                                             const demands& demand_map) {
-    std::vector<double> congestion_per_edge(_g.getNumDirectedEdges(), 0.0);
-    routing_scheme->routeDemands(congestion_per_edge, demand_map);
-    double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
-    for (const auto& cong : congestion_per_edge)
-        if (cong > max_cong) max_cong = cong;
-    return max_cong;
-}
-
-inline double computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
-    CMMF_Solver mccf(_g);
-    mccf.AddDemandMap(demand_map);
-    auto offline_scheme = mccf.solve();
-    return mccf.getCongestionForPassedDemandMap();
-}
 
 
 

@@ -2,8 +2,8 @@
 // Created by Mert Biyikli on 20.03.26.
 //
 
-#include "../../../include/algorithms/oblivious/mwu/electrical_mwu.h"
-#include "../../../include/utils/my_math.h"
+#include "algorithms/oblivious/mwu/electrical_mwu.h"
+#include "utils/my_math.h"
 #include <random>
 
 boost::property_tree::ptree make_amg_params() {

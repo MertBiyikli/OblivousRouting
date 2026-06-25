@@ -1,5 +1,5 @@
-#include "../../../../../../include/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h"
-#include "../../../../../../include/data_structures/union_find/union_find.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h"
+#include "data_structures/union_find/union_find.h"
 
 
 

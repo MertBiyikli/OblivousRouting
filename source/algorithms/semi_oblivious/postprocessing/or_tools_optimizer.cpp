@@ -2,8 +2,15 @@
 // Created by Mert Biyikli on 12.06.26.
 //
 
-#include "../../include/algorithms/semi_oblivious/or_tools_optimizer.h"
+#include "../../../../include/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h"
 #include "routing/storage/allpair_routing_table.h"
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "ortools/linear_solver/linear_solver.h"
 
 using operations_research::MPSolver;
 using operations_research::MPVariable;
@@ -469,7 +476,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
 
     SemiObliviousOptimizationResult result;
      result.scheme = std::make_unique<AllPairRoutingScheme>(graph, std::move(table));
-    result.lambda = lambda->solution_value();
+
 
     return result;
 }

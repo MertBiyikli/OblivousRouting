@@ -4,15 +4,9 @@
 
 #ifndef OBLIVIOUSROUTING_OR_TOOLS_OPTIMIZER_H
 #define OBLIVIOUSROUTING_OR_TOOLS_OPTIMIZER_H
-#include <iostream>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
-#include "ortools/linear_solver/linear_solver.h"
 #include "load_optimizer.h"
-#include "../../utils/demands.h"
+#include "../../../utils/demands.h"
 
 class OrToolsSemiObliviousLoadOptimizer
     : public ISemiObliviousRoutingLoadOptimizer {

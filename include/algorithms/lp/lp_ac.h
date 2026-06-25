@@ -22,7 +22,7 @@
 class LPSolver : public LP, public IAllPairObliviousSolverBase {
 public:
     LPSolver(IGraph& graph)
-        : IAllPairObliviousSolverBase(graph) {}
+        : IAllPairObliviousSolverBase(graph), LP(graph.getNumNodes()) {}
 
 protected:
     void computeBasisFlows(AllPairRoutingTable& table) override;

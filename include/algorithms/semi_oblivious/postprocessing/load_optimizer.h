@@ -5,12 +5,12 @@
 #ifndef OBLIVIOUSROUTING_LOAD_OPTIMIZER_H
 #define OBLIVIOUSROUTING_LOAD_OPTIMIZER_H
 
-#include "../../data_structures/graph/Igraph.h"
-#include "../../utils/demands.h"
-#include "../../routing/routing_table.h"
-#include "candidate_routing_scheme.h"
+#include "../../../data_structures/graph/Igraph.h"
+#include "../../../utils/demands.h"
+#include "../../../routing/routing_table.h"
+#include "core/utils.h"
+#include "../preprocessing/candidate_routing_scheme.h"
 #include <optional>
-
 
 struct SemiObliviousOptimizationResult {
     std::unique_ptr<RoutingScheme> scheme;

@@ -38,7 +38,7 @@ public:
     routing_table(std::move(table)) {
     }
 
-    double computeObliviousRatio();
+    double computeObliviousRatio() const;
 
     void initRoutingTable();
 

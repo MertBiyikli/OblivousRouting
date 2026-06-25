@@ -15,18 +15,28 @@ int main(int argc, char **argv) {
 
     RoutingResultWriter parser;
     RoutingEngine engine;
-    RoutingRunResult result;
+    IRoutingResult result;
     for (SolverType type : cfg.solvers ) {
-        auto res = engine.solve(*graph, cfg, type);
-        if (res) {
-            result = std::move(res.value());
-        } else {
-            throw std::runtime_error("Failed to solve for solver type: " + getSolverName(type));
 
+        // Toy example of including try & catch to handle exceptions
+        try {
+            auto res = engine.solve(*graph, cfg, type);
+            if (res) {
+                result = std::move(res.value());
+            } else {
+                throw std::runtime_error("Failed to solve for solver type: " + getSolverName(type));
+            }
+            if (!parser.write(result, "result_"+getSolverName(type)+".json", OutputFormat::JSON)) {
+                throw std::runtime_error("Failed to write results to file for solver type: " + getSolverName(type));
+            }
+        } catch(std::runtime_error& e) {
+            std::cerr << e.what() << std::endl;
+            return -1;
+        } catch (std::invalid_argument& e) {
+            std::cerr << e.what() << std::endl;
+            return -1;
         }
-        if (!parser.write(result, "result_"+getSolverName(type)+".json", OutputFormat::JSON)) {
-            throw std::runtime_error("Failed to write results to file for solver type: " + getSolverName(type));
-        }
+
     }
 
 

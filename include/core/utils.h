@@ -11,10 +11,12 @@
 #include "../routing/routing_result.h"
 
 
+
+
 class RoutingResultWriter {
 public:
     static bool write(
-        const RoutingRunResult& result,
+        const IRoutingResult& result,
         const std::string& path,
         OutputFormat format
     ) {
@@ -41,11 +43,12 @@ public:
 
 private:
     static void writeText(
-        const RoutingRunResult& result,
+        const IRoutingResult& result,
         std::ostream& out
     ) {
         out << "Date: " << std::chrono::system_clock::now() << '\n';
         out << "Solver: " << result.solver_name << '\n';
+        out << "Graph: " << result.graph_name << '\n';
 
         if (!result.routing_base.empty()) {
             out << "Routing base: " << result.routing_base << '\n';
@@ -66,7 +69,6 @@ private:
         }
 
         out << "Oblivious ratio: " << result.oblivious_ratio << '\n';
-        out << "MWU iterations: " << result.mwu_iterations << '\n';
 
         if (result.candidate_paths > 0) {
             out << "Candidate paths: " << result.candidate_paths << '\n';
@@ -82,6 +84,28 @@ private:
             if (eval.runtime_microseconds >= 0.0) {
                 out << "  Runtime (microseconds): "
                     << eval.runtime_microseconds << '\n';
+            }
+        }
+
+        if (!result.mwu_metrics.empty()) {
+            const auto& mwu = result.mwu_metrics;
+
+            out << "MWU metrics:\n";
+            out << "  Iterations: " << mwu.iteration_count << '\n';
+            out << "  Solve time (microseconds): " << mwu.solve_time << '\n';
+            out << "  Transformation time (microseconds): "
+                << mwu.transformation_time << '\n';
+            out << "  Load computation time (microseconds): "
+                << mwu.load_computation_time << '\n';
+            out << "  Weight update time (microseconds): "
+                << mwu.mwu_weight_update_time << '\n';
+
+            if (!mwu.oracle_running_times.empty()) {
+                out << "  Average oracle time (microseconds): "
+                    << mwu.averageOracleTime() << '\n';
+
+                out << "  Oracle calls: "
+                    << mwu.oracle_running_times.size() << '\n';
             }
         }
     }
@@ -104,12 +128,13 @@ private:
     }
 
     static void writeJson(
-        const RoutingRunResult& result,
+        const IRoutingResult& result,
         std::ostream& out
     ) {
         out << "{\n";
         out << "  \"date\": \"" << (std::chrono::system_clock::now()) << "\",\n";
         out << "  \"solver\": \"" << (result.solver_name) << "\",\n";
+        out << "  \"graph\": \"" << (result.graph_name) << "\",\n";
         out << "  \"status\": " << static_cast<int>(result.status) << ",\n";
 
         if (!result.routing_base.empty()) {
@@ -125,12 +150,37 @@ private:
             << result.solve_runtime_microseconds << ",\n";
         out << "  \"oblivious_ratio\": "
             << result.oblivious_ratio << ",\n";
-        out << "  \"mwu_iterations\": "
-            << result.mwu_iterations << ",\n";
         out << "  \"candidate_paths\": "
             << result.candidate_paths << ",\n";
         out << "  \"average_paths_per_pair\": "
             << result.average_paths_per_pair << ",\n";
+
+        if (!result.mwu_metrics.empty()) {
+            const auto& mwu = result.mwu_metrics;
+
+            out << "  \"mwu_metrics\": {\n";
+            out << "    \"iteration_count\": " << mwu.iteration_count << ",\n";
+            out << "    \"solve_time_microseconds\": " << mwu.solve_time << ",\n";
+            out << "    \"transformation_time_microseconds\": "
+                << mwu.transformation_time << ",\n";
+            out << "    \"load_computation_time_microseconds\": "
+                << mwu.load_computation_time << ",\n";
+            out << "    \"weight_update_time_microseconds\": "
+                << mwu.mwu_weight_update_time << ",\n";
+            out << "    \"average_oracle_time_microseconds\": "
+                << mwu.averageOracleTime() << ",\n";
+
+            out << "    \"oracle_running_times_microseconds\": [";
+            for (std::size_t i = 0; i < mwu.oracle_running_times.size(); ++i) {
+                out << mwu.oracle_running_times[i];
+                if (i + 1 < mwu.oracle_running_times.size()) {
+                    out << ", ";
+                }
+            }
+            out << "]\n";
+
+            out << "  },\n";
+        }
 
         out << "  \"demand_evaluations\": [\n";
 
@@ -154,45 +204,15 @@ private:
         }
 
         out << "  ]\n";
+
+
         out << "}\n";
+
+
     }
 };
 
 
-class MWUMetrics{
-public:
-    MWUMetrics() {
-        iteration_count = 0;
-        solve_time = 0;
-        transformation_time = 0;
-        mwu_weight_update_time = 0;
-    }
 
-    virtual ~MWUMetrics() = default;
-    std::vector<double> oracle_running_times;
-    int iteration_count;
-    double solve_time;
-    double transformation_time;
-    double mwu_weight_update_time;
-    double load_computation_time{};
-
-
-    void printTimeStats() {
-        std::cout << "Solve time: " << this->solve_time << " micro seconds\n";
-        std::cout << "Transformation time: " << transformation_time << " micro seconds\n";
-        std::cout << "MWU iterations: " << this->iteration_count << "\n";
-        std::cout << "MWU load computation: " << this->load_computation_time << " micro seconds\n";
-        double average_oracle_time = 0.0;
-        for (double t : this->oracle_running_times) {
-            average_oracle_time += t;
-        }
-        std::cout << "Average oracle time: " << (average_oracle_time/static_cast<double>(this->iteration_count)) << " micro seconds\n";
-        std::cout << "Total MWU weight update time: " << mwu_weight_update_time << " micro seconds\n";
-    }
-
-    const int getIterationCount() const {
-        return iteration_count;
-    }
-};
 
 #endif //OBLIVIOUSROUTING_UTILS_H

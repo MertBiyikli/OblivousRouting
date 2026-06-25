@@ -21,7 +21,7 @@
 #include <functional>
 #include <map>
 
-#include "algorithms/semi_oblivious/or_tools_optimizer.h"
+#include "../algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h"
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
 #include "core/types.h"
 

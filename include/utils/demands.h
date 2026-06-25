@@ -25,7 +25,7 @@ class demands {
     std::optional<double> getDemandValue(int s, int t) const;
 };
 
-// base classe for the demand models
+// base class for the demand models
 class DemandModel {
 public:
     DemandModel() = default;

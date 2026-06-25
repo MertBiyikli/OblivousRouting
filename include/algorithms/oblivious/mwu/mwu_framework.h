@@ -23,6 +23,9 @@ public:
 
     virtual void updateDistances(const std::vector<double>& distances) = 0;
 
+    MWUMetrics getMetrics() const {
+        return metrics;
+    }
     virtual void printAdditionalStats() = 0;
 
 protected:

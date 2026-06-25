@@ -20,7 +20,8 @@ public:
     MPVariable* alpha;
     std::vector<std::pair<int, int>> m_demands;
 
-    LP(): solver(nullptr), alpha(nullptr) {
+    LP(const int& _n): solver(nullptr), alpha(nullptr)  {
+        n = _n;
         solver = std::unique_ptr<MPSolver>(MPSolver::CreateSolver("GLOP"));
         if (!solver) {
             throw std::runtime_error("[LP Base]: Could not create solver.");

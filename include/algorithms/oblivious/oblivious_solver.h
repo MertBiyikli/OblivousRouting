@@ -68,4 +68,6 @@ protected:
     virtual void computeBasisFlows(AllPairRoutingTable& table) = 0;
 };
 
+
+
 #endif //OBLIVOUSROUTING_SOLVER_H

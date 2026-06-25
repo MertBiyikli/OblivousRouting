@@ -62,20 +62,20 @@ add_library(oblivious_routing_core STATIC
         source/data_structures/union_find/union_find.cpp
 
         include/algorithms/oblivious/mwu/electrical_mwu.h
-        source/algorithms/mwu/electrical_mwu.cpp
+        source/algorithms/oblivious/mwu/electrical_mwu.cpp
         include/algorithms/oblivious/mwu/tree_mwu.h
-        source/algorithms/mwu/tree_mwu.cpp
+        source/algorithms/oblivious/mwu/tree_mwu.cpp
 
         include/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h
-        source/algorithms/mwu/oracle/electrical/laplacian_solver.cpp
+        source/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.cpp
         include/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.h
-        source/algorithms/mwu/oracle/electrical/graph_to_laplacian.cpp
+        source/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.cpp
 
         include/algorithms/oblivious/mwu/oracle/tree/tree_transform.h
         include/algorithms/oblivious/mwu/oracle/tree/tree_oracle.h
         include/algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h
         include/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h
-        source/algorithms/mwu/oracle/tree/mst/mst_algo.cpp
+        source/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.cpp
         include/algorithms/oblivious/mwu/oracle/tree/frt/frt.h
         include/algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h
 
@@ -90,11 +90,11 @@ add_library(oblivious_routing_core STATIC
         source/utils/demands.cpp
         include/utils/hash.h
         include/algorithms/semi_oblivious/semi_routing_engine.h
-        include/algorithms/semi_oblivious/candidate_routing_scheme.h
-        include/algorithms/semi_oblivious/load_optimizer.h
+        include/algorithms/semi_oblivious/preprocessing/candidate_routing_scheme.h
+        include/algorithms/semi_oblivious/postprocessing/load_optimizer.h
         include/algorithms/semi_oblivious/semi_oblivious_solver.h
-        include/algorithms/semi_oblivious/or_tools_optimizer.h
-        source/algorithms/semi_oblivious/or_tools_optimizer.cpp
+        include/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h
+        source/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.cpp
         include/core/utils.h
         include/routing/routing_result.h
         include/core/solver.h
@@ -105,7 +105,13 @@ add_library(oblivious_routing_core STATIC
         include/routing/storage/allpair_routing_table.h
         source/routing/storage/linear_routing_table.cpp
         source/routing/storage/allpair_routing_table.cpp
-        include/algorithms/semi_oblivious/semi_oblivious_result.h
+        include/routing/routing_runner.h
+        include/algorithms/semi_oblivious/semi_routing_runner.h
+        include/algorithms/oblivious/oblivious_routing_runner.h
+        source/algorithms/semi_oblivious/semi_routing_engine.cpp
+        source/algorithms/semi_oblivious/semi_routing_runner.cpp
+        source/algorithms/semi_oblivious/semi_oblivious_solver.cpp
+        source/algorithms/oblivious/oblivious_routing_runner.cpp
 )
 
 target_include_directories(oblivious_routing_core
