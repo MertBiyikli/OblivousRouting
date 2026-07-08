@@ -1,12 +1,11 @@
 //
-// Created by Mert Biyikli on 17.06.26.
+// Created by Mert Biyikli on 06.07.26.
 //
 
-#ifndef OBLIVIOUSROUTING_UTILS_H
-#define OBLIVIOUSROUTING_UTILS_H
+#ifndef OBLIVIOUSROUTING_RESULT_IO_H
+#define OBLIVIOUSROUTING_RESULT_IO_H
 
-#pragma once
-
+#include "core/errors.h"
 #include <fstream>
 #include "../routing/routing_result.h"
 
@@ -15,7 +14,7 @@
 
 class RoutingResultWriter {
 public:
-    static bool write(
+    static Result<void> write(
         const IRoutingResult& result,
         const std::string& path,
         OutputFormat format
@@ -23,22 +22,20 @@ public:
         std::ofstream file(path);
 
         if (!file.is_open()) {
-            std::cerr << "[ERROR] Failed to open output file: " << path << '\n';
-            return false;
+            return makeErrorMessage(ErrorCode::FileNotFound, "Failed to open output file: "+ path);
         }
 
         switch (format) {
             case OutputFormat::TEXT:
                 writeText(result, file);
-                return true;
-
+                return {};
             case OutputFormat::JSON:
                 writeJson(result, file);
-                return true;
+                return {};
             default:
-                std::cerr << "[ERROR] Unsupported output format\n";
-                return false;
+                return makeErrorMessage(ErrorCode::FormatNotFound, "Unsupported output format.");
         }
+
     }
 
 private:
@@ -132,9 +129,11 @@ private:
         std::ostream& out
     ) {
         out << "{\n";
-        out << "  \"date\": \"" << (std::chrono::system_clock::now()) << "\",\n";
-        out << "  \"solver\": \"" << (result.solver_name) << "\",\n";
+        out << R"(  "date": ")" << std::chrono::system_clock::now() << "\",\n";
+        out << R"(  "solver": ")" << (result.solver_name) << "\",\n";
         out << "  \"graph\": \"" << (result.graph_name) << "\",\n";
+        out << "  \"nodes\": \"" << (result.nodes) << "\",\n";
+        out << "  \"edges\": \"" << (result.edges) << "\",\n";
         out << "  \"status\": " << static_cast<int>(result.status) << ",\n";
 
         if (!result.routing_base.empty()) {
@@ -168,16 +167,7 @@ private:
             out << "    \"weight_update_time_microseconds\": "
                 << mwu.mwu_weight_update_time << ",\n";
             out << "    \"average_oracle_time_microseconds\": "
-                << mwu.averageOracleTime() << ",\n";
-
-            out << "    \"oracle_running_times_microseconds\": [";
-            for (std::size_t i = 0; i < mwu.oracle_running_times.size(); ++i) {
-                out << mwu.oracle_running_times[i];
-                if (i + 1 < mwu.oracle_running_times.size()) {
-                    out << ", ";
-                }
-            }
-            out << "]\n";
+                << mwu.averageOracleTime() << "\n";
 
             out << "  },\n";
         }
@@ -212,7 +202,4 @@ private:
     }
 };
 
-
-
-
-#endif //OBLIVIOUSROUTING_UTILS_H
+#endif //OBLIVIOUSROUTING_RESULT_IO_H

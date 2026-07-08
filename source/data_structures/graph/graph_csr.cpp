@@ -6,12 +6,13 @@
 #include "../../../include/data_structures/priority_queue.h"
 #include <stdexcept>
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 
 
 IGraph::NeighborRange GraphCSR::neighbors(int u) const {
-    if (!is_processed)
-        throw std::runtime_error("GraphCSR::neighbors: graph not finalized");
+    assert(u >= 0 && u < n && "GraphCSR::neighbors: node index out of range");
+
 
     int start = head[u];
     int end   = head[u+1];
@@ -96,7 +97,6 @@ void GraphCSR::finalize() {
         for (int e = start; e < end - 1; e++) {
             if (to[e] == to[e+1]) {
                 is_processed = false;
-                throw std::runtime_error("GraphCSR::finalize: duplicate edges detected");
             }
         }
     }
@@ -104,8 +104,8 @@ void GraphCSR::finalize() {
 }
 
 void GraphCSR::addEdge(int u, int v, double cap, double dist) {
-    if (u<0 || u>=n || v<0 || v>=n)
-        throw std::out_of_range("GraphCSR::addEdge: node index");
+    assert(u >= 0 && u < n && "GraphCSR::addEdge: node index u out of range");
+
 
     // only allow undirected edges to be passed
     if (u > v) {return;};
@@ -127,50 +127,37 @@ void GraphCSR::addEdge(int u, int v, double cap, double dist) {
 const int GraphCSR::getAntiEdge(int e) const {
     const auto& [u, v] = getEdgeEndpoints(e);
     int anti_e = getEdgeId(v, u);
-    if (anti_e == INVALID_EDGE_ID) {
-        throw std::runtime_error("getAntiEdge: reverse edge not found");
-    }
+    assert(anti_e != INVALID_EDGE_ID && "GraphCSR::getAntiEdge: anti-edge not found");
+
     return anti_e;
 }
 
 std::pair<int, int> GraphCSR::getEdgeEndpoints(int e) const {
-    if (!is_processed) {
-        throw std::runtime_error("edgeEndpoints: graph not finalized");
-    }
-    if (e < 0 || e >= m) {
-        throw std::out_of_range("edgeEndpoints: edge id out of range");
-    }
+    assert(is_processed && "GraphCSR::getEdgeEndpoints: graph not finalized");
+    assert(e >= 0 && e < m && "GraphCSR::getEdgeEndpoints: edge id out of range");
+
     return {from[e], to[e]};
 }
 
 double GraphCSR::getEdgeCapacity(int edge_id) const {
-    if (edge_id >= m || edge_id < 0) {
-        throw std::out_of_range("Edge index out of range");
-    }
-    if (capacity.size() < edge_id) {
-        throw std::runtime_error("Edge index exceeds capacity size");
-    }
+    assert(edge_id < m && edge_id >= 0 && "Edge index out of range");
+    assert(capacity.size() >= edge_id && "Edge index exceeds capacity size");
+
     return capacity[edge_id];
 }
 
 double GraphCSR::getEdgeDistance(int edge_id) const {
-    if (edge_id >= m || edge_id < 0) {
-        throw std::out_of_range("Edge index out of range");
-    }
-    if (distance.size() < edge_id) {
-        throw std::runtime_error("Edge index exceeds distance size");
-    }
+    assert(edge_id < m && edge_id >= 0 && "Edge index out of range");
+    assert(distance.size() >= edge_id && "Edge index exceeds distance size");
+
     return distance[edge_id];
 }
 
-bool GraphCSR::updateEdgeDistance(int e, double dist) {
+Result<void> GraphCSR::updateEdgeDistance(int e, double dist) {
+    assert(e < m && e >= 0 && "Edge index out of range");
+    assert(distance.size() >= e && "Edge index exceeds distance size");
     bool ok = false;
-    if (e > m || e < 0) {
-        throw std::out_of_range("Edge index out of range");
-    }
-    if (distance.size() < e) {
-        throw std::out_of_range("Edge index exceeds distance size");
-    }
+
     distance[e] = dist;
 
     // also update the reverse edge if undirected
@@ -181,15 +168,15 @@ bool GraphCSR::updateEdgeDistance(int e, double dist) {
         distance[rev_edge_id] = dist;
         ok = true;
     }else {
-        throw std::runtime_error("Reverse edge not found");
+        ok = false;
+        return makeErrorMessage(ErrorCode::RuntimeError, "Reverse edge not found");
     }
-    return ok;
+    return {};
 }
 
 
 const int GraphCSR::getEdgeId(int u, int v) const {
-    if (!is_processed)
-        throw std::runtime_error("GraphCSR::getEdgeId: graph not finalized");
+    assert(is_processed && "GraphCSR::getEdgeId: graph not finalized");
 
     int start = head[u];
     int end   = head[u+1];
@@ -204,8 +191,7 @@ double GraphCSR::getEdgeCapacity(int u, int v) const {
     if ( u > v) std::swap(u, v);
 
     int e = getEdgeId(u, v);
-    if (e == INVALID_EDGE_ID)
-        throw std::runtime_error("Edge not found");
+    assert(e != INVALID_EDGE_ID && "GraphCSR::getEdgeCapacity: Edge not found");
     return capacity[e];
 }
 
@@ -223,15 +209,15 @@ double GraphCSR::getEdgeDistance(int u, int v) const  {
             return distance[e];
         }
     }
-    throw std::runtime_error("Edge not found");
+    assert(false && "GraphCSR::getEdgeDistance: Edge not found");
 }
 
-bool GraphCSR::updateEdgeDistance(int u, int v, double dist) {
+Result<void> GraphCSR::updateEdgeDistance(int u, int v, double dist) {
     int source = u;
     int target = v;
 
     if (source < 0 || source >= n || target < 0 || target >= n) {
-        throw std::out_of_range("Node index out of range");
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Node index out of range");
     }
 
     if (source > target) std::swap(source, target);
@@ -243,7 +229,7 @@ bool GraphCSR::updateEdgeDistance(int u, int v, double dist) {
         distance[e_source_target] = dist;
         ok = true;
     }else {
-        throw std::runtime_error("Edge not found");
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Edge not found");
     }
 
     if ( ok ) {
@@ -254,10 +240,10 @@ bool GraphCSR::updateEdgeDistance(int u, int v, double dist) {
             ok &= true;
         } else {
             ok = false;
-            throw std::runtime_error("Reverse edge not found");
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Reverse edge not found");
         }
     }
-    return ok;
+    return {};
 }
 
 

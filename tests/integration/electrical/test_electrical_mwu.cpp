@@ -13,9 +13,9 @@ TEST_CASE("Electrical Flow - Simple Oblivious Routing solve", "[ElectricalFlowMW
 
     RoutingEngine engine;
     auto result = engine.solve(*g, cfg, cfg.solvers[0]);
+    checkForException(result);
 
-    REQUIRE(result);
-    double obl_ratio = result->oblivious_ratio;
+    double obl_ratio = result.value().oblivious_ratio;
     REQUIRE(obl_ratio >= 0); // Oblivious ratio should be at least 1
 }
 
@@ -28,8 +28,9 @@ TEST_CASE("Electrical flow solver solves a simple path graph end-to-end",
     RoutingEngine engine;
 
     auto result = engine.solve(*g, cfg, cfg.solvers.front());
+    checkForException(result);
 
-    REQUIRE(result->oblivious_ratio < 5.0);
+    REQUIRE(result.value().oblivious_ratio < 5.0);
 }
 
 TEST_CASE("Electrical flow solver can be run repeatedly on the same small graph",
@@ -43,9 +44,12 @@ TEST_CASE("Electrical flow solver can be run repeatedly on the same small graph"
     auto first = engine.solve(*g, cfg, cfg.solvers.front());
     auto second = engine.solve(*g, cfg, cfg.solvers.front());
 
+    if (!first || !second) {
+        FAIL("engine.solve returned error.");
+    }
 
-    REQUIRE(first->oblivious_ratio >= 0.5);
-    REQUIRE(second->oblivious_ratio >= 0.5);
+    REQUIRE(first.value().oblivious_ratio >= 0.5);
+    REQUIRE(second.value().oblivious_ratio >= 0.5);
 }
 
 TEST_CASE("Electrical flow solver handles non-uniform capacities",
@@ -65,6 +69,7 @@ TEST_CASE("Electrical flow solver handles non-uniform capacities",
 
     RoutingEngine engine;
     auto result = engine.solve(*g, cfg, cfg.solvers.front());
+    checkForException(result);
 
     requireValidRoutingResult(result);
 }

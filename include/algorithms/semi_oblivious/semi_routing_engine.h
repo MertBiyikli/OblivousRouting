@@ -8,6 +8,7 @@
 #include "../../data_structures/graph/Igraph.h"
 #include "algorithms/oblivious/oblivious_solver.h"
 #include "preprocessing/candidate_routing_scheme.h"
+#include "core/errors.h"
 
 class SemiSolverRoutingEngine  {
 public:
@@ -17,12 +18,12 @@ public:
     explicit SemiSolverRoutingEngine(std::shared_ptr<ILinearObliviousSolverBase> solver)
         : solver_(std::move(solver)) {}
 
-    CandidateRoutingScheme preprocess(const IGraph& graph);
+    Result<CandidateRoutingScheme> preprocess(const IGraph& graph);
     void extractPath(const IGraph& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const;
     virtual const std::string getSolverBase() const;
     bool dfsDecompose(const IGraph& g,int u,int t,std::vector<double>& residual,std::vector<int>& currentPath,std::vector<bool>& visited) const;
 
-private:
+
     std::shared_ptr<ILinearObliviousSolverBase> solver_;
 };
 

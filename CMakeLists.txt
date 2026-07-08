@@ -11,7 +11,7 @@ project(ObliviousRouting
 option(BUILD_TESTS "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -37,9 +37,8 @@ add_library(oblivious_routing_core STATIC
         include/routing/routing_engine.h
 
         include/io/graph_io.h
-        source/io/graph_io.cpp
         include/io/solver_io.h
-        include/io/parse_argurment_io.h
+        include/io/parse_argument_io.h
         include/io/demand_io.h
 
         include/data_structures/graph/Igraph.h
@@ -95,23 +94,27 @@ add_library(oblivious_routing_core STATIC
         include/algorithms/semi_oblivious/semi_oblivious_solver.h
         include/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h
         source/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.cpp
-        include/core/utils.h
+        include/core/config.h
         include/routing/routing_result.h
         include/core/solver.h
         include/algorithms/lp/offline_solver.h
         include/core/types.h
-        source/core/routing_engine.cpp
+        source/routing/routing_engine.cpp
         include/routing/storage/linear_routing_table.h
         include/routing/storage/allpair_routing_table.h
         source/routing/storage/linear_routing_table.cpp
         source/routing/storage/allpair_routing_table.cpp
         include/routing/routing_runner.h
+        include/routing/routing_validation.h
+        source/routing/routing_validation.cpp
         include/algorithms/semi_oblivious/semi_routing_runner.h
         include/algorithms/oblivious/oblivious_routing_runner.h
         source/algorithms/semi_oblivious/semi_routing_engine.cpp
         source/algorithms/semi_oblivious/semi_routing_runner.cpp
         source/algorithms/semi_oblivious/semi_oblivious_solver.cpp
         source/algorithms/oblivious/oblivious_routing_runner.cpp
+        include/core/errors.h
+        include/io/result_io.h
 )
 
 target_include_directories(oblivious_routing_core

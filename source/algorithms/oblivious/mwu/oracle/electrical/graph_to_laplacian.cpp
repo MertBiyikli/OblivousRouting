@@ -29,11 +29,8 @@ void GraphToLaplacian::init(const IGraph& graph) {
 }
 
 double GraphToLaplacian::getEdgeWeight(int e) const {
-    if(e >= 0 && e < weights.size()) {
-        return weights[e];
-    }else{
-        throw std::out_of_range("Edge index out of range in getEdgeWeight(e)");
-    }
+    assert(e >= 0 && e < weights.size());
+    return weights[e];
 }
 
 double GraphToLaplacian::getEdgeWeight(int u, int v) const {
@@ -44,7 +41,8 @@ double GraphToLaplacian::getEdgeWeight(int u, int v) const {
             return weights[idx];
         }
     }
-    throw std::invalid_argument("Edge not found in getEdgeWeight(u,v)");
+    assert(false && "Edge not found in getEdgeWeight(u,v)");
+    return 0.0;
 }
 
 void GraphToLaplacian::setEdgeWeight(int e, double w) {
@@ -52,35 +50,35 @@ void GraphToLaplacian::setEdgeWeight(int e, double w) {
     weights[e] = w;
 }
 
-void GraphToLaplacian::setEdgeWeight(int u, int v, double w) {
+Result<void> GraphToLaplacian::setEdgeWeight(int u, int v, double w) {
     assert(u >= 0 && u < head.size() - 1);
     assert(v >= 0 && v < head.size() - 1);
     for (int idx = head[u]; idx < head[u + 1]; ++idx) {
         if (to[idx] == v) {
             weights[idx] = w;
-            return;
+            return {};
         }
     }
-    throw std::invalid_argument("Edge not found in setEdgeWeight(u,v)");
+    return makeErrorMessage(ErrorCode::InvalidArgument, "Edge not found in laplacian model.");
 }
 
-void GraphToLaplacian::setLaplacianIndex(int u, int v, int idx) {
+Result<void> GraphToLaplacian::setLaplacianIndex(int u, int v, int idx) {
     assert(u >= 0 && u < head.size() - 1);
     assert(v >= 0 && v < head.size() - 1);
     if (u == v) {
         laplacian_indices_for_diagonal_elements[u] = idx;
-        return;
+        return {};
     }
     for (int e = head[u]; e < head[u + 1]; ++e) {
         if (to[e] == v) {
             laplacian_indices[e] = idx;
-            return;
+            return {};
         }
     }
-    throw std::invalid_argument("Edge not found in setLaplacianIndex(u,v)");
+    return makeErrorMessage(ErrorCode::InvalidArgument, "Edge not found in laplacian model.");
 }
 
-int GraphToLaplacian::getLaplacianIndex(int u, int v) const {
+Result<int> GraphToLaplacian::getLaplacianIndex(int u, int v) const {
     assert(u >= 0 && u < head.size() - 1);
     assert(v >= 0 && v < head.size() - 1);
     if (u == v) {
@@ -91,5 +89,5 @@ int GraphToLaplacian::getLaplacianIndex(int u, int v) const {
             return laplacian_indices[e];
         }
     }
-    throw std::invalid_argument("Edge not found in getLaplacianIndex(u,v)");
+    return makeErrorMessage(ErrorCode::InvalidArgument, "Edge not found in laplacian model.");
 }

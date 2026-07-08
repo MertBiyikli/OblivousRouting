@@ -8,7 +8,6 @@
 #include "../../../data_structures/graph/Igraph.h"
 #include "../../../utils/demands.h"
 #include "../../../routing/routing_table.h"
-#include "core/utils.h"
 #include "../preprocessing/candidate_routing_scheme.h"
 #include <optional>
 
@@ -20,7 +19,7 @@ struct SemiObliviousOptimizationResult {
 class ISemiObliviousRoutingLoadOptimizer {
 public:
     virtual ~ISemiObliviousRoutingLoadOptimizer() = default;
-    virtual SemiObliviousOptimizationResult optimize(
+    virtual Result<SemiObliviousOptimizationResult> optimize(
         const IGraph& g,
         const CandidateRoutingScheme& candidate_routing_scheme,
         const demands& Demands) = 0;

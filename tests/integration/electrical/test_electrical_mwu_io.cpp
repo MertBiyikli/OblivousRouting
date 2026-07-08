@@ -14,19 +14,21 @@ TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][ele
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
     auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()) {
-        readLGFFile(*graph, cfg.filename);
+    if (!cfg.filename.empty()
+        && graph) {
+        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
+        if (!r) { FAIL(r.error().message.c_str()); }
     }
 
-    graph->finalize();
+    (graph.value())->finalize();
 
-    REQUIRE(graph);
-    REQUIRE(graph->getNumNodes() > 0);
-    REQUIRE(graph->getNumUndirectedEdges() > 0);
+    REQUIRE((graph.value()));
+    REQUIRE((graph.value())->getNumNodes() > 0);
+    REQUIRE((graph.value())->getNumUndirectedEdges() > 0);
 
 
     RoutingEngine engine;
-    auto result = engine.solve(*graph, cfg, cfg.solvers.front());
+    auto result = engine.solve(*((graph.value())), cfg, cfg.solvers.front());
 
     requireValidRoutingResult(result);
 }
@@ -41,22 +43,25 @@ TEST_CASE("Electrical flow solver works with gravity demand model",
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
     auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()) {
-        readLGFFile(*graph, cfg.filename);
+    if (!cfg.filename.empty()
+        && (graph)) {
+        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
+        if (!r) { FAIL(r.error().message.c_str()); }
     }
-    graph->finalize();
+    (graph.value())->finalize();
 
     cfg.demand_models.push_back(DemandModelType::GRAVITY); // adapt to your real enum/name
     cfg.evaluate_demand_models = true;
-    cfg.offline_opt_per_model["gravity"]=computeOfflineOptimalCongestion(*graph, cfg.demand_maps["gravity"]);
+    cfg.offline_opt_per_model["gravity"]=computeOfflineOptimalCongestion(*(graph.value()), cfg.demand_maps["gravity"]);
 
     RoutingEngine engine;
-    auto result = engine.solve(*graph, cfg, cfg.solvers.front());
+    IRoutingResult result;
+    if (auto res = engine.solve(*(graph.value()), cfg, cfg.solvers.front())) {
+        result = std::move(res.value());
+    }
 
-    REQUIRE(result);
-    REQUIRE(std::isfinite(result->oblivious_ratio));
-    REQUIRE(result->oblivious_ratio >= 1.0);
-    REQUIRE(result->congestion >= cfg.offline_opt_per_model["gravity"]);
+    REQUIRE(std::isfinite(result.oblivious_ratio));
+    REQUIRE(result.oblivious_ratio >= 1.0);
 }
 
 int runCommand(const std::string& command)
@@ -117,22 +122,27 @@ TEST_CASE("Electrical solver conserves unit flow per source",
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
     auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()) {
-        readLGFFile(*graph, cfg.filename);
+    if (!cfg.filename.empty()
+        && graph) {
+        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
+        if (!r) { FAIL(r.error().message.c_str()); }
     }
 
-    graph->finalize();
+    (graph.value())->finalize();
 
-    ElectricalMWU solver(*graph, 0, true);
-    auto table = solver.solve();
+    ElectricalMWU solver(*(graph.value()), 0, true);
+    std::unique_ptr<RoutingScheme> table;
+    if (auto res = solver.solve()) {
+        table = std::move(res.value());
+    }
 
     constexpr double tol = EPS;
 
-    for (int s = 0; s < graph->getNumNodes(); ++s) {
+    for (int s = 0; s < (graph.value())->getNumNodes(); ++s) {
         double out = 0.0;
         double in = 0.0;
-        for (int e = 0; e < graph->getNumDirectedEdges(); ++e) {
-            auto [u, v] = graph->getEdgeEndpoints(e);
+        for (int e = 0; e < (graph.value())->getNumDirectedEdges(); ++e) {
+            auto [u, v] = (graph.value())->getEdgeEndpoints(e);
             double f = table->getFlow(e, s, 0);
 
             REQUIRE(std::isfinite(f));

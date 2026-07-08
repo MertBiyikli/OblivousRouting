@@ -28,34 +28,35 @@ class demands {
 // base class for the demand models
 class DemandModel {
 public:
+    int seed = 42;
     DemandModel() = default;
     virtual ~DemandModel() = default;
-    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin = 1.0) = 0;
+    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin = 1.0) = 0;
 };
 
 
 class BimodalModel : public DemandModel {
 public:
     BimodalModel() = default;
-    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class UniformModel : public DemandModel {
 public:
     UniformModel() = default;
-    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class GravityModel : public DemandModel {
 public:
     GravityModel() = default;
-    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class GaussianModel : public DemandModel {
 public:
     GaussianModel() = default;
-    virtual demands generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 

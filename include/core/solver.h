@@ -7,6 +7,7 @@
 
 #include "routing/routing_table.h"
 #include "data_structures/graph/Igraph.h"
+#include "errors.h"
 #include <memory>
 
 class ISolver {
@@ -17,6 +18,6 @@ public:
     explicit ISolver(IGraph& g) : graph(g) {}
     virtual ~ISolver() = default;
 
-    virtual std::unique_ptr<RoutingScheme> solve() = 0;
+    virtual Result<std::unique_ptr<RoutingScheme>> solve() = 0;
 };
 #endif //OBLIVIOUSROUTING_SOLVER_H

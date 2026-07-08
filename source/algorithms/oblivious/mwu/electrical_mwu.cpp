@@ -21,7 +21,7 @@ boost::property_tree::ptree make_amg_params() {
     return pt;
 }
 
-void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
+Result<void> ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
 {
     auto t0 = timeNow();
     n = graph.getNumNodes();
@@ -38,7 +38,10 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
     initEdgeDistances();
 
     boost::property_tree::ptree params = make_amg_params();
-    initAMGSolver(params);
+    auto amg_init = initAMGSolver(params);
+    if (!amg_init) {
+        return getError(amg_init);
+    }
 
     if ( use_sketching ) {
         // compute Sketch matrix
@@ -52,19 +55,20 @@ void ElectricalMWU::init( bool debug,  boost::property_tree::ptree _params)
         X = (B.transpose() * UCt).sparseView(); // n × ℓ
     }
     metrics.solve_time += duration(timeNow()-t0);
+    return {};
 }
 
 
-void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
+Result<void> ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
     // init AMG
     amg = std::make_unique<LaplacianSolver>();
-    if (amg == nullptr) {
-        std::cerr << "Failed to create AMG solver instance.\n";
-        return;
+    if (!amg) {
+       return makeErrorMessage(ErrorCode::InvalidSolver, "Failed to create AMG solver instance.");
     }
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
     amg->setSolverParams(_params);
     amg->init(graph, edge_weights, n, edges, debug);
+    return {};
 }
 
 /*
@@ -73,68 +77,69 @@ void ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
  * solve for potentials, and then add the computed flow to the routing table.
  * After processing all sources, we compute the approximate load and update edge distances accordingly.
  */
-void ElectricalMWU::run(LinearRoutingTable &table) {
+Result<void> ElectricalMWU::run(LinearRoutingTable &table) {
 
-    auto t0 = timeNow();
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero(n);
-    Eigen::VectorXd potentials(n);
     std::vector<double> load(m, 0.0);
-    metrics.solve_time += duration(timeNow() - t0);
+
+    Result<Eigen::VectorXd> potentials(n);
 
 
     for (int t = 0; t < metrics.iteration_count; ++t) {
 
+        auto t0 = timeNow();
         auto oracle_iteration = 0.0;
         // --- main loop over sources (u -> x_fixed) ---
         for (int u = 0; u < n; ++u) {
             if (u == x_fixed) continue;
 
-            t0 = timeNow();
             rhs.setZero();
             rhs[u]       =  1.0;
             rhs[x_fixed] = -1.0;
 
-            potentials = amg->solve(rhs, epsilon_L);/*
-            if (!potentials.allFinite()) {
-                std::cerr << "[ElectricalMWU] first non-finite solve\n"
-                          << "  iteration = " << t << "\n"
-                          << "  source    = " << u << "\n"
-                          << "  rhs.sum() = " << rhs.sum() << "\n"
-                          << "  min_weight = " << *std::min_element(edge_weights.begin(), edge_weights.end()) << "\n"
-                          << "  max_weight = " << *std::max_element(edge_weights.begin(), edge_weights.end()) << "\n"
-                          << "  min_distance = " << *std::min_element(edge_distances.begin(), edge_distances.end()) << "\n"
-                          << "  max_distance = " << *std::max_element(edge_distances.begin(), edge_distances.end()) << "\n"
-                          << "  cap_X = " << cap_X << "\n";
-                throw std::runtime_error("ElectricalMWU: AMG solve produced non-finite potentials");
-            }*/
+            potentials = amg->solve(rhs, epsilon_L);
+
+            if (!potentials) {
+                return getError(potentials);
+            }
             double oracle_time_iter = duration(timeNow() - t0);
             oracle_iteration += oracle_time_iter;
 
             // addFlowToTable measures its own time and adds to transformation_time
-            addFlowToTable(u, potentials, table);
+            addFlowToTable(u, potentials.value(), table);
 
             // solve_time includes setup_time + oracle_time (but not transformation_time)
             metrics.solve_time += oracle_time_iter;
         }
 
         t0 = timeNow();
+
+        // Compute the load on the edges
+        Result<void> load_comp;
         if (use_sketching) {
-            getApproxLoad(load);
+            load_comp = getApproxLoad(load);
         }else {
-            getExactLoad(load);
+            load_comp = getExactLoad(load);
+        }
+
+        if (!load_comp) {
+            return getError(load_comp);
         }
         metrics.load_computation_time += duration(timeNow()-t0);
 
         t0 = timeNow();
-        updateDistances(load);
+        auto update = updateDistances(load);
+        if (!update) {
+            return getError(update);
+        }
         double weight_update_time = duration(timeNow() - t0);
         metrics.mwu_weight_update_time += weight_update_time;
 
         metrics.oracle_running_times.push_back(oracle_iteration);
     }
+    return {};
 }
 
-double out_going_9 = 0;
 /*
  * This function takes the potentials obtained from solving the Laplacian system
  * and computes the flow on each edge based on the potential difference and edge resistances.
@@ -163,14 +168,6 @@ void ElectricalMWU::addFlowToTable(const int& source,
 
         if (!std::isfinite(signed_flow)) {
             continue;
-            std::cerr << "[ElectricalMWU::addFlowToTable] non-finite signed flow\n"
-                      << "  source=" << source << "\n"
-                      << "  edge_index=" << e << "\n"
-                      << "  mapped_edge=(" << a << "," << b << ")\n"
-                      << "  edge_weight=" << edge_weights[e] << "\n"
-                      << "  potential[a]=" << potential[a] << "\n"
-                      << "  potential[b]=" << potential[b] << "\n";
-            //throw std::runtime_error("ElectricalMWU: non-finite signed flow");
         }
 
         if (std::abs(signed_flow) <= EPS) {
@@ -193,26 +190,9 @@ void ElectricalMWU::addFlowToTable(const int& source,
 
         const int directed_edge_id = graph.getEdgeId(from, to);
 
-#ifndef NDEBUG
-        const auto [stored_from, stored_to] =
-            graph.getEdgeEndpoints(directed_edge_id);
-
-        if (stored_from != from || stored_to != to) {
-            std::cerr << "[ElectricalMWU::addFlowToTable] directed edge lookup mismatch\n"
-                      << "  requested=(" << from << "," << to << ")\n"
-                      << "  returned=(" << stored_from << "," << stored_to << ")\n";
-            throw std::runtime_error("ElectricalMWU: directed edge lookup mismatch");
-        }
-#endif
 
         table.addFlow(directed_edge_id, source, amount);
-/*
-        if (source == 9 && (from == 9 || to == 9)) {
-            std::cout << "[ElectricalMWU] source 9 stores "
-                      << amount << " on " << from << " -> " << to
-                      << " from mapped edge (" << a << "," << b << ")"
-                      << " signed_flow=" << signed_flow << "\n";
-        }*/
+
     }
 
     metrics.transformation_time += duration(timeNow() - t0);
@@ -227,9 +207,9 @@ void ElectricalMWU::setEpsilon(double eps) {
  * This function computes the approximate load on each edge based on the current potentials obtained from solving the Laplacian system.
  * It uses the sketching matrix to project the flow differences into a lower-dimensional space and updates the approximate load estimates accordingly.
  */
-void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
+Result<void> ElectricalMWU::getApproxLoad(std::vector<double>& load) {
     const int ell = X.cols();
-    Eigen::VectorXd rhs(n), sol(n);
+    Eigen::VectorXd rhs(n);
     Eigen::VectorXd d(m);
 
     edge_diffs.resize(static_cast<size_t>(m) * ell);
@@ -237,11 +217,15 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
 
     for (int i = 0; i < ell; ++i) {
         rhs = X.col(i);
-        sol = amg->solve(rhs);
+        auto sol = amg->solve(rhs);
+
+        if (!sol) {
+            return getError(sol);
+        }
 
         for (int e = 0; e < m; ++e) {
             const auto& [u,v] = edges[e];
-            d[e] = sol[v] - sol[u];             // signed diff consistent with B
+            d[e] = sol.value()[v] - sol.value()[u];             // signed diff consistent with B
             edge_diffs[size_t(e) * ell + i] = std::abs(d[e]); // keep abs for median
         }
     }
@@ -265,6 +249,7 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         const double med = arr[ell >> 1];
         load[e] = edge_weights[e] * med;
     }
+    return {};
 }
 
 /**
@@ -274,9 +259,8 @@ void ElectricalMWU::getApproxLoad(std::vector<double>& load) {
  * where b_e L† b_f^T is the potential difference across edge e when unit current is injected on edge f.
  * Final formula: load_w(e) = w_e * Σ_f |b_e L† b_f^T|
  */
-void ElectricalMWU::getExactLoad(std::vector<double>& load) {
-    Eigen::VectorXd rhs(n), sol(n);
-
+Result<void> ElectricalMWU::getExactLoad(std::vector<double>& load) {
+    Eigen::VectorXd rhs(n);
     // Initialize load to zero
     std::fill(load.begin(), load.end(), 0.0);
 
@@ -290,24 +274,28 @@ void ElectricalMWU::getExactLoad(std::vector<double>& load) {
         rhs[v_f] = -1.0;
 
         // Solve Laplacian system: L * potential = rhs
-        sol = amg->solve(rhs);
+        auto sol = amg->solve(rhs);
+        if (!sol) {
+            return getError(sol);
+        }
 
         // For each edge e, compute load contribution from this demand
         // load contribution = w_e * |potential_diff_e|
         // where potential_diff_e = b_e^T * L† * b_f = sol[v_e] - sol[u_e]
         for (int e = 0; e < m; ++e) {
             const auto& [u_e, v_e] = edges[e];
-            double pot_diff = sol[v_e] - sol[u_e];  // b_e^T L† b_f^T
+            double pot_diff = sol.value()[v_e] - sol.value()[u_e];  // b_e^T L† b_f^T
             load[e] += edge_weights[e] * std::abs(pot_diff);
         }
     }
+    return {};
 }
 
 /*
  * This function updates the edge distances based on the computed load. It iterates over all edges,
  * and for those with positive load, it updates the edge distance using the formula: x_e *= (1 + (1/(2*roh)) * load[e]).
  */
-void ElectricalMWU::updateDistances(const std::vector<double>& load) {
+Result<void> ElectricalMWU::updateDistances(const std::vector<double>& load) {
     cap_X = 0.0;
     for (int e = 0; e < m; ++e) {
         const double le = load[e];
@@ -330,22 +318,31 @@ void ElectricalMWU::updateDistances(const std::vector<double>& load) {
     }
 
 
-    amg->updateAllEdges(edge_weights, edges);
+    auto update = amg->updateAllEdges(edge_weights, edges);
+    if (!update) {
+        return getError(update);
+    }
     amg->updateSolver();
+
+    return {};
 }
 
 /*
  * After computing the flows in the main loop, we need to scale them down by the number of iterations to get the average flow.
  */
-void ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
+Result<void> ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     // scale the flow from the adjacency list flow
-    auto start_transfo = timeNow();
+    auto time_transfo = timeNow();
+
     if (metrics.iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(metrics.iteration_count);
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) // dont use m here. m is undirected edges only
             for (double &val : table.src_flows[e]) val *= (inv_iters);
+    }else {
+        return makeErrorMessage(ErrorCode::NumericalFailure, "Dividing by zero.");
     }
-    metrics.transformation_time += duration(timeNow() - start_transfo);
+    metrics.transformation_time += duration(timeNow() - time_transfo);
+    return {};
 }
 
 void ElectricalMWU::initEdgeDistances() {
@@ -387,7 +384,9 @@ void ElectricalMWU::extractEdges() {
 Eigen::SparseMatrix<double> ElectricalMWU::buildIncidence()
 {
     Eigen::SparseMatrix<double> B(m, n);
-    std::vector<Eigen::Triplet<double>> T; T.reserve(2*m);
+    std::vector<Eigen::Triplet<double>> T;
+    T.reserve(2*m);
+
     for (int e = 0; e < m; ++e) {
         auto [u,v] = edges[e]; // u < v
         T.emplace_back(e, u, -1.0);

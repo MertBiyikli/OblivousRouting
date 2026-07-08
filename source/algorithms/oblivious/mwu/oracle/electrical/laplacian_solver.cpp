@@ -34,7 +34,7 @@ void LaplacianSolver::init(IGraph& g, std::vector<double>& _adj_edge_weights, in
      buildLaplacian();
  }
 
-void LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges) {
+Result<void> LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges) {
      assert(new_weights.size() == edges.size());
 
      for (size_t e = 0; e < edges.size(); ++e) {
@@ -47,13 +47,16 @@ void LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, con
          if (std::abs(delta) < EPS) continue;
 
 
-         int uu = weight_model.getLaplacianIndex(u, u),
+         auto uu = weight_model.getLaplacianIndex(u, u),
              vv = weight_model.getLaplacianIndex(v, v),
              uv = weight_model.getLaplacianIndex(u, v),
              vu = weight_model.getLaplacianIndex(v, u);
 
-         if (uu == -1 || vv == -1 || uv == -1 || vu == -1) {
-             throw std::runtime_error("updateAllEdges: missing matrix entry for edge update");
+         if (!uu
+             || !vv
+             || !uv
+             || !vu) {
+             return getError(uu);
          }
 
 
@@ -63,14 +66,15 @@ void LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, con
 
          // --- Update CSR Laplacian entries ---
          // Diagonal contributions
-         m_values[uu] += delta;
-         m_values[vv] += delta;
+         m_values[uu.value()] += delta;
+         m_values[vv.value()] += delta;
 
          // Off-diagonal contributions
-         m_values[uv] -= delta;
-         m_values[vu] -= delta;
+         m_values[uv.value()] -= delta;
+         m_values[vu.value()] -= delta;
 
      }
+    return {};
  }
 
 
@@ -169,11 +173,14 @@ void LaplacianSolver::buildLaplacian() {
 
 
 
-std::vector<double> LaplacianSolver::solve(const std::vector<double> &b, double eps) {
+Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double> &b, double eps) {
     if (b.size() != (size_t)n)
-        throw std::runtime_error("RHS size mismatch");
+        return makeErrorMessage(ErrorCode::RuntimeError, "RHS size mismatch");
 
-    if (!hierarchy) throw std::runtime_error("AMGSolver: hierarchy not built");
+    if (!hierarchy)
+        return makeErrorMessage(ErrorCode::RuntimeError, "Solver not initialized");
+
+    std::vector<double> bvec_buffer, x_buffer;
 
     x_buffer.assign(n, 0.0);
     bvec_buffer.assign(b.begin(), b.end());
@@ -200,26 +207,38 @@ std::vector<double> LaplacianSolver::solve(const std::vector<double> &b, double 
         solver(*hierarchy, bvec_buffer, x_buffer);
     }
 
-    if (use_dirichlet) {
-        x_buffer[dirichlet_root] = 0.0;
-    } else {
-        double mean_x = std::reduce(x_buffer.begin(), x_buffer.end(), 0.0) / n;
-        for (double &v : x_buffer) v -= mean_x;
-    }
+/*
+    if (!allFinite(x_buffer)) {
+        return makeErrorMessage(ErrorCode::NumericalFailure, "Non-finite solve in electrical flow computation.");
+    }*/
 
     return x_buffer;
 }
 
+bool LaplacianSolver::allFinite(const std::vector<double>& vec) {
+    for (const double& v : vec) {
+        if (!std::isfinite(v)) {
+            return false;
+        }
+    }
+    return true;
+}
 
-Eigen::VectorXd LaplacianSolver::solve(const Eigen::VectorXd& b, double eps) {
+
+Result<Eigen::VectorXd> LaplacianSolver::solve(const Eigen::VectorXd& b, double eps) {
     const int n_ = b.size();
     std::vector<double> bvec(n_);
     std::memcpy(bvec.data(), b.data(), n_ * sizeof(double));
 
-    result.clear();
+    Result<std::vector<double>> result;
     result = this->solve(bvec, eps);
-    Eigen::VectorXd eigen_output(result.size());
-    std::memcpy(eigen_output.data(), result.data(), n_ * sizeof(double));
+    if (!result) {
+        return getError(result);
+    }
+
+    Eigen::VectorXd eigen_output(result.value().size());
+    std::memcpy(eigen_output.data(), result.value().data(), n_ * sizeof(double));
+
     return eigen_output;
 }
 

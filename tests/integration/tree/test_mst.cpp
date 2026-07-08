@@ -10,7 +10,7 @@
 
 #include "../../common/utils.h"
 
-#include "algorithms/mwu/oracle/tree/mst/mst_algo.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h"
 
 using namespace integration;
 

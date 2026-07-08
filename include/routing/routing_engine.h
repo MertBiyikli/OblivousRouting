@@ -6,16 +6,20 @@
 #define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
 #include "routing_result.h"
-#include "../core/utils.h"
+#include "../core/errors.h"
 #include <optional>
 #include "../algorithms/oblivious/mwu/electrical_mwu.h"
 #include "../algorithms/oblivious/mwu/tree_mwu.h"
-#include "io/parse_argurment_io.h"
+#include "io/parse_argument_io.h"
 
 
 class RoutingEngine {
 public:
-    std::optional<IRoutingResult> solve(
+
+    Result<void> entry(int argc, char **argv);
+
+
+    Result<IRoutingResult> solve(
         IGraph& graph,
         const Config& cfg,
         SolverType type

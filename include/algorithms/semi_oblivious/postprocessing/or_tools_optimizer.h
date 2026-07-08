@@ -11,7 +11,7 @@
 class OrToolsSemiObliviousLoadOptimizer
     : public ISemiObliviousRoutingLoadOptimizer {
 public:
-    SemiObliviousOptimizationResult optimize(
+    Result<SemiObliviousOptimizationResult> optimize(
         const IGraph& graph,
         const CandidateRoutingScheme& candidateScheme,
         const demands& demand

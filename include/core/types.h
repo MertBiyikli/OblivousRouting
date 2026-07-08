@@ -24,4 +24,32 @@ enum class SolverType {
     SEMI_TREE
 };
 
+enum class DemandModelType {
+    GRAVITY,
+    BIMODAL,
+    GAUSSIAN,
+    UNIFORM,
+    NONE
+};
+
+enum class GraphFormat {
+    CSR,
+    ADJLIST
+};
+
+
+enum class OutputFormat {
+    TEXT,
+    JSON
+};
+
+enum class ResultStatus {
+    OK,
+    ERROR_INVALID_SOLVER,
+    ERROR_INVALID_ROUTING_SCHEME,
+    ERROR_MISSING_DEMAND_MODELS,
+    ERROR_EXCEPTION
+};
+
+
 #endif //OBLIVIOUSROUTING_TYPES_H

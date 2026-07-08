@@ -10,16 +10,17 @@
 
 class ObliviousSolverRunner final : public IRoutingExperimentRunner {
 public:
-    IRoutingResult run(IGraph& graph,const Config& cfg,SolverType type) const override;
+    Result<IRoutingResult> run(IGraph& graph,const Config& cfg,SolverType type) const override;
 
-private:
-    static void appendMetricsIfAvailable(const std::unique_ptr<ISolver>& solver,IRoutingResult& result) {
+    template<typename SolverPtr>
+    static void appendMetricsIfAvailable(const SolverPtr& solver,IRoutingResult& result) {
         if (const auto* mwu = dynamic_cast<const MWUFramework*>(solver.get())) {
             result.mwu_metrics = mwu->getMetrics();
         }
     }
 
-    static void appendObjectiveIfAvailable(const std::unique_ptr<ISolver>& solver,const RoutingScheme& scheme,IRoutingResult& result) {
+    template<typename SolverPtr>
+    static void appendObjectiveIfAvailable(const SolverPtr& solver,const RoutingScheme& scheme,IRoutingResult& result) {
         if (const auto* linearScheme =
                 dynamic_cast<const LinearRoutingScheme*>(&scheme)) {
             result.oblivious_ratio = linearScheme->computeObliviousRatio();

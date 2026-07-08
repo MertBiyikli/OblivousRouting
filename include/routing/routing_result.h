@@ -8,22 +8,11 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include "../io/demand_io.h"
+#include "io/demand_io.h"
 #include "routing_table.h"
 #include "core/types.h"
+#include "utils/my_math.h"
 
-enum class OutputFormat {
-    TEXT,
-    JSON
-};
-
-enum class ResultStatus {
-    OK,
-    ERROR_INVALID_SOLVER,
-    ERROR_INVALID_ROUTING_SCHEME,
-    ERROR_MISSING_DEMAND_MODELS,
-    ERROR_EXCEPTION
-};
 
 struct DemandEvaluationResult {
     DemandModelType demand_type{};
@@ -53,24 +42,19 @@ public:
 
     [[nodiscard]] bool empty() const {
         return iteration_count == 0
-            && solve_time == 0.0
-            && transformation_time == 0.0
-            && mwu_weight_update_time == 0.0
-            && load_computation_time == 0.0
-            && oracle_running_times.empty();
+            || solve_time == 0.0
+            || transformation_time == 0.0
+            || mwu_weight_update_time == 0.0
+            || load_computation_time == 0.0
+            || oracle_running_times.empty();
     }
 
     [[nodiscard]] double averageOracleTime() const {
-        if (oracle_running_times.empty()) {
-            return -1.0;
-        }
-
         double sum = 0.0;
         for (double t : oracle_running_times) {
             sum += t;
         }
-
-        return sum / static_cast<double>(oracle_running_times.size());
+        return ((sum > EPS) ? sum / static_cast<double>(oracle_running_times.size()) : -1.0);
     }
 
     [[nodiscard]] int getIterationCount() const {
@@ -86,8 +70,9 @@ struct IRoutingResult {
     std::string solver_name;
     std::string routing_base;
     std::string graph_name;
+    int nodes, edges;
     SolverType type;
-    double oblivious_ratio = 0.0;
+    double oblivious_ratio = NULL;
 
 
     // Runtime

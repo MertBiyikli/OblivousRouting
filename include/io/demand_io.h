@@ -8,16 +8,12 @@
 #include <memory>
 #include <map>
 #include <functional>
+#include "core/types.h"
+#include "core/config.h"
 #include "../utils/demands.h"
 #include "../algorithms/lp/lp_mcf.h"
 
-enum class DemandModelType {
-    GRAVITY,
-    BIMODAL,
-    GAUSSIAN,
-    UNIFORM,
-    NONE
-};
+
 
 static const std::map<std::string, DemandModelType> DEMAND_MAP{
     {"gravity", DemandModelType::GRAVITY}, {"gravity_model", DemandModelType::GRAVITY},
@@ -53,6 +49,67 @@ inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
         throw std::runtime_error("Unknown demand model type.");
     return it->second.second();
 }
+
+
+
+
+// Generate all-pairs demand list
+inline std::vector<std::pair<int,int>> generateAllDemandPairs(IGraph& g) {
+    std::vector<std::pair<int,int>> result;
+    result.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
+    for (int v : g.getVertices())
+        for (int u : g.getVertices())
+            if (v != u) result.push_back({v, u});
+    return result;
+}
+
+// Demand model handling
+inline Result<void> HandleDemandModels(const std::optional<Config>& cfg, IGraph& g,
+                               std::function<void(const std::string&, const demands&)> callback) {
+    if (!cfg || cfg->demand_models.empty()) {
+        return makeErrorMessage(ErrorCode::InvalidDemand, "No demand models specified in the configuration.");
+    }
+
+    auto pairs = generateAllDemandPairs(g);
+    for (DemandModelType type : cfg->demand_models) {
+        auto model = makeDemandModel(type);
+        auto dmap = model->generate(g, pairs);
+        if (!dmap) {
+            return getError(dmap);
+        }
+        callback(demandModelName(type), dmap.value());
+    }
+    return {};
+}
+
+inline demands GetSingleDemandModel(const std::optional<Config>& cfg, IGraph& g) {
+    if (!cfg || cfg->demand_models.empty()) return demands{};
+    auto pairs = generateAllDemandPairs(g);
+    auto model = makeDemandModel(cfg->demand_models.front());
+    auto generated = model->generate(g, pairs);
+    return generated ? generated.value() : demands{};
+}
+
+
+inline Result<void> offlineOptimal(std::unique_ptr<IGraph>& g, Config& cfg) {
+    if (cfg.evaluate_demand_models) {
+        auto handle_demand = HandleDemandModels(cfg, *g,
+            [&](const std::string& model_name, const demands& dmap) {
+                cfg.demand_maps[model_name] = dmap;
+                auto offline_opt = computeOfflineOptimalCongestion(*g, dmap);
+                // Void callback: only set the result if computation succeeded
+                if (offline_opt) {
+                    cfg.offline_opt_per_model[model_name] = offline_opt.value();
+                }
+                // If offline_opt fails, silently skip (don't propagate error from void lambda)
+            });
+        if (!handle_demand) {
+            return getError(handle_demand);
+        }
+    }
+    return {};
+}
+
 
 inline void printStatsForDemandModel(const std::string& model_name,
                                      std::pair<double, double> result) {

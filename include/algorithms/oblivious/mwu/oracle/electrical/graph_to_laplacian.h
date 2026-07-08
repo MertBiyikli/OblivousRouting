@@ -20,8 +20,8 @@ public:
     double getEdgeWeight(int e) const;
     double getEdgeWeight(int u, int v) const;
     void setEdgeWeight(int e, double w);
-    void setEdgeWeight(int u, int v, double w);
-    void setLaplacianIndex(int u, int v, int idx);
-    int getLaplacianIndex(int u, int v) const;
+    Result<void> setEdgeWeight(int u, int v, double w);
+    Result<void> setLaplacianIndex(int u, int v, int idx);
+    Result<int> getLaplacianIndex(int u, int v) const;
 };
 #endif //OBLIVIOUSROUTING_GRAPH_TO_LAPLACIAN_H

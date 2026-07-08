@@ -8,10 +8,13 @@
 #include "algorithms/oblivious/mwu/tree_mwu.h"
 #include "utils/my_math.h"
 
-CandidateRoutingScheme SemiSolverRoutingEngine::preprocess(const IGraph& graph) {
+Result<CandidateRoutingScheme> SemiSolverRoutingEngine::preprocess(const IGraph& graph) {
     CandidateRoutingScheme candidateScheme;
 
     auto scheme = solver_->solve();
+    if (!scheme || !scheme.value()) {
+        return getError(scheme);
+    }
     for (int s = 0; s < graph.getNumNodes(); s++) {
         for (int t = 0; t<graph.getNumNodes(); t++) {
             if (s == solver_->getRootNode() || t == solver_->getRootNode()
@@ -19,7 +22,7 @@ CandidateRoutingScheme SemiSolverRoutingEngine::preprocess(const IGraph& graph) 
                 continue;
                 }
 
-            extractPath(graph, *scheme, s, t, candidateScheme);
+            extractPath(graph, *(scheme.value()), s, t, candidateScheme);
         }
     }
 

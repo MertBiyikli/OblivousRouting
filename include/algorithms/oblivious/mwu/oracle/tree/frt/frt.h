@@ -58,9 +58,7 @@ public:
                             int from = path_nodes[i];
                             int to = path_nodes[i + 1];
                             int edge_id = g.getEdgeId(from, to);
-                            if (edge_id == INVALID_EDGE_ID) {
-                                throw std::runtime_error("Invalid edge in shortest path: " + std::to_string(from) + " -> " + std::to_string(to));
-                            }
+
                             path.nodes.push_back(from);
                             path.edge_ids.push_back(edge_id);
                         }

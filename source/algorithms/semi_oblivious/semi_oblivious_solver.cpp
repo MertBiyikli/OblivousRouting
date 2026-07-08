@@ -7,40 +7,52 @@
 #include "utils/time_tracking.h"
 
 
-std::unique_ptr<RoutingScheme> SemiObliviousRoutingSolver::solve() {
+Result<std::unique_ptr<RoutingScheme>> SemiObliviousRoutingSolver::solve() {
     current_result = SemiObliviousRoutingResult();
     if (!demand_ || !demandType_) {
-        throw std::logic_error(
-            "SemiObliviousRoutingSolver::setDemand must be called before solve"
-        );
+        return makeErrorMessage(ErrorCode::LogicError, "Semi oblivious :demand must be set before solve.");
     }
 
-    if (!candidateScheme_) {
-        candidateScheme_ = routingEngine_->preprocess(graph);
+    if (!candidateScheme_) {;
+        if (auto pre = this->preprocess()) {
+            candidateScheme_ = pre.value();
+        }else {
+            return getError(pre);
+        }
     }
 
-    current_result = route(*demand_, *demandType_);
+    if (auto routed = route(*demand_, *demandType_)) {
+        current_result = std::move(routed.value());
+    }else {
+        getError(routed);
+    }
 
     return std::move(current_result.scheme); // NOTE: after that the scheme in the current result is empty/null
 }
 
 
-void SemiObliviousRoutingSolver::setDemand(const demands& demand, DemandModelType demandType) {
+void SemiObliviousRoutingSolver::setDemand(const demands& demand,  const DemandModelType& demandType) {
     demand_ = demand;
     demandType_ = demandType;
 }
 
-CandidateRoutingScheme SemiObliviousRoutingSolver::preprocess() {
-    candidateScheme_ = routingEngine_->preprocess(graph);
-    return *candidateScheme_;
+Result<CandidateRoutingScheme> SemiObliviousRoutingSolver::preprocess() {
+    if (auto candidateScheme_res = routingEngine_->preprocess(graph)) {
+        candidateScheme_ = candidateScheme_res.value();
+        return *(candidateScheme_);
+    }else {
+        return getError(candidateScheme_res);
+    }
 }
 
 
-SemiObliviousRoutingResult SemiObliviousRoutingSolver::route(const demands& demand,DemandModelType demandType) {
-    setDemand(demand, demandType);
-
+Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const demands& demand, const DemandModelType& demandType) {
     if (!candidateScheme_) {
-        candidateScheme_ = routingEngine_->preprocess(graph);
+        return makeErrorMessage(ErrorCode::LogicError, "Semi oblivious: Paths must be precomputed before routing any demand.");
+    }
+
+    if (!demand.size()) {
+        return makeErrorMessage(ErrorCode::InvalidDemand, "Semi oblivious: Demand must be set before routing.");
     }
 
     SemiObliviousRoutingResult res;
@@ -59,8 +71,15 @@ SemiObliviousRoutingResult SemiObliviousRoutingSolver::route(const demands& dema
         demand
     );
 
+    if (!optResult) {
+        return getError(optResult);
+    }
+
     res.total_runtime_microseconds = duration(timeNow() - start);
-    res.scheme = std::move(optResult.scheme);
+    if (!optResult.value().scheme) {
+        return makeErrorMessage(ErrorCode::InvalidRouting, "Semi oblivious: failed to compute demand-specific routing scheme.");
+    }
+    res.scheme = std::move(optResult.value().scheme);
 
     std::vector<double> cong;
     res.scheme->routeDemands(cong, demand);

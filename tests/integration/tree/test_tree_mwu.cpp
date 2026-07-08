@@ -7,10 +7,10 @@
 
 #include "../../common/utils.h"
 
-#include "algorithms/mwu/tree_mwu.h"
-#include "algorithms/mwu/oracle/tree/frt/frt.h"
-#include "algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
-#include "algorithms/mwu/oracle/tree/mst/mst_oracle.h"
+#include "algorithms/oblivious/mwu/tree_mwu.h"
+#include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
+#include "algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
 
 #include "data_structures/hst/flat_hst.h"
 #include "../../../include/routing/routing_table.h"

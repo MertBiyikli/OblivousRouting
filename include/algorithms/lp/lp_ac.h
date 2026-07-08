@@ -24,11 +24,11 @@ public:
     LPSolver(IGraph& graph)
         : IAllPairObliviousSolverBase(graph), LP(graph.getNumNodes()) {}
 
-protected:
-    void computeBasisFlows(AllPairRoutingTable& table) override;
+    Result<void> computeBasisFlows(AllPairRoutingTable& table) override;
+
 
 private:
-    void CreateVariables() override;
+    Result<void> CreateVariables() override;
     void CreateConstraints() override;
     void SetObjective() override;
     void storeFlow(AllPairRoutingTable& table) override;

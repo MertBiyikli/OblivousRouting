@@ -21,7 +21,9 @@ public:
     SemiObliviousRoutingSolver(IGraph& graph, std::shared_ptr<SemiSolverRoutingEngine> routingEngine, std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer)
         : ISolver(graph),
           routingEngine_(std::move(routingEngine)),
-          loadOptimizer_(std::move(loadOptimizer)) {
+          loadOptimizer_(std::move(loadOptimizer)), current_result() {
+
+
         if (!routingEngine_ || !loadOptimizer_) {
             throw std::invalid_argument(
                 "SemiObliviousRoutingSolver received null dependency"
@@ -29,11 +31,11 @@ public:
         }
     }
 
-    std::unique_ptr<RoutingScheme> solve() override;
+    Result<std::unique_ptr<RoutingScheme>> solve() override;
 
-    void setDemand(const demands& demand, DemandModelType demandType);
-    CandidateRoutingScheme preprocess();
-    SemiObliviousRoutingResult route(const demands& demand,DemandModelType demandType);
+    void setDemand(const demands& demand,  const DemandModelType& demandType);
+    Result<CandidateRoutingScheme> preprocess();
+    Result<SemiObliviousRoutingResult> route(const demands& demand, const DemandModelType& demandType);
 
 private:
     std::shared_ptr<SemiSolverRoutingEngine> routingEngine_;

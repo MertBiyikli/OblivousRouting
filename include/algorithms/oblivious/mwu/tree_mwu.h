@@ -41,9 +41,10 @@ public:
         lambda_sum = 0.0;
     }
 
-    virtual void computeBasisFlows(LinearRoutingTable& table) override {
+    virtual Result<void> computeBasisFlows(LinearRoutingTable& table) override {
         table.init(graph);
         run(table);
+        return {};
     }
 
     virtual void printAdditionalStats() override {
@@ -61,20 +62,31 @@ public:
         }
     }
 
-    void run(LinearRoutingTable& table) {
+    Result<void> run(LinearRoutingTable& table) {
 
         lambda_sum = 0.0;
         while (lambda_sum < 1.0) {
-            lambda_sum += treeOracle(table);
+            auto tree_result = treeOracle(table);
+            if (tree_result) {
+                lambda_sum += tree_result.value();
+            }else {
+                return getError(tree_result);
+            }
+
             metrics.iteration_count++;
         }
+        return {};
     }
 
-    double treeOracle(LinearRoutingTable& table) {
+    Result<double> treeOracle(LinearRoutingTable& table) {
         auto t0 = timeNow();
 
+        auto oracle_result = oracle->getTree(current_distances);
+        if (!oracle_result) {
+            return getError(oracle_result);
+        }
+        HSTDatastructures t = oracle_result.value();
 
-        HSTDatastructures t = oracle->getTree(current_distances);
         double oracle_time = duration(timeNow() - t0);
         metrics.oracle_running_times.push_back(oracle_time);
 
@@ -273,10 +285,11 @@ public:
         updateDistances(current_distances);
     }
 
-    virtual void updateDistances(const std::vector<double> &distances) override {
+    virtual Result<void> updateDistances(const std::vector<double> &distances) override {
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             graph.updateEdgeDistance(e, distances[e]);
         }
+        return {};
     }
 
     std::vector<int> getScales() const {

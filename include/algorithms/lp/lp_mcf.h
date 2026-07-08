@@ -10,6 +10,7 @@
 #include "ortools/linear_solver/linear_solver.h"
 #include "../../utils/hash.h"
 #include "../../utils/demands.h"
+#include "core/errors.h"
 
 using namespace operations_research;
 
@@ -20,20 +21,21 @@ private:
     std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>, PairHash> map_commodities2edge;
 public:
 
-    CMMF_Solver(IGraph& graph) : IOfflineSolver(graph), LP(graph.getNumNodes()) {}
+    CMMF_Solver(IGraph& graph) : IOfflineSolver(graph), LP(graph.getNumNodes()) {
+    }
 
-    virtual void computeBasisFlows(AllPairRoutingTable& table) override;
+    virtual Result<void> computeBasisFlows(AllPairRoutingTable& table) override;
 
-    virtual void CreateVariables() override;
+    virtual Result<void> CreateVariables() override;
+
     virtual void CreateConstraints() override;
     virtual void SetObjective() override;
     virtual void storeFlow(AllPairRoutingTable& table) override;
 
     void PrintSolution();
     void AddDemandMap(const demands& d_map);
-    void AddDemands(const std::pair<int, int>& d, double value);
 
-    double getCongestionForPassedDemandMap() const;
+    Result<double> getCongestionForPassedDemandMap() const;
 };
 
 
@@ -48,11 +50,15 @@ inline double computeRoutingSchemeCongestion(IGraph& _g,
     return max_cong;
 }
 
-inline double computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
+inline Result<double> computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
     CMMF_Solver mccf(_g);
     mccf.AddDemandMap(demand_map);
     auto offline_scheme = mccf.solve();
-    return mccf.getCongestionForPassedDemandMap();
+    auto congestion = mccf.getCongestionForPassedDemandMap();
+    if (congestion) {
+        return congestion.value();
+    }else {
+        return getError(congestion);
+    }
 }
-
 #endif //OBLIVIOUSROUTING_LP_MCF_H

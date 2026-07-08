@@ -6,15 +6,16 @@
 #include "../../../include/data_structures/priority_queue.h"
 
 #include <iostream>
+#include <cassert>
 
 IGraph::NeighborRange GraphADJList::neighbors(int node) const {
     return NeighborRange{adjList[node].data(), adjList[node].data() + adjList[node].size()};
 }
 
+// TODO: here pplies the comment from the CSR version...
 
 void GraphADJList::addEdge(int u, int v, double cap, double dist) {
-    if (u<0 || u>=n || v<0 || v>=n)
-        throw std::out_of_range("GraphADJList::addEdge: node index");
+    assert(u >= 0 && u < n && v >= 0 && v < n && "GraphADJList::addEdge: node index");
 
 
     adjList[u].push_back(v);
@@ -99,35 +100,25 @@ const int GraphADJList::getEdgeId(int u, int v) const {
 const int GraphADJList::getAntiEdge(int e) const {
     const auto& [u, v] = getEdgeEndpoints(e);
     int anti_e = getEdgeId(v, u);
-    if (anti_e == INVALID_EDGE_ID) {
-        throw std::runtime_error("getAntiEdge: reverse edge not found");
-    }
+    assert(anti_e != INVALID_EDGE_ID && "getAntiEdge: reverse edge not found");
     return anti_e;
 }
 
 
 
 std::pair<int,int> GraphADJList::getEdgeEndpoints(int e) const {
-    if (!is_processed) {
-        throw std::runtime_error("edgeEndpoints: graph not finalized");
-    }
-    if (e < 0 || e >= m) {
-        throw std::out_of_range("edgeEndpoints: edge id out of range");
-    }
+    assert(is_processed && "edgeEndpoints: graph not finalized");
+    assert(e >= 0 && e < m && "edgeEndpoints: edge id out of range");
 
     // Find owning node u via binary search over edge_id_start
     auto it = std::upper_bound(edge_id_start.begin(), edge_id_start.end(), e);
     // upper_bound returns iterator to first element > e; we want previous index
     int idx = static_cast<int>(std::distance(edge_id_start.begin(), it)) - 1;
-    if (idx < 0 || idx >= n) {
-        throw std::runtime_error("edgeEndpoints: failed to locate owning node");
-    }
+    assert(idx >= 0 && idx < n && "edgeEndpoints: failed to locate owning node");
 
     int offset = e - edge_id_start[idx];
     // offset should be within edge_ids[idx].size()
-    if (offset < 0 || static_cast<size_t>(offset) >= edge_ids[idx].size()) {
-        throw std::runtime_error("edgeEndpoints: inconsistent edge id mapping");
-    }
+    assert(!(offset < 0 || static_cast<size_t>(offset) >= edge_ids[idx].size()) && "edgeEndpoints: inconsistent edge id mapping");
 
     int u = idx;
     int v = adjList[u][offset];
@@ -153,9 +144,7 @@ double GraphADJList::getEdgeCapacity(int u, int v) const {
         }
     }
 
-    if (capacity < 0) {
-        throw std::runtime_error("getEdgeCapacity: edge not found");
-    }
+    assert(capacity >= 0 && "getEdgeCapacity: edge not found");
     return capacity;
 }
 
@@ -178,13 +167,11 @@ double GraphADJList::getEdgeDistance(int u, int v) const {
         }
     }
 
-    if (distance < 0) {
-        throw std::runtime_error("getEdgeDistance: edge not found");
-    }
+    assert(distance >= 0 && "getEdgeDistance: edge not found");
     return distance;
 }
 
-bool GraphADJList::updateEdgeDistance(int u, int v, double dist) {
+Result<void> GraphADJList::updateEdgeDistance(int u, int v, double dist) {
     bool ok = false;
 
     const auto& neighbors_u = adjList[u];
@@ -202,7 +189,11 @@ bool GraphADJList::updateEdgeDistance(int u, int v, double dist) {
         }
     }
 
-    return ok;
+    if (!ok) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "updateEdgeDistance: edge not found");
+    }
+
+    return {};
 }
 
 bool GraphADJList::updateEdgeCapacity(int u, int v, double cap) {
@@ -236,7 +227,7 @@ double GraphADJList::getEdgeDistance(int e) const {
     return getEdgeDistance(u, v);
 }
 
-bool GraphADJList::updateEdgeDistance(int e, double dist) {
+Result<void> GraphADJList::updateEdgeDistance(int e, double dist) {
     auto [u, v] = getEdgeEndpoints(e);
     return updateEdgeDistance(u, v, dist);
 }

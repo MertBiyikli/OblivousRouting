@@ -313,7 +313,7 @@ void validateSemiObliviousExtraction(
               << '\n';
 }
 
-SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
+Result<SemiObliviousOptimizationResult> OrToolsSemiObliviousLoadOptimizer::optimize(
     const IGraph& graph,
     const CandidateRoutingScheme& candidateScheme,
     const demands& _demand
@@ -341,7 +341,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
         }
 
         if (paths.empty()) {
-            throw std::runtime_error("Demand pair has no candidate paths");
+            return makeErrorMessage(ErrorCode::LogicError, "Demand pair has no candidate paths");
         }
 
         auto* splitConstraint = solver.MakeRowConstraint(1.0, 1.0);
@@ -385,7 +385,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
         const double capacity = graph.getEdgeCapacity(e);
 
         if (capacity <= 0.0) {
-            throw std::runtime_error("Edge has non-positive capacity");
+            return makeErrorMessage(ErrorCode::LogicError, "Edge has non-positive capacity");
         }
 
         auto* edgeConstraint = solver.MakeRowConstraint(-inf, 0.0);
@@ -419,7 +419,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
 
                 auto it = xVars.find(PairPathVarKey{s, t, p});
                 if (it == xVars.end()) {
-                    throw std::runtime_error("Missing LP variable for path");
+                    return makeErrorMessage(ErrorCode::LogicError, "Missing LP variable for path");
                 }
 
                 edgeConstraint->SetCoefficient(it->second, *d);
@@ -436,7 +436,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
 
     if (status != MPSolver::OPTIMAL
         && status != MPSolver::FEASIBLE) {
-        throw std::runtime_error("Semi-oblivious LP infeasible or not solved");
+        return makeErrorMessage(ErrorCode::SolverFailed, "LP solver failed to find a feasible solution");
     }
 
     const auto diagnostics = computeLPDiagnostics(candidateScheme,_demand,xVars);
@@ -459,7 +459,7 @@ SemiObliviousOptimizationResult OrToolsSemiObliviousLoadOptimizer::optimize(
             auto it = xVars.find(PairPathVarKey{s, t, p});
 
             if (it == xVars.end()) {
-                throw std::runtime_error("Missing LP variable during solution extraction");
+                return makeErrorMessage(ErrorCode::SolverFailed, "Missing LP variable during solution extraction");
             }
 
             const double alpha = it->second->solution_value();

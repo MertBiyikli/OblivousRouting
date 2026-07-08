@@ -13,6 +13,7 @@
 #include "data_structures/mendel_scaling/quotient_graph.h"
 #include "utils/time_tracking.h"
 #include "mst/mst_algo.h"
+#include "core/errors.h"
 
 #include <vector>
 #include <unordered_map>
@@ -60,7 +61,7 @@ public:
     double total_time_spent_on_mendel_scaling;
 
     // Single entry point — dispatches at compile time based on T.
-    virtual T getTree(std::vector<double>& distances) {
+    virtual Result<T> getTree(std::vector<double>& distances) {
         total_time_spent_on_mendel_scaling = 0;
         updateDistances(distances);
         if constexpr (std::is_same_v<T, std::shared_ptr<HSTNode>>) {
@@ -80,8 +81,11 @@ public:
     // -----------------------------------------------------------------------
     // Pointer-based HST
     // -----------------------------------------------------------------------
-    std::shared_ptr<HSTNode> computeHST() {
-        preprocess();
+    Result<std::shared_ptr<HSTNode>> computeHST() {
+        auto pre = preprocess();
+        if (!pre) {
+            getError(pre);
+        }
 
         std::vector<std::shared_ptr<HSTNode>> prev_nodes;
         for (int v = 0; v < n; ++v) {
@@ -113,11 +117,18 @@ public:
                 Q = qc.constructQuotientGraph(ultrametric, Delta, graph);
                 if (Q.Gq->getNumNodes() <= 1) continue;
                 total_time_spent_on_mendel_scaling += duration(timeNow() - start);
-                computeQuotientLevelPartition(Q, L, Delta);
+                auto quotient_result = computeQuotientLevelPartition(Q, L, Delta);
+                if (!quotient_result) {
+                    return getError(quotient_result);
+                }
             } else {
                 computeLevelPartition(graph, L, perm, Delta);
             }
-            current_level = buildTreeLevel(prev_nodes, L);
+            auto level_result = buildTreeLevel(prev_nodes, L);
+            if (!level_result) {
+                return getError(level_result);
+            }
+            current_level = level_result.value();
 
             for (auto& node : current_level)
                 current_tree_nodes.push_back(node);
@@ -131,8 +142,11 @@ public:
     // -----------------------------------------------------------------------
     // Flat FlatHST
     // -----------------------------------------------------------------------
-    FlatHST computeFlatHST() {
-        preprocess();
+    Result<FlatHST> computeFlatHST() {
+        auto pre = preprocess();
+        if (!pre) {
+            getError(pre);
+        }
 
         HSTBuilder builder(n);
         std::vector<int> prev_level(n);
@@ -154,7 +168,10 @@ public:
                 Q = qc.constructQuotientGraph(ultrametric, Delta, graph);
                 if (Q.Gq->getNumNodes() <= 1) continue;
                 total_time_spent_on_mendel_scaling += duration(timeNow() - start);
-                computeQuotientLevelPartition(Q, L, Delta);
+                auto quotient_result = computeQuotientLevelPartition(Q, L, Delta);
+                if (!quotient_result) {
+                    return getError(quotient_result);
+                }
             } else {
                 computeLevelPartition(graph, L, perm, Delta);
             }
@@ -177,9 +194,11 @@ public:
     // -----------------------------------------------------------------------
     // Shared helpers (unchanged from original)
     // -----------------------------------------------------------------------
-    virtual void preprocess() {
+    virtual Result<void> preprocess() {
         n = graph.getNumNodes();
-        if (n == 0) throw std::invalid_argument("The graph has no nodes.");
+        if (n == 0) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "The graph has no nodes.");
+        }
         diameter = graph.getDiameterApprox();
 
         perm.clear();
@@ -198,24 +217,26 @@ public:
             total_time_spent_on_mendel_scaling += duration(timeNow() - start);
             assert(ultrametric.root != -1);
         }
+        return {};
     }
 
-    static std::vector<int> buildRepresentatives(const std::vector<int>& sigma, int nQ) {
+    static Result<std::vector<int>> buildRepresentatives(const std::vector<int>& sigma, int nQ) {
         const int nG = (int)sigma.size();
         std::vector<int> rep(nQ, -1);
         for (int v = 0; v < nG; ++v) {
             int q = sigma[v];
             if (q < 0 || q >= nQ)
-                throw std::runtime_error("sigma[v] out of range at v=" + std::to_string(v));
+                return makeErrorMessage(ErrorCode::RuntimeError, "Oracle construction error: in  sigma[v] out of range.");
             if (rep[q] == -1) rep[q] = v;
         }
         for (int q = 0; q < nQ; ++q)
-            if (rep[q] == -1)
-                throw std::runtime_error("Quotient node q=" + std::to_string(q) + " has no preimage");
+            if (rep[q] == -1) {
+                return makeErrorMessage(ErrorCode::RuntimeError, "Quotient node q=" + std::to_string(q) + " has no preimage");
+            }
         return rep;
     }
 
-    void computeQuotientLevelPartition(QuotientLevel& Q, HSTLevel& level, double delta) {
+    Result<void> computeQuotientLevelPartition(QuotientLevel& Q, HSTLevel& level, double delta) {
         HSTLevel qL;
         std::vector<int> x_perm;
         std::vector<char> used(Q.Gq->getNumNodes(), 0);
@@ -223,9 +244,10 @@ public:
         for (int v : perm) {
             int vq = Q.sigma_compact_of_v[v];
             if (vq < 0 || vq >= Q.Gq->getNumNodes())
-                throw std::runtime_error(
+                return makeErrorMessage(ErrorCode::RuntimeError,
                     "computeQuotientLevelPartition: sigma_compact_of_v[v] out of range at v="
                     + std::to_string(v));
+
             if (!used[vq]) {
                 x_perm.push_back(vq);
                 used[vq] = 1;
@@ -244,27 +266,30 @@ public:
         std::vector<int> q_rep(Q.Gq->getNumNodes(), -1);
         for (int v : perm) {
             int q = Q.sigma_compact_of_v[v];
-            if (q < 0 || q >= Q.Gq->getNumNodes())
-                throw std::runtime_error(
-                    "computeQuotientLevelPartition: sigma_compact_of_v[v] out of range at v="
-                    + std::to_string(v));
+            if (q < 0 || q >= Q.Gq->getNumNodes()) {
+                return makeErrorMessage(ErrorCode::RuntimeError,
+                "computeQuotientLevelPartition: sigma_compact_of_v[v] out of range at v="
+                + std::to_string(v));
+            }
+
             if (q_rep[q] == -1) q_rep[q] = v;
         }
         for (int q = 0; q < Q.Gq->getNumNodes(); ++q) {
-            if (q_rep[q] == -1)
-                throw std::runtime_error(
-                    "computeQuotientLevelPartition: quotient node " + std::to_string(q) +
-                    " has no representative in perm");
+            if (q_rep[q] == -1) {
+                return makeErrorMessage(ErrorCode::RuntimeError,
+                "computeQuotientLevelPartition: quotient node " + std::to_string(q) + " has no representative.");
+            }
         }
 
         std::unordered_map<int, int> q_center_to_g_center;
         q_center_to_g_center.reserve(qL.centers.size());
 
         for (int q_center : qL.centers) {
-            if (q_center < 0 || q_center >= Q.Gq->getNumNodes())
-                throw std::runtime_error(
-                    "computeQuotientLevelPartition: quotient center out of range: " +
-                    std::to_string(q_center));
+            if (q_center < 0 || q_center >= Q.Gq->getNumNodes()) {
+                return makeErrorMessage(ErrorCode::RuntimeError,
+                "computeQuotientLevelPartition: quotient center out of range: " +
+                   std::to_string(q_center));
+            }
 
             int g_center = q_rep[q_center];
             level.centers.push_back(g_center);
@@ -273,19 +298,19 @@ public:
 
         for (int vq = 0; vq < Q.Gq->getNumNodes(); ++vq) {
             int cluster_q = qL.owner[vq];
-            if (cluster_q == -1)
-                throw std::runtime_error(
-                    "computeQuotientLevelPartition: node " + std::to_string(vq) + " has no cluster!");
+            if (cluster_q == -1) {
+                return makeErrorMessage(ErrorCode::RuntimeError,"computeQuotientLevelPartition: node " + std::to_string(vq) + " has no cluster!");
+            }
 
             auto it = q_center_to_g_center.find(cluster_q);
-            if (it == q_center_to_g_center.end())
-                throw std::runtime_error(
-                    "computeQuotientLevelPartition: cluster center " + std::to_string(cluster_q) +
-                    " missing lifted representative");
+            if (it == q_center_to_g_center.end()) {
+                return makeErrorMessage(ErrorCode::RuntimeError,"computeQuotientLevelPartition: cluster center " + std::to_string(cluster_q) + " missing lifted representative");
+            }
 
             int cluster_g = it->second;
             for (int v : Q.members_of_q[vq]) level.owner[v] = cluster_g;
         }
+        return {};
     }
 
 
@@ -301,7 +326,7 @@ public:
         else                    computeNaiveScales();
     }
 
-    std::vector<std::shared_ptr<HSTNode>> buildTreeLevel(
+    Result<std::vector<std::shared_ptr<HSTNode>>> buildTreeLevel(
         std::vector<std::shared_ptr<HSTNode>>& prev_nodes,
         const HSTLevel& L) {
         std::vector<std::shared_ptr<HSTNode>> parents(L.centers.size());
@@ -323,17 +348,13 @@ public:
 
             int child_center = child->center;
             if (child_center < 0 || child_center >= static_cast<int>(L.owner.size())) {
-                throw std::runtime_error(
-                    "buildTreeLevel: child center out of range in L.owner: " +
-                    std::to_string(child_center));
+                return makeErrorMessage(ErrorCode::RuntimeError, "buildTreeLevel: child center out of range in L.owner: " +std::to_string(child_center));
             }
 
             int cluster = L.owner[child_center];
             auto it = center_to_idx.find(cluster);
             if (it == center_to_idx.end()) {
-                throw std::runtime_error(
-                    "buildTreeLevel: cluster center not found in L.centers: " +
-                    std::to_string(cluster));
+                return makeErrorMessage(ErrorCode::RuntimeError, "buildTreeLevel: cluster center not found in L.centers: " +std::to_string(cluster));
             }
 
             auto& parent = parents[it->second];
@@ -373,15 +394,18 @@ public:
         std::reverse(scales.begin(), scales.end());
     }
 
-    void computeNaiveScales() {
-        if (diameter == 0)
-            throw std::runtime_error("TreeOracle: Graph has zero diameter; cannot build tree.");
+    Result<void> computeNaiveScales() {
+        if (diameter == 0) {
+            return makeErrorMessage(ErrorCode::RuntimeError, "TreeOracle: Graph has zero diameter; cannot build tree.");
+        }
+
         int i = static_cast<int>(std::ceil(std::log2(diameter) / std::log2(2.0))) + 1;
         for (; i >= 0; --i) {
             double scale = (double)(1ull << i);
             if (scale <= diameter) scales.push_back(scale);
         }
         std::reverse(scales.begin(), scales.end());
+        return {};
     }
 
     void finishTree(std::shared_ptr<HSTNode>& root, std::vector<std::shared_ptr<HSTNode>>& prev_nodes) {

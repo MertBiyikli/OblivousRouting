@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_OFFLINE_SOLVER_H
 
 #include "core/solver.h"
+#include "core/errors.h"
 #include "utils/demands.h"
 #include "routing/storage/allpair_routing_table.h"
 
@@ -17,14 +18,17 @@ public:
     IOfflineSolver(IGraph& graph)
         : ISolver(graph) {}
 
-    std::unique_ptr<RoutingScheme> solve() override {
+    Result<std::unique_ptr<RoutingScheme>> solve() override {
         if (!demands_.size()) {
             throw std::runtime_error("[OfflineSolver]: demands must be initialized");
         }
 
         AllPairRoutingTable table;
         table.init(graph);
-        computeBasisFlows(table);
+        auto flow = computeBasisFlows(table);
+        if (!flow) {
+            return getError(flow);
+        }
 
         graph.resetEdgeDistance();
 
@@ -34,7 +38,7 @@ public:
         );
     }
 
-    virtual void computeBasisFlows(AllPairRoutingTable& table) = 0;
+    virtual Result<void> computeBasisFlows(AllPairRoutingTable& table) = 0;
 
     void addDemand(int source, int target, double demand) {
         demands_.addDemand(source, target, demand);

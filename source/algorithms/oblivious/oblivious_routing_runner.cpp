@@ -4,43 +4,52 @@
 
 #include "algorithms/oblivious/oblivious_routing_runner.h"
 
-IRoutingResult ObliviousSolverRunner::run(IGraph& graph,const Config& cfg,SolverType type) const {
+Result<IRoutingResult> ObliviousSolverRunner::run(IGraph& graph,const Config& cfg,SolverType type) const {
     IRoutingResult result;
     result.type = type;
     result.graph_name = cfg.filename;
+    result.nodes = graph.getNumNodes();
+    result.edges = graph.getNumUndirectedEdges();
     result.solver_name = getSolverName(type);
 
     auto solverOpt = makeSolver(type, graph);
-    if (!solverOpt) {
-        std::cerr << "[ERROR] Failed to create solver of type "
-                  << static_cast<int>(type) << '\n';
-
+    if (!solverOpt
+        || !(*solverOpt)) {
         result.status = ResultStatus::ERROR_INVALID_SOLVER;
-        return result;
+        return makeErrorMessage(ErrorCode::InvalidSolver, getSolverName(type)+" solver was not found.");
     }
 
     auto& solver = *solverOpt;
 
     const auto t0 = timeNow();
-    result.scheme = solver->solve();
+    auto scheme = solver->solve();
+    if (!scheme
+        || !(*scheme)) {
+        result.status = ResultStatus::ERROR_INVALID_ROUTING_SCHEME;
+        return makeErrorMessage(ErrorCode::SolverFailed, "The computed scheme is null.");
+    }else {
+        result.scheme = std::move(scheme.value());
+    }
+
+
     result.solve_runtime_microseconds = duration(timeNow() - t0);
     result.total_runtime_microseconds = result.solve_runtime_microseconds;
 
-    if (!result.scheme) {
-        std::cerr << "[ERROR] Solver returned null routing scheme\n";
-        result.status = ResultStatus::ERROR_INVALID_ROUTING_SCHEME;
-        return result;
-    }
 
     appendMetricsIfAvailable(solver, result);
     appendObjectiveIfAvailable(solver, *result.scheme, result);
 
-    DemandEvaluator::evaluate(graph, result.scheme, cfg, result);
+    if (!cfg.evaluate_demand_models) {
+        return result;
+    }
 
-    if (result.status == ResultStatus::OK) {
-        result.status = ResultStatus::OK;
+    auto evaluate = DemandEvaluator::evaluate(graph, result.scheme, cfg, result);
+    if (!evaluate) {
+        return getError(evaluate);
     }
 
     return result;
 }
+
+
 

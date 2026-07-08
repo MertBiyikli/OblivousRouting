@@ -9,6 +9,7 @@
 #include "routing/storage/linear_routing_table.h"
 #include "routing/storage/allpair_routing_table.h"
 #include "core/solver.h"
+#include "core/errors.h"
 #include "data_structures/graph/Igraph.h"
 #include <memory>
 
@@ -21,11 +22,14 @@ public:
     ILinearObliviousSolverBase(IGraph& g, int root)
         : ISolver(g), root(root) {}
 
-    std::unique_ptr<RoutingScheme> solve() final {
+    Result<std::unique_ptr<RoutingScheme>> solve() final {
         LinearRoutingTable table;
         table.init(graph);
 
-        computeBasisFlows(table);
+        auto basis_flow = computeBasisFlows(table);
+        if ( !basis_flow) {
+            return getError(basis_flow);
+        }
 
         graph.resetEdgeDistance();
 
@@ -41,7 +45,7 @@ public:
     }
 
 protected:
-    virtual void computeBasisFlows(LinearRoutingTable& table) = 0;
+    virtual Result<void> computeBasisFlows(LinearRoutingTable& table) = 0;
 };
 
 
@@ -50,11 +54,14 @@ public:
     explicit IAllPairObliviousSolverBase(IGraph& g)
         : ISolver(g) {}
 
-    std::unique_ptr<RoutingScheme> solve() {
+    Result<std::unique_ptr<RoutingScheme>> solve() {
         AllPairRoutingTable table;
         table.init(graph);
 
-        computeBasisFlows(table);
+        auto basis_flow = computeBasisFlows(table);
+        if ( !basis_flow) {
+            return getError(basis_flow);
+        }
 
         graph.resetEdgeDistance();
 
@@ -65,7 +72,7 @@ public:
     }
 
 protected:
-    virtual void computeBasisFlows(AllPairRoutingTable& table) = 0;
+    virtual Result<void> computeBasisFlows(AllPairRoutingTable& table) = 0;
 };
 
 

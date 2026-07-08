@@ -20,7 +20,7 @@ TEST_CASE("Applegate-Cohen LP solver runs on a triangle graph",
 
     AllPairRoutingTable table;
     table.init(*graph);
-    solver.computeBasisFlows(table);
+    REQUIRE(solver.computeBasisFlows(table));
 
     //table.printFlows(*graph);
     requireValidAllPairRoutingTable(table, *graph);
@@ -35,7 +35,8 @@ TEST_CASE("Applegate-Cohen LP solver runs on a path graph",
 
     AllPairRoutingTable table;
     table.init(*graph);
-    solver.computeBasisFlows(table);
+
+    REQUIRE(solver.computeBasisFlows(table));
 
     requireValidAllPairRoutingTable(table, *graph);
 }

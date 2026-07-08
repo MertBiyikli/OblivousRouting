@@ -10,29 +10,43 @@
 using namespace operations_research;
 
 
-void LPSolver::computeBasisFlows(AllPairRoutingTable& table) {
+Result<void> LPSolver::computeBasisFlows(AllPairRoutingTable& table) {
     this->n = graph.getNumNodes();
-    CreateVariables();
+    auto init = this->initSolver();
+    if (!init) {
+        return getError(init);
+    }
+    auto var = CreateVariables();
+    if (!var) {
+        return getError(var);
+    }
     CreateConstraints();
     SetObjective();
 
     // === Solve the LP ===
     status = solver->Solve();
     if (status != MPSolver::OPTIMAL) {
-        throw std::runtime_error("[LPSolver]: Solve failed.");
+        return makeErrorMessage(ErrorCode::SolverFailed, "Solving the Applegate & Cohen LP returned non-optimal solution.");
     } else {
         storeFlow(table);
     }
+    return {};
 }
 
 
-void LPSolver::CreateVariables() {
+Result<void> LPSolver::CreateVariables() {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
-    if (!solver) throw std::runtime_error("[LPSolver]: GLOP solver unavailable.");
+
+    if (!solver) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "GLOP solver unavailable.");
+    }
 
 
     // CREATE Alpha variable
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
+    if (!alpha) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "Creating the bounding variable for the Applegate & Cohen LP failed.");
+    }
 
     for(int s = 0; s<n; s++) {
         for(int t = 0; t<n; t++) {
@@ -76,6 +90,7 @@ void LPSolver::CreateVariables() {
         }
     }
 
+    return {};
 }
 
 void LPSolver::CreateConstraints() {
@@ -157,9 +172,7 @@ void LPSolver::CreateConstraints() {
                     if( it != m_var_f_e_.end() &&
                         it->second) {
                         constraint->SetCoefficient(it->second, 1);
-                    } else {
-                        std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                    }
+                    };
                 }
             }
 
@@ -170,9 +183,7 @@ void LPSolver::CreateConstraints() {
                     if( it != m_var_f_e_.end()
                         && it->second) {
                         constraint->SetCoefficient(it->second, -1);
-                    } else {
-                        std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                    }
+                    };
                 }
             }
         }
@@ -192,9 +203,7 @@ void LPSolver::CreateConstraints() {
                         auto it = m_var_f_e_.find({e, {i, j}});
                         if (it != m_var_f_e_.end() && it->second != nullptr) {
                             constraint->SetCoefficient(it->second, 1);
-                        } else {
-                            std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                        }
+                        };
                     }
                 }
 
@@ -204,9 +213,7 @@ void LPSolver::CreateConstraints() {
                         auto it = m_var_f_e_.find({e, {i, j}});
                         if (it != m_var_f_e_.end() && it->second != nullptr) {
                             constraint->SetCoefficient(it->second, -1);
-                        } else {
-                            std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                        }
+                        };
                     }
                 }
             }

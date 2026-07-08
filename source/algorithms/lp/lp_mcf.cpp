@@ -6,18 +6,29 @@
 #include "utils/demands.h"
 #include "utils/my_math.h"
 
-void CMMF_Solver::computeBasisFlows(AllPairRoutingTable& table) {
+Result<void> CMMF_Solver::computeBasisFlows(AllPairRoutingTable& table) {
+    // as of now, each LP final class has to call initialize outside the LP base class
     this->n = graph.getNumNodes();
-    CreateVariables();
+    auto init = this->initSolver();
+    if (!init) {
+        return getError(init);
+    }
+
+    auto var = CreateVariables();
+    if (!var) {
+        return getError(var);
+    }
+
     CreateConstraints();
     SetObjective();
     // === Solve the LP ===
     status = solver->Solve();
     if (status != MPSolver::OPTIMAL) {
-        throw std::runtime_error("[Minimum Congestion Solver]: Solve failed.");
+        return makeErrorMessage(ErrorCode::SolverFailed, "Solving the CMF LP returned non-optimal solution.");
     } else {
         storeFlow(table);
     }
+    return {};
 }
 
 
@@ -25,31 +36,19 @@ void CMMF_Solver::AddDemandMap(const demands &d_map) {
      for (int i = 0; i < static_cast<int>(d_map.size()); ++i) {
          const auto& d = d_map.getDemandPair(i);
          const double& value = d_map.getDemandValue(i);
-         AddDemands({d.first, d.second}, value);
+         this->addDemand(d.first, d.second, value);
      }
 }
 
 
 
-void CMMF_Solver::AddDemands(const std::pair<int, int>& d, double demand) {
-    int u = d.first;
-    int v = d.second;
-    if (u < 0 || v < 0
-        || u >= n || v >= n) {
-        std::cout << "Invalid vertex IDs in demand: (" << u << ", " << v << ")\n";
-        throw std::invalid_argument("Vertex IDs out of range.");
-    }
-    if (u == v) {
-        throw std::invalid_argument("Cannot add demand from a vertex to itself.");
-    }
 
-    this->addDemand(u, v, demand);
-}
-
-
-void CMMF_Solver::CreateVariables() {
+Result<void> CMMF_Solver::CreateVariables() {
 
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
+    if (!alpha) {
+        return makeErrorMessage(ErrorCode::SolverFailed, "Creating the bounding variable for the MCF LP failed.");
+    }
 
     for (int s = 0; s<n; s++) {
         for (int t = 0; t < n; ++t) {
@@ -64,6 +63,7 @@ void CMMF_Solver::CreateVariables() {
             }
         }
     }
+    return {};
 }
 
 void CMMF_Solver::CreateConstraints() {
@@ -77,7 +77,7 @@ void CMMF_Solver::CreateConstraints() {
             double it = this->getDemandValue(s, t);
             if (it > EPS  ) rhs = it;
 
-            MPConstraint* c = solver->MakeRowConstraint(rhs, rhs);
+            MPConstraint* const c = solver->MakeRowConstraint(rhs, rhs);
 
             for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
                 const auto &edge = graph.getEdgeEndpoints(e);
@@ -97,7 +97,7 @@ void CMMF_Solver::CreateConstraints() {
         // find reverse arc if present
         int rev_id = graph.getAntiEdge(e);
 
-        MPConstraint* c = solver->MakeRowConstraint(-solver->infinity(), 0.0);
+        MPConstraint* const c = solver->MakeRowConstraint(-solver->infinity(), 0.0);
 
         // -cap(u,v) * alpha
         const double cap = graph.getEdgeCapacity(u, v);
@@ -198,11 +198,11 @@ void CMMF_Solver::storeFlow(AllPairRoutingTable& table) {
     }
 }
 
-double CMMF_Solver::getCongestionForPassedDemandMap() const {
+Result<double> CMMF_Solver::getCongestionForPassedDemandMap() const {
     if ( solver && alpha
         && status == MPSolver::OPTIMAL) {
         return alpha->solution_value();
     }else {
-        throw std::runtime_error("CMMF_Solver: error solving the minimum congestion.");
+        return makeErrorMessage(ErrorCode::SolverFailed, "CMMF_Solver: error solving the minimum congestion.");
     }
 }

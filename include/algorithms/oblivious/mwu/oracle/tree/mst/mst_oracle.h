@@ -24,7 +24,7 @@ public:
 
     // Override getTree: bypass the level-partition path entirely and
     // build the MST-based decomposition tree directly, dispatching on T.
-    T getTree(std::vector<double>& distances) override {
+    Result<T> getTree(std::vector<double>& distances) override {
         this->updateDistances(distances);
         MST mst_algo(this->graph);
         mst_edges = mst_algo.computeMST();
@@ -35,7 +35,7 @@ public:
         }
     }
 
-    std::shared_ptr<HSTNode> buildPointerHST() {
+    Result<std::shared_ptr<HSTNode>> buildPointerHST() {
         std::vector<std::tuple<double,int,int>> keyed;
         keyed.reserve(mst_edges.size());
         for (auto [u, v] : mst_edges) {
@@ -86,7 +86,7 @@ public:
         return cluster[rep];
     }
 
-    FlatHST buildFlatHST() {
+    Result<FlatHST> buildFlatHST() {
         // Flat FlatHST build
         std::vector<std::tuple<double,int,int>> keyed;
         keyed.reserve(mst_edges.size());

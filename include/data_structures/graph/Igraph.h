@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <numeric>
+#include "core/errors.h"
 
 #define INVALID_EDGE_ID -1
 
@@ -105,7 +106,7 @@ public:
      */
     virtual double getEdgeCapacity(int u, int v) const = 0;
     virtual double getEdgeDistance(int u, int v) const = 0;
-    virtual bool updateEdgeDistance(int u, int v, double distance) = 0;
+    virtual Result<void> updateEdgeDistance(int u, int v, double distance) = 0;
     virtual const int getEdgeId(int u, int v) const = 0;
 
     /**
@@ -113,7 +114,7 @@ public:
      */
     virtual double getEdgeCapacity(int e) const = 0;
     virtual double getEdgeDistance(int e) const = 0;
-    virtual bool updateEdgeDistance(int e, double dist) = 0;
+    virtual Result<void> updateEdgeDistance(int e, double dist) = 0;
     virtual std::pair<int, int> getEdgeEndpoints(int e) const = 0;
     virtual const int getAntiEdge(int e) const = 0;
 

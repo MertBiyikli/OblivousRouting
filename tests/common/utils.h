@@ -15,9 +15,11 @@
 #include <string>
 
 #include "../../include/core/utils.h"
+#include "../../include/core/errors.h"
 #include "../../include/routing/routing_engine.h"
+#include "../../include/routing/routing_result.h"
 #include "../../include/data_structures/graph/graph_csr.h"
-#include "../../include/io/parse_argurment_io.h"
+#include "../../include/io/parse_argument_io.h"
 
 namespace integration {
     inline std::filesystem::path projectSourceDir()
@@ -125,9 +127,15 @@ namespace integration {
     template <typename ResultPtr>
     inline void requireValidRoutingResult(const ResultPtr& result)
     {
-        REQUIRE(result);
-        REQUIRE(std::isfinite(result->oblivious_ratio));
-        REQUIRE(result->status == ResultStatus::OK);
+        REQUIRE(std::isfinite(result.value().oblivious_ratio));
+        REQUIRE(result.value().status == ResultStatus::OK);
+    }
+
+    template <typename T>
+    inline void checkForException(const Result<T>& result) {
+        if (!result) {
+            FAIL("Failed running test: " << result.error().message);
+        }
     }
 
     inline Config makeElectricalConfig()
@@ -135,6 +143,7 @@ namespace integration {
         Config cfg;
         cfg.solvers = {SolverType::ELECTRICAL_SKETCHING};
         cfg.graph_format = GraphFormat::CSR;
+        cfg.evaluate_demand_models = false;
 
         return cfg;
     }

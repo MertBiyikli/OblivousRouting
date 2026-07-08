@@ -2,6 +2,8 @@
 #include <catch2/catch_approx.hpp>
 #include "data_structures/graph/graph_csr.h"
 #include "../../include/routing/routing_table.h"
+#include "routing/storage/allpair_routing_table.h"
+#include "routing/storage/linear_routing_table.h"
 
 using Catch::Approx;
 
