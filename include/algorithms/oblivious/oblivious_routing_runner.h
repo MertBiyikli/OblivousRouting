@@ -17,6 +17,23 @@ public:
         if (const auto* mwu = dynamic_cast<const MWUFramework*>(solver.get())) {
             result.mwu_metrics = mwu->getMetrics();
         }
+        if (const auto* expander =
+            dynamic_cast<const ElectrifiedExpanderHierarchySolver*>(
+                solver.get()
+            )) {
+            result.expander_metrics =
+                expander->getMetrics();
+
+            /*
+             * Give the generic runtime fields meaningful EEH values.
+             */
+            result.preprocessing_runtime_microseconds =
+                result.expander_metrics.preprocessingRuntime();
+
+            result.solve_runtime_microseconds =
+                result.expander_metrics
+                    .basis_flow_runtime_microseconds;
+            }
     }
 
     template<typename SolverPtr>

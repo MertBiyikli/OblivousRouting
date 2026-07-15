@@ -24,6 +24,20 @@ public:
         const Config& cfg,
         SolverType type
     );
+
+    Config cfg;
+    std::unique_ptr<IGraph> m_graph;
+    std::unique_ptr<IGraph> getGraph() {
+        if (!m_graph) {
+            throw std::runtime_error("RoutingEngine::getGraph: graph not set");
+            return nullptr;
+        }else {
+            return std::move(m_graph);
+        }
+    }
+
+
+    Config getConfig() {return cfg;}
 };
 
 

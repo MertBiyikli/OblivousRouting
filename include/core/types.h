@@ -21,7 +21,8 @@ enum class SolverType {
     RAECKE_FRT_MENDELSCALING_POINTER,
     RAECKE_CKR_MENDELSCALING_POINTER,
     SEMI_ELECTRICAL,
-    SEMI_TREE
+    SEMI_TREE,
+    EXPANDER_HIERARCHY
 };
 
 enum class DemandModelType {

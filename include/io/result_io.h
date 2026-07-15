@@ -105,6 +105,83 @@ private:
                     << mwu.oracle_running_times.size() << '\n';
             }
         }
+        if (!result.expander_metrics.empty()) {
+            const auto& metrics = result.expander_metrics;
+
+            out << "Expander hierarchy metrics:\n";
+
+            out << "  Hierarchy runtime (microseconds): "
+                << metrics.hierarchy_runtime_microseconds
+                << '\n';
+
+            out << "  Tree construction runtime (microseconds): "
+                << metrics.tree_runtime_microseconds
+                << '\n';
+
+            out << "  Basis-flow runtime (microseconds): "
+                << metrics.basis_flow_runtime_microseconds
+                << '\n';
+
+            out << "  Hierarchy levels: "
+                << metrics.hierarchy_levels
+                << '\n';
+
+            out << "  Hierarchy clusters: "
+                << metrics.hierarchy_clusters
+                << '\n';
+
+            out << "  Clusters per level: ";
+
+            for (std::size_t index = 0; index < metrics.clusters_per_level.size(); ++index) {
+                if (index > 0) {
+                    out << ", ";
+                }
+
+                out << metrics.clusters_per_level[index];
+                 }
+
+            out << '\n';
+
+            out << "  Maximum cluster vertices: "
+                << metrics.max_cluster_vertices
+                << '\n';
+
+            out << "  Average cluster vertices: "
+                << metrics.average_cluster_vertices
+                << '\n';
+
+            out << "  Tree nodes: "
+                << metrics.tree_nodes
+                << '\n';
+
+            out << "  Tree edges: "
+                << metrics.tree_edges
+                << '\n';
+
+            out << "  Tree depth: "
+                << metrics.tree_depth
+                << '\n';
+
+            out << "  Basis flows: "
+                << metrics.basis_flows
+                << '\n';
+
+            out << "  Total electrical solves: "
+                << metrics.total_electrical_solves
+                << '\n';
+
+            out << "  Average electrical solves per basis flow: "
+                << metrics.averageElectricalSolves()
+                << '\n';
+
+            out << "  Maximum basis embedding congestion: "
+                << metrics.max_basis_embedding_congestion
+                << '\n';
+
+            out << "  Maximum conservation error: "
+                << metrics.max_conservation_error
+                << '\n';
+        }
     }
 
     static std::string jsonEscape(const std::string& s) {
@@ -124,10 +201,7 @@ private:
         return escaped;
     }
 
-    static void writeJson(
-        const IRoutingResult& result,
-        std::ostream& out
-    ) {
+    static void writeJson(const IRoutingResult& result,std::ostream& out) {
         out << "{\n";
         out << R"(  "date": ")" << std::chrono::system_clock::now() << "\",\n";
         out << R"(  "solver": ")" << (result.solver_name) << "\",\n";
@@ -172,6 +246,14 @@ private:
             out << "  },\n";
         }
 
+        if (!result.expander_metrics.empty()) {
+            writeExpanderMetricsJson(
+                result.expander_metrics,
+                out
+            );
+        }
+
+
         out << "  \"demand_evaluations\": [\n";
 
         for (std::size_t i = 0; i < result.demand_evaluations.size(); ++i) {
@@ -200,6 +282,87 @@ private:
 
 
     }
+
+    static void writeExpanderMetricsJson(
+    const ExpanderMetrics& metrics,
+    std::ostream& out
+) {
+    out << "  \"expander_metrics\": {\n";
+
+    out << "    \"hierarchy_runtime_microseconds\": "
+        << metrics.hierarchy_runtime_microseconds
+        << ",\n";
+
+    out << "    \"tree_runtime_microseconds\": "
+        << metrics.tree_runtime_microseconds
+        << ",\n";
+
+    out << "    \"basis_flow_runtime_microseconds\": "
+        << metrics.basis_flow_runtime_microseconds
+        << ",\n";
+
+    out << "    \"hierarchy_levels\": "
+        << metrics.hierarchy_levels
+        << ",\n";
+
+    out << "    \"hierarchy_clusters\": "
+        << metrics.hierarchy_clusters
+        << ",\n";
+
+    out << "    \"clusters_per_level\": [";
+
+    for (std::size_t index = 0;index < metrics.clusters_per_level.size();++index) {
+        if (index > 0) {
+            out << ", ";
+        }
+
+        out << metrics.clusters_per_level[index];
+    }
+
+    out << "],\n";
+
+    out << "    \"max_cluster_vertices\": "
+        << metrics.max_cluster_vertices
+        << ",\n";
+
+    out << "    \"average_cluster_vertices\": "
+        << metrics.average_cluster_vertices
+        << ",\n";
+
+    out << "    \"tree_nodes\": "
+        << metrics.tree_nodes
+        << ",\n";
+
+    out << "    \"tree_edges\": "
+        << metrics.tree_edges
+        << ",\n";
+
+    out << "    \"tree_depth\": "
+        << metrics.tree_depth
+        << ",\n";
+
+    out << "    \"basis_flows\": "
+        << metrics.basis_flows
+        << ",\n";
+
+    out << "    \"total_electrical_solves\": "
+        << metrics.total_electrical_solves
+        << ",\n";
+
+    out << "    \"average_electrical_solves\": "
+        << metrics.averageElectricalSolves()
+        << ",\n";
+
+    out << "    \"max_basis_embedding_congestion\": "
+        << metrics.max_basis_embedding_congestion
+        << ",\n";
+
+    out << "    \"max_conservation_error\": "
+        << metrics.max_conservation_error
+        << "\n";
+
+    out << "  },\n";
+}
 };
 
 #endif //OBLIVIOUSROUTING_RESULT_IO_H

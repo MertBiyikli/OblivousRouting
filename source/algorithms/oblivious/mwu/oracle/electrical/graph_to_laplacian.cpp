@@ -28,6 +28,28 @@ void GraphToLaplacian::init(const IGraph& graph) {
     }
 }
 
+void GraphToLaplacian::init(const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, int n) {
+    int m = static_cast<int>(edges.size());
+
+    to.resize(m);
+    from.resize(m);
+    head.resize(n + 1, 0);
+    weights = edge_weights;
+    laplacian_indices.resize(m);
+    laplacian_indices_for_diagonal_elements.resize(n);
+
+    for (int e = 0; e < m; e++) {
+        from[e] = edges[e].first;
+        to[e]   = edges[e].second;
+    }
+
+    int curr = 0;
+    for (int u = 0; u < n; u++) {
+        while (curr < m && from[curr] == u) curr++;
+        head[u+1] = curr;
+    }
+}
+
 double GraphToLaplacian::getEdgeWeight(int e) const {
     assert(e >= 0 && e < weights.size());
     return weights[e];

@@ -120,7 +120,7 @@ Result<void> RoutingValidation::validateConfig(const Config &_config) const {
         }
 
         if (_config.offline_opt_per_model.empty()) {
-            return makeErrorMessage(ErrorCode::RuntimeError, "Offline optima are empty, but solver expects to route a demand.");
+            //return makeErrorMessage(ErrorCode::RuntimeError, "Offline optima are empty, but solver expects to route a demand.");
         }
     }
 

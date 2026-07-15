@@ -5,6 +5,14 @@ project(ObliviousRouting
         DESCRIPTION "A comparison of tree metrics and electrical flows as oblivious routing oracles"
         LANGUAGES CXX)
 
+# Set CMake policies early to suppress warnings
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW)
+endif()
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 # ============================================================================
 # Options
 # ============================================================================
@@ -15,19 +23,52 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ============================================================================
+# Dependencies — Homebrew setup
+# ============================================================================
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
-if(DEFINED ENV{ORTOOLS_ROOT})
-    list(PREPEND CMAKE_PREFIX_PATH "$ENV{ORTOOLS_ROOT}")
-endif()
+# Homebrew is at /usr/local on this Intel Mac.
+set(PKG_CONFIG_EXECUTABLE "/usr/local/bin/pkg-config"
+        CACHE FILEPATH "Homebrew pkg-config executable" FORCE)
 
-# ============================================================================
-# Dependencies
-# ============================================================================
-find_package(Protobuf CONFIG REQUIRED)
-find_package(ortools REQUIRED CONFIG)
+set(ENV{PKG_CONFIG_PATH}
+        "/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Cbc       REQUIRED IMPORTED_TARGET cbc)
+pkg_check_modules(OsiCbc    REQUIRED IMPORTED_TARGET osi-cbc)
+pkg_check_modules(Clp       REQUIRED IMPORTED_TARGET clp)
+pkg_check_modules(OsiClp    REQUIRED IMPORTED_TARGET osi-clp)
+pkg_check_modules(Cgl       REQUIRED IMPORTED_TARGET cgl)
+pkg_check_modules(Osi       REQUIRED IMPORTED_TARGET osi)
+pkg_check_modules(CoinUtils REQUIRED IMPORTED_TARGET coinutils)
+# This is the imported target Homebrew's OR-Tools export requires.
+pkg_check_modules(Cbc REQUIRED IMPORTED_TARGET cbc)
+
+find_package(ortools CONFIG REQUIRED)
+get_filename_component(ORTOOLS_PREFIX "${ortools_DIR}/../../.." REALPATH)
+set(ORTOOLS_INCLUDE_DIR "${ORTOOLS_PREFIX}/include")
+
+if(NOT EXISTS "${ORTOOLS_INCLUDE_DIR}/ortools/linear_solver/linear_solver.h")
+    message(FATAL_ERROR "OR-Tools headers were not found at: ${ORTOOLS_INCLUDE_DIR}")
+endif()
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen3 REQUIRED)
+
+
+# Never let CMake select Anaconda's fmt installation.
+find_package(fmt CONFIG REQUIRED
+        PATHS "/usr/local/lib/cmake/fmt"
+        NO_DEFAULT_PATH)
+
+# xcut fetches spdlog. Make that spdlog use the same external fmt.
+set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL
+        "Use external fmt for spdlog" FORCE)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/extern/xcut EXCLUDE_FROM_ALL)
+
+target_link_libraries(xcut_lib PUBLIC fmt::fmt)
 
 # ============================================================================
 # Core library: all production code except app/main.cpp
@@ -112,9 +153,21 @@ add_library(oblivious_routing_core STATIC
         source/algorithms/semi_oblivious/semi_routing_engine.cpp
         source/algorithms/semi_oblivious/semi_routing_runner.cpp
         source/algorithms/semi_oblivious/semi_oblivious_solver.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/hierarchy_results.h
+        include/algorithms/semi_oblivious/expander_hierarchy/preprocessing/hierarchy_preprocessor.h
         source/algorithms/oblivious/oblivious_routing_runner.cpp
         include/core/errors.h
         include/io/result_io.h
+        include/algorithms/semi_oblivious/expander_hierarchy/routing_oracle/local_electrical_solver.h
+        source/algorithms/semi_oblivious/expander_hierarchy/preprocessing/hierarchy_preprocessor.cpp
+        source/algorithms/semi_oblivious/expander_hierarchy/routing_oracle/local_electrical_solver.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.h
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_router.h
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_router.cpp
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.h
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h
 )
 
 target_include_directories(oblivious_routing_core
@@ -123,16 +176,19 @@ target_include_directories(oblivious_routing_core
         ${CMAKE_SOURCE_DIR}/source
         ${CMAKE_SOURCE_DIR}/experiments
         ${CMAKE_SOURCE_DIR}/extern/amgcl
+        ${CMAKE_SOURCE_DIR}/extern/xcut/include
+        ${ORTOOLS_INCLUDE_DIR}
 )
 
 target_link_libraries(oblivious_routing_core
         PUBLIC
+        xcut_lib
         ortools::ortools
-        protobuf::libprotobuf
         Eigen3::Eigen
         Boost::program_options
         Boost::serialization
 )
+
 
 # ============================================================================
 # Main executable

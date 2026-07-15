@@ -71,6 +71,13 @@ public:
     void init(IGraph &g, std::vector<double> &_adj_edge_weights, int n, const std::vector<std::pair<int, int> > &edges,
               bool debug = false);
 
+    void init(int n,
+          const std::vector<std::pair<int, int>>& edges,
+          const std::vector<double>& edge_weights,
+          bool debug = false);
+
+    Result<void> initGrounded(int n, const std::vector<std::pair<int, int>>& edges,  const std::vector<double>& edge_weights, int grounded_node);
+
     void updateSolver();
 
     Result<void> updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges);

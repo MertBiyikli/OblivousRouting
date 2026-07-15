@@ -1,5 +1,4 @@
-#ifndef OBLIVIOUSROUTING_ROUTING_VALIDATION_H
-#define OBLIVIOUSROUTING_ROUTING_VALIDATION_H
+#pragma once
 
 #include "routing_result.h"
 #include "core/config.h"
@@ -23,4 +22,3 @@ private:
     [[nodiscard]] Result<void> validateRouting(const IRoutingResult& _routing_results) const;
 };
 
-#endif OBLIVIOUSROUTING_ROUTING_VALIDATION_H

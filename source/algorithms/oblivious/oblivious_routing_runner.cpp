@@ -23,8 +23,10 @@ Result<IRoutingResult> ObliviousSolverRunner::run(IGraph& graph,const Config& cf
 
     const auto t0 = timeNow();
     auto scheme = solver->solve();
-    if (!scheme
-        || !(*scheme)) {
+    if (!scheme) {
+        return getError(scheme);
+    }
+    if ( !(*scheme)) {
         result.status = ResultStatus::ERROR_INVALID_ROUTING_SCHEME;
         return makeErrorMessage(ErrorCode::SolverFailed, "The computed scheme is null.");
     }else {

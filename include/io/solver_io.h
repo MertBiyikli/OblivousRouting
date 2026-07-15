@@ -9,6 +9,7 @@
 #include "algorithms/oblivious/oblivious_solver.h"
 #include "algorithms/lp/lp_ac.h"
 #include "algorithms/oblivious/mwu/electrical_mwu.h"
+#include "algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h"
 #include "algorithms/oblivious/mwu/tree_mwu.h"
 #include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
 #include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
@@ -49,7 +50,8 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"rmst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"11", SolverType::RAECKE_RANDOM_MST_POINTER},
     {"raecke_frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"12", SolverType::RAECKE_FRT_MENDELSCALING_POINTER},
         {"semi_elec", SolverType::SEMI_ELECTRICAL}, {"semi_electrical", SolverType::SEMI_ELECTRICAL}, {"13", SolverType::SEMI_ELECTRICAL},
-        {"semi_tree", SolverType::SEMI_TREE}, {"14", SolverType::SEMI_TREE}
+        {"semi_tree", SolverType::SEMI_TREE}, {"14", SolverType::SEMI_TREE},
+    {"expander", SolverType::EXPANDER_HIERARCHY}, {"exp", SolverType::EXPANDER_HIERARCHY},{"expander_hierarchy", SolverType::EXPANDER_HIERARCHY},{"15", SolverType::EXPANDER_HIERARCHY},
 };
 
 
@@ -96,6 +98,9 @@ makeSolver(SolverType type, IGraph& g) {
         case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
             return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g, true));
 
+        case SolverType::EXPANDER_HIERARCHY:
+            return std::make_unique<ElectrifiedExpanderHierarchySolver>(g, 0);
+
         default:
             return std::nullopt;
     }
@@ -122,7 +127,8 @@ inline std::string getSolverName(SolverType type) {
             {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
             {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
             {SolverType::SEMI_ELECTRICAL, "Semi-Oblivious Routing (Electrical base)"},
-            {SolverType::SEMI_TREE, "Semi-Oblivious Routing (Tree base)"}
+            {SolverType::SEMI_TREE, "Semi-Oblivious Routing (Tree base)"},
+            {SolverType::EXPANDER_HIERARCHY, "Electrified Expander Hierarchy solver"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";

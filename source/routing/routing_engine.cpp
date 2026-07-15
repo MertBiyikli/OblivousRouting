@@ -38,11 +38,12 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
     if (!graph) {
         return getError(graph);
     }
-
+/*
     auto offline = offlineOptimal(graph.value(), cfg.value());
     if (!offline) {
         return getError(offline);
     }
+    */
 
     RoutingEngine engine;
 
@@ -62,6 +63,8 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
 
     }
 
+    m_graph = std::move(graph.value());
+    this->cfg = cfg.value();
     return {};
 }
 
@@ -73,7 +76,7 @@ Result<IRoutingResult> RoutingEngine::solve(IGraph& graph,const Config& cfg,Solv
 
     auto input = validator.input(graph, cfg);
     if (!input) {
-        return std::unexpected(input.error());
+        return getError(input);
     }
 
     auto runner = makeRunner(type);

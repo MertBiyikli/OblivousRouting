@@ -27,15 +27,118 @@
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/re2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/scip-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/zlib-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/catch2-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/catch2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/spdlog-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel-coverage/_deps/spdlog-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/cmake-build-release/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-tests/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl/pyamgcl/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/xcut" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/lambda" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/lambda2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/leaf" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/lexical_cast" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/local_function" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/locale" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/lockfree" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/log" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/logic" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/math" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/metaparse" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/move" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/mp11" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/mpi" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/mpl" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/msm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/multi_array" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/multi_index" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/multiprecision" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/mysql" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/nowide" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/numeric/conversion" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/numeric/interval" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/numeric/odeint" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/numeric/ublas" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/optional" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/outcome" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/parameter" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/parameter_python" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/parser" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/pfr" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/phoenix" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/poly_collection" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/polygon" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/pool" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/predef" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/preprocessor" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/process" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/program_options" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/property_map" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/property_map_parallel" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/property_tree" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/proto" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/ptr_container" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/python" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/qvm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/random" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/range" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/ratio" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/rational" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/redis" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/regex" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/safe_numerics" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/scope" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/scope_exit" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/serialization" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/signals2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/smart_ptr" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/sort" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/spirit" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/stacktrace" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/statechart" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/static_assert" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/static_string" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/stl_interfaces" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/system" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/thread" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/throw_exception" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/timer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/tokenizer" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/tti" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/tuple" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/type_erasure" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/type_index" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/type_traits" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/typeof" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/units" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/unordered" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/url" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/utility" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/uuid" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/variant" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/variant2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/vmd" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/wave" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/winapi" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/xpressive" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/libs/yap" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/more" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/auto_index" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/bcp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/boost_install" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/boostbook" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/boostdep" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/boostlook" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/check_build" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/cmake" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/docca" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/inspect" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/litre" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/or-tools/tools/quickbook" vcs="Git" />
   </component>
 </project>

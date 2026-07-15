@@ -63,6 +63,54 @@ public:
 
 };
 
+struct ExpanderMetrics {
+    double hierarchy_runtime_microseconds = 0.0;
+    double tree_runtime_microseconds = 0.0;
+    double basis_flow_runtime_microseconds = 0.0;
+
+    // Hierarchy structure.
+    std::size_t hierarchy_levels = 0;
+    std::size_t hierarchy_clusters = 0;
+    std::vector<std::size_t> clusters_per_level;
+
+    std::size_t max_cluster_vertices = 0;
+    double average_cluster_vertices = 0.0;
+
+    // Tree sparsifier structure.
+    std::size_t tree_nodes = 0;
+    std::size_t tree_edges = 0;
+    int tree_depth = 0;
+
+    // Routing construction.
+    std::size_t basis_flows = 0;
+    std::size_t total_electrical_solves = 0;
+
+    // Numerical diagnostics over all root-target basis flows.
+    double max_basis_embedding_congestion = 0.0;
+    double max_conservation_error = 0.0;
+
+    double preprocessingRuntime() const noexcept {
+        return hierarchy_runtime_microseconds +
+               tree_runtime_microseconds;
+    }
+
+    double averageElectricalSolves() const noexcept {
+        if (basis_flows == 0) {
+            return 0.0;
+        }
+
+        return static_cast<double>(total_electrical_solves) /
+               static_cast<double>(basis_flows);
+    }
+
+    bool empty() const noexcept {
+        return hierarchy_levels == 0 &&
+               hierarchy_clusters == 0 &&
+               tree_nodes == 0 &&
+               basis_flows == 0;
+    }
+};
+
 
 struct IRoutingResult {
 
@@ -72,7 +120,7 @@ struct IRoutingResult {
     std::string graph_name;
     int nodes, edges;
     SolverType type;
-    double oblivious_ratio = NULL;
+    double oblivious_ratio = -1;
 
 
     // Runtime
@@ -86,6 +134,7 @@ struct IRoutingResult {
     double average_paths_per_pair = 0.0;
 
     MWUMetrics mwu_metrics;
+    ExpanderMetrics expander_metrics;
 
     std::vector<DemandEvaluationResult> demand_evaluations;
     // Semi-oblivious: one demand-specific scheme per demand model
