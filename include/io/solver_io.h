@@ -23,6 +23,7 @@
 #include <map>
 
 #include "../algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h"
+#include "algorithms/oblivious/mwu/flow_sparsifier_mwu.h"
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
 #include "core/types.h"
 
@@ -36,7 +37,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"f", SolverType::RAECKE_FRT_FLAT}, {"2", SolverType::RAECKE_FRT_FLAT},
     {"raecke_ckr", SolverType::RAECKE_CKR_FLAT}, {"ckr", SolverType::RAECKE_CKR_FLAT},
     {"c", SolverType::RAECKE_CKR_FLAT}, {"3", SolverType::RAECKE_CKR_FLAT},
-    {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_mst", SolverType::RAECKE_RANDOM_MST_FLAT},
+    {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_lecmst", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"rmst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"4", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"cohen", SolverType::LP_APPLEGATE_COHEN}, {"lp", SolverType::LP_APPLEGATE_COHEN},
     {"applegate", SolverType::LP_APPLEGATE_COHEN}, {"ac", SolverType::LP_APPLEGATE_COHEN}, {"l", SolverType::LP_APPLEGATE_COHEN}, {"5", SolverType::LP_APPLEGATE_COHEN},
@@ -52,6 +53,8 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
         {"semi_elec", SolverType::SEMI_ELECTRICAL}, {"semi_electrical", SolverType::SEMI_ELECTRICAL}, {"13", SolverType::SEMI_ELECTRICAL},
         {"semi_tree", SolverType::SEMI_TREE}, {"14", SolverType::SEMI_TREE},
     {"expander", SolverType::EXPANDER_HIERARCHY}, {"exp", SolverType::EXPANDER_HIERARCHY},{"expander_hierarchy", SolverType::EXPANDER_HIERARCHY},{"15", SolverType::EXPANDER_HIERARCHY},
+        {"semi_expander", SolverType::SEMI_EXPANDER_HIERARCHY}, {"semi_exp", SolverType::SEMI_EXPANDER_HIERARCHY},{"semi_expander_hierarchy", SolverType::SEMI_EXPANDER_HIERARCHY},{"16", SolverType::SEMI_EXPANDER_HIERARCHY},
+    {"expander_mwu", SolverType::EXPANDER_MWU}, {"17", SolverType::EXPANDER_MWU}
 };
 
 
@@ -101,6 +104,9 @@ makeSolver(SolverType type, IGraph& g) {
         case SolverType::EXPANDER_HIERARCHY:
             return std::make_unique<ElectrifiedExpanderHierarchySolver>(g, 0);
 
+        case SolverType::EXPANDER_MWU:
+            return std::make_unique<FlowSparsifier>(g, 0);
+
         default:
             return std::nullopt;
     }
@@ -128,7 +134,9 @@ inline std::string getSolverName(SolverType type) {
             {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
             {SolverType::SEMI_ELECTRICAL, "Semi-Oblivious Routing (Electrical base)"},
             {SolverType::SEMI_TREE, "Semi-Oblivious Routing (Tree base)"},
-            {SolverType::EXPANDER_HIERARCHY, "Electrified Expander Hierarchy solver"}
+            {SolverType::EXPANDER_HIERARCHY, "Electrified Expander Hierarchy solver"},
+            {SolverType::SEMI_EXPANDER_HIERARCHY, "Semi-Oblivious Routing (Electrified Expander Hierarchy)"},
+            {SolverType::EXPANDER_MWU, "Electrified Expander Hierarchy solver with MWU weight update"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";

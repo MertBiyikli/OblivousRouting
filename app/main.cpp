@@ -1,162 +1,139 @@
-#include "../include/io/parse_argument_io.h"
 #include "../include/routing/routing_engine.h"
+#include "../include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.h"
+#include "algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.h"
+#include "algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h"
+#include <cassert>
 
-#include "algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.h"
-#include "algorithms/semi_oblivious/expander_hierarchy/tree_flow_router.h"
-#include "algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.h"
-#include "algorithms/semi_oblivious/expander_hierarchy/preprocessing/hierarchy_preprocessor.h"
-#include "routing/routing_runner.h"
+#include "algorithms/oblivious/mwu/flow_sparsifier_mwu.h"
+
+int main(int argc, char **argv) {
+
+    // Parse command line arguments
+    RoutingEngine engine;
+    auto res = engine.entry(argc, argv);
+    if (!res) {
+        std::cerr << "Error: " << getError(res).error().message << std::endl;
+        return 1;
+    }
+
 
 /*
-LinearRoutingTable runExpanderHierarchySmokeTest(IGraph& graph) {
-    //graph.print();
-    if (graph.getNumNodes() < 2) {
-        std::cerr
-            << "[expander smoke] Graph requires at least two vertices.\n";
+    auto graph_p = engine.getGraph();
+    auto graph = Graph(*graph_p);
+    std::vector<int> all_vertices(graph.node_count());
+    std::iota(all_vertices.begin(), all_vertices.end(), 0);
+
+
+    const Capacity root_volume = graph.volume(all_vertices);
+    const double log_volume = std::log10(
+        static_cast<double>(std::max<Capacity>(2, root_volume)));
+
+    const double gamma_cmp =
+        22.0 + std::ceil(5.0 * log_volume * log_volume);
+
+    DecompositionConfig decomposition_config;
+    const double log2_volume = std::max(
+    1.0,
+    std::log2(static_cast<double>(
+        std::max<Capacity>(2, root_volume))));
+
+    const double alpha_max =1.0 /(4.0 * gamma_cmp * log2_volume * log2_volume);
+
+    decomposition_config.alpha = 0.9 * alpha_max;
+    decomposition_config.phi = 0.2;
+    decomposition_config.gamma_cmp = gamma_cmp;
+
+
+    constexpr std::size_t exact_cluster_limit = 18;
+    PracticalOracleConfig oracle_config;
+    Capacity total_multiplicity = 0;
+    for (const Edge& edge : graph.edges()) {
+        if (total_multiplicity >
+            std::numeric_limits<Capacity>::max() - edge.multiplicity) {
+            throw std::overflow_error("terminal upper bound overflow");
+            }
+        total_multiplicity += edge.multiplicity;
+    }
+
+    const Capacity maximum_boundary_copies =
+        std::max<Capacity>(
+            1,
+            static_cast<Capacity>(std::ceil(
+                decomposition_config.alpha / decomposition_config.phi)));
+
+    if (total_multiplicity >
+        std::numeric_limits<Capacity>::max() / maximum_boundary_copies) {
+        throw std::overflow_error("terminal upper bound overflow");
+        }
+
+    const Capacity terminal_upper_bound =
+        total_multiplicity * maximum_boundary_copies;
+
+    if (terminal_upper_bound >
+        std::numeric_limits<std::size_t>::max()) {
+        throw std::overflow_error("terminal upper bound exceeds size_t");
+        }
+
+    oracle_config.maximum_explicit_terminals =
+        static_cast<std::size_t>(terminal_upper_bound);
+    oracle_config.exact_fallback_max_vertices = exact_cluster_limit;
+    oracle_config.gamma_cmp = gamma_cmp;
+    oracle_config.allow_exact_fallback = true;
+    oracle_config.selection_mode = OracleSelectionMode::Auto;
+
+
+    const auto oracle = std::make_shared<PracticalCutMatchingOracle>(oracle_config);
+    auto t0 = timeNow();
+    const DecompositionResult result = BoundaryLinkedDecomposer(decomposition_config, oracle).decompose(graph);
+    std::cout << "Running time boundary-linked: " << duration(timeNow()-t0) << " microseconds." << std::endl;
+
+    assert(result.boundary_accounting_identity_verified && "end-to-end boundary accounting failed");
+
+    ValidationOptions validation_options;
+    validation_options.exact_max_vertices = exact_cluster_limit;
+    validation_options.require_exact_for_all = false;
+    const ValidationReport validation = validate_decomposition(graph, decomposition_config, result, {}, validation_options);
+    for (const std::string& error : validation.errors) {
+        std::cerr << "Boundary-linked validation: " << error << '\n';
+    }
+    assert(validation.valid() && "end-to-end result failed independent validation");
+
+    std::vector<bool> seen(graph.node_count(), false);
+    const ExactConductanceOracle exact(exact_cluster_limit);
+    for (const OutputCluster& cluster : result.clusters) {
+        for (int v : cluster.vertices) {
+            assert(!seen[v] &&  "end-to-end clusters overlap");
+            seen[v] = true;
+        }
+        if (cluster.vertices.size() <= exact_cluster_limit) {
+            const OracleResult check = exact.analyze(
+                graph,
+                cluster.vertices,
+                decomposition_config.alpha / cluster.phi,
+                cluster.phi);
+            assert(check.kind == OracleResult::Kind::ExpanderCertificate &&
+                "end-to-end final cluster failed exact boundary-linked verification");
+        }
+    }
+    for (bool vertex_was_seen : seen) {
+        assert(vertex_was_seen && "end-to-end decomposition omitted a vertex");
     }
 
     std::cout
-        << "[expander smoke] preprocessing graph with "
-        << graph.getNumNodes() << " vertices and "
-        << graph.getNumUndirectedEdges() << " edges\n";
+    << "Clusters: " << result.clusters.size() << '\n'
+    << "Splits: " << result.splits.size() << '\n'
+    << "Randomized certificates: "
+    << result.randomized_expansion_proof_count << '\n'
+    << "Boundary accounting: "
+    << result.boundary_accounting_identity_verified << '\n'
+    << "Output expansion certified: "
+    << result.output_expansion_certified << '\n';
 
-    XCutHierarchyPreprocessor preprocessor;
-
-    auto hierarchy_result = preprocessor.build(graph);
-
-    if (!hierarchy_result) {
-        std::cerr
-            << "[expander smoke] preprocessing failed\n";
-        std::cerr << hierarchy_result.error().message << '\n';
-    }
-
-    const HierarchyResult& hierarchy = *hierarchy_result;
-
-    TreeSparsifierBuilder tree_builder;
-
-    auto tree_result =
-        tree_builder.build(graph, hierarchy);
-
-    if (!tree_result) {
-        std::cerr
-            << "[tree sparsifier] construction failed\n"
-            << tree_result.error().message
-            << '\n';
-
-    }
-
-    const TreeSparsifier& tree = *tree_result;
-    //tree.print();
-
-
-    const int root = 0;
-    //const int target = graph.getNumNodes() - 3;
-    TreeFlowRouter tree_router(tree);
-    constexpr double demand_value = 1.0;
-    LinearRoutingTable linear_routing_table;
-    linear_routing_table.init(graph);
-
-    for (int target = 0; target < graph.getNumNodes(); ++target) {
-        if (target == root) {
-            continue;
+    for (std::size_t i = 0; i < result.clusters.size(); ++i) {
+        std::cout << "Cluster " << i << ": ";
+        for (int v : result.clusters[i].vertices) {
+            std::cout << v << ' ';
         }
-
-        auto tree_flow_result = tree_router.routePair(
-            root,
-            target,
-            demand_value
-        );
-
-
-        if (!tree_flow_result) {
-            std::cerr
-                << "[tree routing] failed\n"
-                << tree_flow_result.error().message
-                << '\n';
-
-        }
-
-        const TreeFlowResult& tree_flow = *tree_flow_result;
-
-        TreeFlowElectricalEmbedder embedder(
-        graph,
-        hierarchy,
-        tree
-    );
-
-        auto embedding_result = embedder.embed(tree_flow);
-
-        if (!embedding_result) {
-            std::cerr
-                << "[electrical embedding] failed\n"
-                << embedding_result.error().message
-                << '\n';
-        }
-
-        const auto& embedding = *embedding_result;
-
-
-        for (int e = 0; e < graph.getNumDirectedEdges();++e) {
-            const double flow = embedding.signed_edge_flow[e];
-
-            if (std::abs(flow) <= 1e-10) {
-                continue;
-            }
-
-            const auto [u, v] = graph.getEdgeEndpoints(e);
-
-            // get sign of the flow
-            if (flow < 0) {
-                int anti_e = graph.getAntiEdge(e);
-                linear_routing_table.addFlow(anti_e, target, std::abs(flow));
-            }else {
-                linear_routing_table.addFlow(e, target, flow);
-            }
-        }
-    }
-    return linear_routing_table;
-}
-*/
-
-int main(int argc, char **argv) {
-    // Parse command line arguments
-
-    RoutingEngine engine;
-    auto result = engine.entry(argc, argv);
-    if (!result) {
-        std::cerr << "Error: " << result.error().message << std::endl;
-        return 1;
-    }
-/*
-    IRoutingResult res;
-    if (auto graph = engine.getGraph()) {
-        auto t0 = timeNow();
-        auto table = runExpanderHierarchySmokeTest(*graph);
-        std::cout << "Running time expander: " << (duration( timeNow()-t0)) << " microseconds" << std::endl;
-        const std::unique_ptr<RoutingScheme> scheme = std::make_unique<LinearRoutingScheme>(*graph, 0, std::move(table));
-
-
-        auto dem = DemandEvaluator::evaluate(*graph, scheme ,engine.getConfig(), res);
-
-        for (std::size_t i = 0; i < res.demand_evaluations.size(); ++i) {
-            const auto& eval = res.demand_evaluations[i];
-
-            std::cout << "    {\n";
-            std::cout << "      \"demand_model\": \""
-                << (demandModelName(eval.demand_type)) << "\",\n";
-            std::cout << "      \"congestion\": "
-                << eval.congestion << ",\n";
-            std::cout << "      \"runtime_microseconds\": "
-                << eval.runtime_microseconds << "\n";
-            std::cout << "    }";
-
-            if (i + 1 < res.demand_evaluations.size()) {
-                std::cout << ",";
-            }
-
-            std::cout << "\n";
-        }
-
-    }
-    */
+        std::cout << '\n';
+    }*/
 }

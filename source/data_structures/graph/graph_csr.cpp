@@ -160,7 +160,7 @@ Result<void> GraphCSR::updateEdgeDistance(int e, double dist) {
 
     distance[e] = dist;
 
-    // also update the reverse edge if undirected
+    // also update the reverse edge
     const int& a = from[e];
     const int& b = to[e];
     int rev_edge_id = getEdgeId(a, b);

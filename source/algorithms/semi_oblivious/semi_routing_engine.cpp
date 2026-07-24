@@ -6,7 +6,56 @@
 
 #include "algorithms/oblivious/mwu/electrical_mwu.h"
 #include "algorithms/oblivious/mwu/tree_mwu.h"
+#include "algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h"
 #include "utils/my_math.h"
+
+Result<void> validateResidualOrientation(const IGraph& graph,const int source,const int target,const std::vector<double>& residual) {
+    std::vector<double> divergence(
+        graph.getNumNodes(),
+        0.0
+    );
+
+    for (int edge = 0;
+         edge < graph.getNumDirectedEdges();
+         ++edge) {
+        const double flow = residual[edge];
+
+        if (flow <= 0.0) {
+            continue;
+        }
+
+        const auto [u, v] =
+            graph.getEdgeEndpoints(edge);
+
+        divergence[u] += flow;
+        divergence[v] -= flow;
+         }
+
+    constexpr double tolerance = 1e-7;
+
+    /*
+     * Unit s -> t flow:
+     *
+     *     div(s) = +1
+     *     div(t) = -1
+     */
+    if (divergence[source] < 1.0 - tolerance ||
+        divergence[target] > -1.0 + tolerance) {
+        return makeErrorMessage(
+            ErrorCode::InvalidRouting,
+            "Flow orientation/conservation is invalid for pair " +
+                std::to_string(source) +
+                " -> " +
+                std::to_string(target) +
+                ". source divergence=" +
+                std::to_string(divergence[source]) +
+                ", target divergence=" +
+                std::to_string(divergence[target])
+        );
+        }
+
+    return {};
+}
 
 Result<CandidateRoutingScheme> SemiSolverRoutingEngine::preprocess(const IGraph& graph) {
     CandidateRoutingScheme candidateScheme;
@@ -17,84 +66,163 @@ Result<CandidateRoutingScheme> SemiSolverRoutingEngine::preprocess(const IGraph&
     }
     for (int s = 0; s < graph.getNumNodes(); s++) {
         for (int t = 0; t<graph.getNumNodes(); t++) {
-            if (s == solver_->getRootNode() || t == solver_->getRootNode()
-                || s == t) {
+            if (s == solver_->getRootNode() || t == solver_->getRootNode() || s == t) {
                 continue;
-                }
+            }
 
-            extractPath(graph, *(scheme.value()), s, t, candidateScheme);
+            auto extracted = extractPath(graph, *(scheme.value()), s, t, candidateScheme);
+            if (!extracted) {
+                return getError(extracted);
+            }
         }
     }
 
     return candidateScheme;
 }
 
-void SemiSolverRoutingEngine::extractPath(const IGraph& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const {
-    const int m = g.getNumDirectedEdges();
+Result<void> SemiSolverRoutingEngine::extractPath(const IGraph& graph,const RoutingScheme& scheme,const int source,const int target,CandidateRoutingScheme& output) const {
+    const int directed_edges =
+        graph.getNumDirectedEdges();
 
-    std::vector<double> residual(m, 0.0);
+    std::vector<double> residual(
+        directed_edges,
+        0.0
+    );
 
-    for (int e = 0; e < m; ++e) {
-        const double f = scheme.getFlow(e, s, t);
+    constexpr double decomposition_epsilon = 1e-12;
 
-        if (f > EPS) {
-            residual[e] += f;
-        } else if (f < -EPS) {
-            const int anti = g.getAntiEdge(e);
-            residual[anti] += -f;
+    /*
+     * Process each undirected edge exactly once.
+     */
+    for (int edge = 0;
+         edge < directed_edges;
+         ++edge) {
+        const int anti =
+            graph.getAntiEdge(edge);
+
+        if (anti == INVALID_EDGE_ID) {
+            return makeErrorMessage(
+                ErrorCode::InvalidGraph,
+                "Graph edge has no anti-edge."
+            );
+        }
+
+        if (edge > anti) {
+            continue;
+        }
+
+        const double flow =
+            scheme.getFlow(
+                edge,
+                source,
+                target
+            );
+
+        if (!std::isfinite(flow)) {
+            return makeErrorMessage(
+                ErrorCode::InvalidRouting,
+                "Routing scheme returned a non-finite flow."
+            );
+        }
+
+        if (flow > decomposition_epsilon) {
+            residual[edge] = flow;
+        } else if (flow < -decomposition_epsilon) {
+            residual[anti] = -flow;
         }
     }
 
-    while (true) {
-        std::vector<int> pathEdges;
-        std::vector<bool> visited(g.getNumNodes(), false);
-
-        const bool found = dfsDecompose(
-            g,
-            s,
-            t,
-            residual,
-            pathEdges,
-            visited
+    auto orientation_check =
+        validateResidualOrientation(
+            graph,
+            source,
+            target,
+            residual
         );
 
-        if (!found) break;
+    if (!orientation_check) {
+        return getError(orientation_check);
+    }
 
-        double bottleneck = std::numeric_limits<double>::infinity();
+    while (true) {
+        std::vector<int> path_edges;
 
-        for (int e : pathEdges) {
-            bottleneck = std::min(bottleneck, residual[e]);
-        }
+        std::vector<bool> visited(
+            graph.getNumNodes(),
+            false
+        );
 
-        if (bottleneck <= EPS || !std::isfinite(bottleneck)) {
+        const bool found =
+            dfsDecompose(
+                graph,
+                source,
+                target,
+                residual,
+                path_edges,
+                visited
+            );
+
+        if (!found) {
             break;
         }
 
-        for (int e : pathEdges) {
-            residual[e] -= bottleneck;
-            if (std::abs(residual[e]) < EPS) {
-                residual[e] = 0.0;
+        double bottleneck =
+            std::numeric_limits<double>::infinity();
+
+        for (const int edge : path_edges) {
+            bottleneck = std::min(
+                bottleneck,
+                residual[edge]
+            );
+        }
+
+        if (!std::isfinite(bottleneck) ||
+            bottleneck <= decomposition_epsilon) {
+            break;
+        }
+
+        for (const int edge : path_edges) {
+            residual[edge] -= bottleneck;
+
+            if (std::abs(residual[edge]) <=
+                decomposition_epsilon) {
+                residual[edge] = 0.0;
             }
         }
 
         Path path;
-        path.source = s;
-        path.target = t;
-        path.edges = pathEdges;
+        path.source = source;
+        path.target = target;
+        path.edges = std::move(path_edges);
         path.weight = bottleneck;
 
-        out.addPath(s, t, std::move(path));
+        output.addPath(
+            source,
+            target,
+            std::move(path)
+        );
     }
+
+    return {};
 }
 
 const std::string SemiSolverRoutingEngine::getSolverBase() const {
-    if (auto sol = dynamic_cast<ElectricalMWU*>(solver_.get())) {
+    if (dynamic_cast<ElectricalMWU*>(
+            solver_.get())) {
         return "Electrical";
-    } else if (auto sol = dynamic_cast<TreeMWU<FlatHST>*>(solver_.get())) {
+            }
+
+    if (dynamic_cast<TreeMWU<FlatHST>*>(
+            solver_.get())) {
         return "Tree";
-    } else {
-        return "UnknownSolverBase";
-    }
+            }
+
+    if (dynamic_cast<
+            ElectrifiedExpanderHierarchySolver*
+        >(solver_.get())) {
+        return "Electrified Expander Hierarchy";
+        }
+
 }
 
 bool SemiSolverRoutingEngine::dfsDecompose(const IGraph& g,int u,int t,std::vector<double>& residual,std::vector<int>& currentPath,std::vector<bool>& visited) const {

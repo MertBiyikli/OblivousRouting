@@ -22,7 +22,9 @@ enum class SolverType {
     RAECKE_CKR_MENDELSCALING_POINTER,
     SEMI_ELECTRICAL,
     SEMI_TREE,
-    EXPANDER_HIERARCHY
+    EXPANDER_HIERARCHY,
+    SEMI_EXPANDER_HIERARCHY,
+    EXPANDER_MWU
 };
 
 enum class DemandModelType {
@@ -41,7 +43,8 @@ enum class GraphFormat {
 
 enum class OutputFormat {
     TEXT,
-    JSON
+    JSON,
+    COUT
 };
 
 enum class ResultStatus {

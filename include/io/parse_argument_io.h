@@ -107,11 +107,12 @@ inline std::optional<OutputFormat> parse_output_format(std::string s) {
     s = to_lower(std::move(s));
     if (s == "txt") return OutputFormat::TEXT;
     if (s == "json" || s == "jason") return OutputFormat::JSON;
+    if (s == "cout") return OutputFormat::COUT;
     return std::nullopt;
 }
 
 inline std::string input_usage() {
-    return "Usage:\n <solver> <graph_file> [<demand_models>] [<graph_format>] [<num_threads>]";
+    return "Usage:\n <solver> <graph_file> [<demand_models>] [<graph_format>] [<num_threads>] [<output_format>]";
 }
 
 
@@ -129,7 +130,7 @@ inline Result<Config> parse_parameter(int argc, char** argv) {
 
     std::vector<DemandModelType> demands;
     GraphFormat fmt = GraphFormat::CSR;
-    OutputFormat out_fmt = OutputFormat::JSON;
+    OutputFormat out_fmt = OutputFormat::COUT;
     int threads = 1;
     std::string output;
 

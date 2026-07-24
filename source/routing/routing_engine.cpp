@@ -16,14 +16,14 @@
 
 bool isSemiObliviousSolver(SolverType type) {
     return type == SolverType::SEMI_ELECTRICAL ||
-           type == SolverType::SEMI_TREE;
+           type == SolverType::SEMI_TREE ||
+           type == SolverType::SEMI_EXPANDER_HIERARCHY;
 }
 
 std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {
     if (isSemiObliviousSolver(type)) {
         return std::make_unique<SemiObliviousSolverRunner>();
     }
-
     return std::make_unique<ObliviousSolverRunner>();
 }
 

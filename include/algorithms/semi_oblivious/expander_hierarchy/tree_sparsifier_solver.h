@@ -9,7 +9,7 @@
 #include "tree_sparsifier.h"
 #include "algorithms/oblivious/oblivious_solver.h"
 #include "preprocessing/hierarchy_preprocessor.h"
-
+#include "utils/time_tracking.h"
 
 class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
     public:
@@ -35,10 +35,19 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
         return {};
     }
 
-    Result<void> init() {
-
+    Result<void> init(std::vector<double> edge_weights = {}) {
         auto start = timeNow();
         XCutHierarchyPreprocessor preprocessor;
+        if (edge_weights.empty()) {
+            for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
+                graph.updateEdgeDistance(e, graph.getEdgeCapacity(e));
+            }
+        }else {
+            for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
+                graph.updateEdgeDistance(e, edge_weights[e]);
+            }
+        }
+
         auto hierarchy_result = preprocessor.build(graph);
 
         metrics_.hierarchy_runtime_microseconds = duration(timeNow() - start);
@@ -87,8 +96,8 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
             }
 
             auto tree_flow_result = tree_router.routePair(
-                root,
                 target,
+                root,
                 1.0 // -> should be an oblivious routing scheme
             );
 
@@ -109,6 +118,10 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
 
             const auto& embedding = *embedding_result;
 
+            metrics_.total_electrical_solves  += embedding.electrical_solves;
+            metrics_.basis_flows += 1;
+            metrics_.max_basis_embedding_congestion = std::max(metrics_.max_basis_embedding_congestion,embedding.max_congestion);
+            metrics_.max_conservation_error = std::max(metrics_.max_conservation_error,embedding.max_conservation_error);
 
             for (int e = 0; e < graph.getNumDirectedEdges();++e) {
                 const double flow = embedding.signed_edge_flow[e];

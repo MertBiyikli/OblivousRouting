@@ -140,9 +140,11 @@ bool containsAll(const std::vector<int>& parent,const std::vector<int>& children
 
 } // namespace
 
-std::vector<std::pair<unsigned int,unsigned int>> XCutHierarchyPreprocessor::toXCutEdges(const IGraph& graph) {
+std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>> XCutHierarchyPreprocessor::toXCutEdges(const IGraph& graph) {
     std::vector<std::pair<unsigned int,unsigned int>> edges;
+    std::vector<double> weight;
     edges.reserve(graph.getNumUndirectedEdges());
+    weight.reserve(graph.getNumUndirectedEdges());
 
     for (int edge_id = 0; edge_id < graph.getNumDirectedEdges(); ++edge_id) {
         auto [u, v] = graph.getEdgeEndpoints(edge_id);
@@ -150,9 +152,11 @@ std::vector<std::pair<unsigned int,unsigned int>> XCutHierarchyPreprocessor::toX
         if (u >= v) {
             continue;
         }
+
         edges.emplace_back(u, v);
+        weight.emplace_back(graph.getEdgeDistance(edge_id));
     }
-    return edges;
+    return {edges, weight};
 }
 
 std::vector<int> XCutHierarchyPreprocessor::computeInducedEdges(const IGraph& graph,const std::vector<int>& vertices) {
@@ -322,7 +326,7 @@ XCutHierarchyPreprocessor::build(const IGraph& graph) const {
 
     const auto xcut_edges = toXCutEdges(graph);
 
-    Graph xcut_graph(static_cast<int>(graph.getNumNodes()),xcut_edges,false);
+    Graph xcut_graph(xcut_edges.first, xcut_edges.second,false);
 
     if (xcut_graph.has_degree_zero()) {
         return makeErrorMessage(ErrorCode::InvalidGraph, "Graph has vertices with degree zero, which is not allowed for XCut.");

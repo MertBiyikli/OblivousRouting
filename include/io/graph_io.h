@@ -255,7 +255,7 @@ public:
 
                 if (!capacityParsed && costParsed && costValue != 0.0) {
                     // use inverse of cost as capacity
-                    capacityValue = 1.0 / costValue;
+                    capacityValue =  costValue;
                 }
 
                 if (!capacityParsed && !costParsed) {

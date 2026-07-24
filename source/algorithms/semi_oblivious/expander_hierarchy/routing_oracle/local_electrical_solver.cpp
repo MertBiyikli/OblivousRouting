@@ -367,10 +367,7 @@ Result<LocalElectricalFlowResult> LocalElectricalSolver::routeDemand(const IGrap
             return makeErrorMessage(ErrorCode::InvalidGraph,"Cluster edge has invalid conductance.");
         }
 
-        local_edges.emplace_back(
-            u_it->second,
-            v_it->second
-        );
+        local_edges.emplace_back(u_it->second,v_it->second);
 
         conductances.push_back(conductance);
         local_to_cluster_edge.push_back(cluster_edge_index);

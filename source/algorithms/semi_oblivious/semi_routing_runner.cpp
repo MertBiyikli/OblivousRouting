@@ -22,6 +22,11 @@ static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(So
                 )
             );
 
+        case SolverType::SEMI_EXPANDER_HIERARCHY:
+            return std::make_shared<SemiSolverRoutingEngine>(
+                std::make_shared<ElectrifiedExpanderHierarchySolver>(graph, 0)
+            );
+
         default:
             return makeErrorMessage(ErrorCode::InvalidSolver, "Requested semi-oblivious routing engine for non-semi solver");
     }
@@ -62,8 +67,7 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(IGraph& graph,const Config
     if (!pre) {
         return getError(pre);
     }
-    semiResult.preprocessing_runtime_microseconds =
-        duration(timeNow() - preprocessStart);
+    semiResult.preprocessing_runtime_microseconds = duration(timeNow() - preprocessStart);
 
 
 

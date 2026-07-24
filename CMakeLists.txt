@@ -101,6 +101,9 @@ add_library(oblivious_routing_core STATIC
         include/data_structures/union_find/union_find.h
         source/data_structures/union_find/union_find.cpp
 
+
+        include/algorithms/oblivious/mwu/flow_sparsifier_mwu.h
+
         include/algorithms/oblivious/mwu/electrical_mwu.h
         source/algorithms/oblivious/mwu/electrical_mwu.cpp
         include/algorithms/oblivious/mwu/tree_mwu.h
@@ -168,6 +171,16 @@ add_library(oblivious_routing_core STATIC
         source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.cpp
         include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.h
         include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h
+        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.h
+        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.cpp
+        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.h
+        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.cpp
+        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.h
+        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.cpp
+        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_logger.cpp
+        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
+        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
+        source/algorithms/oblivious/mwu/flow_sparsifier_mwu.cpp
 )
 
 target_include_directories(oblivious_routing_core
@@ -189,7 +202,26 @@ target_link_libraries(oblivious_routing_core
         Boost::serialization
 )
 
+set(PRACTICAL_ED_ROOT
+        "${CMAKE_SOURCE_DIR}/extern/practical-expander-decomposition"
+)
 
+if(NOT EXISTS "${PRACTICAL_ED_ROOT}/lib/cut_matching.hpp")
+    message(FATAL_ERROR
+            "practical-expander-decomposition not found at "
+            "${PRACTICAL_ED_ROOT}"
+    )
+endif()
+
+target_include_directories(oblivious_routing_core PRIVATE
+        "${PRACTICAL_ED_ROOT}/lib"
+)
+
+target_sources(oblivious_routing_core PRIVATE
+        "${PRACTICAL_ED_ROOT}/lib/datastructures/unit_flow.cpp"
+        "${PRACTICAL_ED_ROOT}/lib/cut_matching.cpp"
+        "${PRACTICAL_ED_ROOT}/lib/trimming.cpp"
+)
 # ============================================================================
 # Main executable
 # ============================================================================

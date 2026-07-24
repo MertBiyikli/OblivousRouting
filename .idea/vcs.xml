@@ -14,6 +14,7 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build/_deps/catch-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build/_deps/catch2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build_tests/_deps/catch2-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/abseil-cpp-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cbc-src" vcs="Git" />
@@ -36,7 +37,11 @@
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl/pyamgcl/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/practical-expander-decomposition" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/practical-expander-decomposition/external/tlx" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/xcut" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/xcut/build/_deps/catch-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/xcut/build/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/or-tools" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/or-tools/libs/lambda" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/or-tools/libs/lambda2" vcs="Git" />

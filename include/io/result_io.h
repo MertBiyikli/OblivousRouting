@@ -19,6 +19,13 @@ public:
         const std::string& path,
         OutputFormat format
     ) {
+
+        if (format == OutputFormat::COUT) {
+            writeCout(result);
+            return {};
+        }
+
+        // else we write into a file
         std::ofstream file(path);
 
         if (!file.is_open()) {
@@ -46,6 +53,8 @@ private:
         out << "Date: " << std::chrono::system_clock::now() << '\n';
         out << "Solver: " << result.solver_name << '\n';
         out << "Graph: " << result.graph_name << '\n';
+        out << "Nodes: " << result.nodes << '\n';
+        out << "Edges: " << result.edges << '\n';
 
         if (!result.routing_base.empty()) {
             out << "Routing base: " << result.routing_base << '\n';
@@ -100,9 +109,6 @@ private:
             if (!mwu.oracle_running_times.empty()) {
                 out << "  Average oracle time (microseconds): "
                     << mwu.averageOracleTime() << '\n';
-
-                out << "  Oracle calls: "
-                    << mwu.oracle_running_times.size() << '\n';
             }
         }
         if (!result.expander_metrics.empty()) {
@@ -179,6 +185,150 @@ private:
                 << '\n';
 
             out << "  Maximum conservation error: "
+                << metrics.max_conservation_error
+                << '\n';
+        }
+    }
+
+    static void writeCout(
+        const IRoutingResult& result) {
+        std::cout << "Date: " << std::chrono::system_clock::now() << '\n';
+        std::cout << "Solver: " << result.solver_name << '\n';
+        std::cout << "Graph: " << result.graph_name << '\n';
+        std::cout << "Nodes: " << result.nodes << '\n';
+        std::cout << "Edges: " << result.edges << '\n';
+
+        if (!result.routing_base.empty()) {
+            std::cout << "Routing base: " << result.routing_base << '\n';
+        }
+
+        std::cout << "Status: " << static_cast<int>(result.status) << '\n';
+        std::cout << "Total runtime (microseconds): "
+            << result.total_runtime_microseconds << '\n';
+
+        if (result.preprocessing_runtime_microseconds >= 0.0) {
+            std::cout << "Preprocessing runtime (microseconds): "
+                << result.preprocessing_runtime_microseconds << '\n';
+        }
+
+        if (result.solve_runtime_microseconds >= 0.0) {
+            std::cout << "Solve runtime (microseconds): "
+                << result.solve_runtime_microseconds << '\n';
+        }
+
+        std::cout << "Oblivious ratio: " << result.oblivious_ratio << '\n';
+
+        if (result.candidate_paths > 0) {
+            std::cout << "Candidate paths: " << result.candidate_paths << '\n';
+            std::cout << "Average paths per pair: "
+                << result.average_paths_per_pair << '\n';
+        }
+        for (const auto& eval : result.demand_evaluations) {
+            std::cout << "Demand [" << demandModelName(eval.demand_type) << "]\n";
+            std::cout << "  Congestion: " << eval.congestion << '\n';
+
+
+            if (eval.runtime_microseconds >= 0.0) {
+                std::cout << "  Runtime (microseconds): "
+                    << eval.runtime_microseconds << '\n';
+            }
+        }
+
+        if (!result.mwu_metrics.empty()) {
+            const auto& mwu = result.mwu_metrics;
+
+            std::cout << "MWU metrics:\n";
+            std::cout << "  Iterations: " << mwu.iteration_count << '\n';
+            std::cout << "  Solve time (microseconds): " << mwu.solve_time << '\n';
+            std::cout << "  Transformation time (microseconds): "
+                << mwu.transformation_time << '\n';
+            std::cout << "  Load computation time (microseconds): "
+                << mwu.load_computation_time << '\n';
+            std::cout << "  Weight update time (microseconds): "
+                << mwu.mwu_weight_update_time << '\n';
+
+            if (!mwu.oracle_running_times.empty()) {
+                std::cout << "  Average oracle time (microseconds): "
+                    << mwu.averageOracleTime() << '\n';
+
+                std::cout << "  Oracle calls: "
+                    << mwu.oracle_running_times.size() << '\n';
+            }
+        }
+        if (!result.expander_metrics.empty()) {
+            const auto& metrics = result.expander_metrics;
+
+            std::cout << "Expander hierarchy metrics:\n";
+
+            std::cout << "  Hierarchy runtime (microseconds): "
+                << metrics.hierarchy_runtime_microseconds
+                << '\n';
+
+            std::cout << "  Tree construction runtime (microseconds): "
+                << metrics.tree_runtime_microseconds
+                << '\n';
+
+            std::cout << "  Basis-flow runtime (microseconds): "
+                << metrics.basis_flow_runtime_microseconds
+                << '\n';
+
+            std::cout << "  Hierarchy levels: "
+                << metrics.hierarchy_levels
+                << '\n';
+
+            std::cout << "  Hierarchy clusters: "
+                << metrics.hierarchy_clusters
+                << '\n';
+
+            std::cout << "  Clusters per level: ";
+
+            for (std::size_t index = 0; index < metrics.clusters_per_level.size(); ++index) {
+                if (index > 0) {
+                    std::cout << ", ";
+                }
+
+                std::cout << metrics.clusters_per_level[index];
+                 }
+
+            std::cout << '\n';
+
+            std::cout << "  Maximum cluster vertices: "
+                << metrics.max_cluster_vertices
+                << '\n';
+
+            std::cout << "  Average cluster vertices: "
+                << metrics.average_cluster_vertices
+                << '\n';
+
+            std::cout << "  Tree nodes: "
+                << metrics.tree_nodes
+                << '\n';
+
+            std::cout << "  Tree edges: "
+                << metrics.tree_edges
+                << '\n';
+
+            std::cout << "  Tree depth: "
+                << metrics.tree_depth
+                << '\n';
+
+            std::cout << "  Basis flows: "
+                << metrics.basis_flows
+                << '\n';
+
+            std::cout << "  Total electrical solves: "
+                << metrics.total_electrical_solves
+                << '\n';
+
+            std::cout << "  Average electrical solves per basis flow: "
+                << metrics.averageElectricalSolves()
+                << '\n';
+
+            std::cout << "  Maximum basis embedding congestion: "
+                << metrics.max_basis_embedding_congestion
+                << '\n';
+
+            std::cout << "  Maximum conservation error: "
                 << metrics.max_conservation_error
                 << '\n';
         }

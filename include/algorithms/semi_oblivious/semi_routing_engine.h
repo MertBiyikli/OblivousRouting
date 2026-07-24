@@ -19,7 +19,7 @@ public:
         : solver_(std::move(solver)) {}
 
     Result<CandidateRoutingScheme> preprocess(const IGraph& graph);
-    void extractPath(const IGraph& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const;
+    Result<void> extractPath(const IGraph& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const;
     virtual const std::string getSolverBase() const;
     bool dfsDecompose(const IGraph& g,int u,int t,std::vector<double>& residual,std::vector<int>& currentPath,std::vector<bool>& visited) const;
 
