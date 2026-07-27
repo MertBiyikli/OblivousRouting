@@ -70,8 +70,6 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(IGraph& graph,const Config
     semiResult.preprocessing_runtime_microseconds = duration(timeNow() - preprocessStart);
 
 
-
-
     auto pairs = generateAllDemandPairs(graph);
 
     for (const auto& demandType : cfg.demand_models) {
@@ -106,6 +104,18 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(IGraph& graph,const Config
 
         semiResult.demand_schemes[demandModelName(demandType)] =
             std::move(result.scheme);
+
+        RoutingVisualizationResult visualization = result.visualization;
+
+        visualization.graph_name =
+            cfg.filename;
+
+        visualization.solver_name =
+            getSolverName(type);
+
+        semiResult.visualization_results.push_back(
+            std::move(visualization)
+        );
     }
 
     semiResult.total_runtime_microseconds =

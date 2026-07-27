@@ -181,6 +181,12 @@ add_library(oblivious_routing_core STATIC
         include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
         source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
         source/algorithms/oblivious/mwu/flow_sparsifier_mwu.cpp
+        include/visualization/visualization_result.h
+        include/visualization/edge_load_analyzer.h
+        source/visualization/edge_load_analyzer.cpp
+        source/visualization/visualization_result.cpp
+        include/visualization/json_exporter.h
+        source/visualization/json_exporter.cpp
 )
 
 target_include_directories(oblivious_routing_core

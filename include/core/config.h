@@ -17,6 +17,11 @@ struct Config {
     std::string output_filename;
     OutputFormat                 output_format;
     int seed = 42;
+
+    /*
+     * Empty means that visualization export is disabled.
+     */
+    std::string visualization_output_directory{};
 };
 
 

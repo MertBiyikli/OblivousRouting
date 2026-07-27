@@ -133,6 +133,7 @@ inline Result<Config> parse_parameter(int argc, char** argv) {
     OutputFormat out_fmt = OutputFormat::COUT;
     int threads = 1;
     std::string output;
+    std::string visualization_output_directory;
 
     // Parse optional arguments
     for (int i = 3; i < argc; ++i) {
@@ -159,10 +160,43 @@ inline Result<Config> parse_parameter(int argc, char** argv) {
         auto output_format = parse_output_format(arg);
         if (output_format) { out_fmt = *output_format; continue; }
 
-        return makeErrorMessage(ErrorCode::InvalidArgument, "Unknown argument: " + arg);
+        // Visualization JSON output directory.
+        constexpr std::string_view visualization_prefix =
+            "visualization=";
+
+        if (arg.starts_with(visualization_prefix)) {
+            visualization_output_directory =
+                arg.substr(visualization_prefix.size());
+
+            if (visualization_output_directory.empty()) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "Visualization output directory is empty."
+                );
+            }
+
+            continue;
+        }
+
+        return makeErrorMessage(
+            ErrorCode::InvalidArgument,
+            "Unknown argument: " + arg
+        );
     }
 
-    return Config{ *solvers_opt, std::string(argv[2]), evaluate_demand, demands, {}, {},fmt, threads,output, out_fmt};
+    return Config{
+        *solvers_opt,
+        std::string(argv[2]),
+        evaluate_demand,
+        demands,
+        {},
+        {},
+        fmt,
+        threads,
+        output,
+        out_fmt,
+        42,
+        visualization_output_directory};
 }
 
 

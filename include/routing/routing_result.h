@@ -12,6 +12,7 @@
 #include "routing_table.h"
 #include "core/types.h"
 #include "utils/my_math.h"
+#include "visualization/visualization_result.h"
 
 
 struct DemandEvaluationResult {
@@ -140,6 +141,11 @@ struct IRoutingResult {
     // Semi-oblivious: one demand-specific scheme per demand model
     std::unordered_map<std::string, std::unique_ptr<RoutingScheme>> demand_schemes;
 
+    /*
+     * One visualization result per evaluated demand model.
+     */
+    std::vector<RoutingVisualizationResult> visualization_results;
+
 };
 
 struct SemiObliviousRoutingResult :public IRoutingResult{
@@ -147,6 +153,11 @@ struct SemiObliviousRoutingResult :public IRoutingResult{
     DemandModelType demand_type{};
     double congestion = -1.0;
     std::string path_selection_strategy;
+
+    /*
+    * Visualization for the exact demand-specific routing solution.
+    */
+    RoutingVisualizationResult visualization;
 };
 
 

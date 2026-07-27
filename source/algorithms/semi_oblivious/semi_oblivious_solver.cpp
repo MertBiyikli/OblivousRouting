@@ -81,13 +81,49 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
     }
     res.scheme = std::move(optResult.value().scheme);
 
-    std::vector<double> cong;
-    res.scheme->routeDemands(cong, demand);
+    /*
+     * Analyze the exact demand-specific routing solution.
+     *
+     * This replaces the old congestion-only calculation and produces:
+     *
+     * - maximum congestion
+     * - average utilization
+     * - edge loads
+     * - edge utilizations
+     * - overloaded-edge count
+     * - visualization nodes and edges
+     */
+    auto vis_result =
+        RoutingAnalyzer::analyze(
+            graph,
+            *res.scheme,
+            demand,
 
-    res.congestion = 0.0;
-    for (double c : cong) {
-        res.congestion = std::max(res.congestion, c);
+            /*
+             * Replace this with graph.getName() if your graph interface
+             * exposes a graph name.
+             */
+            "",
+
+            /*
+             * Path-selection strategy identifies the semi-oblivious solver
+             * variant, such as electrical, tree or expander hierarchy.
+             */
+            res.path_selection_strategy,
+
+            demandModelName(demandType)
+        );
+
+    if (!vis_result) {
+        return getError(vis_result);
     }
+
+    res.visualization =  vis_result.value();
+
+    res.congestion =
+        res.visualization
+            .summary
+            .maximum_congestion;
 
     return res;
 }
