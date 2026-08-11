@@ -15,6 +15,19 @@ MST::MST(IGraph& g) {
     }
 }
 
+MST::MST(optimized::Graph<EdgeData>& g) {
+    keyed.clear();
+
+    n = g.getNumNodes();
+
+    for (int u = 0; u < n; ++u) {
+        for (const auto& e : g.edgesOf(u)) {
+            double w = g.edgeData(e.id).weight;
+            keyed.emplace_back(w, u, e.tail);
+        }
+    }
+}
+
 // Build a random MST edge set using Kruskal with random priorities
 std::vector<std::pair<int,int>> MST::computeMST() {
     if ( keyed.empty()) return {};

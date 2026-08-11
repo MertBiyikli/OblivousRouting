@@ -4,7 +4,7 @@
 
 #include "algorithms/oblivious/oblivious_routing_runner.h"
 
-Result<IRoutingResult> ObliviousSolverRunner::run(IGraph& graph,const Config& cfg,SolverType type) const {
+Result<IRoutingResult> ObliviousSolverRunner::run(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type) const {
     IRoutingResult result;
     result.type = type;
     result.graph_name = cfg.filename;

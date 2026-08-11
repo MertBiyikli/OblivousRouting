@@ -8,7 +8,7 @@
 
 #include "core/errors.h"
 #include "data_structures/graph/Igraph.h"
-
+#include "data_structures/graph/graph.h"
 #include <vector>
 
 #include "hierarchy_results.h"
@@ -101,6 +101,6 @@ struct TreeSparsifier {
 
 class TreeSparsifierBuilder {
 public:
-    Result<TreeSparsifier> build(const IGraph& graph,const HierarchyResult& hierarchy) const;
+    Result<TreeSparsifier> build(const optimized::Graph<EdgeData>& graph,const HierarchyResult& hierarchy) const;
 };
 #endif //OBLIVIOUSROUTING_TREE_SPARSIFIER_H

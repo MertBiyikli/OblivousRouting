@@ -17,7 +17,7 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
     std::unique_ptr<HierarchyResult> hierarchy_;
     ExpanderMetrics metrics_;
 
-    ElectrifiedExpanderHierarchySolver(IGraph& g, int root)
+    ElectrifiedExpanderHierarchySolver(optimized::Graph<EdgeData>& g, int root)
         : ILinearObliviousSolverBase(g, root){
     }
 
@@ -40,11 +40,11 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
         XCutHierarchyPreprocessor preprocessor;
         if (edge_weights.empty()) {
             for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
-                graph.updateEdgeDistance(e, graph.getEdgeCapacity(e));
+                graph.edgeData(e).weight = graph.edgeData(e).capacity;
             }
         }else {
             for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
-                graph.updateEdgeDistance(e, edge_weights[e]);
+                graph.edgeData(e).weight = edge_weights[e];
             }
         }
 
@@ -132,7 +132,7 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
 
                 // get sign of the flow
                 if (flow < 0) {
-                    int anti_e = graph.getAntiEdge(e);
+                    int anti_e = graph.reverse(e).id;
                     table.addFlow(anti_e, target, std::abs(flow));
                 }else {
                     table.addFlow(e, target, flow);

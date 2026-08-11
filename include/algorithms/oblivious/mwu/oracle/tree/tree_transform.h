@@ -51,9 +51,9 @@ public:
 // ---------------------------------------------------------------------------
 class TreeTransform {
 public:
-    const IGraph& graph;
+    const optimized::Graph<EdgeData>& graph;
 
-    explicit TreeTransform(const IGraph& _graph) : graph(_graph) {}
+    explicit TreeTransform(const optimized::Graph<EdgeData>& _graph) : graph(_graph) {}
 
     void transform(TreeIteration<std::shared_ptr<HSTNode>>& iter, LinearRoutingTable& table, std::map<std::pair<int,int>, CachedPath>& path_cache) {
         buildLinearRoutingFromSpanningTree(iter, table, path_cache);
@@ -97,7 +97,7 @@ struct UndirectedEdge {
         for (size_t i = 0; i + 1 < path.nodes.size(); ++i) {
             const int a = path.nodes[i];
             const int b = path.nodes[i + 1];
-            assert(graph.getEdgeId(a, b) != INVALID_EDGE_ID);
+            assert(graph.edgeId(a, b) != INVALID_EDGE_ID);
             candidate_edges.emplace(a, b);
         }
     }
@@ -112,8 +112,8 @@ struct UndirectedEdge {
         std::vector<UndirectedEdge> edges(candidate_edges.begin(), candidate_edges.end());
 
         std::sort(edges.begin(), edges.end(), [&](const UndirectedEdge& e1, const UndirectedEdge& e2) {
-            const double d1 = graph.getEdgeDistance(e1.u, e1.v);
-            const double d2 = graph.getEdgeDistance(e2.u, e2.v);
+            const double d1 = graph.edgeData(graph.edgeId(e1.u, e1.v)).weight;
+            const double d2 = graph.edgeData(graph.edgeId(e2.u, e2.v)).weight;
             if (d1 != d2) return d1 < d2;
             if (e1.u != e2.u) return e1.u < e2.u;
             return e1.v < e2.v;
@@ -173,12 +173,7 @@ struct UndirectedEdge {
     // Convert rooted tree into the linear routing table:
     // add lambda on every edge of the unique path s -> root.
     // ------------------------------------------------------------
-    void addTreePathsToLinearTable(
-        const std::vector<int>& parent,
-        double lambda,
-        LinearRoutingTable& table,
-        int root = 0
-    ) const {
+    void addTreePathsToLinearTable(const std::vector<int>& parent,double lambda,LinearRoutingTable& table,int root = 0) const {
         const int n = graph.getNumNodes();
 
         for (int s = 0; s < n; ++s) {
@@ -190,7 +185,7 @@ struct UndirectedEdge {
                 const int par = parent[cur];
                 assert(par != -1);
 
-                const int e = graph.getEdgeId(cur, par);
+                const int e = graph.edgeId(cur, par);
                 assert(e != INVALID_EDGE_ID);
 
                 table.addFlow(e, s, lambda);
@@ -240,11 +235,15 @@ struct UndirectedEdge {
 
                 auto& path = path_cache[{parentCenter, childCenter}];
                 if (path.nodes.empty()) {
-                    path.nodes = graph.getShortestPathBidirectionalSearch(parentCenter, childCenter, distance);
+                    auto pathResult = graph.getShortestPathBidirectionalSearch(parentCenter, childCenter, distance);
+                    if (!pathResult) {
+                        continue; // Skip this path if search failed
+                    }
+                    path.nodes = pathResult.value();
                     // Pre-compute edge IDs for all edges on the path
                     path.edge_ids.clear();
                     for (size_t i = 0; i + 1 < path.nodes.size(); ++i) {
-                        int e = graph.getEdgeId(path.nodes[i], path.nodes[i+1]);
+                        int e = graph.edgeId(path.nodes[i], path.nodes[i+1]);
                         path.edge_ids.push_back(e);
                     }
                 }
@@ -293,11 +292,15 @@ struct UndirectedEdge {
 
                 auto& path = path_cache[{parentCenter, childCenter}];
                 if (path.nodes.empty()) {
-                    path.nodes = graph.getShortestPathBidirectionalSearch(parentCenter, childCenter, distance);
+                    auto pathResult = graph.getShortestPathBidirectionalSearch(parentCenter, childCenter, distance);
+                    if (!pathResult) {
+                        continue; // Skip this path if search failed
+                    }
+                    path.nodes = pathResult.value();
                     // Pre-compute edge IDs for all edges on the path
                     path.edge_ids.clear();
                     for (size_t i = 0; i + 1 < path.nodes.size(); ++i) {
-                        int e = graph.getEdgeId(path.nodes[i], path.nodes[i+1]);
+                        int e = graph.edgeId(path.nodes[i], path.nodes[i+1]);
                         path.edge_ids.push_back(e);
                     }
                 }

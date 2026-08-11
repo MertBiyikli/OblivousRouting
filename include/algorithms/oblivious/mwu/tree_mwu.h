@@ -31,10 +31,10 @@ class TreeMWU : public MWUFramework {
     std::map<std::pair<int,int>, CachedPath> path_cache;
 
 public:
-    TreeMWU(IGraph& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
+    TreeMWU(optimized::Graph<EdgeData>& g, int root, std::unique_ptr<TreeOracle<HSTDatastructures>> _oracle)
         : MWUFramework(g, root)
         , oracle(std::move(_oracle))
-        , transform(graph){
+        , transform(g){
         current_distances.assign(graph.getNumDirectedEdges(), 1.0);
         rload_current.assign(graph.getNumDirectedEdges(), 0.0);
         rload_total.assign(graph.getNumDirectedEdges(), 0.0);
@@ -147,8 +147,8 @@ public:
 
                 double cut = 0.0;
                 for (int u : child_members)
-                    for (int v : graph.neighbors(u))
-                        if (!S[v]) cut += graph.getEdgeCapacity(u, v);
+                    for (auto e : graph.edgesOf(u))
+                        if (!S[e.tail]) cut += graph.edgeData(e.id).capacity;
                 if (cut <= 1e-12) cut = 1e-12;
 
                 int repParent = node_members.empty() ? child_members[0] : node_members[0];
@@ -158,11 +158,14 @@ public:
                 auto cache_key = std::make_pair(repParent, repChild);
                 auto& cached_path = path_cache[cache_key];
                 if (cached_path.nodes.empty()) {
-                    cached_path.nodes = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    auto pathResult = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    if (pathResult) {
+                        cached_path.nodes = std::move(pathResult.value());
+                    }
                     // Pre-compute edge IDs for all edges on the path
                     cached_path.edge_ids.clear();
                     for (size_t i = 0; i + 1 < cached_path.nodes.size(); ++i) {
-                        int e = graph.getEdgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
+                        int e = graph.edgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
                         cached_path.edge_ids.push_back(e);
                     }
                 }
@@ -171,8 +174,8 @@ public:
 
                 for (size_t i = 0; i < cached_path.edge_ids.size(); ++i) {
                     int e = cached_path.edge_ids[i];
-                    int anti_e = graph.getAntiEdge(e);
-                    double cap = std::max(graph.getEdgeCapacity(e), 1e-12);
+                    int anti_e = graph.reverse(e).id;
+                    double cap = std::max(graph.edgeData(e).capacity, 1e-12);
                     double rload = rload_current[e] + cut / cap;
                     rload_current[e] = rload_current[anti_e] = rload;
                 }
@@ -200,8 +203,8 @@ public:
 
                 double cut = 0.0;
                 for (int u : clusterVertices)
-                    for (auto v : graph.neighbors(u))
-                        if (!S[v]) cut += graph.getEdgeCapacity(u, v);
+                    for (auto e : graph.edgesOf(u))
+                        if (!S[e.tail]) cut += graph.edgeData(e.id).capacity;
                 if (cut <= 1e-12) cut = 1e-12;
 
                 int repParent = node->getMembers().empty() ? clusterVertices[0] : node->getMembers()[0];
@@ -211,11 +214,14 @@ public:
                 auto cache_key = std::make_pair(repParent, repChild);
                 auto& cached_path = path_cache[cache_key];
                 if (cached_path.nodes.empty()) {
-                    cached_path.nodes = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    auto pathResult = graph.getShortestPathBidirectionalSearch(repParent, repChild, current_distances);
+                    if (pathResult) {
+                        cached_path.nodes = std::move(pathResult.value());
+                    }
                     // Pre-compute edge IDs for all edges on the path
                     cached_path.edge_ids.clear();
                     for (size_t i = 0; i + 1 < cached_path.nodes.size(); ++i) {
-                        int e = graph.getEdgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
+                        int e = graph.edgeId(cached_path.nodes[i], cached_path.nodes[i+1]);
                         cached_path.edge_ids.push_back(e);
                     }
                 }
@@ -224,8 +230,8 @@ public:
 
                 for (size_t i = 0; i < cached_path.edge_ids.size(); ++i) {
                     int e = cached_path.edge_ids[i];
-                    int anti_e = graph.getAntiEdge(e);
-                    double cap = std::max(graph.getEdgeCapacity(e), 1e-12);
+                    int anti_e = graph.reverse(e).id;
+                    double cap = std::max(graph.edgeData(e).capacity, 1e-12);
                     double rload = rload_current[e] + cut / cap;
                     rload_current[e] = rload_current[anti_e] = rload;
                 }
@@ -267,7 +273,7 @@ public:
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             double r = rload_total[e];
 
-            double cap = graph.getEdgeCapacity(e);
+            double cap = graph.edgeData(e).capacity;
             if (cap < EPS) cap = EPS;
             double d = (std::exp(r - max_r) / cap) / sumExp;
             newDist[e] = d;
@@ -287,7 +293,7 @@ public:
 
     virtual Result<void> updateDistances(const std::vector<double> &distances) override {
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-            graph.updateEdgeDistance(e, distances[e]);
+            graph.edgeData(e).weight = distances[e];
         }
         return {};
     }

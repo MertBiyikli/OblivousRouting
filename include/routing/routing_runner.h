@@ -15,22 +15,13 @@ class IRoutingExperimentRunner {
 public:
     virtual ~IRoutingExperimentRunner() = default;
 
-    virtual Result<IRoutingResult> run(
-        IGraph& graph,
-        const Config& cfg,
-        SolverType type
-    ) const = 0;
+    virtual Result<IRoutingResult> run(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type) const = 0;
 };
 
 
 class DemandEvaluator {
 public:
-    static Result<void> evaluate(
-        IGraph& graph,
-        const std::unique_ptr<RoutingScheme>& scheme,
-        const Config& cfg,
-        IRoutingResult& result
-    ) {
+    static Result<void> evaluate(optimized::Graph<EdgeData>& graph,const std::unique_ptr<RoutingScheme>& scheme,const Config& cfg,IRoutingResult& result) {
         if (!cfg.evaluate_demand_models) {
             return makeErrorMessage(ErrorCode::InvalidDemand, "Evaluating demand model is set off.");
         }
@@ -52,8 +43,7 @@ public:
             const auto t0 = timeNow();
             //double congestion = computeRoutingSchemeCongestion(graph, scheme, dmap.value());
 
-            auto visualization =
-                RoutingAnalyzer::analyze(
+            auto visualization =RoutingAnalyzer::analyze(
                     graph,
                     *scheme,
                     dmap.value(),

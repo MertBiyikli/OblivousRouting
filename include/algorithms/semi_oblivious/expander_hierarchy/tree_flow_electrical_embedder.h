@@ -14,6 +14,7 @@
 #include "routing_oracle/local_electrical_solver.h"
 #include "core/errors.h"
 #include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 
 #include <unordered_map>
 #include <utility>
@@ -77,7 +78,7 @@ struct ElectricalEmbeddingResult {
 
 class TreeFlowElectricalEmbedder {
 public:
-    TreeFlowElectricalEmbedder(const IGraph& graph,const HierarchyResult& hierarchy,const TreeSparsifier& tree)
+    TreeFlowElectricalEmbedder(const optimized::Graph<EdgeData>& graph,const HierarchyResult& hierarchy,const TreeSparsifier& tree)
         : graph_(graph),
           hierarchy_(hierarchy),
           tree_(tree) {}
@@ -85,7 +86,7 @@ public:
     Result<ElectricalEmbeddingResult> embed(const TreeFlowResult& tree_flow) const;
 
 private:
-    const IGraph& graph_;
+    const optimized::Graph<EdgeData>& graph_;
     const HierarchyResult& hierarchy_;
     const TreeSparsifier& tree_;
 

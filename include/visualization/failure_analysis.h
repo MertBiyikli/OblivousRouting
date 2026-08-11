@@ -56,7 +56,7 @@ struct LinkFailureSummary {
 class LinkFailureAnalyzer {
 public:
 
-    static Result<LinkFailureSummary> analyze(const IGraph& graph,const RoutingScheme& scheme,const demands& demand_map,int failed_edge);
+    static Result<LinkFailureSummary> analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,int failed_edge);
 };
 
 #endif //OBLIVIOUSROUTING_EDGE_LOAD_ANALYZER_H

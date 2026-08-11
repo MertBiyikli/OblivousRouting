@@ -22,6 +22,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <Eigen/Dense>
 
+#include "data_structures/graph/graph.h"
 #include "graph_to_laplacian.h"
 #include "utils/my_math.h"
 #include "core/errors.h"
@@ -68,8 +69,7 @@ public:
     virtual ~LaplacianSolver() = default;
 
 
-    void init(IGraph &g, std::vector<double> &_adj_edge_weights, int n, const std::vector<std::pair<int, int> > &edges,
-              bool debug = false);
+    void init(optimized::Graph<EdgeData>&g, std::vector<double> &_adj_edge_weights, int n, const std::vector<std::pair<int, int> > &edges,bool debug = false);
 
     void init(int n,
           const std::vector<std::pair<int, int>>& edges,

@@ -192,3 +192,23 @@ TEST_CASE("LinearRoutingTable - Multiple Edges Different Sources", "[RoutingTabl
     REQUIRE(table.getFlow(2, 2) == Approx(0.5));
 }
 
+TEST_CASE("LinearRoutingScheme - Reconstructs flow orientation across anti-edge basis entries", "[RoutingTable]") {
+    std::vector<optimized::Graph<EdgeData>::InputEdge> input = {
+        {0, 1, EdgeData{1.0, 1.0}}
+    };
+    optimized::Graph<EdgeData> graph(2, input);
+
+    LinearRoutingTable table;
+    table.init(graph);
+
+    const int edge_01 = graph.edgeId(0, 1);
+    const int edge_10 = graph.edgeId(1, 0);
+
+    // Basis flow for source 1 -> root 0 is stored on 1 -> 0.
+    table.addFlow(edge_10, 1, 1.0);
+
+    LinearRoutingScheme scheme(graph, 0, std::move(table));
+
+    REQUIRE(scheme.getFlow(edge_01, 0, 1) == Approx(1.0));
+    REQUIRE(scheme.getFlow(edge_10, 0, 1) == Approx(-1.0));
+}

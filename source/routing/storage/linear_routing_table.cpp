@@ -6,7 +6,7 @@
 #include "utils/my_math.h"
 #include <iostream>
 
-void LinearRoutingTable::init(const IGraph& g) {
+void LinearRoutingTable::init(const optimized::Graph<EdgeData>& g) {
     const int numEdges = g.getNumDirectedEdges();
     n = g.getNumNodes();
     src_ids.assign(numEdges, {});
@@ -130,7 +130,7 @@ void LinearRoutingTable::eraseFlow(int e, int s) {
 
 // TODO: isValid returns true only for valid oblivious routing table, e.g. all linear flows must be stored
 //   Hence, if the table should also return true for tables that only satisfy the flow conservation constraints.
-bool LinearRoutingTable::isValid(const IGraph& g) const {
+bool LinearRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     const int m = src_ids.size();
     for (int e = 0; e < m; ++e) {
         const auto& ids = src_ids[e];
@@ -170,26 +170,48 @@ bool LinearRoutingTable::isValid(const IGraph& g) const {
 
 
 
-void LinearRoutingTable::printFlows(const IGraph& g) const {
-    for (int s = 0; s < n; ++s) {
+void LinearRoutingTable::printFlows(const optimized::Graph<EdgeData>& g) const {
+    for (int s : g) {
         std::cout << "Flows for source " << s << ":\n";
         for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
-            double flow = getFlow(e, s);
-            if (std::abs(flow) > EPS) {
-                auto [u, v] = g.getEdgeEndpoints(e);
-                std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
+            auto [u, v] = g.getEdgeEndpoints(e);
+            if (u > v) {
+                continue; // print each physical edge once
+            }
+
+            const int reverse_edge = g.reverse(e).id;
+            const double net_flow = getFlow(e, s) - getFlow(reverse_edge, s);
+
+            if (std::abs(net_flow) <= EPS) {
+                continue;
+            }
+
+            if (net_flow > 0.0) {
+                std::cout << "  Edge (" << u << ", " << v << "): " << net_flow << "\n";
+            } else {
+                std::cout << "  Edge (" << v << ", " << u << "): " << -net_flow << "\n";
             }
         }
     }
 }
 
-void LinearRoutingTable::printFlowsForSource(const IGraph& g, const int& s) const {
+void LinearRoutingTable::printFlowsForSource(const optimized::Graph<EdgeData>& g, const int& s) const {
     std::cout << "Flows for source " << s << ":\n";
     for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
-        double flow = getFlow(e, s);
-        if (std::abs(flow) > EPS) {
-            auto [u, v] = g.getEdgeEndpoints(e);
-            std::cout << "  Edge (" << u << ", " << v << "): " << flow << "\n";
+        auto [u, v] = g.getEdgeEndpoints(e);
+        if (u > v) {
+            continue; // print each physical edge once
+        }
+
+        const int reverse_edge = g.reverse(e).id;
+        const double net_flow = getFlow(e, s) - getFlow(reverse_edge, s);
+
+        if (std::abs(net_flow) > EPS) {
+            if (net_flow > 0.0) {
+                std::cout << "  Edge (" << u << ", " << v << "): " << net_flow << "\n";
+            } else {
+                std::cout << "  Edge (" << v << ", " << u << "): " << -net_flow << "\n";
+            }
         }
     }
 }
@@ -212,7 +234,7 @@ double LinearRoutingScheme::computeObliviousRatio() const {
     for (int e = 0; e < m; ++e) {
         auto [u, v] = g.getEdgeEndpoints(e);
         if (u > v) continue; // only consider one orientation for undirected edges
-        double capacity = g.getEdgeCapacity(e);
+        double capacity = g.edgeData(e).capacity;
         worst_case_demands.addDemand(u,v,capacity);
     }
 
@@ -228,38 +250,21 @@ void LinearRoutingScheme::initRoutingTable() {
 
 
 
-// Since we store the oblivious routing as a linear routing table w.r.t. root_x,
-// and we encode the flow orientation  as (absolute) flows along the direction of the
-// undirected edge which is represented as two directed edges (u,v) and (v,u),
-// we need to consider both orientations when querying the flow for an undirected edge.
-//
-// Example: Given an edge e=(u,v), assume we have flow f_e_st going from v to u for demand s→t,
-// which is the reverse orientation of the original edge (u,v)
-//
-// we encoded this as:
-// In the representation as an undirected graph this would be negative flow along edge (u,v)
-// but in our linear routing table representation w.r.t. root node x, we have:
-//
-// a positive flow f_e'_st along the anti-edge e'=(v,u) for demand s→t which is then represented by the linearity as
-// - f_e_st = f_e'_st = f_e'_sx - f_e'_tx
-//
-//
-// which means that if we want to get the flow for an edge e that is an undirected edge,
-// and encode the flow orientation correctly, which is the by the signs of its value we need to consider the anti-edge as well.
+// Basis flows can be stored on either directed orientation of the same physical
+// edge. Reconstruct signed basis flow on orientation e by subtracting the
+// anti-edge contribution before applying linearity across sources.
 double LinearRoutingScheme::getFlow(int e, int s, int t) const {
-    int e_orig = e;
-    int anti_e = g.getAntiEdge(e);
+    const int reverse_edge = g.reverse(e).id;
 
-    double flow_sx = routing_table.getFlow(e_orig, s);
-    double flow_tx = routing_table.getFlow(e_orig, t);
+    const double flow_sx =
+        routing_table.getFlow(e, s) -
+        routing_table.getFlow(reverse_edge, s);
 
-    double flow_sx_anti = routing_table.getFlow(anti_e, s);
-    double flow_tx_anti = routing_table.getFlow(anti_e, t);
+    const double flow_tx =
+        routing_table.getFlow(e, t) -
+        routing_table.getFlow(reverse_edge, t);
 
-    double total_flow_sx = flow_sx - flow_sx_anti;
-    double total_flow_tx = flow_tx - flow_tx_anti;
-
-    double total_flow = total_flow_sx - total_flow_tx;
+    const double total_flow = flow_sx - flow_tx;
     return ( std::abs(total_flow) < EPS ? 0.0 : total_flow );
 }
 
@@ -268,10 +273,7 @@ void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, t, -flow_sx);
 }
 
-void LinearRoutingScheme::routeDemands(
-    std::vector<double>& congestion,
-    const demands& demands
-) const {
+void LinearRoutingScheme::routeDemands(std::vector<double>& congestion,const demands& demands) const {
     const int m = g.getNumDirectedEdges();
     const int n = g.getNumNodes();
 
@@ -298,17 +300,10 @@ void LinearRoutingScheme::routeDemands(
             }
         }
 
-        directed_congestion[e] = flow / g.getEdgeCapacity(e);
+        directed_congestion[e] = flow / g.edgeData(e).capacity;
     }
 
-    congestion.assign(m, 0.0);
-
-    for (int e = 0; e < m; ++e) {
-        const auto& [u, v] = g.getEdgeEndpoints(e);
-        const int undirected_idx = (u < v ? e : g.getAntiEdge(e));
-
-        congestion[undirected_idx] += directed_congestion[e];
-    }
+    congestion = std::move(directed_congestion);
 }
 
 bool LinearRoutingScheme::isValid() {

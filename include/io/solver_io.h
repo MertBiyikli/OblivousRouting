@@ -59,7 +59,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
 
 
 inline std::optional<std::unique_ptr<ISolver>>
-makeSolver(SolverType type, IGraph& g) {
+makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
     // Factory with cycle removal strategy support for TreeMWU-based solvers
     switch (type) {
         case SolverType::ELECTRICAL_NAIVE:

@@ -18,7 +18,7 @@
 
 class SemiObliviousRoutingSolver : public ISolver {
 public:
-    SemiObliviousRoutingSolver(IGraph& graph, std::shared_ptr<SemiSolverRoutingEngine> routingEngine, std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer)
+    SemiObliviousRoutingSolver(optimized::Graph<EdgeData>& graph, std::shared_ptr<SemiSolverRoutingEngine> routingEngine, std::shared_ptr<ISemiObliviousRoutingLoadOptimizer> loadOptimizer)
         : ISolver(graph),
           routingEngine_(std::move(routingEngine)),
           loadOptimizer_(std::move(loadOptimizer)), current_result() {

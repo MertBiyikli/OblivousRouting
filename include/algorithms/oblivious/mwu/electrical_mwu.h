@@ -51,7 +51,7 @@ protected:
 
 public:
 
-    ElectricalMWU(IGraph& g, int root, bool use_sketching, bool debug = false)
+    ElectricalMWU(optimized::Graph<EdgeData>& g, int root, bool use_sketching, bool debug = false)
     : MWUFramework(g, root), n(g.getNumNodes()), m(g.getNumUndirectedEdges()) {
         this->debug = debug;
         this->use_sketching = use_sketching;

@@ -8,6 +8,7 @@
 #include <vector>
 #include <tuple>
 #include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 #include "data_structures/hst/pointer_hst.h"
 #include "data_structures/hst/flat_hst.h"
 #include "data_structures/union_find/union_find.h"
@@ -24,6 +25,7 @@ class MST {
 public:
     MST() = delete;
     explicit MST(IGraph& g);
+    explicit MST(optimized::Graph<EdgeData>& g);
     // Build a random MST edge set using Kruskal with random priorities
     std::vector<std::pair<int,int>> computeMST();
 

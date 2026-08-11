@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 
 class GraphToLaplacian {
 public:
@@ -16,6 +17,7 @@ public:
     std::vector<int> laplacian_indices_for_diagonal_elements; // laplacian_indices_red[e] gives the index in the reduced Laplacian matrix values array
 
     void init(const IGraph& graph);
+    void init(const optimized::Graph<EdgeData>& graph);
     void init(const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edges_weights, int n );
 
     double getEdgeWeight(int e) const;

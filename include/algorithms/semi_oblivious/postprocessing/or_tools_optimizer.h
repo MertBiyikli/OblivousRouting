@@ -12,9 +12,9 @@ class OrToolsSemiObliviousLoadOptimizer
     : public ISemiObliviousRoutingLoadOptimizer {
 public:
     Result<SemiObliviousOptimizationResult> optimize(
-        const IGraph& graph,
-        const CandidateRoutingScheme& candidateScheme,
-        const demands& demand
+        const optimized::Graph<EdgeData> &graph,
+        const CandidateRoutingScheme &candidateScheme,
+        const demands &_demand
     ) override;
 };
 

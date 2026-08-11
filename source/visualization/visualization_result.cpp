@@ -4,7 +4,7 @@
 
 #include "visualization/visualization_result.h"
 
-Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const IGraph &graph, const RoutingScheme &scheme, const demands &demand_map, std::string graph_name, std::string solver_name, std::string demand_model) {
+Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const optimized::Graph<EdgeData> &graph, const RoutingScheme &scheme, const demands &demand_map, std::string graph_name, std::string solver_name, std::string demand_model) {
     RoutingVisualizationResult result;
 
     result.graph_name = std::move(graph_name);
@@ -18,7 +18,7 @@ Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const IGraph &graph,
         static_cast<std::size_t>(graph.getNumNodes())
     );
 
-    for (const int vertex : graph.getVertices()) {
+    for (int vertex = 0; vertex < graph.getNumNodes(); ++vertex) {
         result.nodes.push_back({
             .id = vertex,
             .label = std::to_string(vertex)
@@ -61,7 +61,7 @@ Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const IGraph &graph,
             continue;
         }
 
-        const double capacity = graph.getEdgeCapacity(edge);
+        const double capacity = graph.edgeData(edge).capacity;
 
         if (capacity <= 0.0) {
             return makeErrorMessage(ErrorCode::RuntimeError, "Edge capacity must be positive");
@@ -121,7 +121,7 @@ Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const IGraph &graph,
     return result;
 }
 
-Result<void> RoutingAnalyzer::analyzeSingleLinkFailures(const IGraph& graph,const RoutingScheme& scheme,const demands& demand_map,RoutingVisualizationResult& result) {
+Result<void> RoutingAnalyzer::analyzeSingleLinkFailures(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,RoutingVisualizationResult& result) {
     result.link_failures.reserve(
         static_cast<std::size_t>(
             graph.getNumUndirectedEdges()
@@ -133,8 +133,8 @@ Result<void> RoutingAnalyzer::analyzeSingleLinkFailures(const IGraph& graph,cons
         edge < graph.getNumDirectedEdges();
         ++edge
     ) {
-        const int anti =
-            graph.getAntiEdge(edge);
+        const auto& rev_edge = graph.reverse(graph.getEdge(graph.getEdgeEndpoints(edge).first, 0));
+        int anti = rev_edge.id;
 
         if (anti == INVALID_EDGE_ID) {
             return makeErrorMessage(

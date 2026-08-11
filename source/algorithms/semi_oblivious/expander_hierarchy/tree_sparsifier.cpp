@@ -10,11 +10,11 @@
 template<typename Callback>
 Result<void>
 forEachUndirectedEdge(
-    const IGraph& graph,
+    const optimized::Graph<EdgeData>& graph,
     Callback&& callback
 ) {
     /*
-     * IGraph stores both orientations of each undirected edge.
+     * optimized::Graph stores both orientations of each undirected edge.
      * Keep only the canonical u < v representative.
      */
     for (int edge_id = 0;
@@ -41,7 +41,7 @@ forEachUndirectedEdge(
         }
 
         const double capacity =
-            graph.getEdgeCapacity(edge_id);
+            graph.edgeData(edge_id).capacity;
 
         if (!std::isfinite(capacity) || capacity < 0.0) {
             return makeErrorMessage(
@@ -57,7 +57,7 @@ forEachUndirectedEdge(
 }
 
 Result<std::vector<double>>
-computeWeightedDegrees(const IGraph& graph) {
+computeWeightedDegrees(const optimized::Graph<EdgeData>& graph) {
     std::vector<double> weighted_degree(
         graph.getNumNodes(),
         0.0
@@ -81,7 +81,7 @@ computeWeightedDegrees(const IGraph& graph) {
     return weighted_degree;
 }
 
-Result<std::unordered_map<int, double>> computeClusterBoundaryCapacities(const IGraph& graph,const HierarchyResult& hierarchy) {
+Result<std::unordered_map<int, double>> computeClusterBoundaryCapacities(const optimized::Graph<EdgeData>& graph,const HierarchyResult& hierarchy) {
     std::unordered_map<int, double> boundary_capacity;
 
     /*
@@ -271,7 +271,7 @@ Result<void> assignDepthsAndValidateTree(TreeSparsifier& tree) {
 }
 
 
-Result<TreeSparsifier> TreeSparsifierBuilder::build(const IGraph &graph, const HierarchyResult &hierarchy) const {
+Result<TreeSparsifier> TreeSparsifierBuilder::build(const optimized::Graph<EdgeData> &graph, const HierarchyResult &hierarchy) const {
     auto degrees = computeWeightedDegrees(graph);
     auto boundary = computeClusterBoundaryCapacities(graph, hierarchy);
 

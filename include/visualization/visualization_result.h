@@ -59,7 +59,7 @@ struct RoutingVisualizationResult {
 
 class RoutingAnalyzer {
 public:
-    static Result<RoutingVisualizationResult> analyze(const IGraph& graph,const RoutingScheme& scheme,const demands& demand_map,std::string graph_name,std::string solver_name,std::string demand_model);
-    static Result<void> analyzeSingleLinkFailures(const IGraph& graph,const RoutingScheme& scheme,const demands& demand_map,RoutingVisualizationResult& result);
+    static Result<RoutingVisualizationResult> analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,std::string graph_name,std::string solver_name,std::string demand_model);
+    static Result<void> analyzeSingleLinkFailures(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,RoutingVisualizationResult& result);
 };
 #endif //OBLIVIOUSROUTING_VISUALIZATION_RESULT_H

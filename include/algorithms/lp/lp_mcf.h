@@ -21,7 +21,7 @@ private:
     std::unordered_map<std::pair<int, int>, std::unordered_map<int,  MPVariable*>, PairHash> map_commodities2edge;
 public:
 
-    CMMF_Solver(IGraph& graph) : IOfflineSolver(graph), LP(graph.getNumNodes()) {
+    CMMF_Solver(optimized::Graph<EdgeData>& graph) : IOfflineSolver(graph), LP(graph.getNumNodes()) {
     }
 
     virtual Result<void> computeBasisFlows(AllPairRoutingTable& table) override;
@@ -39,7 +39,7 @@ public:
 };
 
 
-inline double computeRoutingSchemeCongestion(IGraph& _g,
+inline double computeRoutingSchemeCongestion(optimized::Graph<EdgeData>& _g,
                                              const std::unique_ptr<RoutingScheme>& routing_scheme,
                                              const demands& demand_map) {
     std::vector<double> congestion_per_edge(_g.getNumDirectedEdges(), 0.0);
@@ -50,7 +50,7 @@ inline double computeRoutingSchemeCongestion(IGraph& _g,
     return max_cong;
 }
 
-inline Result<double> computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
+inline Result<double> computeOfflineOptimalCongestion(optimized::Graph<EdgeData>& _g, const demands& demand_map) {
     CMMF_Solver mccf(_g);
     mccf.AddDemandMap(demand_map);
     auto offline_scheme = mccf.solve();

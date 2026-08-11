@@ -1,7 +1,7 @@
 
 #include "routing/routing_validation.h"
 
-Result<void> RoutingValidation::input(const IGraph& _graph, const Config& _config) const {
+Result<void> RoutingValidation::input(const optimized::Graph<EdgeData>& _graph, const Config& _config) const {
     auto validate_graph = validateGraph(_graph);
     if (!validate_graph) {
         return getError(validate_graph);
@@ -47,7 +47,7 @@ Result<void> RoutingValidation::output(const IRoutingResult& _routing_results) c
 }
 
 
-Result<void> RoutingValidation::validateGraph(const IGraph &_graph) const {
+Result<void> RoutingValidation::validateGraph(const optimized::Graph<EdgeData> &_graph) const {
     if (_graph.getNumNodes() == 0) {
         return makeErrorMessage(ErrorCode::InvalidGraph, "Graph has no nodes.");
     }
@@ -67,7 +67,7 @@ Result<void> RoutingValidation::validateGraph(const IGraph &_graph) const {
             return makeErrorMessage(ErrorCode::InvalidGraph, "Edge has invalid tail node.");
         }
 
-        if (!std::isfinite(_graph.getEdgeCapacity(e)) || _graph.getEdgeCapacity(e) <= 0.0) {
+        if (!std::isfinite(_graph.edgeData(e).capacity) || _graph.edgeData(e).capacity <= 0.0) {
             return makeErrorMessage(ErrorCode::InvalidGraph, "Edge has non-positive or non-finite capacity.");
         }
 
@@ -79,7 +79,7 @@ Result<void> RoutingValidation::validateGraph(const IGraph &_graph) const {
     return{};
 }
 
-Result<void> RoutingValidation::validateDemand(const demands &_demands, const IGraph& graph) const {
+Result<void> RoutingValidation::validateDemand(const demands &_demands, const optimized::Graph<EdgeData>& graph) const {
     if (_demands.size()==0) {
         return std::unexpected(Error{ErrorCode::InvalidDemand, "Demand set is empty."});
     }

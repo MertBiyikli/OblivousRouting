@@ -19,7 +19,7 @@ constexpr double flow_epsilon = 1e-12;
  * Therefore, we sum the absolute routed fractions represented by the failed
  * edge and its anti-edge carefully.
  */
-double failedLinkFraction(const IGraph& graph,const RoutingScheme& scheme,const int edge,const int anti_edge,const int source,const int target){
+double failedLinkFraction(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const int edge,const int anti_edge,const int source,const int target){
     const double forward =
         scheme.getFlow(
             edge,
@@ -63,7 +63,7 @@ double failedLinkFraction(const IGraph& graph,const RoutingScheme& scheme,const 
     return std::abs(reverse);
 }
 
-Result<LinkFailureSummary> LinkFailureAnalyzer::analyze(const IGraph& graph,const RoutingScheme& scheme,const demands& demand_map,const int failed_edge) {
+Result<LinkFailureSummary> LinkFailureAnalyzer::analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,const int failed_edge) {
     if (
         failed_edge < 0 ||
         failed_edge >= graph.getNumDirectedEdges()
@@ -75,7 +75,7 @@ Result<LinkFailureSummary> LinkFailureAnalyzer::analyze(const IGraph& graph,cons
     }
 
     const int anti_edge =
-        graph.getAntiEdge(failed_edge);
+        graph.reverse(failed_edge).id;
 
     if (anti_edge == INVALID_EDGE_ID) {
         return makeErrorMessage(
@@ -102,7 +102,7 @@ Result<LinkFailureSummary> LinkFailureAnalyzer::analyze(const IGraph& graph,cons
         edge_target;
 
     result.capacity =
-        graph.getEdgeCapacity(failed_edge);
+        graph.edgeData(failed_edge).capacity;
 
     /*
      * Only aggregate failure statistics are retained.

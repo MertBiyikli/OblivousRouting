@@ -4,7 +4,7 @@
 
 class FlowSparsifier : public MWUFramework{
     public:
-    FlowSparsifier(IGraph& g, int root):
+    FlowSparsifier(optimized::Graph<EdgeData>& g, int root):
     MWUFramework(g, root){};
 
     std::vector<double> _mwu_weights;
@@ -36,7 +36,7 @@ class FlowSparsifier : public MWUFramework{
 
     virtual Result<void> run(LinearRoutingTable &table);
     virtual Result<void> scaleFlowDown(LinearRoutingTable &table);
-    virtual void printAdditionalStats() {
+    virtual void printAdditionalStats() override{
         return;
     }
 
@@ -57,7 +57,7 @@ class FlowSparsifier : public MWUFramework{
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
             double r = _rel_loads[e];
 
-            double cap = graph.getEdgeCapacity(e);
+            double cap = graph.edgeData(e).capacity;
             if (cap < EPS) cap = EPS;
             double d = (std::exp(r - max_r) / cap) / sumExp;
             newDist[e] = d;

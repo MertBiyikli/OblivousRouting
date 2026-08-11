@@ -20,9 +20,9 @@ class ISemiObliviousRoutingLoadOptimizer {
 public:
     virtual ~ISemiObliviousRoutingLoadOptimizer() = default;
     virtual Result<SemiObliviousOptimizationResult> optimize(
-        const IGraph& g,
-        const CandidateRoutingScheme& candidate_routing_scheme,
-        const demands& Demands) = 0;
+        const optimized::Graph<EdgeData> &g,
+        const CandidateRoutingScheme &candidate_routing_scheme,
+        const demands &_demand) = 0;
 };
 
 #endif //OBLIVIOUSROUTING_LOAD_OPTIMIZER_H

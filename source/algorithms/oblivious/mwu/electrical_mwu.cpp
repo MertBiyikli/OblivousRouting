@@ -188,7 +188,7 @@ void ElectricalMWU::addFlowToTable(const int& source,
             to   = b;
         }
 
-        const int directed_edge_id = graph.getEdgeId(from, to);
+        const int directed_edge_id = graph.edgeId(from, to);
 
 
         table.addFlow(directed_edge_id, source, amount);
@@ -355,7 +355,7 @@ void ElectricalMWU::initEdgeDistances() {
     edge_weights.resize(m);
 
     for (int e = 0; e < m; ++e) {
-        double cap = graph.getEdgeCapacity(e);      // undirected capacity accessor
+        double cap = graph.edgeData(e).capacity;      // undirected capacity accessor
         edge_capacities[e]  = cap;
         edge_probabilities[e] = edge_distances[e] / cap_X;
         edge_weights[e] = std::pow(cap, 2) / (edge_probabilities[e] + inv_m);

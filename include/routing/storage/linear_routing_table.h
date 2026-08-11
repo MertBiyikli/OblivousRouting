@@ -14,15 +14,15 @@ public:
     std::vector<std::vector<int>>    src_ids;   // src_ids[e]   = [s1, s2, ...]
     std::vector<std::vector<double>> src_flows; // src_flows[e] = [f_e(s1,x), f_e(s2,x), ...]
 
-    void init(const IGraph& g) override;
+    void init(const optimized::Graph<EdgeData>& g) override;
     void addFlow(int e, int s, double flow_sx);
     void eraseFlow(int e, int s);
 
     // return flow for unit demand s→x on edge e, or 0 if not present
     const double getFlow(int e, int s) const;
-    bool isValid(const IGraph& g) const override;
-    void printFlows(const IGraph& g) const override;
-    void printFlowsForSource(const IGraph& g, const int& source) const;
+    bool isValid(const optimized::Graph<EdgeData>& g) const override;
+    void printFlows(const optimized::Graph<EdgeData>& g) const override;
+    void printFlowsForSource(const optimized::Graph<EdgeData>& g, const int& source) const;
     const int getSize() const override;
 };
 
@@ -32,7 +32,7 @@ public:
 
     LinearRoutingTable routing_table;
     int root_x = 0;
-    explicit LinearRoutingScheme(const IGraph& _g, int _root_x, LinearRoutingTable&& table)
+    explicit LinearRoutingScheme(const optimized::Graph<EdgeData>& _g, int _root_x, LinearRoutingTable&& table)
     : RoutingScheme(_g),
     root_x(_root_x),
     routing_table(std::move(table)) {

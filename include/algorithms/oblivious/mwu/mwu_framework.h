@@ -13,7 +13,7 @@
 class MWUFramework : public ILinearObliviousSolverBase {
 public:
 
-    MWUFramework(IGraph& g, int root)
+    MWUFramework(optimized::Graph<EdgeData>& g, int root)
         : ILinearObliviousSolverBase(g, root) {}
 
 

@@ -5,7 +5,7 @@
 #ifndef OBLIVIOUSROUTING_SEMI_ROUTING_ENGINE_H
 #define OBLIVIOUSROUTING_SEMI_ROUTING_ENGINE_H
 
-#include "../../data_structures/graph/Igraph.h"
+#include "../../data_structures/graph/graph.h"
 #include "algorithms/oblivious/oblivious_solver.h"
 #include "preprocessing/candidate_routing_scheme.h"
 #include "core/errors.h"
@@ -18,10 +18,10 @@ public:
     explicit SemiSolverRoutingEngine(std::shared_ptr<ILinearObliviousSolverBase> solver)
         : solver_(std::move(solver)) {}
 
-    Result<CandidateRoutingScheme> preprocess(const IGraph& graph);
-    Result<void> extractPath(const IGraph& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const;
+    Result<CandidateRoutingScheme> preprocess(const optimized::Graph<EdgeData>& graph);
+    Result<void> extractPath(const optimized::Graph<EdgeData>& g,const RoutingScheme& scheme,int s,int t,CandidateRoutingScheme& out) const;
     virtual const std::string getSolverBase() const;
-    bool dfsDecompose(const IGraph& g,int u,int t,std::vector<double>& residual,std::vector<int>& currentPath,std::vector<bool>& visited) const;
+    bool dfsDecompose(const optimized::Graph<EdgeData>& g,int u,int t,std::vector<double>& residual,std::vector<int>& currentPath,std::vector<bool>& visited) const;
 
 
     std::shared_ptr<ILinearObliviousSolverBase> solver_;

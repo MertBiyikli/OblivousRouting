@@ -10,6 +10,7 @@
 
 #include "ultrametric_tree.h"
 #include "../graph/Igraph.h"
+#include "../graph/graph.h"
 
 class QuotientLevel {
 public:
@@ -30,11 +31,17 @@ public:
     std::vector<std::pair<int, double>> weights;
 
     void preprocessEdges(const IGraph& G);
+    void preprocessEdges(const optimized::Graph<EdgeData>& G);
 
     QuotientLevel constructQuotientGraph(
             const UltrametricTree& ultra,
             double Delta,
             IGraph& G);
+    
+    QuotientLevel constructQuotientGraph(
+            const UltrametricTree& ultra,
+            double Delta,
+            optimized::Graph<EdgeData>& G);
 };
 
 #endif //OBLIVIOUSROUTING_QUOTIENT_GRAPH_H

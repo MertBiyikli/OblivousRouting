@@ -15,7 +15,7 @@ class IOfflineSolver : public ISolver {
 protected:
     demands demands_;
 public:
-    IOfflineSolver(IGraph& graph)
+    IOfflineSolver(optimized::Graph<EdgeData>& graph)
         : ISolver(graph) {}
 
     Result<std::unique_ptr<RoutingScheme>> solve() override {
@@ -30,7 +30,7 @@ public:
             return getError(flow);
         }
 
-        graph.resetEdgeDistance();
+        resetEdgeDistance();
 
         return std::make_unique<AllPairRoutingScheme>(
             graph,

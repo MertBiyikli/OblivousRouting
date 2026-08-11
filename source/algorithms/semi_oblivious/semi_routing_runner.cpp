@@ -6,7 +6,7 @@
 #include "algorithms/oblivious/oblivious_routing_runner.h"
 #include "core/errors.h"
 
-static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(SolverType type,IGraph& graph) {
+static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(SolverType type, optimized::Graph<EdgeData>& graph) {
     switch (type) {
         case SolverType::SEMI_ELECTRICAL:
             return std::make_shared<SemiSolverRoutingEngine>(
@@ -32,7 +32,7 @@ static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(So
     }
 }
 
-Result<IRoutingResult> SemiObliviousSolverRunner::run(IGraph& graph,const Config& cfg,SolverType type) const {
+Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type) const {
     SemiObliviousRoutingResult semiResult;
     semiResult.type = type;
     semiResult.graph_name = cfg.filename;

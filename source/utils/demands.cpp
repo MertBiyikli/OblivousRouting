@@ -39,7 +39,7 @@ std::optional<double> demands::getDemandValue(int s, int t) const {
 }
 
 
-Result<demands> BimodalModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> BimodalModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
 
@@ -66,7 +66,7 @@ Result<demands> BimodalModel::generate(IGraph& g, std::vector<std::pair<int, int
     return demand2flow;
 }
 
-Result<demands> UniformModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> UniformModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
     std::mt19937_64 rng(seed);
@@ -89,7 +89,7 @@ Result<demands> UniformModel::generate(IGraph& g, std::vector<std::pair<int, int
 }
 
 
-Result<demands> GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> GravityModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
     std::unordered_set<int> nodes(g.getNumNodes());
@@ -102,8 +102,8 @@ Result<demands> GravityModel::generate(IGraph& g, std::vector<std::pair<int, int
     double sumCapacity = 0.0;
     for(const auto& node : nodes) {
         double sum = 0.0;
-        for(const auto& u : g.neighbors(node)) {
-            sum += g.getEdgeCapacity(node, u);
+        for(const auto& e : g.edgesOf(node)) {
+            sum += g.edgeData(e.id).capacity;
         }
         sumCapacity += sum;
         nodeToCapacity[node] = sum;
@@ -138,7 +138,7 @@ Result<demands> GravityModel::generate(IGraph& g, std::vector<std::pair<int, int
     return demand2flow;
 }
 
-Result<demands> GaussianModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> GaussianModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
     std::mt19937_64 rng(seed);
 

@@ -10,14 +10,14 @@
 template<typename T>
 class FRT : public TreeOracle<T> {
 public:
-    explicit FRT(IGraph& g) : TreeOracle<T>(g) {}
-    explicit FRT(IGraph& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
+    explicit FRT(optimized::Graph<EdgeData>& g) : TreeOracle<T>(g) {}
+    explicit FRT(optimized::Graph<EdgeData>& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
 
-    void computeLevelPartition(IGraph& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
+    void computeLevelPartition(optimized::Graph<EdgeData>& g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
         std::map<std::pair<int, int>, CachedPath> path_cache; // local cache for this level's shortest path computations
 
         level.owner.resize(g.getNumNodes());
-        for (const auto& v : g.getVertices()) {
+        for (int v = 0; v < g.getNumNodes(); ++v) {
             level.owner[v] = v; // initialize owner to itself
         }
         level.R = delta;
@@ -33,7 +33,7 @@ public:
             level.centers.push_back(v);
             assigned.insert(v);
 
-            for (const auto& u : g.getVertices()) {
+            for (int u = 0; u < g.getNumNodes(); ++u) {
                 if (assigned.find(u) != assigned.end()) {
                     continue;
                 }
@@ -50,25 +50,28 @@ public:
                         std::reverse(path.nodes.begin(), path.nodes.end());
 
                         for (int e : path.edge_ids) {
-                            path.edge_ids.push_back(g.getAntiEdge(e));
+                            path.edge_ids.push_back(g.reverse(e).id);
                         }
                     }else {
-                        auto path_nodes = g.getShortestPathBidirectionalSearch(v, u);
-                        for (size_t i = 0; i + 1 < path_nodes.size(); ++i) {
-                            int from = path_nodes[i];
-                            int to = path_nodes[i + 1];
-                            int edge_id = g.getEdgeId(from, to);
+                        auto pathResult = g.getShortestPathBidirectionalSearch(v, u);
+                        if (pathResult) {
+                            auto path_nodes = std::move(pathResult.value());
+                            for (size_t i = 0; i + 1 < path_nodes.size(); ++i) {
+                                int from = path_nodes[i];
+                                int to = path_nodes[i + 1];
+                                int edge_id = g.edgeId(from, to);
 
-                            path.nodes.push_back(from);
-                            path.edge_ids.push_back(edge_id);
+                                path.nodes.push_back(from);
+                                path.edge_ids.push_back(edge_id);
+                            }
+                            path.nodes.push_back(u); // add the target node at the end
                         }
-                        path.nodes.push_back(u); // add the target node at the end
                     }
                 }
 
                 double dist = 0;
                 for (size_t i = 0; i  < path.edge_ids.size(); ++i) {
-                    dist += g.getEdgeDistance(path.edge_ids[i]);
+                    dist += g.edgeData(path.edge_ids[i]).weight;
                 }
 
                 if (dist <= delta) {

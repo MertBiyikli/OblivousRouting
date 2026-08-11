@@ -19,18 +19,13 @@ public:
     Result<void> entry(int argc, char **argv);
 
 
-    Result<IRoutingResult> solve(
-        IGraph& graph,
-        const Config& cfg,
-        SolverType type
-    );
+    Result<IRoutingResult> solve(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type);
 
     Config cfg;
-    std::unique_ptr<IGraph> m_graph;
-    std::unique_ptr<IGraph> getGraph() {
+    std::unique_ptr<optimized::Graph<EdgeData>> m_graph;
+    Result<std::unique_ptr<optimized::Graph<EdgeData>>> getGraph() {
         if (!m_graph) {
-            throw std::runtime_error("RoutingEngine::getGraph: graph not set");
-            return nullptr;
+            return makeErrorMessage(ErrorCode::RuntimeError, "RoutingEngine::getGraph: graph not set");
         }else {
             return std::move(m_graph);
         }

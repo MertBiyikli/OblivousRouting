@@ -21,7 +21,7 @@
  */
 class LPSolver : public LP, public IAllPairObliviousSolverBase {
 public:
-    LPSolver(IGraph& graph)
+    LPSolver(optimized::Graph<EdgeData>& graph)
         : IAllPairObliviousSolverBase(graph), LP(graph.getNumNodes()) {}
 
     Result<void> computeBasisFlows(AllPairRoutingTable& table) override;

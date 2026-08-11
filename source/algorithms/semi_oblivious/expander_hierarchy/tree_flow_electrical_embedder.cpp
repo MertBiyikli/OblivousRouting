@@ -18,7 +18,7 @@
 constexpr double kEmbeddingEpsilon = 1e-8;
 
 template<typename Callback>
-Result<void> forEachUndirectedEdge(const IGraph& graph, Callback&& callback) {
+Result<void> forEachUndirectedEdge(const optimized::Graph<EdgeData>& graph, Callback&& callback) {
     for (int e = 0;e < graph.getNumDirectedEdges(); ++e) {
         const auto [u, v] = graph.getEdgeEndpoints(e);
 
@@ -26,7 +26,7 @@ Result<void> forEachUndirectedEdge(const IGraph& graph, Callback&& callback) {
         if (u >= v) {
             continue;
         }
-        const double capacity = graph.getEdgeCapacity(e);
+        const double capacity = graph.edgeData(e).capacity;
 
         if (!std::isfinite(capacity) ||capacity <= 0.0) {
             return makeErrorMessage(ErrorCode::InvalidGraph,"Original graph contains an invalid capacity.");
@@ -410,7 +410,7 @@ Result<ElectricalEmbeddingResult> TreeFlowElectricalEmbedder::embed(const TreeFl
 
         const auto [u, v] = graph_.getEdgeEndpoints(e);
 
-        const double capacity = graph_.getEdgeCapacity(e);
+        const double capacity = graph_.edgeData(e).capacity;
 
         if (!std::isfinite(capacity) || capacity <= 0.0) {
             return makeErrorMessage( ErrorCode::InvalidGraph,"Used original edge has invalid capacity.");

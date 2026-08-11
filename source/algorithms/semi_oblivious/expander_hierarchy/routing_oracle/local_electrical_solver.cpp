@@ -293,7 +293,7 @@ Result<std::vector<double>> solveGroundedLaplacianViaAMGCL(const int node_count,
     return pot;
 }
 
-Result<LocalElectricalFlowResult> LocalElectricalSolver::routeDemand(const IGraph& graph,const HierarchyCluster& cluster,const std::vector<double>& local_imbalance) const {
+Result<LocalElectricalFlowResult> LocalElectricalSolver::routeDemand(const optimized::Graph<EdgeData>& graph,const HierarchyCluster& cluster,const std::vector<double>& local_imbalance) const {
     const int local_node_count = static_cast<int>(cluster.original_vertices.size());
 
     if (local_node_count == 0) {
@@ -361,7 +361,7 @@ Result<LocalElectricalFlowResult> LocalElectricalSolver::routeDemand(const IGrap
             return makeErrorMessage(ErrorCode::InvalidGraph,"Cluster induced edge leaves the cluster.");
         }
 
-        const double conductance = graph.getEdgeCapacity(global_edge_id);
+        const double conductance = graph.edgeData(global_edge_id).capacity;
 
         if (!std::isfinite(conductance) ||conductance <= 0.0) {
             return makeErrorMessage(ErrorCode::InvalidGraph,"Cluster edge has invalid conductance.");

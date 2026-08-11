@@ -13,7 +13,7 @@ Result<void> FlowSparsifier::run(LinearRoutingTable &table) {
 
     _mwu_weights.resize(graph.getNumDirectedEdges());
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
-        _mwu_weights[e] = graph.getEdgeCapacity(e);
+        _mwu_weights[e] = graph.edgeData(e).capacity;
     }
 
     for (int t = 0; t<this->metrics.iteration_count ; t++) {
@@ -35,7 +35,13 @@ Result<void> FlowSparsifier::run(LinearRoutingTable &table) {
             if (head >= tail) continue;
 
             double& rload = current_rload[e];
-            int rev_e = graph.getAntiEdge(e);
+            int rev_e = graph.reverse(graph.getEdge(head, 0)).id;
+            for (auto& edge : graph.edgesOf(tail)) {
+                if (edge.tail == head) {
+                    rev_e = edge.id;
+                    break;
+                }
+            }
 
             for (int i{0};i<  current_table.src_ids[e].size(); i++) {
                 rload += current_table.src_flows[e][i];
@@ -43,7 +49,7 @@ Result<void> FlowSparsifier::run(LinearRoutingTable &table) {
             for (int i{0};i<  current_table.src_ids[rev_e].size(); i++) {
                 rload += current_table.src_flows[rev_e][i];
             }
-            rload /= graph.getEdgeCapacity(e);
+            rload /= graph.edgeData(e).capacity;
             current_rload[rev_e] = rload;
         }
 

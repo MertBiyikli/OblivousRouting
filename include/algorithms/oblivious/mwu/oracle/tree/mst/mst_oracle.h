@@ -17,7 +17,7 @@ class TreeMST : public TreeOracle<T> {
     std::vector<std::pair<int, int>> mst_edges;
 
 public:
-    explicit TreeMST(IGraph& g) : TreeOracle<T>(g) {
+    explicit TreeMST(optimized::Graph<EdgeData>& g) : TreeOracle<T>(g) {
         n = g.getNumNodes();
         root =0; // by default
     }
@@ -39,7 +39,8 @@ public:
         std::vector<std::tuple<double,int,int>> keyed;
         keyed.reserve(mst_edges.size());
         for (auto [u, v] : mst_edges) {
-            double w = this->graph.getEdgeDistance(this->graph.getEdgeId(u, v));
+            int edge_id = this->graph.edgeId(u, v);
+            double w = this->graph.edgeData(edge_id).weight;
             keyed.emplace_back(w, u, v);
         }
         std::vector<std::shared_ptr<HSTNode>> cluster(n);
@@ -91,7 +92,7 @@ public:
         std::vector<std::tuple<double,int,int>> keyed;
         keyed.reserve(mst_edges.size());
         for (auto [u, v] : mst_edges) {
-            double w = this->graph.getEdgeDistance(this->graph.getEdgeId(u, v));
+            double w = this->graph.edgeData(this->graph.edgeId(u, v)).weight;
             keyed.emplace_back(w, u, v);
         }
         std::sort(keyed.begin(), keyed.end());
@@ -121,7 +122,7 @@ public:
         return t;
     }
 
-    void computeLevelPartition(IGraph& /*g*/, HSTLevel& /*level*/,
+    void computeLevelPartition(optimized::Graph<EdgeData>& /*g*/, HSTLevel& /*level*/,
                                const std::vector<int>& /*x_perm*/, double /*delta*/) override {
         // not used — getTree handles everything directly
     }

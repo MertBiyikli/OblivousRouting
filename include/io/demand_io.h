@@ -54,17 +54,17 @@ inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
 
 
 // Generate all-pairs demand list
-inline std::vector<std::pair<int,int>> generateAllDemandPairs(IGraph& g) {
+inline std::vector<std::pair<int,int>> generateAllDemandPairs(optimized::Graph<EdgeData>& g) {
     std::vector<std::pair<int,int>> result;
     result.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
-    for (int v : g.getVertices())
-        for (int u : g.getVertices())
+    for (int v : g)
+        for (int u : g)
             if (v != u) result.push_back({v, u});
     return result;
 }
 
 // Demand model handling
-inline Result<void> HandleDemandModels(const std::optional<Config>& cfg, IGraph& g,
+inline Result<void> HandleDemandModels(const std::optional<Config>& cfg, optimized::Graph<EdgeData>& g,
                                std::function<void(const std::string&, const demands&)> callback) {
     if (!cfg || cfg->demand_models.empty()) {
         return makeErrorMessage(ErrorCode::InvalidDemand, "No demand models specified in the configuration.");
@@ -82,7 +82,7 @@ inline Result<void> HandleDemandModels(const std::optional<Config>& cfg, IGraph&
     return {};
 }
 
-inline demands GetSingleDemandModel(const std::optional<Config>& cfg, IGraph& g) {
+inline demands GetSingleDemandModel(const std::optional<Config>& cfg, optimized::Graph<EdgeData>& g) {
     if (!cfg || cfg->demand_models.empty()) return demands{};
     auto pairs = generateAllDemandPairs(g);
     auto model = makeDemandModel(cfg->demand_models.front());
@@ -91,7 +91,7 @@ inline demands GetSingleDemandModel(const std::optional<Config>& cfg, IGraph& g)
 }
 
 
-inline Result<void> offlineOptimal(std::unique_ptr<IGraph>& g, Config& cfg) {
+inline Result<void> offlineOptimal(std::unique_ptr<optimized::Graph<EdgeData>>& g, Config& cfg) {
     if (cfg.evaluate_demand_models) {
         auto handle_demand = HandleDemandModels(cfg, *g,
             [&](const std::string& model_name, const demands& dmap) {

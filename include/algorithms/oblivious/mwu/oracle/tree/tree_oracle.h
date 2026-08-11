@@ -9,6 +9,7 @@
 #include "data_structures/hst/pointer_hst.h"
 #include "data_structures/hst/flat_hst.h"
 #include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 #include "data_structures/mendel_scaling/ultrametric_tree.h"
 #include "data_structures/mendel_scaling/quotient_graph.h"
 #include "utils/time_tracking.h"
@@ -33,14 +34,14 @@
 template<typename T>
 class TreeOracle {
 public:
-    explicit TreeOracle(IGraph& graph) : graph(graph) {
+    explicit TreeOracle(optimized::Graph<EdgeData>& graph) : graph(graph) {
         n = graph.getNumNodes();
         diameter = 0;
         applyMendelScaling = false;
 
     }
 
-    TreeOracle(IGraph& graph, bool activateMendelScaling) : graph(graph) {
+    TreeOracle(optimized::Graph<EdgeData>& graph, bool activateMendelScaling) : graph(graph) {
         n = graph.getNumNodes();
         diameter = 0;
         this->applyMendelScaling = activateMendelScaling;
@@ -49,7 +50,7 @@ public:
     }
     virtual ~TreeOracle() = default;
 
-    IGraph& graph;
+    optimized::Graph<EdgeData>& graph;
     int n;
     double diameter;
     std::vector<double> scales;
@@ -74,9 +75,18 @@ public:
     // -----------------------------------------------------------------------
     // The only pure virtual — subclasses only need to implement this.
     // -----------------------------------------------------------------------
-    virtual void computeLevelPartition(IGraph& g, HSTLevel& level,
+    virtual void computeLevelPartition(optimized::Graph<EdgeData>& g, HSTLevel& level,
                                        const std::vector<int>& x_perm,
                                        double delta) = 0;
+    
+    // Overload for IGraph (used by quotient graph in Mendel scaling)
+    virtual void computeLevelPartition(IGraph& g, HSTLevel& level,
+                                       const std::vector<int>& x_perm,
+                                       double delta) {
+        // Default implementation: subclasses may override if they need to support IGraph
+        // For now, this throws an error as Mendel scaling with IGraph should not happen
+        throw std::runtime_error("Mendel scaling with IGraph is not supported");
+    }
 
     // -----------------------------------------------------------------------
     // Pointer-based HST
@@ -211,7 +221,7 @@ public:
             std::vector<double> mst_weights;
             mst_weights.reserve(mst_edges.size());
             for (auto [u, v] : mst_edges)
-                mst_weights.push_back(graph.getEdgeDistance(u, v));
+                mst_weights.push_back(graph.edgeData(graph.edgeId(u, v)).weight);
 
             ultrametric.buildFromMST(graph.getNumNodes(), mst_edges, mst_weights);
             total_time_spent_on_mendel_scaling += duration(timeNow() - start);
@@ -316,7 +326,7 @@ public:
 
     void updateDistances(std::vector<double>& distances) {
         for (int e = 0; e < graph.getNumDirectedEdges(); ++e)
-            graph.updateEdgeDistance(e, distances[e]);
+            graph.edgeData(e).weight = distances[e];
     }
 
     void computeScales() {
@@ -383,7 +393,7 @@ public:
     void computeMendelScales() {
         double min_distance = std::numeric_limits<double>::max();
         for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
-            double w = graph.getEdgeDistance(e);
+            double w = graph.edgeData(e).weight;
             if (w < min_distance) min_distance = w;
         }
         if (diameter == 0)

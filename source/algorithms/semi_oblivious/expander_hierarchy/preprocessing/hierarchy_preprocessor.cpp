@@ -21,7 +21,7 @@
 namespace {
 
     Result<void>
-    validateHierarchy(const IGraph& graph,const HierarchyResult& hierarchy) {
+    validateHierarchy(const optimized::Graph<EdgeData>& graph,const HierarchyResult& hierarchy) {
         if (hierarchy.levels.empty()) {
             return makeErrorMessage(ErrorCode::InvalidArgument,"Hierarchy is empty.");
         }
@@ -140,7 +140,7 @@ bool containsAll(const std::vector<int>& parent,const std::vector<int>& children
 
 } // namespace
 
-std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>> XCutHierarchyPreprocessor::toXCutEdges(const IGraph& graph) {
+std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>> XCutHierarchyPreprocessor::toXCutEdges(const optimized::Graph<EdgeData>& graph) {
     std::vector<std::pair<unsigned int,unsigned int>> edges;
     std::vector<double> weight;
     edges.reserve(graph.getNumUndirectedEdges());
@@ -154,12 +154,12 @@ std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>
         }
 
         edges.emplace_back(u, v);
-        weight.emplace_back(graph.getEdgeDistance(edge_id));
+        weight.emplace_back(graph.edgeData(edge_id).weight);
     }
     return {edges, weight};
 }
 
-std::vector<int> XCutHierarchyPreprocessor::computeInducedEdges(const IGraph& graph,const std::vector<int>& vertices) {
+std::vector<int> XCutHierarchyPreprocessor::computeInducedEdges(const optimized::Graph<EdgeData>& graph,const std::vector<int>& vertices) {
     std::vector<char> inside(graph.getNumNodes(), false);
 
     for (const int vertex : vertices) {
@@ -260,7 +260,7 @@ Result<void> XCutHierarchyPreprocessor::buildParentChildRelations(
     return {};
 }
 
-void XCutHierarchyPreprocessor::buildLookupStructures(const IGraph& graph,HierarchyResult& hierarchy) {
+void XCutHierarchyPreprocessor::buildLookupStructures(const optimized::Graph<EdgeData>& graph,HierarchyResult& hierarchy) {
     hierarchy.cluster_location.clear();
     hierarchy.vertex_to_leaf.assign(graph.getNumNodes(), -1);
 
@@ -288,7 +288,7 @@ void XCutHierarchyPreprocessor::buildLookupStructures(const IGraph& graph,Hierar
     }
 }
 
-void XCutHierarchyPreprocessor::choosePortals(const IGraph& graph,HierarchyResult& hierarchy) {
+void XCutHierarchyPreprocessor::choosePortals(const optimized::Graph<EdgeData>& graph,HierarchyResult& hierarchy) {
     for (auto& level : hierarchy.levels) {
         for (auto& cluster : level.clusters) {
             int best_vertex = -1;
@@ -301,7 +301,7 @@ void XCutHierarchyPreprocessor::choosePortals(const IGraph& graph,HierarchyResul
                     const auto [u, v] = graph.getEdgeEndpoints(edge_id);
 
                     if (u == vertex || v == vertex) {
-                        internal_capacity += graph.getEdgeCapacity(edge_id);
+                        internal_capacity += graph.edgeData(edge_id).capacity;
                     }
                 }
 
@@ -317,7 +317,7 @@ void XCutHierarchyPreprocessor::choosePortals(const IGraph& graph,HierarchyResul
 }
 
 Result<HierarchyResult>
-XCutHierarchyPreprocessor::build(const IGraph& graph) const {
+XCutHierarchyPreprocessor::build(const optimized::Graph<EdgeData>& graph) const {
     if (graph.getNumNodes() == 0 || graph.getNumUndirectedEdges() == 0) {
         return makeErrorMessage(ErrorCode::InvalidGraph, "Graph must have at least one vertex and one edge.");
     }

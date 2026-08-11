@@ -314,7 +314,7 @@ void validateSemiObliviousExtraction(
 }
 
 Result<SemiObliviousOptimizationResult> OrToolsSemiObliviousLoadOptimizer::optimize(
-    const IGraph& graph,
+    const optimized::Graph<EdgeData>& graph,
     const CandidateRoutingScheme& candidateScheme,
     const demands& _demand
 ) {
@@ -375,14 +375,14 @@ Result<SemiObliviousOptimizationResult> OrToolsSemiObliviousLoadOptimizer::optim
             continue;
         }
 
-        const int rev = graph.getAntiEdge(e); // adapt name if needed
+        const int rev = graph.reverse(e).id; // adapt name if needed
 
         processed[e] = true;
         if (rev >= 0) {
             processed[rev] = true;
         }
 
-        const double capacity = graph.getEdgeCapacity(e);
+        const double capacity = graph.edgeData(e).capacity;
 
         if (capacity <= 0.0) {
             return makeErrorMessage(ErrorCode::LogicError, "Edge has non-positive capacity");

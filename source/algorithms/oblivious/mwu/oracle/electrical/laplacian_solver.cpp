@@ -14,7 +14,7 @@
 #include <cassert>
 #include <stdexcept>
 
-void LaplacianSolver::init(IGraph& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug) {
+void LaplacianSolver::init(optimized::Graph<EdgeData>& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug) {
      assert(g.getNumUndirectedEdges() == static_cast<int>(_adj_edge_weights.size()));
      this->debug = debug;
      this->n = n;

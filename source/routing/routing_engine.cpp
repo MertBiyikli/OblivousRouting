@@ -1,10 +1,6 @@
 //
 // Created by Mert Biyikli on 23.06.26.
 //
-
-//
-// Created by Mert Biyikli on 23.06.26.
-//
 #include "routing/routing_engine.h"
 #include "routing/routing_runner.h"
 #include "routing/routing_validation.h"
@@ -16,9 +12,9 @@
 
 
 std::string safeFileComponent(std::string value) {
-    for (char& character : value) {
+    for (char &character: value) {
         const auto byte =
-            static_cast<unsigned char>(character);
+                static_cast<unsigned char>(character);
 
         if (
             !std::isalnum(byte) &&
@@ -52,27 +48,21 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
         return getError(cfg);
     }
 
-    auto graph = load_graph(cfg.value(), argc, argv);
+    auto graph = load_graph_optimized(cfg.value(), argc, argv);
     if (!graph) {
         return getError(graph);
     }
-/*
-    auto offline = offlineOptimal(graph.value(), cfg.value());
-    if (!offline) {
-        return getError(offline);
-    }
-    */
 
     RoutingEngine engine;
 
-    for (SolverType type : cfg.value().solvers ) {
+    for (SolverType type: cfg.value().solvers) {
         auto result = engine.solve(*graph.value(), cfg.value(), type);
 
         if (!result) {
             return getError(result);
         }
 
-        std::string out = (cfg->output_filename.empty() ? "result/run_" +getSolverName(type)+".json" : cfg->output_filename);
+        std::string out = (cfg->output_filename.empty() ? "result/run_" + getSolverName(type) + ".json" : cfg->output_filename);
 
         auto output = RoutingResultWriter::write(result.value(), out, cfg.value().output_format);
         if (!output) {
@@ -80,20 +70,18 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
         }
 
         if (!cfg->visualization_output_directory.empty()) {
-            for (const auto& visualization : result->visualization_results) {
-                const std::string filename =
-                    safeFileComponent(visualization.solver_name) +"__" +safeFileComponent(visualization.demand_model) +".json";
+            for (const auto &visualization: result->visualization_results) {
+                const std::string filename = safeFileComponent(visualization.solver_name) + "__" + safeFileComponent(visualization.demand_model) + ".json";
 
                 const auto visualization_path = std::filesystem::path(cfg->visualization_output_directory) / filename;
 
-                auto visualization_output = RoutingVisualizationJsonExporter::write(visualization,visualization_path);
+                auto visualization_output = RoutingVisualizationJsonExporter::write(visualization, visualization_path);
 
                 if (!visualization_output) {
                     return getError(visualization_output);
                 }
             }
         }
-
     }
 
     m_graph = std::move(graph.value());
@@ -102,9 +90,7 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
 }
 
 
-
-Result<IRoutingResult> RoutingEngine::solve(IGraph& graph,const Config& cfg,SolverType type) {
-
+Result<IRoutingResult> RoutingEngine::solve(optimized::Graph<EdgeData> &graph, const Config &cfg, SolverType type) {
     RoutingValidation validator;
 
     auto input = validator.input(graph, cfg);
@@ -126,4 +112,3 @@ Result<IRoutingResult> RoutingEngine::solve(IGraph& graph,const Config& cfg,Solv
 
     return result;
 }
-

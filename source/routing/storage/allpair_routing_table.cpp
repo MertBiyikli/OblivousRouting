@@ -9,14 +9,14 @@
 #include <iostream>
 #include <unordered_map>
 
-void AllPairRoutingTable::init(const IGraph& g) {
+void AllPairRoutingTable::init(const optimized::Graph<EdgeData>& g) {
     const int numEdges = g.getNumDirectedEdges();
     n = g.getNumNodes();
     adj_ids.assign(numEdges, {});
     adj_vals.assign(numEdges, {});
     anti_edge.resize(numEdges, INVALID_EDGE_ID);
     for (int e = 0; e < numEdges; ++e) {
-        const int& anti_e = g.getAntiEdge(e);
+        const int& anti_e = g.reverse(e).id;
         anti_edge[e] = anti_e;
     }
 }
@@ -130,7 +130,7 @@ double AllPairRoutingTable::getFlow(int e , int s, int t) const {
 
 
 
-bool AllPairRoutingTable::isValid(const IGraph& g) const {
+bool AllPairRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     const int m = adj_ids.size();
     for (int e = 0; e < m; ++e) {
         const auto& ids = adj_ids[e];
@@ -187,7 +187,7 @@ bool AllPairRoutingTable::isValid(const IGraph& g) const {
     return all_unit_flow;
 }
 
-void AllPairRoutingTable::printFlows(const IGraph& g) const {
+void AllPairRoutingTable::printFlows(const optimized::Graph<EdgeData>& g) const {
     for (int s = 0; s < g.getNumNodes(); ++s) {
         for (int t = 0; t < g.getNumNodes(); ++t) {
             if (s >= t) continue;
@@ -254,14 +254,14 @@ void AllPairRoutingScheme::routeDemands(
             }
         }
 
-        directed_congestion[e] = flow / g.getEdgeCapacity(e);
+        directed_congestion[e] = flow / g.edgeData(e).capacity;
     }
 
     congestion.assign(m, 0.0);
 
     for (int e = 0; e < m; ++e) {
         const auto& [u, v] = g.getEdgeEndpoints(e);
-        const int undirected_idx = (u < v ? e : g.getAntiEdge(e));
+        const int undirected_idx = (u < v ? e : g.reverse(e).id);
 
         congestion[undirected_idx] += directed_congestion[e];
     }

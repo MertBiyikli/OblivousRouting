@@ -95,12 +95,12 @@ void CMMF_Solver::CreateConstraints() {
         if (u > v) continue; // ensure each undirected pair processed once
 
         // find reverse arc if present
-        int rev_id = graph.getAntiEdge(e);
+        int rev_id = graph.reverse(e).id;
 
         MPConstraint* const c = solver->MakeRowConstraint(-solver->infinity(), 0.0);
 
         // -cap(u,v) * alpha
-        const double cap = graph.getEdgeCapacity(u, v);
+        const double cap = graph.edgeData(e).capacity;
         c->SetCoefficient(alpha, -cap);
 
         // + sum of flows on both directions (if reverse exists)

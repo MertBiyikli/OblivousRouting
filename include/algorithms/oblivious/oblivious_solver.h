@@ -19,7 +19,7 @@ protected:
     int root = 0;
 
 public:
-    ILinearObliviousSolverBase(IGraph& g, int root)
+    ILinearObliviousSolverBase(optimized::Graph<EdgeData>& g, int root)
         : ISolver(g), root(root) {}
 
     Result<std::unique_ptr<RoutingScheme>> solve() final {
@@ -31,7 +31,7 @@ public:
             return getError(basis_flow);
         }
 
-        graph.resetEdgeDistance();
+        resetEdgeDistance();
 
         return std::make_unique<LinearRoutingScheme>(
             graph,
@@ -51,7 +51,7 @@ protected:
 
 class IAllPairObliviousSolverBase : public ISolver {
 public:
-    explicit IAllPairObliviousSolverBase(IGraph& g)
+    explicit IAllPairObliviousSolverBase(optimized::Graph<EdgeData>& g)
         : ISolver(g) {}
 
     Result<std::unique_ptr<RoutingScheme>> solve() {
@@ -63,7 +63,6 @@ public:
             return getError(basis_flow);
         }
 
-        graph.resetEdgeDistance();
 
         return std::make_unique<AllPairRoutingScheme>(
             graph,

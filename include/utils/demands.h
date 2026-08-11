@@ -9,6 +9,7 @@
 #include <optional>
 #include <unordered_map>
 #include "../data_structures/graph/Igraph.h"
+#include "../data_structures/graph/graph.h"
 #include "hash.h"
 
 class demands {
@@ -31,32 +32,32 @@ public:
     int seed = 42;
     DemandModel() = default;
     virtual ~DemandModel() = default;
-    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin = 1.0) = 0;
+    virtual Result<demands> generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin = 1.0) = 0;
 };
 
 
 class BimodalModel : public DemandModel {
 public:
     BimodalModel() = default;
-    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class UniformModel : public DemandModel {
 public:
     UniformModel() = default;
-    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class GravityModel : public DemandModel {
 public:
     GravityModel() = default;
-    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 class GaussianModel : public DemandModel {
 public:
     GaussianModel() = default;
-    virtual Result<demands> generate(IGraph& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
+    virtual Result<demands> generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& demands, double margin = 1.0) override;
 };
 
 

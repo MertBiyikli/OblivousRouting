@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_ROUTING_TABLE_H
 
 #include "../data_structures/graph/Igraph.h"
+#include "../data_structures/graph/graph.h"
 #include "../utils/demands.h"
 
 /*
@@ -25,10 +26,10 @@ public:
     int n=0;
 
     virtual ~RoutingTable() = default;
-    virtual void init(const IGraph& g) = 0;
+    virtual void init(const optimized::Graph<EdgeData>& g) = 0;
 
-    virtual bool isValid(const IGraph& g) const = 0;
-    virtual void printFlows(const IGraph& g) const = 0;
+    virtual bool isValid(const optimized::Graph<EdgeData>& g) const = 0;
+    virtual void printFlows(const optimized::Graph<EdgeData>& g) const = 0;
 
     const int getNumNodes() const { return n; }
     virtual const int getSize() const = 0;
@@ -37,10 +38,10 @@ public:
 
 class RoutingScheme{
 protected:
-    const IGraph& g;
+    const optimized::Graph<EdgeData>& g;
 
 public:
-    explicit RoutingScheme(const IGraph& _g):g(_g) {
+    explicit RoutingScheme(const optimized::Graph<EdgeData>& _g):g(_g) {
     }
     virtual ~RoutingScheme() = default;
 

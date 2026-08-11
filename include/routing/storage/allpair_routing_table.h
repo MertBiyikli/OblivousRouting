@@ -14,7 +14,7 @@ struct AllPairRoutingTable :public RoutingTable{
     std::vector<std::vector<double>> adj_vals; // adj_vals[e] = [f1, f2, ...] list of flows for edge e corresponding to adj_ids
     std::vector<int> anti_edge; // anti_edge[e] = id of the anti-edge of e
 
-    void init(const IGraph& g) override;
+    void init(const optimized::Graph<EdgeData>& g) override;
     const std::vector<double>& operator[](int e) const { return adj_vals[e]; }
     std::vector<double>& operator[](int e) { return adj_vals[e]; }
 
@@ -26,8 +26,8 @@ struct AllPairRoutingTable :public RoutingTable{
     void eraseAt(int e, int idx);
     double getFlow(int e , int s, int t) const;
 
-    bool isValid(const IGraph& g) const override;
-    void printFlows(const IGraph& g) const override;
+    bool isValid(const optimized::Graph<EdgeData>& g) const override;
+    void printFlows(const optimized::Graph<EdgeData>& g) const override;
     const int getSize() const override;
 };
 
@@ -36,7 +36,7 @@ class AllPairRoutingScheme : public RoutingScheme {
 public:
     AllPairRoutingTable routing_table;
     // to be implemented
-    explicit AllPairRoutingScheme(const IGraph& _g, AllPairRoutingTable&& table) : RoutingScheme(_g), routing_table(std::move(table)) {
+    explicit AllPairRoutingScheme(const optimized::Graph<EdgeData>& _g, AllPairRoutingTable&& table) : RoutingScheme(_g), routing_table(std::move(table)) {
     }
 
     double getFlow(int e, int s, int t) const override;

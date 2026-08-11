@@ -310,4 +310,30 @@ inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg, int argc, char** 
     graph.value()->finalize();
     return std::move(graph.value());
 }
+
+inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(Config& cfg, int argc, char** argv) {
+    // Load using IGraph first
+    auto igraph = load_graph(cfg, argc, argv);
+    if (!igraph) {
+        return std::unexpected(igraph.error());
+    }
+    
+    // Convert to optimized::Graph
+    int n = igraph.value()->getNumNodes();
+    std::vector<optimized::Graph<EdgeData>::InputEdge> input_edges;
+    
+    // Add edges from IGraph
+    for (int u = 0; u < n; ++u) {
+        for (int v : igraph.value()->neighbors(u)) {
+            if (u < v) {
+                double weight = igraph.value()->getEdgeDistance(u, v);
+                double capacity = igraph.value()->getEdgeCapacity(u, v);
+                input_edges.push_back({u, v, EdgeData{capacity, weight}});
+            }
+        }
+    }
+    
+    auto opt_graph = std::make_unique<optimized::Graph<EdgeData>>(n, input_edges);
+    return opt_graph;
+}
 #endif //OBLIVIOUSROUTING_GRAPH_IO_H

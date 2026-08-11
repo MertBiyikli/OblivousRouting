@@ -28,6 +28,34 @@ void GraphToLaplacian::init(const IGraph& graph) {
     }
 }
 
+void GraphToLaplacian::init(const optimized::Graph<EdgeData>& graph) {
+    int n = graph.getNumNodes();
+    int m = graph.getNumDirectedEdges();
+
+    to.resize(m);
+    from.resize(m);
+    head.resize(n + 1, 0);
+    weights.resize(m);
+    laplacian_indices.resize(m);
+    laplacian_indices_for_diagonal_elements.resize(n);
+
+    int edge_idx = 0;
+    for (int u = 0; u < n; u++) {
+        for (const auto& e : graph.edgesOf(u)) {
+            from[edge_idx] = u;
+            to[edge_idx] = e.tail;
+            edge_idx++;
+        }
+    }
+
+    int curr = 0;
+    for (int u = 0; u < n; u++) {
+        while (curr < m && from[curr] == u) curr++;
+        head[u+1] = curr;
+    }
+}
+
+
 void GraphToLaplacian::init(const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, int n) {
     int m = static_cast<int>(edges.size());
 

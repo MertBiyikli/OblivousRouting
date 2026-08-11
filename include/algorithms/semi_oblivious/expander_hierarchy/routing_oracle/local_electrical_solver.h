@@ -5,6 +5,7 @@
 #include "algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h"
 #include "core/errors.h"
 #include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 
 #include <vector>
 
@@ -23,5 +24,5 @@ public:
      * cluster.original_vertices[i].
      */
 
-    Result<LocalElectricalFlowResult> routeDemand(const IGraph& graph,const HierarchyCluster& cluster,const std::vector<double>& local_imbalance) const;
+    Result<LocalElectricalFlowResult> routeDemand(const optimized::Graph<EdgeData>& graph,const HierarchyCluster& cluster,const std::vector<double>& local_imbalance) const;
 };

@@ -9,10 +9,10 @@
 template<typename T>
 class FastCKR : public TreeOracle<T> {
 public:
-    explicit FastCKR(IGraph& g) : TreeOracle<T>(g) {}
-    explicit FastCKR(IGraph& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
+    explicit FastCKR(optimized::Graph<EdgeData>& g) : TreeOracle<T>(g) {}
+    explicit FastCKR(optimized::Graph<EdgeData>& g, bool mendelscaling) : TreeOracle<T>(g, mendelscaling) {}
 
-    void computeLevelPartition(IGraph& _g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
+    void computeLevelPartition(optimized::Graph<EdgeData>& _g, HSTLevel& level, const std::vector<int>& x_perm, double delta) override {
         const int n = _g.getNumNodes();
 
         // Sample R in [Δ/4, Δ/2] ---
@@ -57,12 +57,13 @@ public:
                 // label assignment
                 if (P[w]== 0) P[w] = i+1;
 
-                if (_g.neighbors(w).size() == 0) continue;
-                for (const auto& u : _g.neighbors(w)) {
+                if (_g.edgesOf(w).empty()) continue;
+                for (const auto& e : _g.edgesOf(w)) {
+                    int u = e.tail;
                     if (u >= level.owner.size()) continue;
                     if (level.owner[u]!=-1) continue;
 
-                    double new_dist = dist_w + _g.getEdgeDistance(w, u);
+                    double new_dist = dist_w + _g.edgeData(e.id).weight;
                     if (new_dist < estimated_distances[u]) {
                         estimated_distances[u] = new_dist;
                         Q.insertOrAdjustKey(u, new_dist);
