@@ -62,9 +62,9 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
             return getError(result);
         }
 
-        std::string out = (cfg->output_filename.empty() ? "result/run_" + getSolverName(type) + ".json" : cfg->output_filename);
 
-        auto output = RoutingResultWriter::write(result.value(), out, cfg.value().output_format);
+
+        auto output = RoutingResultWriter::write(result.value(), cfg.value(), type);
         if (!output) {
             return getError(output);
         }

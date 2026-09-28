@@ -11,6 +11,7 @@ Result<IRoutingResult> ObliviousSolverRunner::run(optimized::Graph<EdgeData>& gr
     result.nodes = graph.getNumNodes();
     result.edges = graph.getNumUndirectedEdges();
     result.solver_name = getSolverName(type);
+    result.total_runtime_microseconds = 0;
 
     auto solverOpt = makeSolver(type, graph);
     if (!solverOpt
@@ -35,7 +36,8 @@ Result<IRoutingResult> ObliviousSolverRunner::run(optimized::Graph<EdgeData>& gr
 
 
     result.solve_runtime_microseconds = duration(timeNow() - t0);
-    result.total_runtime_microseconds = result.solve_runtime_microseconds;
+    result.total_runtime_microseconds += result.solve_runtime_microseconds;
+    result.total_runtime_microseconds += result.preprocessing_runtime_microseconds;
 
 
     appendMetricsIfAvailable(solver, result);

@@ -32,13 +32,12 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_FLAGS": "-O3"
       }
-    },
+    }
 
   ],
 
   "buildPresets": [
     { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" },
-    { "name": "debug-tests", "configurePreset": "debug-tests" }
+    { "name": "release", "configurePreset": "release" }
   ]
 }

@@ -26,14 +26,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ============================================================================
 # Dependencies — Homebrew setup
 # ============================================================================
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+#set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 # Homebrew is at /usr/local on this Intel Mac.
-set(PKG_CONFIG_EXECUTABLE "/usr/local/bin/pkg-config"
-        CACHE FILEPATH "Homebrew pkg-config executable" FORCE)
+#set(PKG_CONFIG_EXECUTABLE "/usr/local/bin/pkg-config" CACHE FILEPATH "Homebrew pkg-config executable" FORCE)
 
-set(ENV{PKG_CONFIG_PATH}
-        "/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+find_package(fmt CONFIG REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Cbc       REQUIRED IMPORTED_TARGET cbc)
@@ -47,6 +45,32 @@ pkg_check_modules(CoinUtils REQUIRED IMPORTED_TARGET coinutils)
 pkg_check_modules(Cbc REQUIRED IMPORTED_TARGET cbc)
 
 find_package(ortools CONFIG REQUIRED)
+# ---------------------------------------------------------------------------
+# OR-Tools 9.12 workaround
+#
+# The installed OR-Tools CMake package exports MathOpt OBJECT libraries with
+# INTERFACE_SOURCES referring to internal object targets that are not exported.
+# This causes CMake generation to fail with:
+#
+#   $<TARGET_OBJECTS:ortools_math_opt_core>
+#   $<TARGET_OBJECTS:ortools_math_opt_constraints_indicator>
+#
+# We only use the installed OR-Tools library, so these interface object sources
+# are not needed.
+# ---------------------------------------------------------------------------
+
+foreach(target
+        ortools::ortools_math_opt
+        ortools::ortools_math_opt_constraints)
+
+    if(TARGET ${target})
+        set_property(
+                TARGET ${target}
+                PROPERTY INTERFACE_SOURCES ""
+        )
+    endif()
+
+endforeach()
 get_filename_component(ORTOOLS_PREFIX "${ortools_DIR}/../../.." REALPATH)
 set(ORTOOLS_INCLUDE_DIR "${ORTOOLS_PREFIX}/include")
 
@@ -171,15 +195,15 @@ add_library(oblivious_routing_core STATIC
         source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.cpp
         include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.h
         include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h
-        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.h
-        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.cpp
-        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.h
-        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.cpp
-        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.h
-        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.cpp
-        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_logger.cpp
-        include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
-        source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.cpp
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_logger.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
         source/algorithms/oblivious/mwu/flow_sparsifier_mwu.cpp
         include/visualization/visualization_result.h
         source/visualization/visualization_result.cpp
@@ -209,26 +233,6 @@ target_link_libraries(oblivious_routing_core
         Boost::serialization
 )
 
-set(PRACTICAL_ED_ROOT
-        "${CMAKE_SOURCE_DIR}/extern/practical-expander-decomposition"
-)
-
-if(NOT EXISTS "${PRACTICAL_ED_ROOT}/lib/cut_matching.hpp")
-    message(FATAL_ERROR
-            "practical-expander-decomposition not found at "
-            "${PRACTICAL_ED_ROOT}"
-    )
-endif()
-
-target_include_directories(oblivious_routing_core PRIVATE
-        "${PRACTICAL_ED_ROOT}/lib"
-)
-
-target_sources(oblivious_routing_core PRIVATE
-        "${PRACTICAL_ED_ROOT}/lib/datastructures/unit_flow.cpp"
-        "${PRACTICAL_ED_ROOT}/lib/cut_matching.cpp"
-        "${PRACTICAL_ED_ROOT}/lib/trimming.cpp"
-)
 # ============================================================================
 # Main executable
 # ============================================================================

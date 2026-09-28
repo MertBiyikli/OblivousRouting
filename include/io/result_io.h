@@ -14,22 +14,33 @@
 
 class RoutingResultWriter {
 public:
-    static Result<void> write(
-        const IRoutingResult& result,
-        const std::string& path,
-        OutputFormat format
-    ) {
+    static Result<void> write(const IRoutingResult& result,const Config& cfg, const SolverType& type) {
 
+        std::string out = (cfg.output_filename.empty() ? "result/run_" + getSolverName( type ) + ".json" : cfg.output_filename);
+
+        const auto& format = cfg.output_format;
         if (format == OutputFormat::COUT) {
             writeCout(result);
             return {};
         }
 
-        // else we write into a file
-        std::ofstream file(path);
+        // Create parent directory if it does not exist.
+        const std::filesystem::path output_path(out);
+
+        if (output_path.has_parent_path()) {
+            std::error_code ec;
+            std::filesystem::create_directories(output_path.parent_path(), ec);
+
+            if (ec) {
+                return makeErrorMessage(ErrorCode::FileNotFound,"Failed to create output directory: "
+                    +output_path.parent_path().string() +" (" + ec.message() + ")");
+            }
+        }
+
+        std::ofstream file(out);
 
         if (!file.is_open()) {
-            return makeErrorMessage(ErrorCode::FileNotFound, "Failed to open output file: "+ path);
+            return makeErrorMessage(ErrorCode::FileNotFound,"Failed to open output file: " + out);
         }
 
         switch (format) {
@@ -383,7 +394,7 @@ private:
 
             out << "  \"mwu_metrics\": {\n";
             out << "    \"iteration_count\": " << mwu.iteration_count << ",\n";
-            out << "    \"solve_time_microseconds\": " << mwu.solve_time << ",\n";
+            //out << "    \"solve_time_microseconds\": " << mwu.solve_time << ",\n";
             out << "    \"transformation_time_microseconds\": "
                 << mwu.transformation_time << ",\n";
             out << "    \"load_computation_time_microseconds\": "
