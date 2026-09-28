@@ -5,6 +5,10 @@
 #ifndef OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
 #define OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
 
+
+#ifdef OR_ENABLE_OPENMP
+#include <omp.h>
+#endif
 #include <vector>
 
 #include <amgcl/backend/builtin.hpp>

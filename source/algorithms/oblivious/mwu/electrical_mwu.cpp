@@ -35,7 +35,6 @@ Result<void> ElectricalMWU::init( bool debug,  boost::property_tree::ptree _para
     this->inv_m = 1.0 / static_cast<double>(m);
     this->x_fixed = 0;
 
-    initVariables();
     initEdgeDistances();
 
     boost::property_tree::ptree params = make_amg_params();
@@ -424,16 +423,3 @@ Eigen::MatrixXd ElectricalMWU::getSketchMatrix(double eps) {
     return C;
 }
 
-void ElectricalMWU::initVariables() {
-    n = graph.getNumNodes();
-    m = graph.getNumUndirectedEdges();
-
-    // set algorithm parameters
-    roh = std::sqrt(2.0*static_cast<double>(m));
-    alpha_local = std::log2(n)*std::log2(n);
-    this->cap_X = m;
-    this->iteration_count = std::max(1, (int)std::ceil(8.0 * roh * std::log((double)m) / alpha_local));
-    this->inv_m = 1.0 / static_cast<double>(m);
-    this->x_fixed = 0;
-
-}

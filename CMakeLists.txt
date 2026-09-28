@@ -69,9 +69,13 @@ set(ORTOOLS_INCLUDE_DIR "${ORTOOLS_PREFIX}/include")
 if(NOT EXISTS "${ORTOOLS_INCLUDE_DIR}/ortools/linear_solver/linear_solver.h")
     message(FATAL_ERROR "OR-Tools headers were not found at: ${ORTOOLS_INCLUDE_DIR}")
 endif()
+
+
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen3 REQUIRED)
-
+if(OR_ENABLE_OPENMP)
+    find_package(OpenMP REQUIRED COMPONENTS CXX)
+endif()
 
 # xcut fetches spdlog. Make that spdlog use the same external fmt.
 set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL
@@ -220,11 +224,12 @@ target_link_libraries(oblivious_routing_core
         Boost::serialization
 )
 
-if(OpenMP_CXX_FOUND)
+if(OR_ENABLE_OPENMP)
     target_link_libraries(oblivious_routing_core PUBLIC OpenMP::OpenMP_CXX)
+    target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP)
 endif()
-target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP EIGEN_DONT_PARALLELIZE)
 
+target_compile_definitions(oblivious_routing_core PUBLIC EIGEN_DONT_PARALLELIZE)
 # ============================================================================
 # Main executable
 # ============================================================================

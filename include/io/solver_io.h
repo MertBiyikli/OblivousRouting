@@ -65,7 +65,7 @@ makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
         case SolverType::ELECTRICAL_NAIVE:
             return std::make_unique<ElectricalMWU>(g, 0, false);
 
-            case SolverType::ELECTRICAL_SKETCHING:
+        case SolverType::ELECTRICAL_SKETCHING:
             return std::make_unique<ElectricalMWU>(g, 0, true);
 
         case SolverType::RAECKE_FRT_FLAT:
@@ -107,6 +107,11 @@ makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
         case SolverType::EXPANDER_MWU:
             return std::make_unique<FlowSparsifier>(g, 0);
 
+        /* TODO:
+         * case SolverType::ELECTRICAL_PARALLEL
+         * return std::make_unique<ParElectricalFlowMWU>(g, 0);
+         *
+         */
         default:
             return std::nullopt;
     }
