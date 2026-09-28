@@ -15,6 +15,7 @@ endif()
 # ============================================================================
 option(BUILD_TESTS "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
+option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +23,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 # ============================================================================
-# Dependencies — Homebrew setup
+# Dependencies
 # ============================================================================
 find_package(fmt CONFIG REQUIRED)
 
@@ -219,6 +220,11 @@ target_link_libraries(oblivious_routing_core
         Boost::serialization
 )
 
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(oblivious_routing_core PUBLIC OpenMP::OpenMP_CXX)
+endif()
+target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP EIGEN_DONT_PARALLELIZE)
+
 # ============================================================================
 # Main executable
 # ============================================================================
@@ -293,12 +299,10 @@ if(BUILD_TESTS)
             REPORTER console
     )
 
-
     # ------------------------------------------------------------------------
     # Integration tests
     # ------------------------------------------------------------------------
     add_executable(integration_tests
-            tests/common/utils.h
             tests/integration/electrical/test_electrical_mwu.cpp
             tests/integration/electrical/test_electrical_mwu_io.cpp
 
