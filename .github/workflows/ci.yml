@@ -10,9 +10,6 @@ permissions:
   contents: read
   packages: read
 
-env:
-  ORTOOLS_IMAGE: ghcr.io/mertbiyikli/ortools:linux
-
 jobs:
   linux-matrix:
     name: Linux / ${{ matrix.name }}
@@ -45,7 +42,7 @@ jobs:
             run_tests: false
 
     container:
-      image: ${{ env.ORTOOLS_IMAGE }}
+      image: ghcr.io/mertbiyikli/ortools:linux
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +68,7 @@ jobs:
     needs: linux-matrix
 
     container:
-      image: ${{ env.ORTOOLS_IMAGE }}
+      image: ghcr.io/mertbiyikli/ortools:linux
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
