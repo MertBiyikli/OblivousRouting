@@ -10,6 +10,7 @@ void demands::addDemand(int s, int t, double demand) {
     source.push_back(s);
     target.push_back(t);
     demand_values.push_back(demand);
+    demand_map[{s, t}] = demand;
 }
 
 
@@ -28,11 +29,20 @@ double demands::getDemandValue(size_t idx) const {
     return demand_values[idx];
 }
 
+std::optional<double> demands::getDemandValue(int s, int t) const {
+    auto it = demand_map.find({s, t});
+    if (it != demand_map.end()) {
+        return it->second;
+    }else {
+        return std::nullopt;
+    }
+}
 
-demands BimodalModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+
+Result<demands> BimodalModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
-    std::uint64_t seed = std::random_device{}();
+
     std::mt19937_64 rng(seed);
 
 
@@ -56,10 +66,9 @@ demands BimodalModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _dem
     return demand2flow;
 }
 
-demands UniformModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> UniformModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
-    std::uint64_t seed = std::random_device{}();
     std::mt19937_64 rng(seed);
 
     std::uniform_int_distribution<int> uniform_int(0, 401);
@@ -80,7 +89,7 @@ demands UniformModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _dem
 }
 
 
-demands GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> GravityModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
 
     std::unordered_set<int> nodes(g.getNumNodes());
@@ -93,8 +102,8 @@ demands GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _dem
     double sumCapacity = 0.0;
     for(const auto& node : nodes) {
         double sum = 0.0;
-        for(const auto& u : g.neighbors(node)) {
-            sum += g.getEdgeCapacity(node, u);
+        for(const auto& e : g.edgesOf(node)) {
+            sum += g.edgeData(e.id).capacity;
         }
         sumCapacity += sum;
         nodeToCapacity[node] = sum;
@@ -102,11 +111,10 @@ demands GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _dem
 
     for(int i = 0; i < g.getNumNodes(); ++i) {
         if(nodeToCapacity[i] == 0.0) {
-            throw std::runtime_error("Node " + std::to_string(i) + " has zero capacity, cannot generate demands.");
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Node " + std::to_string(i) + " has zero capacity, cannot generate demands.");
         }
     }
 
-    std::uint64_t seed = std::random_device{}();
     std::mt19937_64 rng(seed);
 
     double capU, capV;
@@ -130,9 +138,8 @@ demands GravityModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _dem
     return demand2flow;
 }
 
-demands GaussianModel::generate(IGraph& g, std::vector<std::pair<int, int>>& _demands, double margin) {
+Result<demands> GaussianModel::generate(optimized::Graph<EdgeData>& g, std::vector<std::pair<int, int>>& _demands, double margin) {
     demands demand2flow;
-    std::uint64_t seed = std::random_device{}();
     std::mt19937_64 rng(seed);
 
     std::uniform_int_distribution<int> uniform_int(0, 401);

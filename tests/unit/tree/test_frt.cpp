@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include "data_structures/graph/graph_csr.h"
-#include "algorithms/mwu/oracle/tree/frt/frt.h"
+#include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
 #include <vector>
 
 #include "tree_oracle_test_helpers.h"

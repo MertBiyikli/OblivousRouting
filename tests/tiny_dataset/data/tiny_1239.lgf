@@ -1,0 +1,172 @@
+@nodes
+label	name	
+0	Amsterdam	
+1	Anaheim	
+2	Atlanta	
+3	Brussels	
+4	Cheyenne	
+5	Chicago	
+6	Copenhagen	
+7	Dallas	
+8	Frankfurt	
+9	Hamburg	
+10	HongKong	
+11	KansasCity	
+12	London	
+13	Manasquan	
+14	Milan	
+15	NewYork	
+16	Orlando	
+17	Paris	
+18	PearlHarbor	
+19	Pennsauken	
+20	Relay	
+21	ResearchTrianglePark	
+22	Roachdale	
+23	SanJose	
+24	Seattle	
+25	Springfield	
+26	Stockton	
+27	Sydney	
+28	Tacoma	
+29	Tokyo	
+@arcs
+		label	name	cost	
+5	4	0	Chicago_Cheyenne	50	
+5	15	1	NewYork_Chicago	75	
+27	28	2	Tacoma_Sydney	65	
+20	15	3	Relay_NewYork	55	
+15	5	4	NewYork_Chicago	75	
+1	18	5	PearlHarbor_Anaheim	70	
+26	19	6	Stockton_Pennsauken	85	
+2	15	7	NewYork_Atlanta	65	
+7	1	8	Dallas_Anaheim	40	
+7	23	9	SanJose_Dallas	75	
+20	23	10	SanJose_Relay	80	
+16	15	11	Orlando_NewYork	85	
+11	15	12	NewYork_KansasCity	65	
+29	26	13	Tokyo_Stockton	70	
+15	13	14	NewYork_Manasquan	45	
+2	5	15	Chicago_Atlanta	80	
+17	12	16	Paris_London	20	
+8	14	17	Milan_Frankfurt	20	
+15	12	18	NewYork_London	90	
+15	2	19	NewYork_Atlanta	65	
+10	29	20	Tokyo_HongKong	45	
+7	15	21	NewYork_Dallas	40	
+22	19	22	Roachdale_Pennsauken	90	
+15	16	23	Orlando_NewYork	85	
+6	12	24	London_Copenhagen	25	
+13	15	25	NewYork_Manasquan	45	
+12	17	26	Paris_London	20	
+19	15	27	Pennsauken_NewYork	60	
+3	12	28	London_Brussels	20	
+4	2	29	Cheyenne_Atlanta	10	
+26	1	30	Stockton_Anaheim	65	
+20	19	31	Relay_Pennsauken	45	
+7	20	32	Relay_Dallas	155	
+7	2	33	Dallas_Atlanta	75	
+17	14	34	Paris_Milan	20	
+17	8	35	Paris_Frankfurt	20	
+21	2	36	ResearchTrianglePark_Atlanta	10	
+8	17	37	Paris_Frankfurt	20	
+11	4	38	KansasCity_Cheyenne	10	
+13	12	39	Manasquan_London	45	
+19	11	40	Pennsauken_KansasCity	125	
+9	0	41	Hamburg_Amsterdam	20	
+26	27	42	Sydney_Stockton	20	
+11	24	43	Seattle_KansasCity	65	
+11	5	44	KansasCity_Chicago	60	
+23	1	45	SanJose_Anaheim	25	
+18	1	46	PearlHarbor_Anaheim	70	
+2	20	47	Relay_Atlanta	40	
+5	24	48	Seattle_Chicago	35	
+13	20	49	Relay_Manasquan	40	
+3	0	50	Brussels_Amsterdam	20	
+2	7	51	Dallas_Atlanta	75	
+13	6	52	Manasquan_Copenhagen	30	
+5	23	53	SanJose_Chicago	90	
+19	20	54	Relay_Pennsauken	45	
+9	8	55	Hamburg_Frankfurt	30	
+19	25	56	Springfield_Pennsauken	20	
+1	15	57	NewYork_Anaheim	60	
+22	5	58	Roachdale_Chicago	65	
+20	2	59	Relay_Atlanta	40	
+28	27	60	Tacoma_Sydney	65	
+26	23	61	Stockton_SanJose	60	
+12	15	62	NewYork_London	90	
+5	26	63	Stockton_Chicago	120	
+15	25	64	Springfield_NewYork	75	
+21	20	65	ResearchTrianglePark_Relay	10	
+26	29	66	Tokyo_Stockton	70	
+25	19	67	Springfield_Pennsauken	20	
+27	26	68	Sydney_Stockton	20	
+22	28	69	Tacoma_Roachdale	130	
+1	23	70	SanJose_Anaheim	25	
+14	8	71	Milan_Frankfurt	20	
+15	19	72	Pennsauken_NewYork	60	
+24	5	73	Seattle_Chicago	35	
+26	10	74	Stockton_HongKong	20	
+2	4	75	Cheyenne_Atlanta	10	
+18	26	76	Stockton_PearlHarbor	30	
+15	11	77	NewYork_KansasCity	65	
+15	7	78	NewYork_Dallas	40	
+1	26	79	Stockton_Anaheim	65	
+5	22	80	Roachdale_Chicago	65	
+10	26	81	Stockton_HongKong	20	
+6	9	82	Hamburg_Copenhagen	45	
+26	18	83	Stockton_PearlHarbor	30	
+7	19	84	Pennsauken_Dallas	90	
+6	13	85	Manasquan_Copenhagen	30	
+9	6	86	Hamburg_Copenhagen	45	
+23	28	87	Tacoma_SanJose	65	
+12	3	88	London_Brussels	20	
+25	15	89	Springfield_NewYork	75	
+11	19	90	Pennsauken_KansasCity	125	
+29	10	91	Tokyo_HongKong	45	
+25	5	92	Springfield_Chicago	60	
+19	22	93	Roachdale_Pennsauken	90	
+7	4	94	Dallas_Cheyenne	135	
+23	7	95	SanJose_Dallas	75	
+2	16	96	Orlando_Atlanta	20	
+24	28	97	Tacoma_Seattle	20	
+28	24	98	Tacoma_Seattle	20	
+5	11	99	KansasCity_Chicago	60	
+28	4	100	Tacoma_Cheyenne	55	
+7	16	101	Orlando_Dallas	75	
+24	11	102	Seattle_KansasCity	65	
+0	9	103	Hamburg_Amsterdam	20	
+23	26	104	Stockton_SanJose	60	
+11	7	105	KansasCity_Dallas	55	
+5	7	106	Dallas_Chicago	65	
+4	7	107	Dallas_Cheyenne	135	
+0	3	108	Brussels_Amsterdam	20	
+12	6	109	London_Copenhagen	25	
+28	23	110	Tacoma_SanJose	65	
+23	20	111	SanJose_Relay	80	
+26	5	112	Stockton_Chicago	120	
+8	9	113	Hamburg_Frankfurt	30	
+4	28	114	Tacoma_Cheyenne	55	
+4	5	115	Chicago_Cheyenne	50	
+29	28	116	Tokyo_Tacoma	80	
+16	2	117	Orlando_Atlanta	20	
+5	25	118	Springfield_Chicago	60	
+4	11	119	KansasCity_Cheyenne	10	
+5	2	120	Chicago_Atlanta	80	
+28	22	121	Tacoma_Roachdale	130	
+1	7	122	Dallas_Anaheim	40	
+23	5	123	SanJose_Chicago	90	
+28	29	124	Tokyo_Tacoma	80	
+19	7	125	Pennsauken_Dallas	90	
+2	21	126	ResearchTrianglePark_Atlanta	10	
+20	7	127	Relay_Dallas	155	
+7	11	128	KansasCity_Dallas	55	
+12	13	129	Manasquan_London	45	
+14	17	130	Paris_Milan	20	
+16	7	131	Orlando_Dallas	75	
+20	21	132	ResearchTrianglePark_Relay	10	
+7	5	133	Dallas_Chicago	65	
+20	13	134	Relay_Manasquan	40	
+15	1	135	NewYork_Anaheim	60	
+19	26	136	Stockton_Pennsauken	85	
+15	20	137	Relay_NewYork	55	

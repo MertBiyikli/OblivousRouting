@@ -2,12 +2,12 @@
 // Created by Mert Biyikli on 09.06.26.
 //
 
-#include "../common/utils.h"
+#include "../../common/utils.h"
 #include <catch2/catch_approx.hpp>
 #include "algorithms/lp/lp_ac.h"
 #include "algorithms/lp/lp_mcf.h"
 
-#include "core/routing_table.h"
+#include "../../../include/routing/routing_table.h"
 
 using namespace integration;
 
@@ -20,7 +20,7 @@ TEST_CASE("Applegate-Cohen LP solver runs on a triangle graph",
 
     AllPairRoutingTable table;
     table.init(*graph);
-    solver.computeBasisFlows(table);
+    REQUIRE(solver.computeBasisFlows(table));
 
     //table.printFlows(*graph);
     requireValidAllPairRoutingTable(table, *graph);
@@ -35,7 +35,8 @@ TEST_CASE("Applegate-Cohen LP solver runs on a path graph",
 
     AllPairRoutingTable table;
     table.init(*graph);
-    solver.computeBasisFlows(table);
+
+    REQUIRE(solver.computeBasisFlows(table));
 
     requireValidAllPairRoutingTable(table, *graph);
 }

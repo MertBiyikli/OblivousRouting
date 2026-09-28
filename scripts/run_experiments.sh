@@ -11,7 +11,7 @@ DATASET=""
 DEMANDS=""
 DEMAND_PROVIDED=0
 
-ALL_SOLVERS="${ALL_SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel}"
+ALL_SOLVERS="${ALL_SOLVERS:-frt,ckr,mst,frt_mendel,ckr_mendel,expander}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
 
 RUN_ALL=0

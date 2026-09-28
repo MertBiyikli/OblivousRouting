@@ -38,12 +38,12 @@ public:
 
     double getEdgeCapacity(int u, int v) const override;
     double getEdgeDistance(int u, int v) const override;
-    bool updateEdgeDistance(int u, int v, double distance) override;
+    Result<void> updateEdgeDistance(int u, int v, double distance) override;
     bool updateEdgeCapacity(int u, int v, double capacity);
 
     double getEdgeCapacity(int e) const override;
     double getEdgeDistance(int e) const override;
-    bool updateEdgeDistance(int e, double dist) override;
+    Result<void> updateEdgeDistance(int e, double dist) override;
 
     void initializeMemberByParser(int maxNodeIdSeen) override;
 

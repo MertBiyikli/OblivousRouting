@@ -6,12 +6,13 @@ OUT_DIR="${OUT_DIR:-results/logs}"
 TIMEOUT="${TIMEOUT:-120m}"
 
 # Native binary (override via: BIN=... ./run_experiments_using_binary.sh ...)
-BIN="${BIN:-./build/oblivious_routing}"
+BIN="${BIN:-../cmake-build-release/oblivious_routing}"
 
 SOLVERS=""
 DATASET=""
 DEMANDS=""
 DEMAND_PROVIDED=0
+OUTPUT_FORMAT="${OUTPUT_FORMAT:-cout}"
 
 ALL_SOLVERS="${ALL_SOLVERS:-electrical_naive, electrical_sketching,frt,ckr,mst,frt_mendel,ckr_mendel,frt_pointer,ckr_pointer,mst_pointer,frt_mendel_pointer,ckr_mendel_pointer,lp}"
 ALL_DEMANDS="${ALL_DEMANDS:-gravity,gaussian,uniform,bimodal}"
@@ -27,11 +28,12 @@ while [[ $# -gt 0 ]]; do
     --demands)       DEMANDS="${2-}"; DEMAND_PROVIDED=1; shift 2 ;;
     --bin)           BIN="${2-}"; shift 2 ;;
     --out)           OUT_CSV="${2-}"; shift 2 ;;
+    --format)        OUTPUT_FORMAT="${2-}"; shift 2 ;;
     -h|--help)
       echo "Usage:"
-      echo "  $0 --all --dataset <dir-or-file> [--out results.csv]"
-      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> [--out results.csv]"
-      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian\" [--out results.csv]"
+      echo "  $0 --all --dataset <dir-or-file> [--out results.csv] [--format cout]"
+      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> [--out results.csv] [--format cout]"
+      echo "  $0 --solvers \"frt,ckr\" --dataset <dir-or-file> --demands \"gravity,gaussian\" [--out results.csv] [--format cout]"
       echo "All solvers and demands are passed in one binary call per graph."
       echo "CSV has one row per (graph × solver × demand_model)."
       exit 0
@@ -76,8 +78,11 @@ mkdir -p "$OUT_DIR"
 
 CSV="$OUT_CSV"
 
-# Always write a fresh header — each invocation owns its output file
-echo "dataset,graph,solver,num_nodes,num_edges,total_time_micro_seconds,solve_time_micro_seconds,transformation_time_micro_seconds,mwu_iterations,avg_oracle_time_micro_seconds,avg_tree_height,load_computation_micro_seconds,mendel_total_micro_seconds,mendel_avg_micro_seconds,oblivious_ratio,demand_model,offline_opt,achieved_congestion,ratio_pct,mwu_weight_update_time_micro_seconds,status" > "$CSV"
+# Always write a fresh header — each invocation owns its output file.
+# The parser below uses the same schema for every solver type; unavailable
+# solver-specific metrics are written as NaN.
+CSV_FIELDS="date,dataset,graph,solver,routing_base,num_nodes,num_edges,execution_status,solver_status,total_time_microseconds,preprocessing_time_microseconds,solve_time_microseconds,oblivious_ratio,demand_model,demand_congestion,demand_runtime_microseconds,offline_opt,ratio_pct,candidate_paths,average_paths_per_pair,mwu_iterations,mwu_solve_time_microseconds,mwu_transformation_time_microseconds,mwu_load_computation_time_microseconds,mwu_weight_update_time_microseconds,mwu_average_oracle_time_microseconds,mwu_oracle_calls,hierarchy_runtime_microseconds,tree_construction_runtime_microseconds,basis_flow_runtime_microseconds,hierarchy_levels,hierarchy_clusters,clusters_per_level,maximum_cluster_vertices,average_cluster_vertices,tree_nodes,tree_edges,tree_depth,basis_flows,total_electrical_solves,average_electrical_solves_per_basis_flow,maximum_basis_embedding_congestion,maximum_conservation_error,average_tree_height,mendel_total_microseconds,mendel_average_microseconds"
+echo "$CSV_FIELDS" > "$CSV"
 
 # Collect graphs
 DATASET_PATH="$DATASET"
@@ -120,17 +125,19 @@ for g in "${GRAPHS[@]}"; do
   fi
 
   base="$(basename "$g_abs")"
+  graph_label="$(basename "$(dirname "$g_abs")")/$base"
   safe_rel="${rel_path//\//__}"
   log="$OUT_DIR/${safe_rel%.lgf}_${RUN_ID}.log"
 
-  # Build command: binary <solvers> <graph> [<demands>]
+  # Build command: binary <solvers> <graph> [<demands>] <output-format>
   cmd=( "$BIN" "$SOLVERS_ARG" "$g_abs" )
   if [[ "$DEMAND_PROVIDED" -eq 1 && -n "$DEMANDS_ARG" ]]; then
     cmd+=( "$DEMANDS_ARG" )
   fi
+  cmd+=( "$OUTPUT_FORMAT" )
 
 
-  echo "[RUN] $rel_path | solvers=$SOLVERS_ARG | demands=${DEMANDS_ARG:-none} | timeout=$TIMEOUT"
+  echo "[RUN] $rel_path | solvers=$SOLVERS_ARG | demands=${DEMANDS_ARG:-none} | format=$OUTPUT_FORMAT | timeout=$TIMEOUT"
 
   status="OK"
   if "$TIMEOUT_BIN" --signal=SIGTERM --kill-after=30s "$TIMEOUT" \
@@ -147,155 +154,179 @@ for g in "${GRAPHS[@]}"; do
     fi
   fi
 
-  # ---------------------------------------------------------------------------
-  # Parse the log.
-  #
-  # Output structure (one binary call, multiple solvers, multiple demands):
-  #
-  #   Graph loaded: 36 nodes, 96 edges.
-  #   ...
-  #   === Running solver: raecke_frt ===
-  #   Total running time: 95 ms
-  #   Solve time: 50 ms
-  #   Transformation time: 24 ms
-  #   MWU iterations: 21
-  #   Average oracle time: 2.28571 ms
-  #   Ratio off the optimal offline solution [bimodal] demand model: 519.863% (2014.49 / 10472.6)
-  #   Ratio off the optimal offline solution [uniform] demand model: 717.007% (11557 / 82864.5)
-  #   ...
-  #   === Running solver: raecke_ckr ===
-  #   ...
-  #
-  # Strategy: track current solver section; for every ratio line emit one CSV row.
-  # If status != OK, emit one row per (solver x demand) with NaN values.
-  # ---------------------------------------------------------------------------
-  # Parse the log into a temp file, then append atomically to the CSV.
-  # Using a temp file ensures no partial/stale data from a previous run
-  # can leak into the output even if the script is interrupted.
-  # ---------------------------------------------------------------------------
+  # Parse both the current labelled cout format and the historical
+  # "=== Running solver" / ratio-line format. Rows are buffered until the end
+  # of each solver section because MWU and hierarchy metrics follow demands.
   _tmp_rows="$(mktemp)"
-  awk \
-    -v dataset="$dataset_label" \
-    -v graph="$rel_path" \
-    -v status="$status" \
-    -v demands_arg="$DEMANDS_ARG" \
-    -v demand_provided="$DEMAND_PROVIDED" \
-  '
-   function flush_no_demand_row() {
-     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-       dataset, graph, solver, nodes, edges,
-       total_time, solve_time, transf_time, mwu, avg_oracle,
-       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-       "none", "NaN","NaN","NaN", mwu_weight_update_time, status
-     n_rows++
-   }
-  function reset_solver_state() {
-    total_time="NaN"; solve_time="NaN"; transf_time="NaN";
-    mwu="NaN"; avg_oracle="NaN"; avg_tree_height="NaN";
-    mendel_total="NaN"; mendel_avg="NaN"; oblivious_ratio="NaN";
-    mwu_weight_update_time="NaN";
-    load_computation_micro_seconds="NaN";
-  }
-  BEGIN {
-    nodes="NaN"; edges="NaN";
-    solver=""; n_rows=0; solver_seen=0;
-    mwu_weight_update_time="NaN";
-    load_computation_micro_seconds="NaN";
-    reset_solver_state()
-  }
+  python3 - "$log" "$dataset_label" "$graph_label" "$status" \
+    "$DEMANDS_ARG" "$DEMAND_PROVIDED" "$CSV_FIELDS" > "$_tmp_rows" <<'PY'
+import csv
+import re
+import sys
 
-  # Graph metadata (appears once at the top)
-  /^Graph loaded: [0-9]+ nodes, [0-9]+ edges\./ {
-    tmp=$0
-    sub(/^Graph loaded: /, "", tmp)
-    nodes=tmp; sub(/ nodes.*$/, "", nodes)
-    sub(/^[0-9]+ nodes, /, "", tmp)
-    edges=tmp; sub(/ edges.*$/, "", edges)
-    next
-  }
+log_path, dataset, fallback_graph, execution_status, demands_arg, demand_provided, fields_arg = sys.argv[1:]
+fields = fields_arg.split(",")
+NA = "NaN"
 
-  # New solver section — flush previous solver row if no demands, then reset
-  /^=== Running solver: / {
-    if (demand_provided != "1" && solver != "" && solver_seen) {
-      flush_no_demand_row()
-    }
-    solver=$0; sub(/^=== Running solver: /,"",solver); sub(/ ===/,"",solver)
-    reset_solver_state()
-    solver_seen=1
-    next
-  }
+label_to_field = {
+    "Total runtime (microseconds)": "total_time_microseconds",
+    "Preprocessing runtime (microseconds)": "preprocessing_time_microseconds",
+    "Solve runtime (microseconds)": "solve_time_microseconds",
+    "Oblivious ratio": "oblivious_ratio",
+    "Candidate paths": "candidate_paths",
+    "Average paths per pair": "average_paths_per_pair",
+    "Iterations": "mwu_iterations",
+    "Solve time (microseconds)": "mwu_solve_time_microseconds",
+    "Transformation time (microseconds)": "mwu_transformation_time_microseconds",
+    "Load computation time (microseconds)": "mwu_load_computation_time_microseconds",
+    "Weight update time (microseconds)": "mwu_weight_update_time_microseconds",
+    "Average oracle time (microseconds)": "mwu_average_oracle_time_microseconds",
+    "Oracle calls": "mwu_oracle_calls",
+    "Hierarchy runtime (microseconds)": "hierarchy_runtime_microseconds",
+    "Tree construction runtime (microseconds)": "tree_construction_runtime_microseconds",
+    "Basis-flow runtime (microseconds)": "basis_flow_runtime_microseconds",
+    "Hierarchy levels": "hierarchy_levels",
+    "Hierarchy clusters": "hierarchy_clusters",
+    "Clusters per level": "clusters_per_level",
+    "Maximum cluster vertices": "maximum_cluster_vertices",
+    "Average cluster vertices": "average_cluster_vertices",
+    "Tree nodes": "tree_nodes",
+    "Tree edges": "tree_edges",
+    "Tree depth": "tree_depth",
+    "Basis flows": "basis_flows",
+    "Total electrical solves": "total_electrical_solves",
+    "Average electrical solves per basis flow": "average_electrical_solves_per_basis_flow",
+    "Maximum basis embedding congestion": "maximum_basis_embedding_congestion",
+    "Maximum conservation error": "maximum_conservation_error",
+}
 
-  /^Total time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-    tmp=$0; sub(/^Total time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); total_time=tmp; next
-  }
-  /^Solve time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-    tmp=$0; sub(/^Solve time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); solve_time=tmp; next
-  }
-  /^Transformation time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-    tmp=$0; sub(/^Transformation time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); transf_time=tmp; next
-  }
-  /^MWU iterations: [0-9]+$/ {
-    tmp=$0; sub(/^MWU iterations: /,"",tmp); mwu=tmp; next
-  }
-  /^MWU load computation: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-      tmp=$0; sub(/^MWU load computation: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); load_computation_micro_seconds=tmp; next
-    }
-  /^Average oracle time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-    tmp=$0; sub(/^Average oracle time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); avg_oracle=tmp; next
-  }
-  /^Total MWU weight update time: [0-9][0-9.]*([eE][+-]?[0-9]+)? micro[ _]seconds/ {
-    tmp=$0; sub(/^Total MWU weight update time: /,"",tmp); sub(/ micro[ _]seconds/,"",tmp); mwu_weight_update_time=tmp; next
-  }
-  /^Average tree height: [0-9][0-9.]*([eE][+-]?[0-9]+)?$/ {
-    tmp=$0; sub(/^Average tree height: /,"",tmp); avg_tree_height=tmp; next
-  }
-  /^Total time spent on Mendel scaling: [0-9][0-9.]*([eE][+-]?[0-9]+)?  *micro  *seconds/ {
-    tmp=$0; sub(/^Total time spent on Mendel scaling: /,"",tmp); sub(/ *micro  *seconds/,"",tmp); mendel_total=tmp; next
-  }
-  /^Average time spent on Mendel scaling per iteration: [0-9][0-9.]*([eE][+-]?[0-9]+)?  *micro  *seconds/ {
-    tmp=$0; sub(/^Average time spent on Mendel scaling per iteration: /,"",tmp); sub(/ *micro  *seconds/,"",tmp); mendel_avg=tmp; next
-  }
-  /^Oblivious ratio: [0-9][0-9.]*([eE][+-]?[0-9]+)?$/ {
-    tmp=$0; sub(/^Oblivious ratio: /,"",tmp); oblivious_ratio=tmp; next
-  }
+def fresh():
+    row = {field: NA for field in fields}
+    row.update(dataset=dataset, graph=fallback_graph,
+               execution_status=execution_status)
+    return {"row": row, "demands": [], "current_demand": None}
 
-   # Ratio line — one row per (solver × demand_model)
-   /^Ratio off the optimal offline solution \[/ {
-     dm=$0; sub(/^Ratio off the optimal offline solution \[/,"",dm); sub(/\] demand model:.*$/,"",dm)
-     ratio_pct=$0; sub(/^.*: /,"",ratio_pct); sub(/%.*$/,"",ratio_pct)
-     vals=$0; sub(/^.*\(/,"",vals); sub(/\).*$/,"",vals)
-     n=split(vals, ab, " / ")
-     offline_val  = (n>=1) ? ab[1] : "NaN"
-     achieved_val = (n>=2) ? ab[2] : "NaN"
-     printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-       dataset, graph, solver, nodes, edges,
-       total_time, solve_time, transf_time, mwu, avg_oracle,
-       avg_tree_height, load_computation_micro_seconds, mendel_total, mendel_avg, oblivious_ratio,
-       dm, offline_val, achieved_val, ratio_pct, mwu_weight_update_time, status
-     n_rows++
-     next
-   }
+sections = []
+section = None
 
-   END {
-     if (n_rows == 0 && !solver_seen) {
-       # Binary produced no output at all (crash before any solver ran)
-       if (demand_provided == "1" && demands_arg != "") {
-         n_d = split(demands_arg, dm_arr, ",")
-       } else {
-         n_d = 1; dm_arr[1] = "none"
-       }
-       for (di=1; di<=n_d; di++) {
-         printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-           dataset, graph, "unknown", nodes, edges,
-           "NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN","NaN",
-           dm_arr[di], "NaN","NaN","NaN","NaN", mwu_weight_update_time, status
-       }
-     } else if (demand_provided != "1" && solver_seen) {
-       # Flush the last solver (no demand model run)
-       flush_no_demand_row()
-     }
-   }
-  ' "$log" > "$_tmp_rows"
+def ensure_section():
+    global section
+    if section is None:
+        section = fresh()
+    return section
+
+def finish_section():
+    global section
+    if section is not None and section["row"]["solver"] != NA:
+        sections.append(section)
+    section = None
+
+with open(log_path, encoding="utf-8", errors="replace") as handle:
+    for raw in handle:
+        line = raw.strip()
+        if not line:
+            continue
+
+        if line.startswith("Date: "):
+            finish_section()
+            ensure_section()["row"]["date"] = line[6:].strip()
+            continue
+
+        old_solver = re.fullmatch(r"=== Running solver: (.*?) ===", line)
+        if old_solver:
+            finish_section()
+            ensure_section()["row"]["solver"] = old_solver.group(1)
+            continue
+
+        if line.startswith("Solver: "):
+            ensure_section()["row"]["solver"] = line[8:].strip()
+            continue
+
+        sec = ensure_section()
+        row = sec["row"]
+
+        graph_loaded = re.fullmatch(r"Graph loaded: (\d+) nodes, (\d+) edges\.", line)
+        if graph_loaded:
+            row["num_nodes"], row["num_edges"] = graph_loaded.groups()
+            continue
+
+        demand = re.fullmatch(r"Demand \[(.+)]", line)
+        if demand:
+            entry = {"demand_model": demand.group(1),
+                     "demand_congestion": NA,
+                     "demand_runtime_microseconds": NA,
+                     "offline_opt": NA, "ratio_pct": NA}
+            sec["demands"].append(entry)
+            sec["current_demand"] = entry
+            continue
+
+        if sec["current_demand"] is not None:
+            if line.startswith("Congestion: "):
+                sec["current_demand"]["demand_congestion"] = line.split(":", 1)[1].strip()
+                continue
+            if line.startswith("Runtime (microseconds): "):
+                sec["current_demand"]["demand_runtime_microseconds"] = line.split(":", 1)[1].strip()
+                continue
+
+        ratio = re.fullmatch(
+            r"Ratio off the optimal offline solution \[(.+?)] demand model: "
+            r"([^%]+)% \(([^/]+) / ([^)]+)\)", line)
+        if ratio:
+            dm, ratio_pct, offline_opt, congestion = (value.strip() for value in ratio.groups())
+            sec["demands"].append({"demand_model": dm,
+                "demand_congestion": congestion, "demand_runtime_microseconds": NA,
+                "offline_opt": offline_opt, "ratio_pct": ratio_pct})
+            continue
+
+        simple = {
+            "Nodes": "num_nodes", "Edges": "num_edges",
+            "Routing base": "routing_base", "Status": "solver_status",
+            "Total time": "total_time_microseconds",
+            "Solve time": "solve_time_microseconds",
+            "Transformation time": "mwu_transformation_time_microseconds",
+            "MWU iterations": "mwu_iterations",
+            "MWU load computation": "mwu_load_computation_time_microseconds",
+            "Average oracle time": "mwu_average_oracle_time_microseconds",
+            "Total MWU weight update time": "mwu_weight_update_time_microseconds",
+            "Average tree height": "average_tree_height",
+            "Total time spent on Mendel scaling": "mendel_total_microseconds",
+            "Average time spent on Mendel scaling per iteration": "mendel_average_microseconds",
+        }
+        matched = False
+        for label, field in simple.items():
+            if line.startswith(label + ": "):
+                value = line[len(label) + 2:].strip()
+                value = re.sub(r"\s+micro[ _ ]*seconds$", "", value)
+                row[field] = value
+                matched = True
+                break
+        if matched:
+            continue
+
+        for label, field in label_to_field.items():
+            if line.startswith(label + ": "):
+                row[field] = line[len(label) + 2:].strip()
+                break
+
+finish_section()
+
+if not sections:
+    failed = fresh()
+    failed["row"]["solver"] = "unknown"
+    requested = demands_arg.split(",") if demand_provided == "1" and demands_arg else ["none"]
+    failed["demands"] = [{"demand_model": dm, "demand_congestion": NA,
+                           "demand_runtime_microseconds": NA,
+                           "offline_opt": NA, "ratio_pct": NA} for dm in requested]
+    sections.append(failed)
+
+writer = csv.DictWriter(sys.stdout, fieldnames=fields, lineterminator="\n")
+for sec in sections:
+    demands = sec["demands"] or [{"demand_model": "none"}]
+    for demand in demands:
+        output = sec["row"].copy()
+        output.update(demand)
+        writer.writerow(output)
+PY
   cat "$_tmp_rows" >> "$CSV"
   rm -f "$_tmp_rows"
 
@@ -304,4 +335,3 @@ done
 
 echo "CSV written to: $CSV"
 echo "Logs written to: $OUT_DIR"
-

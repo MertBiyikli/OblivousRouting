@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(ObliviousRouting
-        VERSION 0.0.1
-        DESCRIPTION "A comparison of tree metrics and electrical flows as oblivious routing oracles"
-        LANGUAGES CXX)
+project(ObliviousRouting VERSION 0.0.1 DESCRIPTION "E-Routing: Network Resilience and Capacity Planning Engine." LANGUAGES CXX)
+
+# Set CMake policies early to suppress warnings
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW)
+endif()
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
 
 # ============================================================================
 # Options
@@ -12,39 +17,80 @@ option(BUILD_TESTS "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
 option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
-
-if(DEFINED ENV{ORTOOLS_ROOT})
-    list(PREPEND CMAKE_PREFIX_PATH "$ENV{ORTOOLS_ROOT}")
-endif()
 
 # ============================================================================
 # Dependencies
 # ============================================================================
+find_package(fmt CONFIG REQUIRED)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Cbc       REQUIRED IMPORTED_TARGET cbc)
+pkg_check_modules(OsiCbc    REQUIRED IMPORTED_TARGET osi-cbc)
+pkg_check_modules(Clp       REQUIRED IMPORTED_TARGET clp)
+pkg_check_modules(OsiClp    REQUIRED IMPORTED_TARGET osi-clp)
+pkg_check_modules(Cgl       REQUIRED IMPORTED_TARGET cgl)
+pkg_check_modules(Osi       REQUIRED IMPORTED_TARGET osi)
+pkg_check_modules(CoinUtils REQUIRED IMPORTED_TARGET coinutils)
+
+find_package(ortools CONFIG REQUIRED)
+# ---------------------------------------------------------------------------
+# OR-Tools 9.12 workaround
+#
+# The installed OR-Tools CMake package exports MathOpt OBJECT libraries with
+# INTERFACE_SOURCES referring to internal object targets that are not exported.
+# This causes CMake generation to fail with:
+#
+#   $<TARGET_OBJECTS:ortools_math_opt_core>
+#   $<TARGET_OBJECTS:ortools_math_opt_constraints_indicator>
+#
+# We only use the installed OR-Tools library, so these interface object sources
+# are not needed.
+# ---------------------------------------------------------------------------
+
+foreach(target
+        ortools::ortools_math_opt
+        ortools::ortools_math_opt_constraints)
+
+    if(TARGET ${target})
+        set_property(
+                TARGET ${target}
+                PROPERTY INTERFACE_SOURCES ""
+        )
+    endif()
+
+endforeach()
+get_filename_component(ORTOOLS_PREFIX "${ortools_DIR}/../../.." REALPATH)
+set(ORTOOLS_INCLUDE_DIR "${ORTOOLS_PREFIX}/include")
+
+if(NOT EXISTS "${ORTOOLS_INCLUDE_DIR}/ortools/linear_solver/linear_solver.h")
+    message(FATAL_ERROR "OR-Tools headers were not found at: ${ORTOOLS_INCLUDE_DIR}")
+endif()
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
-find_package(Protobuf CONFIG REQUIRED)
-find_package(ortools REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
 
+
+# xcut fetches spdlog. Make that spdlog use the same external fmt.
+set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL
+        "Use external fmt for spdlog" FORCE)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/extern/xcut EXCLUDE_FROM_ALL)
+
+target_link_libraries(xcut_lib PUBLIC fmt::fmt)
 
 # ============================================================================
 # Core library: all production code except app/main.cpp
 # ============================================================================
 add_library(oblivious_routing_core STATIC
-        include/core/routing_table.h
-        source/core/routing_table.cpp
-        include/core/routing_scheme.h
-        source/core/routing_scheme.cpp
-        include/core/routing_engine.h
+        include/routing/routing_table.h
+        include/routing/routing_engine.h
 
         include/io/graph_io.h
-        source/io/graph_io.cpp
         include/io/solver_io.h
-        include/io/parse_argurment_io.h
+        include/io/parse_argument_io.h
         include/io/demand_io.h
 
         include/data_structures/graph/Igraph.h
@@ -66,28 +112,30 @@ add_library(oblivious_routing_core STATIC
         include/data_structures/union_find/union_find.h
         source/data_structures/union_find/union_find.cpp
 
-        include/algorithms/mwu/electrical_mwu.h
-        source/algorithms/mwu/electrical_mwu.cpp
-        include/algorithms/mwu/tree_mwu.h
-        source/algorithms/mwu/tree_mwu.cpp
 
-        include/algorithms/mwu/oracle/electrical/laplacian_solver.h
-        source/algorithms/mwu/oracle/electrical/laplacian_solver.cpp
-        include/algorithms/mwu/oracle/electrical/graph_to_laplacian.h
-        source/algorithms/mwu/oracle/electrical/graph_to_laplacian.cpp
+        include/algorithms/oblivious/mwu/flow_sparsifier_mwu.h
 
-        include/algorithms/mwu/oracle/tree/tree_transform.h
-        include/algorithms/mwu/oracle/tree/tree_oracle.h
-        include/algorithms/mwu/oracle/tree/mst/mst_oracle.h
-        include/algorithms/mwu/oracle/tree/mst/mst_algo.h
-        source/algorithms/mwu/oracle/tree/mst/mst_algo.cpp
-        include/algorithms/mwu/oracle/tree/frt/frt.h
-        include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h
+        include/algorithms/oblivious/mwu/electrical_mwu.h
+        source/algorithms/oblivious/mwu/electrical_mwu.cpp
+        include/algorithms/oblivious/mwu/tree_mwu.h
+        source/algorithms/oblivious/mwu/tree_mwu.cpp
+
+        include/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h
+        source/algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.cpp
+        include/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.h
+        source/algorithms/oblivious/mwu/oracle/electrical/graph_to_laplacian.cpp
+
+        include/algorithms/oblivious/mwu/oracle/tree/tree_transform.h
+        include/algorithms/oblivious/mwu/oracle/tree/tree_oracle.h
+        include/algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h
+        include/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.h
+        source/algorithms/oblivious/mwu/oracle/tree/mst/mst_algo.cpp
+        include/algorithms/oblivious/mwu/oracle/tree/frt/frt.h
+        include/algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h
 
         include/algorithms/lp/lp_base.h
         include/algorithms/lp/lp_ac.h
         include/algorithms/lp/lp_mcf.h
-        source/algorithms/lp/lp_base.cpp
         source/algorithms/lp/lp_ac.cpp
         source/algorithms/lp/lp_mcf.cpp
 
@@ -95,8 +143,63 @@ add_library(oblivious_routing_core STATIC
         include/utils/demands.h
         source/utils/demands.cpp
         include/utils/hash.h
+        include/algorithms/semi_oblivious/semi_routing_engine.h
+        include/algorithms/semi_oblivious/preprocessing/candidate_routing_scheme.h
+        include/algorithms/semi_oblivious/postprocessing/load_optimizer.h
+        include/algorithms/semi_oblivious/semi_oblivious_solver.h
+        include/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h
+        source/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.cpp
+        include/core/config.h
+        include/routing/routing_result.h
+        include/core/solver.h
+        include/algorithms/lp/offline_solver.h
+        include/core/types.h
+        source/routing/routing_engine.cpp
+        include/routing/storage/linear_routing_table.h
+        include/routing/storage/allpair_routing_table.h
+        source/routing/storage/linear_routing_table.cpp
+        source/routing/storage/allpair_routing_table.cpp
+        include/routing/routing_runner.h
+        include/routing/routing_validation.h
+        source/routing/routing_validation.cpp
+        include/algorithms/semi_oblivious/semi_routing_runner.h
+        include/algorithms/oblivious/oblivious_routing_runner.h
+        source/algorithms/semi_oblivious/semi_routing_engine.cpp
+        source/algorithms/semi_oblivious/semi_routing_runner.cpp
+        source/algorithms/semi_oblivious/semi_oblivious_solver.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/hierarchy_results.h
+        include/algorithms/semi_oblivious/expander_hierarchy/preprocessing/hierarchy_preprocessor.h
+        source/algorithms/oblivious/oblivious_routing_runner.cpp
+        include/core/errors.h
+        include/io/result_io.h
+        include/algorithms/semi_oblivious/expander_hierarchy/routing_oracle/local_electrical_solver.h
+        source/algorithms/semi_oblivious/expander_hierarchy/preprocessing/hierarchy_preprocessor.cpp
+        source/algorithms/semi_oblivious/expander_hierarchy/routing_oracle/local_electrical_solver.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.h
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_router.h
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_router.cpp
+        source/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.cpp
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_flow_electrical_embedder.h
+        include/algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/expander_decomp.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/augmented_cluster_view.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_adapter.cpp
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/practical_logger.cpp
+        # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
+        # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
+        source/algorithms/oblivious/mwu/flow_sparsifier_mwu.cpp
+        include/visualization/visualization_result.h
+        source/visualization/visualization_result.cpp
+        include/visualization/json_exporter.h
+        source/visualization/json_exporter.cpp
+        include/visualization/failure_analysis.h
+        source/visualization/failure_analysis.cpp
+        include/data_structures/graph/graph.h
 )
-
 
 target_include_directories(oblivious_routing_core
         PUBLIC
@@ -104,23 +207,23 @@ target_include_directories(oblivious_routing_core
         ${CMAKE_SOURCE_DIR}/source
         ${CMAKE_SOURCE_DIR}/experiments
         ${CMAKE_SOURCE_DIR}/extern/amgcl
+        ${CMAKE_SOURCE_DIR}/extern/xcut/include
+        ${ORTOOLS_INCLUDE_DIR}
 )
 
 target_link_libraries(oblivious_routing_core
         PUBLIC
+        xcut_lib
         ortools::ortools
-        protobuf::libprotobuf
         Eigen3::Eigen
         Boost::program_options
         Boost::serialization
 )
-if(OR_ENABLE_OPENMP)
-    find_package(OpenMP)
-    if(OpenMP_CXX_FOUND)
-        target_link_libraries(oblivious_routing_core PUBLIC OpenMP::OpenMP_CXX)
-    endif()
-    target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP EIGEN_DONT_PARALLELIZE)
+
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(oblivious_routing_core PUBLIC OpenMP::OpenMP_CXX)
 endif()
+target_compile_definitions(oblivious_routing_core PUBLIC OR_ENABLE_OPENMP EIGEN_DONT_PARALLELIZE)
 
 # ============================================================================
 # Main executable
@@ -133,7 +236,6 @@ target_link_libraries(oblivious_routing
         PRIVATE
         oblivious_routing_core
 )
-
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
@@ -163,6 +265,7 @@ if(BUILD_TESTS)
     # Unit tests
     # ------------------------------------------------------------------------
     add_executable(unit_tests
+            tests/common/utils.h
             # Graph data structures
             tests/unit/graph/test_graph_common.cpp
             tests/unit/graph/test_graph_csr.cpp
@@ -177,13 +280,18 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/
+            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/ tests/common/ include/
     )
 
     target_link_libraries(unit_tests
             PRIVATE
             oblivious_routing_core
             Catch2::Catch2WithMain
+    )
+
+    target_compile_definitions(unit_tests PRIVATE
+            PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+            PROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
     )
 
     catch_discover_tests(unit_tests
@@ -214,7 +322,7 @@ if(BUILD_TESTS)
     )
 
     target_include_directories(
-            integration_tests PRIVATE tests/integration/common/
+            integration_tests PRIVATE tests/common/ include/
     )
 
     target_compile_definitions(integration_tests

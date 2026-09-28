@@ -41,6 +41,10 @@ struct FlatHST {
     bool isLeaf(int i) const;
     int size() const;
 
+    explicit operator bool() const noexcept {
+        return size();
+    }
+
     void print();
 };
 

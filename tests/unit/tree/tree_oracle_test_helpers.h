@@ -13,9 +13,9 @@
 #include <vector>
 
 #include "data_structures/graph/graph_csr.h"
-#include "algorithms/mwu/oracle/tree/frt/frt.h"
-#include "algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
-#include "algorithms/mwu/oracle/tree/mst/mst_oracle.h"
+#include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
+#include "algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
 #include "catch2/catch_test_macros.hpp"
 
 // -----------------------------------------------------------------------------

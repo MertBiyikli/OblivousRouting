@@ -5,12 +5,15 @@
 #ifndef OBLIVIOUSROUTING_SOLVER_IO_H
 #define OBLIVIOUSROUTING_SOLVER_IO_H
 
-#include "../include/algorithms/lp/lp_ac.h"
-#include "../include/algorithms/mwu/electrical_mwu.h"
-#include "../include/algorithms/mwu/tree_mwu.h"
-#include "../include/algorithms/mwu/oracle/tree/mst/mst_oracle.h"
-#include "../include/algorithms/mwu/oracle/tree/frt/frt.h"
-#include "../include/algorithms/mwu/oracle/tree/fast_ckr/fast_ckr.h"
+#include "core/solver.h"
+#include "algorithms/oblivious/oblivious_solver.h"
+#include "algorithms/lp/lp_ac.h"
+#include "algorithms/oblivious/mwu/electrical_mwu.h"
+#include "algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier_solver.h"
+#include "algorithms/oblivious/mwu/tree_mwu.h"
+#include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
+#include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
+#include "algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h"
 
 #include <string>
 #include <optional>
@@ -19,23 +22,10 @@
 #include <functional>
 #include <map>
 
-
-enum class SolverType {
-    ELECTRICAL_NAIVE,
-    ELECTRICAL_SKETCHING,
-    RAECKE_FRT_FLAT,
-    RAECKE_CKR_FLAT,
-    RAECKE_RANDOM_MST_FLAT,
-    RAECKE_FRT_MENDELSCALING_FLAT,
-    RAECKE_CKR_MENDELSCALING_FLAT,
-    LP_APPLEGATE_COHEN,
-    ELECTRICAL_PARALLEL_BATCHES,
-    RAECKE_FRT_POINTER,
-    RAECKE_CKR_POINTER,
-    RAECKE_RANDOM_MST_POINTER,
-    RAECKE_FRT_MENDELSCALING_POINTER,
-    RAECKE_CKR_MENDELSCALING_POINTER
-};
+#include "../algorithms/semi_oblivious/postprocessing/or_tools_optimizer.h"
+#include "algorithms/oblivious/mwu/flow_sparsifier_mwu.h"
+#include "algorithms/semi_oblivious/semi_oblivious_solver.h"
+#include "core/types.h"
 
 // Map-based token parsers for reduced code duplication
 static const std::map<std::string, SolverType> SOLVER_MAP{
@@ -47,7 +37,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"f", SolverType::RAECKE_FRT_FLAT}, {"2", SolverType::RAECKE_FRT_FLAT},
     {"raecke_ckr", SolverType::RAECKE_CKR_FLAT}, {"ckr", SolverType::RAECKE_CKR_FLAT},
     {"c", SolverType::RAECKE_CKR_FLAT}, {"3", SolverType::RAECKE_CKR_FLAT},
-    {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_mst", SolverType::RAECKE_RANDOM_MST_FLAT},
+    {"raecke_mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"random_lecmst", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"rmst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"mst", SolverType::RAECKE_RANDOM_MST_FLAT}, {"4", SolverType::RAECKE_RANDOM_MST_FLAT},
     {"cohen", SolverType::LP_APPLEGATE_COHEN}, {"lp", SolverType::LP_APPLEGATE_COHEN},
     {"applegate", SolverType::LP_APPLEGATE_COHEN}, {"ac", SolverType::LP_APPLEGATE_COHEN}, {"l", SolverType::LP_APPLEGATE_COHEN}, {"5", SolverType::LP_APPLEGATE_COHEN},
@@ -60,11 +50,16 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
     {"raecke_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"random_mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER},
     {"rmst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"mst_pointer", SolverType::RAECKE_RANDOM_MST_POINTER}, {"11", SolverType::RAECKE_RANDOM_MST_POINTER},
     {"raecke_frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"frt_mendel_pointer", SolverType::RAECKE_FRT_MENDELSCALING_POINTER}, {"12", SolverType::RAECKE_FRT_MENDELSCALING_POINTER},
+        {"semi_elec", SolverType::SEMI_ELECTRICAL}, {"semi_electrical", SolverType::SEMI_ELECTRICAL}, {"13", SolverType::SEMI_ELECTRICAL},
+        {"semi_tree", SolverType::SEMI_TREE}, {"14", SolverType::SEMI_TREE},
+    {"expander", SolverType::EXPANDER_HIERARCHY}, {"exp", SolverType::EXPANDER_HIERARCHY},{"expander_hierarchy", SolverType::EXPANDER_HIERARCHY},{"15", SolverType::EXPANDER_HIERARCHY},
+        {"semi_expander", SolverType::SEMI_EXPANDER_HIERARCHY}, {"semi_exp", SolverType::SEMI_EXPANDER_HIERARCHY},{"semi_expander_hierarchy", SolverType::SEMI_EXPANDER_HIERARCHY},{"16", SolverType::SEMI_EXPANDER_HIERARCHY},
+    {"expander_mwu", SolverType::EXPANDER_MWU}, {"17", SolverType::EXPANDER_MWU}
 };
 
 
-inline std::optional<std::unique_ptr<ObliviousRoutingSolver>>
-makeSolver(SolverType type, IGraph& g) {
+inline std::optional<std::unique_ptr<ISolver>>
+makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
     // Factory with cycle removal strategy support for TreeMWU-based solvers
     switch (type) {
         case SolverType::ELECTRICAL_NAIVE:
@@ -106,6 +101,12 @@ makeSolver(SolverType type, IGraph& g) {
         case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
             return std::make_unique<TreeMWU<std::shared_ptr<HSTNode>>>(g, 0, std::make_unique<FastCKR<std::shared_ptr<HSTNode>>>(g, true));
 
+        case SolverType::EXPANDER_HIERARCHY:
+            return std::make_unique<ElectrifiedExpanderHierarchySolver>(g, 0);
+
+        case SolverType::EXPANDER_MWU:
+            return std::make_unique<FlowSparsifier>(g, 0);
+
         default:
             return std::nullopt;
     }
@@ -130,7 +131,12 @@ inline std::string getSolverName(SolverType type) {
             {SolverType::RAECKE_CKR_POINTER, "Raecke CKR (Pointer HST)"},
             {SolverType::RAECKE_RANDOM_MST_POINTER, "Random MST (Pointer HST)"},
             {SolverType::RAECKE_FRT_MENDELSCALING_POINTER, "Raecke FRT + MendelScaling (Pointer HST)"},
-            {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"}
+            {SolverType::RAECKE_CKR_MENDELSCALING_POINTER, "Raecke CKR + MendelScaling (Pointer HST)"},
+            {SolverType::SEMI_ELECTRICAL, "Semi-Oblivious Routing (Electrical base)"},
+            {SolverType::SEMI_TREE, "Semi-Oblivious Routing (Tree base)"},
+            {SolverType::EXPANDER_HIERARCHY, "Electrified Expander Hierarchy solver"},
+            {SolverType::SEMI_EXPANDER_HIERARCHY, "Semi-Oblivious Routing (Electrified Expander Hierarchy)"},
+            {SolverType::EXPANDER_MWU, "Electrified Expander Hierarchy solver with MWU weight update"}
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";
