@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 project(ObliviousRouting VERSION 0.0.1 DESCRIPTION "E-Routing: Network Resilience and Capacity Planning Engine." LANGUAGES CXX)
 
@@ -241,6 +241,47 @@ target_link_libraries(oblivious_routing
         PRIVATE
         oblivious_routing_core
 )
+
+option(OR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+if(OR_ENABLE_ASAN)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(
+                oblivious_routing_core
+                PUBLIC
+                -fsanitize=address
+                -fno-omit-frame-pointer
+        )
+
+        target_link_options(
+                oblivious_routing_core
+                PUBLIC
+                -fsanitize=address
+        )
+    elseif(MSVC)
+        target_compile_options(
+                oblivious_routing_core
+                PUBLIC /fsanitize=address
+        )
+    endif()
+endif()
+
+if(OR_ENABLE_WARNINGS)
+    if(MSVC)
+        target_compile_options(
+                oblivious_routing_core
+                PRIVATE /W4 /permissive-
+        )
+    else()
+        target_compile_options(
+                oblivious_routing_core
+                PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+        )
+    endif()
+endif()
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 

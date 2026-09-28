@@ -1,5 +1,12 @@
 {
   "version": 6,
+
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+
   "configurePresets": [
     {
       "name": "base",
@@ -7,37 +14,146 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_PREFIX_PATH": "$env{HOME}/local/protobuf-6.31.1;$env{HOME}/local/ortools",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "Boost_DIR": "/usr/local/lib/cmake/Boost-1.88.0",
-        "BUILD_TESTS": "OFF"
+        "BUILD_TESTS": "OFF",
+        "OR_ENABLE_OPENMP": "ON"
       }
     },
 
     {
       "name": "debug",
       "displayName": "Debug",
+      "description": "Debug build with OpenMP enabled",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-g -Wall -Wextra -pedantic -fsanitize=address"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
 
     {
       "name": "release",
-      "displayName": "Release (LTO)",
+      "displayName": "Release",
+      "description": "Optimized release build with OpenMP enabled",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_FLAGS": "-O3"
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "relwithdebinfo",
+      "displayName": "RelWithDebInfo",
+      "description": "Optimized build with debug information",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+
+    {
+      "name": "minsizerel",
+      "displayName": "MinSizeRel",
+      "description": "Release build optimized for binary size",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel"
+      }
+    },
+
+    {
+      "name": "debug-no-openmp",
+      "displayName": "Debug - No OpenMP",
+      "inherits": "debug",
+      "cacheVariables": {
+        "OR_ENABLE_OPENMP": "OFF"
+      }
+    },
+
+    {
+      "name": "release-no-openmp",
+      "displayName": "Release - No OpenMP",
+      "inherits": "release",
+      "cacheVariables": {
+        "OR_ENABLE_OPENMP": "OFF"
+      }
+    },
+
+    {
+      "name": "debug-tests",
+      "displayName": "Debug + Tests",
+      "inherits": "debug",
+      "cacheVariables": {
+        "BUILD_TESTS": "ON"
+      }
+    },
+
+    {
+      "name": "release-tests",
+      "displayName": "Release + Tests",
+      "inherits": "release",
+      "cacheVariables": {
+        "BUILD_TESTS": "ON"
       }
     }
-
   ],
 
   "buildPresets": [
-    { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" }
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 0
+    },
+    {
+      "name": "relwithdebinfo",
+      "configurePreset": "relwithdebinfo",
+      "jobs": 0
+    },
+    {
+      "name": "minsizerel",
+      "configurePreset": "minsizerel",
+      "jobs": 0
+    },
+    {
+      "name": "debug-no-openmp",
+      "configurePreset": "debug-no-openmp",
+      "jobs": 0
+    },
+    {
+      "name": "release-no-openmp",
+      "configurePreset": "release-no-openmp",
+      "jobs": 0
+    },
+    {
+      "name": "debug-tests",
+      "configurePreset": "debug-tests",
+      "jobs": 0
+    },
+    {
+      "name": "release-tests",
+      "configurePreset": "release-tests",
+      "jobs": 0
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug-tests",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release-tests",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }

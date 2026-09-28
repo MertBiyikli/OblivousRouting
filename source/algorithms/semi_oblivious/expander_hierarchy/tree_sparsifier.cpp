@@ -4,6 +4,7 @@
 
 #include "algorithms/semi_oblivious/expander_hierarchy/tree_sparsifier.h"
 
+#include <cmath>
 #include <iostream>
 #include <queue>
 

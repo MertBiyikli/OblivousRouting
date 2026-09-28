@@ -1,9 +1,10 @@
-name: Linux CI
+name: CI
 
 on:
   push:
-    branches: [ master, prio_one, parallel ]
+    branches: [master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,18 +12,40 @@ permissions:
 
 env:
   ORTOOLS_IMAGE: ghcr.io/mertbiyikli/ortools:linux
-  BUILD_DIR: build
 
 jobs:
-  ##################################################################
-  # 1. Build
-  ##################################################################
-  build-linux:
-    name: Build Linux
+  linux-matrix:
+    name: Linux / ${{ matrix.name }}
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debug + Tests + OpenMP
+            configure_preset: debug-tests
+            build_preset: debug-tests
+            test_preset: debug
+            run_tests: true
+
+          - name: Release + Tests + OpenMP
+            configure_preset: release-tests
+            build_preset: release-tests
+            test_preset: release
+            run_tests: true
+
+          - name: Debug / No OpenMP
+            configure_preset: debug-no-openmp
+            build_preset: debug-no-openmp
+            run_tests: false
+
+          - name: RelWithDebInfo
+            configure_preset: relwithdebinfo
+            build_preset: relwithdebinfo
+            run_tests: false
+
     container:
-      image: ghcr.io/mertbiyikli/ortools:linux
+      image: ${{ env.ORTOOLS_IMAGE }}
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -31,76 +54,42 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure CMake
-        run: |
-          cmake -S . -B $BUILD_DIR -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTS=ON
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure_preset }}
 
-      - name: Build project
-        run: |
-          cmake --build $BUILD_DIR -j$(nproc)
-
-      - name: Upload build directory
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-build-dir
-          path: ${{ env.BUILD_DIR }}
-          retention-days: 1
-
-  ##################################################################
-  # 2. Test
-  ##################################################################
-  test-linux:
-    name: Test Linux
-    runs-on: ubuntu-latest
-    needs: build-linux
-
-    container:
-      image: ghcr.io/mertbiyikli/ortools:linux
-      credentials:
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download build directory
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-build-dir
-          path: ${{ env.BUILD_DIR }}
-
-      - name: Restore executable permissions
-        run: |
-          chmod -R u+x $BUILD_DIR
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build_preset }}
 
       - name: Run tests
-        run: |
-          cmake --build $BUILD_DIR --target run_tests
+        if: matrix.run_tests
+        run: ctest --preset ${{ matrix.test_preset }} --output-on-failure
 
-  ##################################################################
-  # 3. Package artifact
-  ##################################################################
   package-linux:
-    name: Package Linux Binary
+    name: Package Linux Release Binary
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    needs: test-linux
+    needs: linux-matrix
+
+    container:
+      image: ${{ env.ORTOOLS_IMAGE }}
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: Download build directory
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-build-dir
-          path: ${{ env.BUILD_DIR }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Restore executable permissions
-        run: |
-          chmod -R u+x $BUILD_DIR
+      - name: Configure release
+        run: cmake --preset release
 
-      - name: Upload binary artifact
+      - name: Build release
+        run: cmake --build --preset release
+
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
           name: oblivious-routing-linux
-          path: ${{ env.BUILD_DIR }}/oblivious_routing
+          path: build/release/oblivious_routing
+          if-no-files-found: error
+          retention-days: 7
