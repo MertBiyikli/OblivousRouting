@@ -69,7 +69,7 @@ public:
     std::pair<int, int> getEdgeEndpoints(int e) const override;
     double getEdgeCapacity(int e) const override;
     double getEdgeDistance(int e) const override;
-    bool updateEdgeDistance(int e, double dist) override;
+    Result<void> updateEdgeDistance(int e, double dist) override;
     const int getAntiEdge(int e) const override;
 
     /**
@@ -77,7 +77,7 @@ public:
     */
     double getEdgeDistance(int u, int v) const override;
     double getEdgeCapacity(int u, int v) const override;
-    bool updateEdgeDistance(int u, int v, double dist) override;
+    Result<void> updateEdgeDistance(int u, int v, double dist) override;
 
     /**
      * shortest path computation methods

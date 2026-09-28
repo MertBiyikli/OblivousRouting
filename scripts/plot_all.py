@@ -1,6 +1,4 @@
-import re
 import argparse
-from collections.abc import Callable
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -94,6 +92,8 @@ def pretty_solver_name(s: str) -> str:
     mapping = {
         "electrical": "Electrical Flow",
         "electrical_parallel": "Electrical Flow (parallel)",
+        "expander": "Electrified Expander Hierarchy",
+        "Electrified Expander Hierarchy solver": "Electrified Expander Hierarchy",
         "raecke_frt": "Räcke-FRT",
         "raecke_ckr": "Räcke–Fast-CKR",
         "raecke_mst": "Räcke–MST",
@@ -115,7 +115,8 @@ def pretty_solver_name(s: str) -> str:
 def solver_sort_key(s: str) -> tuple:
     """
     Global solver order used across *all* plots for consistency.
-    electrical → CKR → CKR (Mendel) → FRT → FRT (Mendel) → MST → ... → LP (always last)
+    electrical → electrified expander hierarchy → CKR → CKR (Mendel) →
+    FRT → FRT (Mendel) → MST → ... → LP (always last)
     Handles both old format (electrical) and new format with variants (Electrical Flow (naive))
     """
     # Normalize solver name - extract base name if it has variants in parentheses
@@ -127,18 +128,20 @@ def solver_sort_key(s: str) -> tuple:
             order_val = 1
         else:
             order_val = 0  # Both naive and sketching go first
+    elif "expander" in base_s:
+        order_val = 2
     elif "ckr" in base_s:
         if "mendel" in s.lower():
-            order_val = 3
+            order_val = 4
         else:
-            order_val = 2
+            order_val = 3
     elif "frt" in base_s:
         if "mendel" in s.lower():
-            order_val = 5
+            order_val = 6
         else:
-            order_val = 4
+            order_val = 5
     elif any(x in base_s for x in ["mst", "random"]):
-        order_val = 6
+        order_val = 7
     elif any(x in base_s for x in ["cohen", "lp", "applegate"]):
         order_val = 99
     else:
@@ -152,6 +155,8 @@ _SOLVER_COLOR_MAP = {
     "Electrical Flow (naive)": "#0072B2",           # blue
     "Electrical Flow (sketching)": "#D55E00",       # vermillion
     "Electrical Flow (parallel)": "#E69F00",        # orange
+    "Electrified Expander Hierarchy solver": "#6F4EAB",  # purple
+    "expander": "#6F4EAB",
 
     # Raecke CKR - Flat HST
     "Raecke CKR (Flat HST)": "#009E73",             # green
@@ -380,8 +385,8 @@ def plot_box_by_solver(
         # Filter out zero and negative values for range calculation
         positive_vals = all_vals_array[all_vals_array > 0]
         if len(positive_vals) > 0:
-            val_min = np.min(positive_vals)
-            val_max = np.max(positive_vals)
+            val_min = float(np.min(positive_vals))
+            val_max = float(np.max(positive_vals))
             # If range spans more than 2 orders of magnitude (100x), use log scale
             if val_max / val_min > 100:
                 actual_ylog = True
@@ -510,10 +515,7 @@ def plot_stacked_time_breakdown(
         outpath: Path,
 ):
     """
-    Stacked bar plot showing time breakdown by solver (as percentages):
-    - solve_time (blue)
-    - transformation_time (orange)
-    - cycle_removal_time (green)
+    Stacked bar plot showing the available MWU time components by solver.
 
     Each bar sums to 100%.
     """
@@ -523,7 +525,12 @@ def plot_stacked_time_breakdown(
     df_filtered = df[df["solver"].isin(solvers)].copy()
 
     # Required time components
-    time_cols = ["solve_time_micro_seconds", "transformation_time_micro_seconds", "cycle_removal_time_micro_seconds"]
+    time_cols = [
+        "mwu_solve_time_microseconds",
+        "mwu_transformation_time_microseconds",
+        "mwu_load_computation_time_microseconds",
+        "mwu_weight_update_time_microseconds",
+    ]
 
     # Check which columns exist
     available_cols = [col for col in time_cols if col in df_filtered.columns]
@@ -561,16 +568,18 @@ def plot_stacked_time_breakdown(
 
     # Define colors for time components
     component_colors = {
-        "solve_time_micro_seconds": "#0072B2",           # blue
-        "transformation_time_micro_seconds": "#D55E00",  # orange
-        "cycle_removal_time_micro_seconds": "#009E73",   # green
+        "mwu_solve_time_microseconds": "#0072B2",
+        "mwu_transformation_time_microseconds": "#D55E00",
+        "mwu_load_computation_time_microseconds": "#009E73",
+        "mwu_weight_update_time_microseconds": "#CC79A7",
     }
 
     # Create nicer labels
     component_labels = {
-        "solve_time_micro_seconds": "Solve time",
-        "transformation_time_micro_seconds": "Transformation time",
-        "cycle_removal_time_micro_seconds": "Cycle removal time",
+        "mwu_solve_time_microseconds": "Solve",
+        "mwu_transformation_time_microseconds": "Transformation",
+        "mwu_load_computation_time_microseconds": "Load computation",
+        "mwu_weight_update_time_microseconds": "Weight update",
     }
 
     bottom = np.zeros(len(solver_order))
@@ -640,8 +649,8 @@ def plot_scatter_cloud(
         if sub.empty:
             continue
 
-        x = pd.to_numeric(sub[xcol], errors="coerce").to_numpy(dtype=float)
-        y = pd.to_numeric(sub[ycol], errors="coerce").to_numpy(dtype=float)
+        x = pd.to_numeric(sub[xcol], errors="coerce").astype(float).values
+        y = pd.to_numeric(sub[ycol], errors="coerce").astype(float).values
 
         if ylog:
             y = np.maximum(y, LOG_EPS)
@@ -686,61 +695,173 @@ def plot_scatter_cloud(
 
 def parse_arguments():
     """
-    Parse command-line arguments for input CSV and output plot directory.
+    Parse command-line arguments for input CSV (or directory) and output plot directory.
+    Supports both single CSV file and directory containing multiple CSVs.
     """
     parser = argparse.ArgumentParser(
         description="Generate publication-grade plots for oblivious routing experiments.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use default paths
-  python3 plot_experiments_pro.py
-  
-  # Specify custom input CSV and output directory
-  python3 plot_experiments_pro.py \\
+  # Single dataset
+  python3 plot_all.py \\
     --input results/synth/fatclique/combined.csv \\
     --output plots/synthetic/fatclique/
   
-  # Specify only input (use default output)
-  python3 plot_experiments_pro.py --input my_results.csv
+  # Multiple datasets (accumulating)
+  python3 plot_all.py \\
+    --input results/ \\
+    --output plots/combined/ \\
+    --accumulate
         """
     )
 
     parser.add_argument(
         "-i", "--input",
-        type=str
+        type=str,
+        required=True,
+        help="Path to CSV file or directory containing CSVs"
     )
 
     parser.add_argument(
         "-o", "--output",
-        type=str
+        type=str,
+        required=True,
+        help="Output directory for plots"
+    )
+
+    parser.add_argument(
+        "--pattern",
+        type=str,
+        default="*/combined.csv",
+        help="Glob pattern to find CSV files when input is a directory (default: */combined.csv)"
+    )
+
+    parser.add_argument(
+        "--accumulate",
+        action="store_true",
+        help="When input is a directory, generate both per-dataset and accumulated plots"
+    )
+
+    parser.add_argument(
+        "--aggregate-only",
+        action="store_true",
+        help="For accumulated plots, only show aggregated trends (no individual instance points)"
     )
 
     args = parser.parse_args()
-    return Path(args.input), Path(args.output)
+    return Path(args.input), Path(args.output), args.pattern, args.accumulate, args.aggregate_only
 
 def _graph_short_name(name: str) -> str:
     """Return a compact display name for a graph path/identifier.
 
-    Keeps the instance-distinguishing suffixes like _01, _02, ...
-    Only strips path and file extension.
+    Keep the immediate parent to distinguish equal filenames across datasets.
+    Example: ``Backbone/1755.lgf`` becomes ``Backbone/1755``.
     """
-    return Path(name).stem
-
-def main():
-    set_paper_style()
-    RESULT_CSV, OUT_DIR = parse_arguments()
-    df = pd.read_csv(RESULT_CSV)
+    path = Path(str(name))
+    return str(Path(path.parent.name) / path.stem)
 
 
-    # Clean up graph names: remove dataset prefix (e.g., "Rocketfuel_Topologies/3967.lgf" → "3967")
+def _normalize_schema(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize historical result files to the current cout CSV schema."""
+    df = df.copy()
+    aliases = {
+        "status": "execution_status",
+        "total_time_micro_seconds": "total_time_microseconds",
+        "solve_time_micro_seconds": "solve_time_microseconds",
+        "transformation_time_micro_seconds": "mwu_transformation_time_microseconds",
+        "load_computation_micro_seconds": "mwu_load_computation_time_microseconds",
+        "mwu_weight_update_time_micro_seconds": "mwu_weight_update_time_microseconds",
+        "avg_oracle_time_micro_seconds": "mwu_average_oracle_time_microseconds",
+        "achieved_congestion": "demand_congestion",
+        "mendel_total_micro_seconds": "mendel_total_microseconds",
+        "mendel_avg_micro_seconds": "mendel_average_microseconds",
+    }
+    for old, new in aliases.items():
+        if new not in df.columns and old in df.columns:
+            df[new] = df[old]
+
+    numeric_columns = [
+        "num_nodes", "num_edges", "total_time_microseconds",
+        "preprocessing_time_microseconds", "solve_time_microseconds",
+        "oblivious_ratio", "demand_congestion", "demand_runtime_microseconds",
+        "offline_opt", "ratio_pct", "candidate_paths", "average_paths_per_pair",
+        "mwu_iterations", "mwu_solve_time_microseconds",
+        "mwu_transformation_time_microseconds",
+        "mwu_load_computation_time_microseconds",
+        "mwu_weight_update_time_microseconds",
+        "mwu_average_oracle_time_microseconds", "mwu_oracle_calls",
+        "hierarchy_runtime_microseconds", "tree_construction_runtime_microseconds",
+        "basis_flow_runtime_microseconds", "hierarchy_levels", "hierarchy_clusters",
+        "maximum_cluster_vertices", "average_cluster_vertices", "tree_nodes",
+        "tree_edges", "tree_depth", "basis_flows", "total_electrical_solves",
+        "average_electrical_solves_per_basis_flow",
+        "maximum_basis_embedding_congestion", "maximum_conservation_error",
+        "average_tree_height", "mendel_total_microseconds",
+        "mendel_average_microseconds",
+    ]
+    for column in numeric_columns:
+        if column not in df.columns:
+            df[column] = np.nan
+        else:
+            df[column] = pd.to_numeric(df[column], errors="coerce")
+    return df
+
+def _load_data(input_path: Path, pattern: str, accumulate: bool) -> dict:
+    """
+    Load data from either a single CSV or multiple CSVs in a directory.
+
+    Returns:
+        dict with 'single' and 'accumulated' keys containing DataFrames
+        'single' is a dict mapping dataset names to DataFrames
+        'accumulated' is combined DataFrame of all datasets (if applicable)
+    """
+    result = {'single': {}, 'accumulated': None}
+
+    if input_path.is_file() and input_path.suffix == '.csv':
+        # Single CSV file
+        df = _normalize_schema(pd.read_csv(input_path))
+        dataset_name = input_path.parent.name
+        result['single'][dataset_name] = df
+
+    elif input_path.is_dir():
+        # Directory: find all matching CSV files
+        # Remove trailing slash if present
+        pattern = pattern.rstrip('/')
+
+        # Path.glob() automatically handles ** for recursive matching
+        csv_files = sorted(input_path.glob(pattern))
+
+        if not csv_files:
+            raise ValueError(f"No CSV files found matching pattern '{pattern}' in {input_path}")
+
+        all_dfs = []
+        for csv_file in csv_files:
+            df = _normalize_schema(pd.read_csv(csv_file))
+            # Extract dataset type from path (e.g., "expander", "small", etc.)
+            dataset_name = csv_file.parent.name
+            df['dataset'] = dataset_name
+            result['single'][dataset_name] = df
+            all_dfs.append(df)
+
+        # Create accumulated DataFrame
+        if accumulate and all_dfs:
+            result['accumulated'] = pd.concat(all_dfs, ignore_index=True)
+    else:
+        raise ValueError(f"Input path must be a CSV file or directory: {input_path}")
+
+    return result
+
+def _generate_plots_for_dataframe(df: pd.DataFrame, OUT_DIR: Path, dataset_name: str = None, aggregate_only: bool = False):
+    """Generate all plots for a given DataFrame."""
+    # Clean up graph names
     if "graph" in df.columns:
         df["graph"] = df["graph"].apply(_graph_short_name)
 
-    if "status" in df.columns:
+    if "execution_status" in df.columns:
         # Only filter by status if there are non-NaN values
-        if df["status"].notna().any():
-            df = df[df["status"] == "OK"].copy()
+        if df["execution_status"].notna().any():
+            df = df[df["execution_status"] == "OK"].copy()
 
     all_solvers = sorted(
         [s for s in df["solver"].unique() if "pointer" not in s.lower() or "HST)" in s],
@@ -759,43 +880,60 @@ def main():
     solver_mwu = [s for s in solvers_no_mendel
                   if "LP" not in s and "Applegate and Cohen" not in s]
 
+    # Create output subdirectory for accumulated plots
+    if dataset_name:
+        plot_out_dir = OUT_DIR / dataset_name
+        plot_out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        plot_out_dir = OUT_DIR
+        plot_out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Legend plate (only once per run)
+    if not (plot_out_dir / "legend_plate.pdf").exists():
+        plot_legend_plate(
+            solvers_no_mendel, colors, markers, linestyles,
+            outpath=plot_out_dir / "legend_plate",
+        )
 
-    plot_legend_plate(
-        solvers_no_mendel, colors, markers, linestyles,
-        outpath=OUT_DIR / "legend_plate",
-    )
-
-    df["relative_error"] = df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
+    #    df["relative_error"] = df["achieved_congestion"] / df["offline_opt"].replace(0, np.nan)
 
     plot_box_by_solver(
         df[df["solver"].isin(solvers_no_mendel)], solvers_no_mendel, colors,
-        ycol="relative_error",
-        ylabel="Relative error [%]",
+        ycol="demand_congestion",
+        ylabel="Demand congestion",
         ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "relative_error_box_by_solver",
+        outpath=plot_out_dir / "demand_congestion_box_by_solver",
     )
 
+    # noinspection PyTypeChecker
     if "demand_model" in df.columns:
         demand_models = sorted(df["demand_model"].dropna().unique())
         for demand in demand_models:
-            df_demand = df[(df["demand_model"] == demand) & df["solver"].isin(solvers_no_mendel)]
-            solvers_demand = [s for s in solvers_no_mendel
-                              if not df_demand[df_demand["solver"] == s].empty]
+            condition = ((df["demand_model"] == demand) & (df["solver"].isin(solvers_no_mendel)))
+            df_demand = df.loc[condition].copy()
+            solvers_demand = []
+            for s in solvers_no_mendel:
+                if any(df_demand["solver"] == s):
+                    solvers_demand.append(s)
             if not solvers_demand:
                 continue
             plot_box_by_solver(
                 df_demand, solvers_demand, colors,
-                ycol="relative_error",
-                ylabel="Relative error [%]",
+                ycol="demand_congestion",
+                ylabel="Demand congestion",
                 ylog=False,
                 figsize=FIGSIZE_SINGLE,
-                outpath=OUT_DIR / f"relative_error_box_by_solver_{demand}",
+                outpath=plot_out_dir / f"demand_congestion_box_by_solver_{demand}",
             )
 
+    # Solver-wide values are repeated once per demand in the current schema.
+    # Deduplicate them before runtime/MWU aggregation.
+    solver_rows = df[df["solver"].isin(solvers_no_mendel)].drop_duplicates(
+        subset=["graph", "solver"]
+    ).copy()
 
-    agg_runtime = aggregate_mean_std(df[df["solver"].isin(solvers_no_mendel)].copy(), "total_time_micro_seconds")
+    agg_runtime = aggregate_mean_std(solver_rows, "total_time_microseconds")
     plot_lines(
         agg_runtime, solvers_no_mendel, colors, markers,
         xcol="num_edges", y_mean_col="mean", y_std_col="std",
@@ -803,41 +941,68 @@ def main():
         ylabel="Total running time [microseconds]",
         xlog=False, ylog=True,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "runtime_lines_vs_edges",
+        outpath=plot_out_dir / "runtime_lines_vs_edges",
         linestyles=linestyles,
     )
 
-    agg_mwu_iterations = aggregate_mean_std(df[df["solver"].isin(solvers_no_mendel)].copy(), "mwu_iterations")
-    plot_lines(
-        agg_mwu_iterations, solvers_no_mendel, colors, markers,
-        xcol="num_edges", y_mean_col="mean", y_std_col="std",
-        xlabel="Number of edges",
-        ylabel="MWU iterations",
-        xlog=False, ylog=False,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "mwu_iterations_lines_vs_edges",
-        linestyles=linestyles,
-    )
+    if solver_rows["mwu_iterations"].notna().any():
+        agg_mwu_iterations = aggregate_mean_std(solver_rows, "mwu_iterations")
+        plot_lines(
+            agg_mwu_iterations, solvers_no_mendel, colors, markers,
+            xcol="num_edges", y_mean_col="mean", y_std_col="std",
+            xlabel="Number of edges", ylabel="MWU iterations",
+            xlog=False, ylog=False, figsize=FIGSIZE_SINGLE,
+            outpath=plot_out_dir / "mwu_iterations_lines_vs_edges",
+            linestyles=linestyles,
+        )
 
-    agg_oracle = aggregate_mean_std(df[df["solver"].isin(solvers_no_mendel)].copy(), "avg_oracle_time_micro_seconds")
-    plot_lines(
-        agg_oracle, solvers_no_mendel, colors, markers,
-        xcol="num_edges", y_mean_col="mean", y_std_col="std",
-        xlabel="Number of edges",
-        ylabel="Average oracle running time [microseconds]",
-        xlog=False, ylog=True,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "oracle_time_lines_vs_edges",
-        linestyles=linestyles,
-    )
+    if solver_rows["mwu_average_oracle_time_microseconds"].notna().any():
+        agg_oracle = aggregate_mean_std(
+            solver_rows, "mwu_average_oracle_time_microseconds"
+        )
+        plot_lines(
+            agg_oracle, solvers_no_mendel, colors, markers,
+            xcol="num_edges", y_mean_col="mean", y_std_col="std",
+            xlabel="Number of edges",
+            ylabel="Average oracle running time [microseconds]",
+            xlog=False, ylog=True, figsize=FIGSIZE_SINGLE,
+            outpath=plot_out_dir / "oracle_time_lines_vs_edges",
+            linestyles=linestyles,
+        )
 
+    mwu_time_columns = [
+        "mwu_solve_time_microseconds", "mwu_transformation_time_microseconds",
+        "mwu_load_computation_time_microseconds",
+        "mwu_weight_update_time_microseconds",
+    ]
+    if solver_rows[mwu_time_columns].notna().any().any():
+        plot_stacked_time_breakdown(
+            solver_rows[solver_rows["solver"].isin(solver_mwu)],
+            solver_mwu, colors, figsize=FIGSIZE_SINGLE,
+            outpath=plot_out_dir / "time_breakdown_stacked",
+        )
 
-
-    plot_stacked_time_breakdown(
-        df[df["solver"].isin(solver_mwu)], solver_mwu, colors,
-        figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "time_breakdown_stacked",
-    )
+    expander_plots = [
+        ("hierarchy_runtime_microseconds", "Hierarchy runtime [microseconds]",
+         "hierarchy_runtime_scatter_vs_nodes", True),
+        ("total_electrical_solves", "Total electrical solves",
+         "electrical_solves_scatter_vs_nodes", False),
+        ("maximum_basis_embedding_congestion", "Maximum basis embedding congestion",
+         "basis_embedding_congestion_scatter_vs_nodes", True),
+    ]
+    for metric, ylabel, filename, ylog in expander_plots:
+        metric_rows = solver_rows.dropna(subset=[metric])
+        metric_solvers = [s for s in solvers_no_mendel
+                          if (metric_rows["solver"] == s).any()]
+        if metric_solvers:
+            plot_scatter_cloud(
+                metric_rows, metric_solvers, colors, markers,
+                xcol="num_nodes", ycol=metric,
+                xlabel="Number of nodes", ylabel=ylabel,
+                xlog=False, ylog=ylog, figsize=FIGSIZE_SINGLE,
+                outpath=plot_out_dir / filename,
+                add_scaling_line=True, linestyles=linestyles,
+            )
 
     df_oblivious = df[df["solver"].isin(solver_mwu)].dropna(
         subset=["oblivious_ratio"]
@@ -867,10 +1032,41 @@ def main():
         ylabel="Oblivious ratio",
         xlog=False, ylog=False,
         figsize=FIGSIZE_SINGLE,
-        outpath=OUT_DIR / "oblivious_ratio_scatter_vs_nodes",
+        outpath=plot_out_dir / "oblivious_ratio_scatter_vs_nodes",
         add_scaling_line=True,
         linestyles=linestyles,
     )
+
+
+
+def main():
+    set_paper_style()
+    INPUT_PATH, OUT_DIR, PATTERN, ACCUMULATE, AGGREGATE_ONLY = parse_arguments()
+
+    # Create output directory
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Load data
+    data = _load_data(INPUT_PATH, PATTERN, ACCUMULATE)
+
+    # Generate plots for each individual dataset
+    for dataset_name, df in data['single'].items():
+        print(f"\n{'='*60}")
+        print(f"Generating plots for dataset: {dataset_name}")
+        print(f"{'='*60}")
+        _generate_plots_for_dataframe(df.copy(), OUT_DIR, dataset_name)
+
+    # Generate accumulated plots if enabled and available
+    if ACCUMULATE and data['accumulated'] is not None:
+        print(f"\n{'='*60}")
+        print("Generating ACCUMULATED plots for all datasets")
+        if AGGREGATE_ONLY:
+            print("(Aggregate-only mode: showing trends only)")
+        print(f"{'='*60}")
+        _generate_plots_for_dataframe(data['accumulated'].copy(), OUT_DIR, "accumulated")
+
+    print(f"\n✓ All plots saved to: {OUT_DIR}")
+
 
 
 if __name__ == "__main__":

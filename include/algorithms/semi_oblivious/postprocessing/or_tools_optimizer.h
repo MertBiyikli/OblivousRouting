@@ -1,0 +1,21 @@
+//
+// Created by Mert Biyikli on 12.06.26.
+//
+
+#ifndef OBLIVIOUSROUTING_OR_TOOLS_OPTIMIZER_H
+#define OBLIVIOUSROUTING_OR_TOOLS_OPTIMIZER_H
+
+#include "load_optimizer.h"
+#include "../../../utils/demands.h"
+
+class OrToolsSemiObliviousLoadOptimizer
+    : public ISemiObliviousRoutingLoadOptimizer {
+public:
+    Result<SemiObliviousOptimizationResult> optimize(
+        const optimized::Graph<EdgeData> &graph,
+        const CandidateRoutingScheme &candidateScheme,
+        const demands &_demand
+    ) override;
+};
+
+#endif //OBLIVIOUSROUTING_OR_TOOLS_OPTIMIZER_H

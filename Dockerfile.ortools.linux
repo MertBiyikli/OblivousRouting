@@ -1,8 +1,8 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV ORTOOLS_ROOT=/usr/local
 
-# System packages needed for OR-Tools AND your C++ project
 RUN apt-get update && apt-get install -y \
     git cmake build-essential ninja-build \
     libz-dev libbz2-dev libeigen3-dev \
@@ -12,22 +12,16 @@ RUN apt-get update && apt-get install -y \
     libboost-serialization-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install AMGCL (header-only)
 RUN git clone https://github.com/ddemidov/amgcl.git --depth 1 /tmp/amgcl && \
-    cd /tmp/amgcl && \
-    cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake --install build && \
+    cmake -S /tmp/amgcl -B /tmp/amgcl/build -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --install /tmp/amgcl/build && \
     rm -rf /tmp/amgcl
 
-# Build OR-Tools from source (stable release)
-RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1
-RUN mkdir ortools-build && cd ortools-build && \
-    cmake ../or-tools -G Ninja \
+RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1 /tmp/or-tools && \
+    cmake -S /tmp/or-tools -B /tmp/ortools-build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_DEPS=ON \
-      -DBUILD_SAMPLES=OFF \
-    && cmake --build . -j"$(nproc)" \
-    && cmake --install . --prefix /usr/local
-
-RUN ls -R /usr/local/include
-RUN ls -R /usr/local/lib/cmake/ortools
+      -DBUILD_SAMPLES=OFF && \
+    cmake --build /tmp/ortools-build -j"$(nproc)" && \
+    cmake --install /tmp/ortools-build --prefix /usr/local && \
+    rm -rf /tmp/or-tools /tmp/ortools-build

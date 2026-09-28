@@ -1,25 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="IssueNavigationConfiguration">
+    <option name="links">
+      <list>
+        <IssueNavigationLink>
+          <option name="issueRegexp" value="[API] Code into layers  #13" />
+          <option name="linkRegexp" value="https://github.com/MertBiyikli/OblivousRouting/issues/13" />
+        </IssueNavigationLink>
+      </list>
+    </option>
+  </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build/_deps/catch-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/abseil-cpp-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cbc-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/cgl-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/clp-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/coinutils-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/eigen3-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/ortools-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/osi-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/protobuf-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/re2-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/scip-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug-terminal-brew-clang/_deps/zlib-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug_parallel/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo/_deps/spdlog-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-relwithdebinfo_parallel/_deps/spdlog-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/release/_deps/catch2-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/build/release/_deps/spdlog-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/amgcl/pyamgcl/pybind11" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/extern/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/extern/xcut" vcs="Git" />
   </component>
 </project>

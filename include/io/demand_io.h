@@ -8,16 +8,12 @@
 #include <memory>
 #include <map>
 #include <functional>
+#include "core/types.h"
+#include "core/config.h"
 #include "../utils/demands.h"
 #include "../algorithms/lp/lp_mcf.h"
 
-enum class DemandModelType {
-    GRAVITY,
-    BIMODAL,
-    GAUSSIAN,
-    UNIFORM,
-    NONE
-};
+
 
 static const std::map<std::string, DemandModelType> DEMAND_MAP{
     {"gravity", DemandModelType::GRAVITY}, {"gravity_model", DemandModelType::GRAVITY},
@@ -54,6 +50,67 @@ inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
     return it->second.second();
 }
 
+
+
+
+// Generate all-pairs demand list
+inline std::vector<std::pair<int,int>> generateAllDemandPairs(optimized::Graph<EdgeData>& g) {
+    std::vector<std::pair<int,int>> result;
+    result.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
+    for (int v : g)
+        for (int u : g)
+            if (v != u) result.push_back({v, u});
+    return result;
+}
+
+// Demand model handling
+inline Result<void> HandleDemandModels(const std::optional<Config>& cfg, optimized::Graph<EdgeData>& g,
+                               std::function<void(const std::string&, const demands&)> callback) {
+    if (!cfg || cfg->demand_models.empty()) {
+        return makeErrorMessage(ErrorCode::InvalidDemand, "No demand models specified in the configuration.");
+    }
+
+    auto pairs = generateAllDemandPairs(g);
+    for (DemandModelType type : cfg->demand_models) {
+        auto model = makeDemandModel(type);
+        auto dmap = model->generate(g, pairs);
+        if (!dmap) {
+            return getError(dmap);
+        }
+        callback(demandModelName(type), dmap.value());
+    }
+    return {};
+}
+
+inline demands GetSingleDemandModel(const std::optional<Config>& cfg, optimized::Graph<EdgeData>& g) {
+    if (!cfg || cfg->demand_models.empty()) return demands{};
+    auto pairs = generateAllDemandPairs(g);
+    auto model = makeDemandModel(cfg->demand_models.front());
+    auto generated = model->generate(g, pairs);
+    return generated ? generated.value() : demands{};
+}
+
+
+inline Result<void> offlineOptimal(std::unique_ptr<optimized::Graph<EdgeData>>& g, Config& cfg) {
+    if (cfg.evaluate_demand_models) {
+        auto handle_demand = HandleDemandModels(cfg, *g,
+            [&](const std::string& model_name, const demands& dmap) {
+                cfg.demand_maps[model_name] = dmap;
+                auto offline_opt = computeOfflineOptimalCongestion(*g, dmap);
+                // Void callback: only set the result if computation succeeded
+                if (offline_opt) {
+                    cfg.offline_opt_per_model[model_name] = offline_opt.value();
+                }
+                // If offline_opt fails, silently skip (don't propagate error from void lambda)
+            });
+        if (!handle_demand) {
+            return getError(handle_demand);
+        }
+    }
+    return {};
+}
+
+
 inline void printStatsForDemandModel(const std::string& model_name,
                                      std::pair<double, double> result) {
     if (result.first > 0.0 && result.second > 0.0) {
@@ -66,23 +123,7 @@ inline void printStatsForDemandModel(const std::string& model_name,
     }
 }
 
-inline double computeRoutingSchemeCongestion(IGraph& _g,
-                                             const std::unique_ptr<RoutingScheme>& routing_scheme,
-                                             const demands& demand_map) {
-    std::vector<double> congestion_per_edge(_g.getNumDirectedEdges(), 0.0);
-    routing_scheme->routeDemands(congestion_per_edge, demand_map);
-    double max_cong = routing_scheme->getMaxCongestion(congestion_per_edge);
-    for (const auto& cong : congestion_per_edge)
-        if (cong > max_cong) max_cong = cong;
-    return max_cong;
-}
 
-inline double computeOfflineOptimalCongestion(IGraph& _g, const demands& demand_map) {
-    CMMF_Solver mccf(_g);
-    mccf.AddDemandMap(demand_map);
-    auto offline_scheme = mccf.solve();
-    return mccf.getCongestionForPassedDemandMap();
-}
 
 
 

@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+    >
+
+    <title>E-Routing Network Analyzer</title>
+
+    <link
+            rel="stylesheet"
+            href="styles.css"
+    >
+</head>
+
+<body>
+<header>
+    <div>
+        <p class="eyebrow">E-Routing</p>
+        <h1>Network Analyzer</h1>
+    </div>
+
+    <div class="header-file-controls">
+        <label class="file-button">
+            Open baseline JSON
+
+            <input
+                    id="file-input"
+                    type="file"
+                    accept="application/json,.json"
+            >
+        </label>
+
+        <label class="file-button">
+            Open candidate JSON
+
+            <input
+                    id="candidate-file-input"
+                    type="file"
+                    accept="application/json,.json"
+                    disabled
+            >
+        </label>
+    </div>
+</header>
+
+<main>
+    <aside class="panel summary-panel">
+        <h2>Scenario</h2>
+
+        <dl
+                id="scenario-details"
+                class="details muted"
+        >
+            <div>
+                <dt>Graph</dt>
+                <dd>Load a result</dd>
+            </div>
+
+            <div>
+                <dt>Solver</dt>
+                <dd>—</dd>
+            </div>
+
+            <div>
+                <dt>Demand</dt>
+                <dd>—</dd>
+            </div>
+
+            <div>
+                <dt>Scenario</dt>
+                <dd>Baseline</dd>
+            </div>
+        </dl>
+
+        <h2>Metrics</h2>
+
+        <section
+                id="metrics"
+                class="metric-grid"
+        >
+            <article>
+                <span>Scenario maximum</span>
+                <strong>—</strong>
+                <small id="baseline-maximum">Baseline —</small>
+            </article>
+
+            <article>
+                <span>Scenario average</span>
+                <strong>—</strong>
+                <small id="baseline-average">Baseline —</small>
+            </article>
+
+            <article>
+                <span>Scenario overloaded</span>
+                <strong>—</strong>
+                <small id="baseline-overloaded">Baseline —</small>
+            </article>
+
+            <article>
+                <span>Total demand</span>
+                <strong>—</strong>
+                <small>Installed demand</small>
+            </article>
+        </section>
+
+        <section
+                id="comparison-metrics"
+                class="metric-grid"
+                hidden
+        >
+            <article>
+                <span>Baseline maximum</span>
+                <strong id="comparison-baseline-maximum">—</strong>
+            </article>
+
+            <article>
+                <span>Candidate maximum</span>
+                <strong id="comparison-candidate-maximum">—</strong>
+            </article>
+
+            <article>
+                <span>Maximum change</span>
+                <strong id="comparison-maximum-change">—</strong>
+            </article>
+
+            <article>
+                <span>Average change</span>
+                <strong id="comparison-average-change">—</strong>
+            </article>
+        </section>
+
+        <div class="legend">
+            <h2>Visualization scale</h2>
+
+            <div class="legend-bar"></div>
+
+            <div class="legend-labels">
+                <span id="legend-min">Low</span>
+                <span id="legend-mid">Median</span>
+                <span id="legend-max">High</span>
+            </div>
+        </div>
+
+        <label class="color-mode-control">
+            <span>Visualization</span>
+
+            <select id="visualization-mode">
+                <option value="utilization">
+                    Utilization
+                </option>
+
+                <option value="difference">
+                    Candidate difference
+                </option>
+            </select>
+        </label>
+
+        <label class="color-mode-control">
+            <span>Utilization color scale</span>
+
+            <select id="color-mode">
+                <option value="relative">
+                    Relative
+                </option>
+
+                <option value="capacity">
+                    Capacity thresholds
+                </option>
+            </select>
+        </label>
+
+        <p
+                id="comparison-description"
+                class="hint"
+        >
+            Load a candidate result to enable comparison.
+        </p>
+
+        <p
+                id="color-scale-description"
+                class="hint"
+        >
+            Colors are normalized between the 5th and 95th percentile.
+        </p>
+    </aside>
+
+    <section class="canvas-panel">
+        <div id="empty-state">
+            <h2>Open an exported routing result</h2>
+
+            <p>
+                The topology will be laid out automatically.
+                Scroll to zoom and drag the background to pan.
+            </p>
+        </div>
+
+        <svg
+                id="network"
+                role="img"
+                aria-label="Network topology"
+        ></svg>
+
+        <div class="canvas-actions">
+            <button
+                    id="fit-button"
+                    type="button"
+            >
+                Fit graph
+            </button>
+
+            <button
+                    id="reset-button"
+                    type="button"
+            >
+                Reset scenario
+            </button>
+        </div>
+    </section>
+
+    <aside class="panel inspector-panel">
+        <h2>Edge inspector</h2>
+
+        <div
+                id="edge-empty"
+                class="muted"
+        >
+            Select an edge in the graph.
+        </div>
+
+        <div
+                id="edge-details"
+                hidden
+        >
+            <div class="edge-title">
+                <strong id="edge-name"></strong>
+                <span id="edge-status"></span>
+            </div>
+
+            <dl class="details">
+                <div>
+                    <dt>Capacity</dt>
+                    <dd id="edge-capacity"></dd>
+                </div>
+
+                <div>
+                    <dt>Load</dt>
+                    <dd id="edge-load"></dd>
+                </div>
+
+                <div>
+                    <dt>Utilization</dt>
+                    <dd id="edge-utilization"></dd>
+                </div>
+
+                <div>
+                    <dt>Edge ID</dt>
+                    <dd id="edge-id"></dd>
+                </div>
+            </dl>
+
+            <section
+                    id="edge-comparison-details"
+                    class="failure-details"
+                    hidden
+            >
+                <h3>Routing comparison</h3>
+
+                <dl class="details">
+                    <div>
+                        <dt>Baseline load</dt>
+                        <dd id="edge-baseline-load">—</dd>
+                    </div>
+
+                    <div>
+                        <dt>Candidate load</dt>
+                        <dd id="edge-candidate-load">—</dd>
+                    </div>
+
+                    <div>
+                        <dt>Load change</dt>
+                        <dd id="edge-load-change">—</dd>
+                    </div>
+
+                    <div>
+                        <dt>Baseline utilization</dt>
+                        <dd id="edge-baseline-utilization">—</dd>
+                    </div>
+
+                    <div>
+                        <dt>Candidate utilization</dt>
+                        <dd id="edge-candidate-utilization">—</dd>
+                    </div>
+
+                    <div>
+                        <dt>Utilization change</dt>
+                        <dd id="edge-utilization-change">—</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section
+                    id="failure-details"
+                    class="failure-details"
+                    hidden
+            >
+                <h3>Static failure impact</h3>
+
+                <dl class="details">
+                    <div>
+                        <dt>Affected commodities</dt>
+                        <dd id="failure-commodities"></dd>
+                    </div>
+
+                    <div>
+                        <dt>Affected demand</dt>
+                        <dd id="failure-demand"></dd>
+                    </div>
+
+                    <div>
+                        <dt>Lost traffic</dt>
+                        <dd id="failure-lost"></dd>
+                    </div>
+
+                    <div>
+                        <dt>Demand affected</dt>
+                        <dd id="failure-fraction"></dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="capacity-editor">
+                <h3>Capacity scenario</h3>
+
+                <label for="edge-capacity-input">
+                    New capacity
+                </label>
+
+                <div class="capacity-input-row">
+                    <input
+                            id="edge-capacity-input"
+                            type="number"
+                            min="0.000001"
+                            step="any"
+                    >
+
+                    <button
+                            id="apply-capacity"
+                            type="button"
+                    >
+                        Apply
+                    </button>
+                </div>
+
+                <div class="capacity-actions">
+                    <button
+                            id="increase-capacity"
+                            type="button"
+                    >
+                        +10%
+                    </button>
+
+                    <button
+                            id="double-capacity"
+                            type="button"
+                    >
+                        ×2
+                    </button>
+
+                    <button
+                            id="reset-capacity"
+                            type="button"
+                    >
+                        Reset
+                    </button>
+                </div>
+
+                <p
+                        id="capacity-change-description"
+                        class="hint"
+                >
+                    No capacity change.
+                </p>
+            </section>
+
+            <button
+                    id="toggle-edge"
+                    class="danger"
+                    type="button"
+            >
+                Simulate edge failure
+            </button>
+
+            <p class="hint">
+                Capacity and failure changes currently modify the displayed
+                scenario without rerunning the routing solver.
+            </p>
+        </div>
+
+        <h2>Most loaded links</h2>
+
+        <div
+                id="edge-ranking"
+                class="ranking muted"
+        >
+            No result loaded.
+        </div>
+
+        <h2>Most critical links</h2>
+
+        <div
+                id="failure-ranking"
+                class="ranking muted"
+        >
+            No failure analysis loaded.
+        </div>
+
+        <h2>Capacity recommendations</h2>
+
+        <div
+                id="capacity-ranking"
+                class="ranking muted"
+        >
+            No result loaded.
+        </div>
+
+        <section
+                id="comparison-rankings"
+                hidden
+        >
+            <h2>Most improved links</h2>
+
+            <div
+                    id="improved-edge-ranking"
+                    class="ranking muted"
+            >
+                No candidate loaded.
+            </div>
+
+            <h2>Most degraded links</h2>
+
+            <div
+                    id="degraded-edge-ranking"
+                    class="ranking muted"
+            >
+                No candidate loaded.
+            </div>
+        </section>
+    </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

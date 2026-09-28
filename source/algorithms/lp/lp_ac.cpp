@@ -10,13 +10,43 @@
 using namespace operations_research;
 
 
-void LPSolver::CreateVariables() {
+Result<void> LPSolver::computeBasisFlows(AllPairRoutingTable& table) {
+    this->n = graph.getNumNodes();
+    auto init = this->initSolver();
+    if (!init) {
+        return getError(init);
+    }
+    auto var = CreateVariables();
+    if (!var) {
+        return getError(var);
+    }
+    CreateConstraints();
+    SetObjective();
+
+    // === Solve the LP ===
+    status = solver->Solve();
+    if (status != MPSolver::OPTIMAL) {
+        return makeErrorMessage(ErrorCode::SolverFailed, "Solving the Applegate & Cohen LP returned non-optimal solution.");
+    } else {
+        storeFlow(table);
+    }
+    return {};
+}
+
+
+Result<void> LPSolver::CreateVariables() {
     if (!solver) solver.reset(MPSolver::CreateSolver("GLOP"));
-    if (!solver) throw std::runtime_error("GLOP solver unavailable.");
+
+    if (!solver) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "GLOP solver unavailable.");
+    }
 
 
     // CREATE Alpha variable
     alpha = solver->MakeNumVar(0.0, solver->infinity(), "alpha");
+    if (!alpha) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "Creating the bounding variable for the Applegate & Cohen LP failed.");
+    }
 
     for(int s = 0; s<n; s++) {
         for(int t = 0; t<n; t++) {
@@ -39,10 +69,6 @@ void LPSolver::CreateVariables() {
         }
     }
 
-
-
-
-
     // π_e_f variables
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
         const auto& [u, v] = graph.getEdgeEndpoints(e);
@@ -55,8 +81,6 @@ void LPSolver::CreateVariables() {
 
         }
     }
-
-
     // f_e_st variables for all arcs
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
         for(const auto& d : m_demands) {
@@ -66,6 +90,7 @@ void LPSolver::CreateVariables() {
         }
     }
 
+    return {};
 }
 
 void LPSolver::CreateConstraints() {
@@ -74,7 +99,6 @@ void LPSolver::CreateConstraints() {
         if ( graph.getEdgeEndpoints(e).first > graph.getEdgeEndpoints(e).second) continue;
 
         MPConstraint* constraint = solver->MakeRowConstraint(-solver->infinity(), 0.0);
-        //std::cout << "Dual optimization constraint for arc " << id_e << " and arc " << id_f << ":\n";
 
         for(int f = 0; f < graph.getNumDirectedEdges(); f++) {
             if ( graph.getEdgeEndpoints(f).first > graph.getEdgeEndpoints(f).second ) continue;
@@ -82,7 +106,7 @@ void LPSolver::CreateConstraints() {
             auto it = π_e_f.find({e, f});
             if (it != π_e_f.end()
                 && it->second) {
-                constraint->SetCoefficient(it->second, graph.getEdgeCapacity(e));
+                constraint->SetCoefficient(it->second, graph.edgeData(f).capacity);
             }
         }
 
@@ -90,22 +114,22 @@ void LPSolver::CreateConstraints() {
     }
 
 
-    // \forall links l:  f_ij(l)-p_l(i,j)*cap(l) <= 0
+    // \forall links l, demands i->j: f_ij(l)-p_l(i,j)*cap(l) <= 0
+    // where f_ij(l) is total commodity flow on the physical edge (both directions).
     for(int e = 0; e < graph.getNumDirectedEdges(); e++) {
         if ( graph.getEdgeEndpoints(e).first > graph.getEdgeEndpoints(e).second) continue;
-
-        // create a constraint for each arc
-        MPConstraint* constraint = solver->MakeRowConstraint(-solver->infinity(), 0.0);
+        const int rev_e = graph.reverse(e).id;
 
         for (const auto& d : m_demands) {
             int s = d.first, t = d.second;
+            MPConstraint* constraint = solver->MakeRowConstraint(-solver->infinity(), 0.0);
 
             constraint->SetCoefficient(m_var_f_e_[{e, {s, t}}], 1);
-            constraint->SetCoefficient(p_e_ij[{e, s, t}], -graph.getEdgeCapacity(e));
-
-
+            if (rev_e != INVALID_EDGE_ID) {
+                constraint->SetCoefficient(m_var_f_e_[{rev_e, {s, t}}], 1);
+            }
+            constraint->SetCoefficient(p_e_ij[{e, s, t}], -graph.edgeData(e).capacity);
         }
-
     }
 
 // \forall links l, i, edges e = (j, k) : π(l, link-of-edge(e))+p_l(i,j) - p_l(i,k) >= 0
@@ -119,7 +143,7 @@ void LPSolver::CreateConstraints() {
 
                 int undirected_link_of_f = -1;
                 if (j > k) {
-                    undirected_link_of_f = graph.getAntiEdge(f);
+                    undirected_link_of_f = graph.reverse(f).id;
                 }else {
                     undirected_link_of_f = f;
                 }
@@ -148,9 +172,7 @@ void LPSolver::CreateConstraints() {
                     if( it != m_var_f_e_.end() &&
                         it->second) {
                         constraint->SetCoefficient(it->second, 1);
-                    } else {
-                        std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                    }
+                    };
                 }
             }
 
@@ -161,9 +183,7 @@ void LPSolver::CreateConstraints() {
                     if( it != m_var_f_e_.end()
                         && it->second) {
                         constraint->SetCoefficient(it->second, -1);
-                    } else {
-                        std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                    }
+                    };
                 }
             }
         }
@@ -183,9 +203,7 @@ void LPSolver::CreateConstraints() {
                         auto it = m_var_f_e_.find({e, {i, j}});
                         if (it != m_var_f_e_.end() && it->second != nullptr) {
                             constraint->SetCoefficient(it->second, 1);
-                        } else {
-                            std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                        }
+                        };
                     }
                 }
 
@@ -195,9 +213,7 @@ void LPSolver::CreateConstraints() {
                         auto it = m_var_f_e_.find({e, {i, j}});
                         if (it != m_var_f_e_.end() && it->second != nullptr) {
                             constraint->SetCoefficient(it->second, -1);
-                        } else {
-                            std::cerr << "Warning: Variable for arc " << e << " and demand (" << i << ", " << j << ") not found.\n";
-                        }
+                        };
                     }
                 }
             }
@@ -207,47 +223,9 @@ void LPSolver::CreateConstraints() {
 
 void LPSolver::SetObjective()
 {
-    // === Objective: maximize alpha ===
+    // === Objective: minimize alpha ===
     solver->MutableObjective()->SetCoefficient(alpha, 1);
     solver->MutableObjective()->SetMinimization();
-}
-
-
-
-void LPSolver::PrintSolution() {
-
-    max_cong = 0;
-    // === Print the solution ===
-    std::unordered_map<int, double> total_flow_per_arc;
-
-    for (const auto& [key, var] : m_var_f_e_) {
-        if (!var) continue;
-        double val = var->solution_value();
-        int arc_id = std::get<0>(key);
-        total_flow_per_arc[arc_id] += val;
-    }
-
-    for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
-        int u = graph.getEdgeEndpoints(e).first, v = graph.getEdgeEndpoints(e).second;
-
-        if (u > v) continue;
-
-        int rev_edge = graph.getAntiEdge(e);
-        double total_flow = total_flow_per_arc[e];
-
-        // to ensure that flow along anti-parallel arcs
-        // will be added as absolute flow to its corresponding undirected link
-        total_flow += total_flow_per_arc[rev_edge];
-
-        double capacity = graph.getEdgeCapacity(e);
-
-        if(max_cong < total_flow/capacity) {
-            max_cong = total_flow/capacity;
-        }
-
-    }
-    std::cout << "Max congestion across all undirected arcs: " << max_cong << std::endl;
-
 }
 
 
@@ -270,7 +248,7 @@ void LPSolver::storeFlow(AllPairRoutingTable& table) {
 
                     if (flow_value < 0) {
                         // push flow into anti-edge direction
-                        int anti_e = graph.getAntiEdge(e);
+                        int anti_e = graph.reverse(e).id;
                         table.addFlow(anti_e, d.first, d.second, flow_value);
                     }else {
                         table.addFlow(e, d.first, d.second, flow_value);

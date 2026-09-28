@@ -8,6 +8,7 @@
 
 FlatHST::ChildRange FlatHST::children(int i) const {
     const auto& n = nodes[i];
+    // TODO: here
     if (n.children_begin < 0) return {nullptr, nullptr};
     return { children_idx.data() + n.children_begin,
              children_idx.data() + n.children_end };
@@ -21,6 +22,10 @@ FlatHST::MemberRange FlatHST::memberRange(int i) const {
 
 int FlatHST::root() const {
     return 0;
+}
+
+int FlatHST::size() const {
+    return nodes.size();
 }
 
 bool FlatHST::isLeaf(int i) const {
