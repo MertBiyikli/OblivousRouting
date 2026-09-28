@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(ObliviousRouting
-        VERSION 0.0.1
-        DESCRIPTION "A comparison of tree metrics and electrical flows as oblivious routing oracles"
-        LANGUAGES CXX)
+project(ObliviousRouting VERSION 0.0.1 DESCRIPTION "E-Routing: Network Resilience and Capacity Planning Engine." LANGUAGES CXX)
 
 # Set CMake policies early to suppress warnings
 if(POLICY CMP0144)
@@ -23,14 +20,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
 # ============================================================================
 # Dependencies — Homebrew setup
 # ============================================================================
-#set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
-
-# Homebrew is at /usr/local on this Intel Mac.
-#set(PKG_CONFIG_EXECUTABLE "/usr/local/bin/pkg-config" CACHE FILEPATH "Homebrew pkg-config executable" FORCE)
-
 find_package(fmt CONFIG REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -41,8 +34,6 @@ pkg_check_modules(OsiClp    REQUIRED IMPORTED_TARGET osi-clp)
 pkg_check_modules(Cgl       REQUIRED IMPORTED_TARGET cgl)
 pkg_check_modules(Osi       REQUIRED IMPORTED_TARGET osi)
 pkg_check_modules(CoinUtils REQUIRED IMPORTED_TARGET coinutils)
-# This is the imported target Homebrew's OR-Tools export requires.
-pkg_check_modules(Cbc REQUIRED IMPORTED_TARGET cbc)
 
 find_package(ortools CONFIG REQUIRED)
 # ---------------------------------------------------------------------------
@@ -80,11 +71,6 @@ endif()
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen3 REQUIRED)
 
-
-# Never let CMake select Anaconda's fmt installation.
-find_package(fmt CONFIG REQUIRED
-        PATHS "/usr/local/lib/cmake/fmt"
-        NO_DEFAULT_PATH)
 
 # xcut fetches spdlog. Make that spdlog use the same external fmt.
 set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL
