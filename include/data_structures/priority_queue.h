@@ -153,6 +153,13 @@ protected:
     }
 
     void siftDown(PosT pos) {
+        if (pos >= size()) {
+            // Heap became empty (e.g. deleteTop() popped the only element
+            // and unconditionally calls siftDown(0) afterwards); nothing to
+            // sift.
+            return;
+        }
+
         const KeyT k = heap[pos].key;
         const IdT id = heap[pos].id;
         const PosT initial_pos = pos;

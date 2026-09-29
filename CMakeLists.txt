@@ -192,6 +192,15 @@ target_link_libraries(oblivious_routing
 or_apply_project_options(oblivious_routing_core)
 or_apply_project_options(oblivious_routing)
 
+# See cmake/ProjectOptions.cmake: these translation units directly touch
+# OR-Tools' MPSolver/MPObjective internals and must be compiled without ASan
+# to remain ABI-compatible with the prebuilt (non-ASan) OR-Tools library.
+or_exempt_sources_from_asan(
+        source/algorithms/lp/lp_ac.cpp
+        source/algorithms/lp/lp_mcf.cpp
+        source/algorithms/semi_oblivious/postprocessing/or_tools_optimizer.cpp
+)
+
 # ============================================================================
 # Testing
 # ============================================================================
