@@ -13,22 +13,16 @@ TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][ele
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()
-        && graph) {
-        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
-        if (!r) { FAIL(r.error().message.c_str()); }
-    }
+    auto graph = load_graph_optimized(cfg, 0, nullptr);
 
-    (graph.value())->finalize();
-
-    REQUIRE((graph.value()));
-    REQUIRE((graph.value())->getNumNodes() > 0);
-    REQUIRE((graph.value())->getNumUndirectedEdges() > 0);
+    REQUIRE(graph);
+    REQUIRE(graph.value());
+    REQUIRE(graph.value()->getNumNodes() > 0);
+    REQUIRE(graph.value()->getNumUndirectedEdges() > 0);
 
 
     RoutingEngine engine;
-    auto result = engine.solve(*((graph.value())), cfg, cfg.solvers.front());
+    auto result = engine.solve(*(graph.value()), cfg, cfg.solvers.front());
 
     requireValidRoutingResult(result);
 }
@@ -42,17 +36,13 @@ TEST_CASE("Electrical flow solver works with gravity demand model",
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()
-        && (graph)) {
-        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
-        if (!r) { FAIL(r.error().message.c_str()); }
-    }
-    (graph.value())->finalize();
+    auto graph = load_graph_optimized(cfg, 0, nullptr);
+    REQUIRE(graph);
 
     cfg.demand_models.push_back(DemandModelType::GRAVITY); // adapt to your real enum/name
     cfg.evaluate_demand_models = true;
-    cfg.offline_opt_per_model["gravity"]=computeOfflineOptimalCongestion(*(graph.value()), cfg.demand_maps["gravity"]);
+    auto offline = offlineOptimal(graph.value(), cfg);
+    REQUIRE(offline);
 
     RoutingEngine engine;
     IRoutingResult result;
@@ -121,14 +111,8 @@ TEST_CASE("Electrical solver conserves unit flow per source",
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()
-        && graph) {
-        auto r = GraphIO::readLGFFile(*(graph.value()), cfg.filename);
-        if (!r) { FAIL(r.error().message.c_str()); }
-    }
-
-    (graph.value())->finalize();
+    auto graph = load_graph_optimized(cfg, 0, nullptr);
+    REQUIRE(graph);
 
     ElectricalMWU solver(*(graph.value()), 0, true);
     std::unique_ptr<RoutingScheme> table;

@@ -7,6 +7,9 @@
 
 #include "../tree_oracle.h"
 
+#include <map>
+#include <utility>
+
 template<typename T>
 class FRT : public TreeOracle<T> {
 public:

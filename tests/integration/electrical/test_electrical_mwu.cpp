@@ -55,15 +55,13 @@ TEST_CASE("Electrical flow solver can be run repeatedly on the same small graph"
 TEST_CASE("Electrical flow solver handles non-uniform capacities",
           "[integration][electrical][routing-engine][capacities]")
 {
-    auto g = std::make_unique<GraphCSR>(4);
-
-    g->addEdge(0, 1, 100.0);
-    g->addEdge(1, 2, 5.0);
-    g->addEdge(2, 3, 100.0);
-    g->addEdge(0, 3, 20.0);
-    g->addEdge(1, 3, 10.0);
-
-    g->finalize();
+    auto g = std::make_unique<optimized::Graph<EdgeData>>(4, std::vector<optimized::Graph<EdgeData>::InputEdge>{
+        {0, 1, EdgeData{100.0, 1.0}},
+        {1, 2, EdgeData{5.0, 1.0}},
+        {2, 3, EdgeData{100.0, 1.0}},
+        {0, 3, EdgeData{20.0, 1.0}},
+        {1, 3, EdgeData{10.0, 1.0}},
+    });
 
     auto cfg = makeElectricalConfig();
 

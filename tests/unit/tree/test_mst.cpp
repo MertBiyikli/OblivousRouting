@@ -67,7 +67,7 @@ TEST_CASE("TreeMST updates graph distances before computing the MST tree", "[tre
     REQUIRE_NOTHROW(oracle.getTree(distances));
 
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-        REQUIRE(graph.getEdgeDistance(e) == Approx(distances[e]));
+        REQUIRE(graph.edgeData(e).weight == Approx(distances[e]));
     }
 }
 
@@ -97,7 +97,7 @@ TEST_CASE("TreeMST can rebuild after distances change", "[tree-oracle][mst][rebu
     REQUIRE_NOTHROW(oracle.getTree(second_distances));
 
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-        REQUIRE(graph.getEdgeDistance(e) == Approx(second_distances[e]));
+        REQUIRE(graph.edgeData(e).weight == Approx(second_distances[e]));
     }
 
     REQUIRE(!oracle.scales.empty());

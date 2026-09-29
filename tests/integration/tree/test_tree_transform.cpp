@@ -36,7 +36,7 @@ TEST_CASE("TreeTransform transforms a flat FRT tree into a linear routing table"
     TreeTransform transform(*graph);
     std::map<std::pair<int, int>, CachedPath> path_cache;
 
-    TreeIteration<FlatHST> iteration(std::move(hst), distances, 1.0);
+    TreeIteration<FlatHST> iteration(std::move(hst.value()), distances, 1.0);
     transform.transform(iteration, table, path_cache);
 
     requireNonEmptyLinearTable(table, *graph);
@@ -57,7 +57,7 @@ TEST_CASE("TreeTransform transforms a pointer FRT tree into a linear routing tab
     TreeTransform transform(*graph);
     std::map<std::pair<int, int>, CachedPath> path_cache;
 
-    TreeIteration<std::shared_ptr<HSTNode>> iteration(std::move(hst), distances, 1.0);
+    TreeIteration<std::shared_ptr<HSTNode>> iteration(std::move(hst.value()), distances, 1.0);
     transform.transform(iteration, table, path_cache);
 
     requireNonEmptyLinearTable(table, *graph);

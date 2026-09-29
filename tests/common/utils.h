@@ -14,11 +14,10 @@
 #include <memory>
 #include <string>
 
-#include "../../include/core/utils.h"
 #include "../../include/core/errors.h"
 #include "../../include/routing/routing_engine.h"
 #include "../../include/routing/routing_result.h"
-#include "../../include/data_structures/graph/graph_csr.h"
+#include "../../include/data_structures/graph/graph.h"
 #include "../../include/io/parse_argument_io.h"
 
 namespace integration {
@@ -58,70 +57,60 @@ namespace integration {
         REQUIRE(std::filesystem::is_regular_file(path));
     }
 
-    inline std::unique_ptr<GraphCSR> makePathGraph()
+    inline std::unique_ptr<optimized::Graph<EdgeData>> makePathGraph()
     {
-        auto g = std::make_unique<GraphCSR>(4);
-
-        g->addEdge(0, 1, 10.0);
-        g->addEdge(1, 2, 10.0);
-        g->addEdge(2, 3, 10.0);
-
-        g->finalize();
-        return g;
+        std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+            {0, 1, EdgeData{10.0, 1.0}},
+            {1, 2, EdgeData{10.0, 1.0}},
+            {2, 3, EdgeData{10.0, 1.0}},
+        };
+        return std::make_unique<optimized::Graph<EdgeData>>(4, edges);
     }
 
-    inline std::unique_ptr<GraphCSR> makeTriangleGraph()
+    inline std::unique_ptr<optimized::Graph<EdgeData>> makeTriangleGraph()
     {
-        auto g = std::make_unique<GraphCSR>(3);
-
-        g->addEdge(0, 1, 1.0);
-        g->addEdge(1, 2, 1.0);
-        g->addEdge(0, 2, 1.0);
-
-        g->finalize();
-        return g;
+        std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+            {0, 1, EdgeData{1.0, 1.0}},
+            {1, 2, EdgeData{1.0, 1.0}},
+            {0, 2, EdgeData{1.0, 1.0}},
+        };
+        return std::make_unique<optimized::Graph<EdgeData>>(3, edges);
     }
 
-    inline std::unique_ptr<GraphCSR> makeCycleGraph()
+    inline std::unique_ptr<optimized::Graph<EdgeData>> makeCycleGraph()
     {
-        auto g = std::make_unique<GraphCSR>(4);
-
-        g->addEdge(0, 1, 10.0);
-        g->addEdge(1, 2, 10.0);
-        g->addEdge(2, 3, 10.0);
-        g->addEdge(3, 0, 10.0);
-
-        g->finalize();
-        return g;
+        std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+            {0, 1, EdgeData{10.0, 1.0}},
+            {1, 2, EdgeData{10.0, 1.0}},
+            {2, 3, EdgeData{10.0, 1.0}},
+            {3, 0, EdgeData{10.0, 1.0}},
+        };
+        return std::make_unique<optimized::Graph<EdgeData>>(4, edges);
     }
 
-    inline std::unique_ptr<GraphCSR> makeCompleteGraphK4()
+    inline std::unique_ptr<optimized::Graph<EdgeData>> makeCompleteGraphK4()
     {
-        auto g = std::make_unique<GraphCSR>(4);
-
-        g->addEdge(0, 1, 10.0);
-        g->addEdge(0, 2, 10.0);
-        g->addEdge(0, 3, 10.0);
-        g->addEdge(1, 2, 10.0);
-        g->addEdge(1, 3, 10.0);
-        g->addEdge(2, 3, 10.0);
-
-        g->finalize();
-        return g;
+        std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+            {0, 1, EdgeData{10.0, 1.0}},
+            {0, 2, EdgeData{10.0, 1.0}},
+            {0, 3, EdgeData{10.0, 1.0}},
+            {1, 2, EdgeData{10.0, 1.0}},
+            {1, 3, EdgeData{10.0, 1.0}},
+            {2, 3, EdgeData{10.0, 1.0}},
+        };
+        return std::make_unique<optimized::Graph<EdgeData>>(4, edges);
     }
 
-    inline std::unique_ptr<GraphCSR> makeNonUniformCapacityGraph()
+    inline std::unique_ptr<optimized::Graph<EdgeData>> makeNonUniformCapacityGraph()
     {
-        auto g = std::make_unique<GraphCSR>(4);
-
-        g->addEdge(0, 1, 100.0);
-        g->addEdge(1, 2, 5.0);
-        g->addEdge(2, 3, 100.0);
-        g->addEdge(0, 3, 20.0);
-        g->addEdge(1, 3, 10.0);
-
-        g->finalize();
-        return g;
+        std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+            {0, 1, EdgeData{100.0, 1.0}},
+            {1, 2, EdgeData{5.0, 1.0}},
+            {2, 3, EdgeData{100.0, 1.0}},
+            {0, 3, EdgeData{20.0, 1.0}},
+            {1, 3, EdgeData{10.0, 1.0}},
+        };
+        return std::make_unique<optimized::Graph<EdgeData>>(4, edges);
     }
 
     template <typename ResultPtr>
@@ -183,7 +172,7 @@ namespace integration {
     }
 
 
-    inline std::vector<double> unitDistances(const IGraph& graph)
+    inline std::vector<double> unitDistances(const optimized::Graph<EdgeData>& graph)
     {
         return std::vector<double>(graph.getNumDirectedEdges(), 1.0);
     }
@@ -203,14 +192,14 @@ namespace integration {
         REQUIRE(static_cast<int>(root->getMembers().size()) == expected_vertices);
     }
 
-    inline void requireNonEmptyLinearTable(const LinearRoutingTable& table, const IGraph& graph)
+    inline void requireNonEmptyLinearTable(const LinearRoutingTable& table, const optimized::Graph<EdgeData>& graph)
     {
         REQUIRE(table.getSize() != 0);
         REQUIRE(table.getNumNodes() == graph.getNumNodes());
     }
 
 
-    inline void requireValidAllPairRoutingTable(const AllPairRoutingTable& table, const IGraph& graph)
+    inline void requireValidAllPairRoutingTable(const AllPairRoutingTable& table, const optimized::Graph<EdgeData>& graph)
     {
         REQUIRE(table.getSize() != 0);
         REQUIRE(table.getNumNodes() == graph.getNumNodes());

@@ -52,7 +52,7 @@ TEST_CASE("CMMF solver runs on a triangle graph with one demand",
     solver.AddDemandMap(d);
     auto offline_scheme = solver.solve();
 
-    const double congestion = solver.getCongestionForPassedDemandMap();
+    const double congestion = solver.getCongestionForPassedDemandMap().value();
     REQUIRE(std::isfinite(congestion));
     REQUIRE(congestion == Catch::Approx(0.5));
 }

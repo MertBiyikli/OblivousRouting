@@ -115,7 +115,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE_NOTHROW(oracle.getTree(distances));
 
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-        REQUIRE(graph.getEdgeDistance(e) == Approx(distances[e]));
+        REQUIRE(graph.edgeData(e).weight == Approx(distances[e]));
     }
 }
 

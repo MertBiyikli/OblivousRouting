@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "data_structures/graph/graph_csr.h"
+#include "data_structures/graph/graph.h"
 #include "algorithms/oblivious/mwu/oracle/tree/frt/frt.h"
 #include "algorithms/oblivious/mwu/oracle/tree/fast_ckr/fast_ckr.h"
 #include "algorithms/oblivious/mwu/oracle/tree/mst/mst_oracle.h"
@@ -20,33 +20,40 @@
 
 // -----------------------------------------------------------------------------
 // Shared graph builders
+//
+// TreeOracle implementations (FRT, FastCKR, TreeMST) operate on
+// optimized::Graph<EdgeData>. Build test graphs using that type directly.
 // -----------------------------------------------------------------------------
 
-inline GraphCSR makeSimplePathGraph5() {
-    GraphCSR graph(5);
+using TestGraph = optimized::Graph<EdgeData>;
 
-    graph.addEdge(0, 1, 1.0, 1.0);
-    graph.addEdge(1, 2, 1.0, 1.5);
-    graph.addEdge(2, 3, 1.0, 1.0);
-    graph.addEdge(3, 4, 1.0, 2.0);
-
-    graph.finalize();
-    return graph;
+inline TestGraph makeGraphFromEdges(int n, const std::vector<TestGraph::InputEdge>& edges) {
+    return TestGraph(n, edges);
 }
 
-inline GraphCSR makePathGraph(int n) {
-    GraphCSR graph(n);
+inline TestGraph makeSimplePathGraph5() {
+    std::vector<TestGraph::InputEdge> edges = {
+        {0, 1, EdgeData{1.0, 1.0}},
+        {1, 2, EdgeData{1.0, 1.5}},
+        {2, 3, EdgeData{1.0, 1.0}},
+        {3, 4, EdgeData{1.0, 2.0}},
+    };
+    return makeGraphFromEdges(5, edges);
+}
+
+inline TestGraph makePathGraph(int n) {
+    std::vector<TestGraph::InputEdge> edges;
+    edges.reserve(n > 0 ? n - 1 : 0);
 
     for (int i = 0; i + 1 < n; ++i) {
-        graph.addEdge(i, i + 1, 1.0, 1.0);
+        edges.push_back({i, i + 1, EdgeData{1.0, 1.0}});
     }
 
-    graph.finalize();
-    return graph;
+    return makeGraphFromEdges(n, edges);
 }
 
-inline GraphCSR makeGridGraph(int size) {
-    GraphCSR graph(size * size);
+inline TestGraph makeGridGraph(int size) {
+    std::vector<TestGraph::InputEdge> edges;
 
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < size; ++j) {
@@ -54,46 +61,42 @@ inline GraphCSR makeGridGraph(int size) {
 
             if (j + 1 < size) {
                 const int right = i * size + (j + 1);
-                graph.addEdge(node, right, 1.0, 1.0);
+                edges.push_back({node, right, EdgeData{1.0, 1.0}});
             }
 
             if (i + 1 < size) {
                 const int down = (i + 1) * size + j;
-                graph.addEdge(node, down, 1.0, 1.0);
+                edges.push_back({node, down, EdgeData{1.0, 1.0}});
             }
         }
     }
 
-    graph.finalize();
-    return graph;
+    return makeGraphFromEdges(size * size, edges);
 }
 
-inline GraphCSR makeFullyConnectedSmallGraph() {
-    GraphCSR graph(4);
+inline TestGraph makeFullyConnectedSmallGraph() {
+    std::vector<TestGraph::InputEdge> edges;
 
     for (int i = 0; i < 4; ++i) {
         for (int j = i + 1; j < 4; ++j) {
-            graph.addEdge(i, j, 1.0, 1.0);
+            edges.push_back({i, j, EdgeData{1.0, 1.0}});
         }
     }
 
-    graph.finalize();
-    return graph;
+    return makeGraphFromEdges(4, edges);
 }
 
-inline GraphCSR makeWeightedCycleGraph6() {
-    GraphCSR graph(6);
-
-    graph.addEdge(0, 1, 1.0, 1.0);
-    graph.addEdge(1, 2, 1.0, 2.0);
-    graph.addEdge(2, 3, 1.0, 1.0);
-    graph.addEdge(3, 4, 1.0, 2.0);
-    graph.addEdge(4, 5, 1.0, 1.0);
-    graph.addEdge(5, 0, 1.0, 3.0);
-    graph.addEdge(0, 3, 1.0, 4.0);
-
-    graph.finalize();
-    return graph;
+inline TestGraph makeWeightedCycleGraph6() {
+    std::vector<TestGraph::InputEdge> edges = {
+        {0, 1, EdgeData{1.0, 1.0}},
+        {1, 2, EdgeData{1.0, 2.0}},
+        {2, 3, EdgeData{1.0, 1.0}},
+        {3, 4, EdgeData{1.0, 2.0}},
+        {4, 5, EdgeData{1.0, 1.0}},
+        {5, 0, EdgeData{1.0, 3.0}},
+        {0, 3, EdgeData{1.0, 4.0}},
+    };
+    return makeGraphFromEdges(6, edges);
 }
 
 inline std::vector<int> identityPermutation(int n) {
@@ -107,26 +110,30 @@ inline std::vector<int> identityPermutation(int n) {
     return permutation;
 }
 
-inline std::vector<double> currentGraphDistances(const IGraph& graph) {
+inline std::vector<double> currentGraphDistances(const TestGraph& graph) {
     std::vector<double> distances;
     distances.reserve(graph.getNumDirectedEdges());
 
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-        distances.push_back(graph.getEdgeDistance(e));
+        distances.push_back(graph.edgeData(e).weight);
     }
 
     return distances;
 }
 
-inline std::vector<double> unitDistances(const IGraph& graph) {
+inline std::vector<double> unitDistances(const TestGraph& graph) {
     return std::vector<double>(graph.getNumDirectedEdges(), 1.0);
 }
 
-inline std::vector<double> increasingDistances(const IGraph& graph) {
+inline std::vector<double> increasingDistances(const TestGraph& graph) {
     std::vector<double> distances(graph.getNumDirectedEdges());
 
+    // Each undirected edge shares a single weight value across both of its
+    // directed ids (directedId >> 1 == undirected edge id), so both
+    // directions must be assigned the same distance for the value to stick.
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-        distances[e] = 1.0 + static_cast<double>(e % 5);
+        const int undirected = e >> 1;
+        distances[e] = 1.0 + static_cast<double>(undirected % 5);
     }
 
     return distances;

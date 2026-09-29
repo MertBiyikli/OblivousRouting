@@ -26,7 +26,7 @@ TEST_CASE("FRT oracle builds a valid flat HST",
     FRT<FlatHST> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidFlatHST(tree, graph->getNumNodes());
+    requireValidFlatHST(tree.value(), graph->getNumNodes());
 }
 
 TEST_CASE("FastCKR oracle builds a valid flat HST",
@@ -38,7 +38,7 @@ TEST_CASE("FastCKR oracle builds a valid flat HST",
     FastCKR<FlatHST> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidFlatHST(tree, graph->getNumNodes());
+    requireValidFlatHST(tree.value(), graph->getNumNodes());
 }
 
 TEST_CASE("MST oracle builds a valid flat HST",
@@ -50,7 +50,7 @@ TEST_CASE("MST oracle builds a valid flat HST",
     TreeMST<FlatHST> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidFlatHST(tree, graph->getNumNodes());
+    requireValidFlatHST(tree.value(), graph->getNumNodes());
 }
 
 TEST_CASE("FRT oracle builds a valid pointer HST",
@@ -62,7 +62,7 @@ TEST_CASE("FRT oracle builds a valid pointer HST",
     FRT<std::shared_ptr<HSTNode>> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidPointerHST(tree, graph->getNumNodes());
+    requireValidPointerHST(tree.value(), graph->getNumNodes());
 }
 
 TEST_CASE("FastCKR oracle builds a valid pointer HST",
@@ -74,7 +74,7 @@ TEST_CASE("FastCKR oracle builds a valid pointer HST",
     FastCKR<std::shared_ptr<HSTNode>> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidPointerHST(tree, graph->getNumNodes());
+    requireValidPointerHST(tree.value(), graph->getNumNodes());
 }
 
 TEST_CASE("MST oracle builds a valid pointer HST",
@@ -86,5 +86,5 @@ TEST_CASE("MST oracle builds a valid pointer HST",
     TreeMST<std::shared_ptr<HSTNode>> oracle(*graph);
     auto tree = oracle.getTree(distances);
 
-    requireValidPointerHST(tree, graph->getNumNodes());
+    requireValidPointerHST(tree.value(), graph->getNumNodes());
 }

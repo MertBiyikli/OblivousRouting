@@ -32,7 +32,7 @@ TEST_CASE("MST algorithm returns n-1 edges on a connected graph",
         REQUIRE(v < graph->getNumNodes());
         REQUIRE(u != v);
 
-        REQUIRE(graph->getEdgeId(u, v) != INVALID_EDGE_ID);
+        REQUIRE(graph->edgeId(u, v) != INVALID_EDGE_ID);
 
         unique_edges.insert(normalizedEdge(u, v));
     }

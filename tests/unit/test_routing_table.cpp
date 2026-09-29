@@ -1,20 +1,20 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
-#include "data_structures/graph/graph_csr.h"
+#include "data_structures/graph/graph.h"
 #include "../../include/routing/routing_table.h"
 #include "routing/storage/allpair_routing_table.h"
 #include "routing/storage/linear_routing_table.h"
 
 using Catch::Approx;
 
-static GraphCSR createSimpleGraph() {
-    GraphCSR graph(4);
-    graph.addEdge(0, 1, 1.0, 1.0);
-    graph.addEdge(1, 2, 1.0, 1.0);
-    graph.addEdge(2, 3, 1.0, 1.0);
-    graph.addEdge(1, 3, 1.0, 1.0);
-    graph.finalize();
-    return graph;
+static optimized::Graph<EdgeData> createSimpleGraph() {
+    std::vector<optimized::Graph<EdgeData>::InputEdge> input = {
+        {0, 1, EdgeData{1.0, 1.0}},
+        {1, 2, EdgeData{1.0, 1.0}},
+        {2, 3, EdgeData{1.0, 1.0}},
+        {1, 3, EdgeData{1.0, 1.0}},
+    };
+    return optimized::Graph<EdgeData>(4, input);
 }
 
 TEST_CASE("AllPairRoutingTable - Construction and Initialization", "[RoutingTable]") {
