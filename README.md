@@ -39,8 +39,8 @@ We provide two variants for the electrical flow solver:
 
 ### Getting Started
 #### Prerequisites
-- C++ compiler (supporting C++11 or later)
-- CMake (version 3.20 or later)
+- C++23
+- CMake >= 3.25
 - Boost Libraries
 - Eigen3
 - OR-Tools (for LP solving)
