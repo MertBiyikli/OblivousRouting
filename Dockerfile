@@ -1,6 +1,6 @@
 # Reproducible application build.
 #   docker build --build-arg TOOLCHAIN_IMAGE=ghcr.io/...@sha256:... .
-ARG TOOLCHAIN_IMAGE=ghcr.io/mertbiyikli/ortools:linux-noble-20260810-ortools-v9.12-r1
+ARG TOOLCHAIN_IMAGE=ghcr.io/mertbiyikli/ortools@sha256:9f9e38fa700e5bdea953bd1ca43efe5d0670e4a153d877b659a2e83ada6495d7
 
 FROM ${TOOLCHAIN_IMAGE} AS builder
 WORKDIR /src
