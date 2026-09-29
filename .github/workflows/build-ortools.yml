@@ -18,7 +18,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/mertbiyikli/ortools
-  VERSION_TAG: linux-noble-20260810-ortools-v9.12-r1
+  VERSION_TAG: linux-noble-20260810-ortools-v9.12-r2
 
 jobs:
   build:
