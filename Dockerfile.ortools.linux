@@ -1,7 +1,3 @@
-# Canonical Linux toolchain used by CI.
-#
-# Base image is pinned by both dated tag and immutable multi-platform digest.
-# Ubuntu 24.04+ supports APT snapshots natively.
 FROM ubuntu:noble-20260810@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -15,14 +11,17 @@ ARG CATCH2_COMMIT=53d0d913a422d356b23dd927547febdf69ee9081
 
 ENV ORTOOLS_ROOT=/usr/local
 
-# Freeze Ubuntu packages to one archive snapshot. This fixes transitive APT
-# dependencies as well as packages named explicitly below.
+# Bootstrap TLS trust before enabling the HTTPS snapshot service.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Everything from this point onward comes from the fixed Ubuntu snapshot.
 RUN printf 'APT::Snapshot "%s";\n' "${APT_SNAPSHOT}" \
       > /etc/apt/apt.conf.d/50-oblivious-routing-snapshot \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
-        ca-certificates \
         ccache \
         cmake \
         git \
@@ -42,7 +41,6 @@ RUN printf 'APT::Snapshot "%s";\n' "${APT_SNAPSHOT}" \
         coinor-libosi-dev \
         coinor-libcoinutils-dev \
     && rm -rf /var/lib/apt/lists/*
-
 # Build the exact OR-Tools source revision.
 RUN git init /tmp/or-tools \
     && git -C /tmp/or-tools remote add origin https://github.com/google/or-tools.git \
