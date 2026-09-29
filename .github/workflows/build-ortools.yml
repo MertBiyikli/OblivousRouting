@@ -1,8 +1,9 @@
-name: Build OR-Tools Image
+name: Build Linux Toolchain Image
 
 on:
   workflow_dispatch:
   push:
+    branches: [master]
     paths:
       - Dockerfile.ortools.linux
       - .github/workflows/build-ortools.yml
@@ -11,33 +12,55 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: build-linux-toolchain-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
-  ORTOOLS_IMAGE: ghcr.io/mertbiyikli/ortools:linux
-  ORTOOLS_CACHE: ghcr.io/mertbiyikli/ortools:linux-cache
+  IMAGE: ghcr.io/mertbiyikli/ortools
+  VERSION_TAG: linux-noble-20260810-ortools-v9.12-r1
 
 jobs:
-  build-ortools-linux:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
 
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
+      # docker/login-action@v3
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # docker/setup-buildx-action@v3
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
-      - name: Build and push OR-Tools base image
-        uses: docker/build-push-action@v5
+      # docker/build-push-action@v6
+      - name: Build and push toolchain image
+        id: image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: ./Dockerfile.ortools.linux
+          platforms: linux/amd64
           push: true
-          tags: ${{ env.ORTOOLS_IMAGE }}
-          cache-from: type=registry,ref=${{ env.ORTOOLS_CACHE }}
-          cache-to: type=registry,ref=${{ env.ORTOOLS_CACHE }},mode=max
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION_TAG }}
+            ${{ env.IMAGE }}:toolchain-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Print immutable image reference
+        shell: bash
+        run: |
+          echo "Use this exact value in ci.yml and Dockerfile:"
+          echo "${IMAGE}@${{ steps.image.outputs.digest }}"
