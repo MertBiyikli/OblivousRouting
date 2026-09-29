@@ -66,7 +66,7 @@ jobs:
     # After build-ortools.yml publishes the image, replace this versioned tag
     # with the exact ghcr.io/...@sha256:<digest> printed by that workflow.
     container:
-      image: ghcr.io/mertbiyikli/ortools:linux-noble-20260810-ortools-v9.12-r1
+      image: ghcr.io/mertbiyikli/ortools@sha256:<THE_DIGEST_FROM_BUILD_WORKFLOW>
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
