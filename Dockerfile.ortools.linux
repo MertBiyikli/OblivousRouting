@@ -1,27 +1,96 @@
-FROM ubuntu:24.04
+# Canonical Linux toolchain used by CI.
+#
+# Base image is pinned by both dated tag and immutable multi-platform digest.
+# Ubuntu 24.04+ supports APT snapshots natively.
+FROM ubuntu:noble-20260810@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
+ARG APT_SNAPSHOT=20260810T000000Z
+
+# OR-Tools v9.12
+ARG ORTOOLS_COMMIT=b8e881fbde473a9e33e0dac475e498559eb0459d
+
+# Catch2 v3.5.0
+ARG CATCH2_COMMIT=53d0d913a422d356b23dd927547febdf69ee9081
+
 ENV ORTOOLS_ROOT=/usr/local
 
-RUN apt-get update && apt-get install -y \
-    git cmake build-essential ninja-build \
-    libz-dev libbz2-dev libeigen3-dev \
-    libgmp-dev \
-    libboost-all-dev \
-    libboost-program-options-dev \
-    libboost-serialization-dev \
+# Freeze Ubuntu packages to one archive snapshot. This fixes transitive APT
+# dependencies as well as packages named explicitly below.
+RUN printf 'APT::Snapshot "%s";\n' "${APT_SNAPSHOT}" \
+      > /etc/apt/apt.conf.d/50-oblivious-routing-snapshot \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        ccache \
+        cmake \
+        git \
+        ninja-build \
+        pkg-config \
+        libfmt-dev \
+        libz-dev \
+        libbz2-dev \
+        libeigen3-dev \
+        libgmp-dev \
+        libboost-dev \
+        libboost-program-options-dev \
+        libboost-serialization-dev \
+        coinor-libcbc-dev \
+        coinor-libclp-dev \
+        coinor-libcgl-dev \
+        coinor-libosi-dev \
+        coinor-libcoinutils-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/ddemidov/amgcl.git --depth 1 /tmp/amgcl && \
-    cmake -S /tmp/amgcl -B /tmp/amgcl/build -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake --install /tmp/amgcl/build && \
-    rm -rf /tmp/amgcl
+# Build the exact OR-Tools source revision.
+RUN git init /tmp/or-tools \
+    && git -C /tmp/or-tools remote add origin https://github.com/google/or-tools.git \
+    && git -C /tmp/or-tools fetch --depth 1 origin "${ORTOOLS_COMMIT}" \
+    && git -C /tmp/or-tools checkout --detach FETCH_HEAD \
+    && test "$(git -C /tmp/or-tools rev-parse HEAD)" = "${ORTOOLS_COMMIT}" \
+    && cmake -S /tmp/or-tools -B /tmp/or-tools-build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DBUILD_CXX=ON \
+        -DBUILD_DEPS=ON \
+        -DBUILD_TESTING=OFF \
+        -DBUILD_SAMPLES=OFF \
+        -DBUILD_EXAMPLES=OFF \
+        -DBUILD_PYTHON=OFF \
+        -DBUILD_JAVA=OFF \
+        -DBUILD_DOTNET=OFF \
+    && cmake --build /tmp/or-tools-build --target install --parallel \
+    && rm -rf /tmp/or-tools /tmp/or-tools-build
 
-RUN git clone https://github.com/google/or-tools.git --branch v9.6 --depth 1 /tmp/or-tools && \
-    cmake -S /tmp/or-tools -B /tmp/ortools-build -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_DEPS=ON \
-      -DBUILD_SAMPLES=OFF && \
-    cmake --build /tmp/ortools-build -j"$(nproc)" && \
-    cmake --install /tmp/ortools-build --prefix /usr/local && \
-    rm -rf /tmp/or-tools /tmp/ortools-build
+# Install the exact Catch2 revision into the toolchain so CI configuration has
+# no FetchContent network dependency.
+RUN git init /tmp/catch2 \
+    && git -C /tmp/catch2 remote add origin https://github.com/catchorg/Catch2.git \
+    && git -C /tmp/catch2 fetch --depth 1 origin "${CATCH2_COMMIT}" \
+    && git -C /tmp/catch2 checkout --detach FETCH_HEAD \
+    && test "$(git -C /tmp/catch2 rev-parse HEAD)" = "${CATCH2_COMMIT}" \
+    && cmake -S /tmp/catch2 -B /tmp/catch2-build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCATCH_BUILD_TESTING=OFF \
+    && cmake --build /tmp/catch2-build --target install --parallel \
+    && rm -rf /tmp/catch2 /tmp/catch2-build
+
+# Capture the exact toolchain visible to every CI job.
+RUN { \
+      echo "APT_SNAPSHOT=${APT_SNAPSHOT}"; \
+      echo "ORTOOLS_COMMIT=${ORTOOLS_COMMIT}"; \
+      echo "CATCH2_COMMIT=${CATCH2_COMMIT}"; \
+      echo; \
+      c++ --version | head -n1; \
+      cmake --version | head -n1; \
+      ninja --version; \
+      ccache --version | head -n1; \
+      pkg-config --version; \
+      pkg-config --modversion fmt || true; \
+      pkg-config --modversion cbc || true; \
+      pkg-config --modversion clp || true; \
+    } > /opt/oblivious-routing-toolchain.txt
+
+WORKDIR /workspace
