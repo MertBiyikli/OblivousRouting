@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(ObliviousRouting VERSION 0.0.1 DESCRIPTION "E-Routing: Network Resilience and Capacity Planning Engine." LANGUAGES CXX)
+project(E-Routing VERSION 0.0.1 DESCRIPTION "E-Routing: Network Resilience and Capacity Planning Engine." LANGUAGES CXX)
 
 # Set CMake policies early to suppress warnings
 if(POLICY CMP0144)
@@ -13,77 +13,24 @@ endif()
 # ============================================================================
 # Options
 # ============================================================================
-option(BUILD_TESTS "Build unit and integration tests" OFF)
+option(BUILD_TESTING "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
 option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" ON)
+option(OR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 # ============================================================================
-# Dependencies
+# Build helpers and dependencies
 # ============================================================================
-find_package(fmt CONFIG REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(Cbc       REQUIRED IMPORTED_TARGET cbc)
-pkg_check_modules(OsiCbc    REQUIRED IMPORTED_TARGET osi-cbc)
-pkg_check_modules(Clp       REQUIRED IMPORTED_TARGET clp)
-pkg_check_modules(OsiClp    REQUIRED IMPORTED_TARGET osi-clp)
-pkg_check_modules(Cgl       REQUIRED IMPORTED_TARGET cgl)
-pkg_check_modules(Osi       REQUIRED IMPORTED_TARGET osi)
-pkg_check_modules(CoinUtils REQUIRED IMPORTED_TARGET coinutils)
-
-find_package(ortools CONFIG REQUIRED)
-# ---------------------------------------------------------------------------
-# OR-Tools 9.12 workaround
-#
-# The installed OR-Tools CMake package exports MathOpt OBJECT libraries with
-# INTERFACE_SOURCES referring to internal object targets that are not exported.
-# This causes CMake generation to fail with:
-#
-#   $<TARGET_OBJECTS:ortools_math_opt_core>
-#   $<TARGET_OBJECTS:ortools_math_opt_constraints_indicator>
-#
-# We only use the installed OR-Tools library, so these interface object sources
-# are not needed.
-# ---------------------------------------------------------------------------
-
-foreach(target
-        ortools::ortools_math_opt
-        ortools::ortools_math_opt_constraints)
-
-    if(TARGET ${target})
-        set_property(
-                TARGET ${target}
-                PROPERTY INTERFACE_SOURCES ""
-        )
-    endif()
-
-endforeach()
-get_filename_component(ORTOOLS_PREFIX "${ortools_DIR}/../../.." REALPATH)
-set(ORTOOLS_INCLUDE_DIR "${ORTOOLS_PREFIX}/include")
-
-if(NOT EXISTS "${ORTOOLS_INCLUDE_DIR}/ortools/linear_solver/linear_solver.h")
-    message(FATAL_ERROR "OR-Tools headers were not found at: ${ORTOOLS_INCLUDE_DIR}")
-endif()
-
-
-find_package(Boost REQUIRED COMPONENTS program_options serialization)
-find_package(Eigen3 REQUIRED)
-if(OR_ENABLE_OPENMP)
-    find_package(OpenMP REQUIRED COMPONENTS CXX)
-endif()
-
-# xcut fetches spdlog. Make that spdlog use the same external fmt.
-set(SPDLOG_FMT_EXTERNAL ON CACHE BOOL
-        "Use external fmt for spdlog" FORCE)
-
-add_subdirectory(${CMAKE_SOURCE_DIR}/extern/xcut EXCLUDE_FROM_ALL)
-
-target_link_libraries(xcut_lib PUBLIC fmt::fmt)
+include(ProjectOptions)
+include(Dependencies)
 
 # ============================================================================
 # Core library: all production code except app/main.cpp
@@ -207,11 +154,11 @@ add_library(oblivious_routing_core STATIC
 
 target_include_directories(oblivious_routing_core
         PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/source
-        ${CMAKE_SOURCE_DIR}/experiments
-        ${CMAKE_SOURCE_DIR}/extern/amgcl
-        ${CMAKE_SOURCE_DIR}/extern/xcut/include
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/source
+        ${PROJECT_SOURCE_DIR}/experiments
+        ${PROJECT_SOURCE_DIR}/extern/amgcl
+        ${PROJECT_SOURCE_DIR}/extern/xcut/include
         ${ORTOOLS_INCLUDE_DIR}
 )
 
@@ -242,159 +189,25 @@ target_link_libraries(oblivious_routing
         oblivious_routing_core
 )
 
-option(OR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
-
-if(OR_ENABLE_ASAN)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        target_compile_options(
-                oblivious_routing_core
-                PUBLIC
-                -fsanitize=address
-                -fno-omit-frame-pointer
-        )
-
-        target_link_options(
-                oblivious_routing_core
-                PUBLIC
-                -fsanitize=address
-        )
-    elseif(MSVC)
-        target_compile_options(
-                oblivious_routing_core
-                PUBLIC /fsanitize=address
-        )
-    endif()
-endif()
-
-if(OR_ENABLE_WARNINGS)
-    if(MSVC)
-        target_compile_options(
-                oblivious_routing_core
-                PRIVATE /W4 /permissive-
-        )
-    else()
-        target_compile_options(
-                oblivious_routing_core
-                PRIVATE
-                -Wall
-                -Wextra
-                -Wpedantic
-        )
-    endif()
-endif()
-
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+or_apply_project_options(oblivious_routing_core)
+or_apply_project_options(oblivious_routing)
 
 # ============================================================================
 # Testing
 # ============================================================================
-if(BUILD_TESTS)
-    enable_testing()
+include(CTest)
 
-    find_package(Catch2 3 QUIET)
-
-    if(NOT Catch2_FOUND)
-        message(STATUS "Catch2 not found, fetching from GitHub...")
-        include(FetchContent)
-        FetchContent_Declare(
-                Catch2
-                GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-                GIT_TAG v3.5.0
-        )
-        FetchContent_MakeAvailable(Catch2)
-    endif()
-
-    include(CTest)
-    include(Catch)
-
-    # ------------------------------------------------------------------------
-    # Unit tests
-    # ------------------------------------------------------------------------
-    add_executable(unit_tests
-            tests/common/utils.h
-            # Graph data structures
-            tests/unit/graph/test_graph_common.cpp
-            tests/unit/graph/test_graph_csr.cpp
-            tests/unit/graph/test_graph_adj.cpp
-            # Tree oracles
-            tests/unit/tree/test_tree_oracle_common.cpp
-            tests/unit/tree/test_fast_ckr.cpp
-            tests/unit/tree/test_frt.cpp
-            tests/unit/tree/test_mst.cpp
-            tests/unit/test_electrical_flow.cpp
-            tests/unit/test_routing_table.cpp
-    )
-
-    target_include_directories(
-            unit_tests PRIVATE tests/unit/graph/ tests/unit/tree/ tests/common/ include/
-    )
-
-    target_link_libraries(unit_tests
-            PRIVATE
-            oblivious_routing_core
-            Catch2::Catch2WithMain
-    )
-
-    target_compile_definitions(unit_tests PRIVATE
-            PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
-            PROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
-    )
-
-    catch_discover_tests(unit_tests
-            TEST_PREFIX "unit."
-            REPORTER console
-    )
-
-    # ------------------------------------------------------------------------
-    # Integration tests
-    # ------------------------------------------------------------------------
-    add_executable(integration_tests
-            tests/integration/electrical/test_electrical_mwu.cpp
-            tests/integration/electrical/test_electrical_mwu_io.cpp
-
-            tests/integration/tree/test_tree_oracle.cpp
-            tests/integration/tree/test_tree_transform.cpp
-            tests/integration/tree/test_mst.cpp
-            tests/integration/tree/test_tree_mwu.cpp
-
-            tests/integration/lp/test_lp.cpp
-            tests/integration/test_routing_engine.cpp
-    )
-
-    target_link_libraries(integration_tests
-            PRIVATE
-            oblivious_routing_core
-            Catch2::Catch2WithMain
-    )
-
-    target_include_directories(
-            integration_tests PRIVATE tests/common/ include/
-    )
-
-    target_compile_definitions(integration_tests
-            PRIVATE
-            PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-            PROJECT_BINARY_DIR="${CMAKE_BINARY_DIR}"
-    )
-
-    catch_discover_tests(integration_tests
-            TEST_PREFIX "integration."
-            PROPERTIES LABELS "integration"
-            REPORTER console
-    )
-
-    # ------------------------------------------------------------------------
-    # Convenience target
-    # ------------------------------------------------------------------------
-    add_custom_target(run_tests
-            COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            DEPENDS unit_tests integration_tests
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-
-    message(STATUS "Tests enabled.")
-    message(STATUS "Build with: cmake --build .")
-    message(STATUS "Run with:   cmake --build . --target run_tests")
-else()
-    message(STATUS "Tests disabled. Enable with: -DBUILD_TESTS=ON")
+if(BUILD_TESTING)
+    add_subdirectory(tests)
 endif()
+
+# ============================================================================
+# Configuration summary
+# ============================================================================
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "OpenMP enabled: ${OR_ENABLE_OPENMP}")
+message(STATUS "Tests enabled: ${BUILD_TESTING}")
+message(STATUS "Warnings enabled: ${OR_ENABLE_WARNINGS}")
+message(STATUS "ASan enabled: ${OR_ENABLE_ASAN}")
