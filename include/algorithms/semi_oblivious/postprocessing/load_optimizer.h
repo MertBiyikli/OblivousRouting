@@ -10,6 +10,7 @@
 #include "../../../routing/routing_table.h"
 #include "../preprocessing/candidate_routing_scheme.h"
 #include <optional>
+#include <memory>
 
 struct SemiObliviousOptimizationResult {
     std::unique_ptr<RoutingScheme> scheme;
