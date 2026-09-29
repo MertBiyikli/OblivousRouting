@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - Dockerfile.ortools.linux
+      - .github/workflows/build-ortools.yml
   pull_request:
     branches: [master]
   workflow_dispatch:
