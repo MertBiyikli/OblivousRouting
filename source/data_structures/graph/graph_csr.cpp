@@ -210,6 +210,7 @@ double GraphCSR::getEdgeDistance(int u, int v) const  {
         }
     }
     assert(false && "GraphCSR::getEdgeDistance: Edge not found");
+    return -1.0;
 }
 
 Result<void> GraphCSR::updateEdgeDistance(int u, int v, double dist) {

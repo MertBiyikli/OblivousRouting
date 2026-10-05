@@ -150,6 +150,7 @@ add_library(oblivious_routing_core STATIC
         include/visualization/failure_analysis.h
         source/visualization/failure_analysis.cpp
         include/data_structures/graph/graph.h
+        include/io/cli.h
 )
 
 target_include_directories(oblivious_routing_core

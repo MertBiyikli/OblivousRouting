@@ -404,7 +404,7 @@ private:
             out << "    \"average_oracle_time_microseconds\": "
                 << mwu.averageOracleTime() << "\n";
 
-            out << "  },\n";
+            out << "  }\n";
         }
 
         if (!result.expander_metrics.empty()) {
@@ -415,30 +415,32 @@ private:
         }
 
 
-        out << "  \"demand_evaluations\": [\n";
+        if (!result.demand_evaluations.empty())
+        {
+            out << ",\n";
+            out << "  \"demand_evaluations\": [\n";
 
-        for (std::size_t i = 0; i < result.demand_evaluations.size(); ++i) {
-            const auto& eval = result.demand_evaluations[i];
+            for (std::size_t i = 0; i < result.demand_evaluations.size(); ++i) {
+                const auto& eval = result.demand_evaluations[i];
 
-            out << "    {\n";
-            out << "      \"demand_model\": \""
-                << jsonEscape(demandModelName(eval.demand_type)) << "\",\n";
-            out << "      \"congestion\": "
-                << eval.congestion << ",\n";
-            out << "      \"runtime_microseconds\": "
-                << eval.runtime_microseconds << "\n";
-            out << "    }";
+                out << "    {\n";
+                out << "      \"demand_model\": \""
+                    << jsonEscape(demandModelName(eval.demand_type)) << "\",\n";
+                out << "      \"congestion\": "
+                    << eval.congestion << ",\n";
+                out << "      \"runtime_microseconds\": "
+                    << eval.runtime_microseconds << "\n";
+                out << "    }";
 
-            if (i + 1 < result.demand_evaluations.size()) {
-                out << ",";
+                if (i + 1 < result.demand_evaluations.size()) {
+                    out << ",";
+                }
+
+                out << "\n";
             }
 
-            out << "\n";
+            out << "  ]\n";
         }
-
-        out << "  ]\n";
-
-
         out << "}\n";
 
 
@@ -522,7 +524,7 @@ private:
         << metrics.max_conservation_error
         << "\n";
 
-    out << "  },\n";
+    out << "  }\n";
 }
 };
 

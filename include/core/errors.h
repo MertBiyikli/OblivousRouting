@@ -13,6 +13,7 @@ enum class ErrorCode {
     FormatNotFound,
     InvalidGraph,
     InputNotFound,
+    InvalidGraphFormat,
     InvalidDemand,
     InvalidSolver,
     InvalidRouting,

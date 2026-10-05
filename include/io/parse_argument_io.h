@@ -44,24 +44,29 @@ inline std::optional<DemandModelType> parse_demand_model_token(std::string s) {
 
 // Generic list parser template
 template<typename T, typename Parser>
-inline Result<std::vector<T>> parse_list(const std::string& s, Parser parser) {
+Result<std::vector<T>> parse_list(const std::string& s, Parser parser) {
     std::vector<T> result;
     size_t start = 0;
     while (true) {
+
         size_t pos = s.find(',', start);
         std::string token = (pos == std::string::npos) ? s.substr(start) : s.substr(start, pos - start);
+
         auto val = parser(token);
-        if (!val) return makeErrorMessage(ErrorCode::InvalidArgument, "Input is null.");
+        if (!val)
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Input is null.");
         result.push_back(*val);
-        if (pos == std::string::npos) break;
+
+        if (pos == std::string::npos)
+            break;
         start = pos + 1;
     }
     if  (result.empty()) {
         return makeErrorMessage(ErrorCode::InvalidArgument, "Returned empty input.");
     }
-    else {
-         return (result);
-    }
+
+    return (result);
+
 }
 
 // Unified list parsers using generic template
