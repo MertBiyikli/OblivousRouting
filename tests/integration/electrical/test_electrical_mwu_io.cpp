@@ -72,18 +72,22 @@ TEST_CASE("Electrical solver CLI runs on a small LGF file with gravity demand",
     REQUIRE(std::filesystem::exists(dataset));
 
     const std::string command =
-        executable.string() + " solve " + dataset.string() + " --solver gravity";
+        "\"" + executable.string() + "\"" +
+        " solve" +
+        " --solver electrical" +
+        " --graph \"" + dataset.string() + "\"" +
+        " --demand gravity";
 
     const int exit_code = runCommand(command);
 
     REQUIRE(exit_code == 0);
 }
 
-TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
+TEST_CASE("Electrical solver CLI rejects missing required solver without crashing",
           "[integration][cli][electrical][error-handling]")
 {
     const std::filesystem::path executable =
-    std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
+        std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
 
     const std::filesystem::path dataset = tinyLgfDataset();
 
@@ -91,13 +95,13 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
     REQUIRE(std::filesystem::exists(dataset));
 
     const std::string command =
-        executable.string() +
-        " solve " +
-        dataset.string();
+        "\"" + executable.string() + "\"" +
+        " solve" +
+        " --graph \"" + dataset.string() + "\"";
 
     const int exit_code = runCommand(command);
 
-    REQUIRE(exit_code == 0);
+    REQUIRE(exit_code != 0);
 }
 
 TEST_CASE("Electrical solver conserves unit flow per source",
