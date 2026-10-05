@@ -71,11 +71,7 @@ TEST_CASE("Electrical solver CLI runs on a small LGF file with gravity demand",
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
 
-    const std::string command =
-        executable.string() +
-        " electrical " +
-        dataset.string() +
-        " gravity";
+    const std::string command = executable.string() +" solve " +dataset.string() +" gravity";
 
     const int exit_code = runCommand(command);
 
@@ -95,7 +91,7 @@ TEST_CASE("Electrical solver CLI rejects missing demand model without crashing",
 
     const std::string command =
         executable.string() +
-        " electrical " +
+        " solve " +
         dataset.string();
 
     const int exit_code = runCommand(command);
