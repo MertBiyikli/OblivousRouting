@@ -288,7 +288,7 @@ inline Result<std::unique_ptr<IGraph>> makegraph(GraphFormat type) {
 }
 
 
-inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg, int argc, char** argv) {
+inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg) {
     // Load or create graph
     auto graph = makegraph(cfg.graph_format);
     if ( !graph ){
@@ -311,9 +311,9 @@ inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg, int argc, char** 
     return std::move(graph.value());
 }
 
-inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(Config& cfg, int argc, char** argv) {
+inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(Config& cfg) {
     // Load using IGraph first
-    auto igraph = load_graph(cfg, argc, argv);
+    auto igraph = load_graph(cfg);
     if (!igraph) {
         return std::unexpected(igraph.error());
     }

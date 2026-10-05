@@ -16,7 +16,7 @@
 class RoutingEngine {
 public:
 
-    Result<void> entry(int argc, char **argv);
+    Result<void> entry(Config& cfg);
 
 
     Result<IRoutingResult> solve(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type);

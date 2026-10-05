@@ -42,21 +42,17 @@ std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {
 }
 
 
-Result<void> RoutingEngine::entry(int argc, char **argv) {
-    auto cfg = parse_parameter(argc, argv);
-    if (!cfg) {
-        return getError(cfg);
-    }
+Result<void> RoutingEngine::entry(Config &cfg) {
 
-    auto graph = load_graph_optimized(cfg.value(), argc, argv);
+    auto graph = load_graph_optimized(cfg);
     if (!graph) {
         return getError(graph);
     }
 
     RoutingEngine engine;
 
-    for (SolverType type: cfg.value().solvers) {
-        auto result = engine.solve(*graph.value(), cfg.value(), type);
+    for (SolverType type: cfg.solvers) {
+        auto result = engine.solve(*graph.value(), cfg, type);
 
         if (!result) {
             return getError(result);
@@ -64,16 +60,16 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
 
 
 
-        auto output = RoutingResultWriter::write(result.value(), cfg.value(), type);
+        auto output = RoutingResultWriter::write(result.value(), cfg, type);
         if (!output) {
             return getError(output);
         }
 
-        if (!cfg->visualization_output_directory.empty()) {
+        if (!cfg.visualization_output_directory.empty()) {
             for (const auto &visualization: result->visualization_results) {
                 const std::string filename = safeFileComponent(visualization.solver_name) + "__" + safeFileComponent(visualization.demand_model) + ".json";
 
-                const auto visualization_path = std::filesystem::path(cfg->visualization_output_directory) / filename;
+                const auto visualization_path = std::filesystem::path(cfg.visualization_output_directory) / filename;
 
                 auto visualization_output = RoutingVisualizationJsonExporter::write(visualization, visualization_path);
 
@@ -85,7 +81,7 @@ Result<void> RoutingEngine::entry(int argc, char **argv) {
     }
 
     m_graph = std::move(graph.value());
-    this->cfg = cfg.value();
+    this->cfg = cfg;
     return {};
 }
 
