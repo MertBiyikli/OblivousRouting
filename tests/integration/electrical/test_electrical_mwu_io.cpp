@@ -64,14 +64,15 @@ TEST_CASE("Electrical solver CLI runs on a small LGF file with gravity demand",
           "[integration][cli][electrical]")
 {
     const std::filesystem::path executable =
-    std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
+        std::filesystem::path(PROJECT_BINARY_DIR) / "oblivious_routing";
 
     const std::filesystem::path dataset = tinyLgfDataset();
 
     REQUIRE(std::filesystem::exists(executable));
     REQUIRE(std::filesystem::exists(dataset));
 
-    const std::string command = executable.string() +" solve " +dataset.string() +" gravity";
+    const std::string command =
+        executable.string() + " solve " + dataset.string() + " --solver gravity";
 
     const int exit_code = runCommand(command);
 
