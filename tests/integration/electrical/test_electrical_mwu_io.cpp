@@ -13,7 +13,7 @@ TEST_CASE("Electrical flow solver solves a tiny LGF dataset", "[integration][ele
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = load_graph_optimized(cfg, 0, nullptr);
+    auto graph = load_graph_optimized(cfg);
 
     REQUIRE(graph);
     REQUIRE(graph.value());
@@ -36,7 +36,7 @@ TEST_CASE("Electrical flow solver works with gravity demand model",
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = load_graph_optimized(cfg, 0, nullptr);
+    auto graph = load_graph_optimized(cfg);
     REQUIRE(graph);
 
     cfg.demand_models.push_back(DemandModelType::GRAVITY); // adapt to your real enum/name
@@ -111,7 +111,7 @@ TEST_CASE("Electrical solver conserves unit flow per source",
 
     Config cfg = makeElectricalConfig();
     cfg.filename = dataset;
-    auto graph = load_graph_optimized(cfg, 0, nullptr);
+    auto graph = load_graph_optimized(cfg);
     REQUIRE(graph);
 
     ElectricalMWU solver(*(graph.value()), 0, true);
