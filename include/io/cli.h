@@ -239,14 +239,22 @@ inline Result<Command> parse(int argc, char** argv)
 
 
         /*
-         * Skip:
+         * Boost.Program_options treats argv[0] as the program name.
          *
-         * argv[0] = executable
-         * argv[1] = solve
-         *
-         * Boost therefore receives only solve arguments.
+         * We pass the "solve" subcommand as that program name,
+         * which causes Boost to start parsing at the first actual
+         * option (--solver, --graph, ...).
          */
-        boost::program_options::store(boost::program_options::command_line_parser(argc - 2,argv + 2).options(options).run(),variables);
+        boost::program_options::store(
+            boost::program_options::command_line_parser(
+                argc - 1,
+                argv + 1
+            )
+            .options(options)
+            .run(),
+            variables
+        );
+
         boost::program_options::notify(variables);
 
         if (variables.count("help")) {
