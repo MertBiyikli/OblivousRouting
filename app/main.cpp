@@ -24,11 +24,10 @@ int main(int argc, char **argv) {
         break;
     }
 
-
-
     // Running engine
+    auto cfg = cmd.value().config;
     RoutingEngine engine;
-    auto res = engine.entry(cmd.value().config);
+    auto res = engine.entry(cfg);
     if (!res) {
         std::cerr << "Error: " << getError(res).error().message << std::endl;
         return 1;

@@ -162,7 +162,7 @@ std::string help(std::string_view executable) {
     const auto options = solveOptions();
 
     out
-        << "E-Routing\n"
+        << "E-Routing: Network Resilience and Capacity Planning Engine.\n"
         << "\n"
 
         << "Usage:\n"
