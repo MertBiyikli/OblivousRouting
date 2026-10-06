@@ -42,12 +42,7 @@ public:
     double load_computation_time{};
 
     [[nodiscard]] bool empty() const {
-        return iteration_count == 0
-            || solve_time == 0.0
-            || transformation_time == 0.0
-            || mwu_weight_update_time == 0.0
-            || load_computation_time == 0.0
-            || oracle_running_times.empty();
+        return iteration_count == 0;
     }
 
     [[nodiscard]] double averageOracleTime() const {
@@ -145,6 +140,18 @@ struct IRoutingResult {
      * One visualization result per evaluated demand model.
      */
     std::vector<RoutingVisualizationResult> visualization_results;
+
+};
+
+/*
+ * The result of a routing experiment, which may include multiple solvers.
+ */
+struct RoutingExperimentResult{
+    std::string graph_name;
+    std::string graph_path;
+    int nodes = 0, edges = 0;
+
+    std::vector<IRoutingResult> solver_results;
 
 };
 

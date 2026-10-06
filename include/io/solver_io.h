@@ -58,8 +58,7 @@ static const std::map<std::string, SolverType> SOLVER_MAP{
 };
 
 
-inline std::optional<std::unique_ptr<ISolver>>
-makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
+inline std::optional<std::unique_ptr<ISolver>> makeSolver(SolverType type, optimized::Graph<EdgeData>& g) {
     // Factory with cycle removal strategy support for TreeMWU-based solvers
     switch (type) {
         case SolverType::ELECTRICAL_NAIVE:
@@ -145,6 +144,69 @@ inline std::string getSolverName(SolverType type) {
     };
     auto it = names.find(type);
     return (it != names.end()) ? it->second : "Unknown Solver";
+}
+
+inline std::string getSolverTypeName(SolverType type) {
+    switch (type) {
+    case SolverType::ELECTRICAL_NAIVE:
+        return "electrical_naive";
+
+    case SolverType::ELECTRICAL_SKETCHING:
+        return "electrical_sketching";
+
+    case SolverType::RAECKE_FRT_FLAT:
+        return "raecke_frt_flat";
+
+    case SolverType::RAECKE_CKR_FLAT:
+        return "raecke_ckr_flat";
+
+    case SolverType::RAECKE_RANDOM_MST_FLAT:
+        return "raecke_random_mst_flat";
+
+    case SolverType::RAECKE_FRT_MENDELSCALING_FLAT:
+        return "raecke_frt_mendel_flat";
+
+    case SolverType::RAECKE_CKR_MENDELSCALING_FLAT:
+        return "raecke_ckr_mendel_flat";
+
+    case SolverType::LP_APPLEGATE_COHEN:
+        return "lp_applegate_cohen";
+
+    case SolverType::ELECTRICAL_PARALLEL_BATCHES:
+        return "electrical_parallel";
+
+    case SolverType::RAECKE_FRT_POINTER:
+        return "raecke_frt_pointer";
+
+    case SolverType::RAECKE_CKR_POINTER:
+        return "raecke_ckr_pointer";
+
+    case SolverType::RAECKE_RANDOM_MST_POINTER:
+        return "raecke_random_mst_pointer";
+
+    case SolverType::RAECKE_FRT_MENDELSCALING_POINTER:
+        return "raecke_frt_mendel_pointer";
+
+    case SolverType::RAECKE_CKR_MENDELSCALING_POINTER:
+        return "raecke_ckr_mendel_pointer";
+
+    case SolverType::SEMI_ELECTRICAL:
+        return "semi_electrical";
+
+    case SolverType::SEMI_TREE:
+        return "semi_tree";
+
+    case SolverType::EXPANDER_HIERARCHY:
+        return "expander_hierarchy";
+
+    case SolverType::SEMI_EXPANDER_HIERARCHY:
+        return "semi_expander_hierarchy";
+
+    case SolverType::EXPANDER_MWU:
+        return "expander_mwu";
+    }
+
+    return "unknown";
 }
 
 

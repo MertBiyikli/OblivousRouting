@@ -16,13 +16,17 @@
 class RoutingResultWriter
 {
 public:
-    static Result<void> write(const IRoutingResult& result,const Config& cfg,const SolverType& type)
+    static Result<void> write(const RoutingExperimentResult& exp,const Config& cfg)
     {
         /*
          * stdout requires no file handling.
          */
-        if (cfg.output_format == OutputFormat::COUT) {
-            writeCout(result);
+        if (cfg.output_format == OutputFormat::COUT)
+        {
+            for (const auto& result : exp.solver_results) {
+                writeCout(result);
+                std::cout << "\n";
+            }
             return {};
         }
 
@@ -50,99 +54,65 @@ public:
 
 
         /*
-         * Build output path.
-         */
+      * One experiment now produces one output file,
+      * regardless of the number of solvers.
+      */
         std::filesystem::path output_path;
 
         if (cfg.output_filename.empty()) {
-            output_path = std::filesystem::path("result") / ("run_" +safeFileName(getSolverName(type)) +extension);
+            output_path = std::filesystem::path("result") / ("run" + extension);
         } else {
-
             output_path = std::filesystem::path(cfg.output_filename);
-            if (cfg.solvers.size() > 1) {
-
-                const std::string stem =
-                    output_path.stem().string();
-
-                output_path =
-                    output_path.parent_path() /
-                    (
-                        stem +
-                        "_" +
-                        safeFileName(getSolverName(type)) +
-                        extension
-                    );
-
-            } else {
-
-                /*
-                 * Ensure extension matches selected format.
-                 */
-                output_path.replace_extension(extension);
-            }
+            output_path.replace_extension(extension);
         }
 
-
-        /*
-         * Create output directory if necessary.
-         */
         if (output_path.has_parent_path()) {
-
             std::error_code ec;
 
             std::filesystem::create_directories(output_path.parent_path(),ec);
 
             if (ec) {
                 return makeErrorMessage(ErrorCode::FileNotFound,
-                    "Failed to create output directory: " +output_path.parent_path().string() +" (" + ec.message() + ")");
+                    "Failed to create output directory: "
+                        + output_path.parent_path().string()
+                        + " ("
+                        + ec.message()
+                        + ")"
+                );
             }
         }
 
-
-        /*
-         * Open explicitly in truncate mode.
-         *
-         * One invocation produces one complete result file.
-         */
         std::ofstream file(output_path,std::ios::out | std::ios::trunc);
 
         if (!file.is_open()) {
             return makeErrorMessage(ErrorCode::FileNotFound,
-                "Failed to open output file: " +output_path.string());
+                "Failed to open output file: "+ output_path.string()
+            );
         }
 
-
-        /*
-         * Serialize.
-         */
         switch (cfg.output_format) {
-
         case OutputFormat::TEXT:
-            writeText(result, file);
+            for (const auto& result : exp.solver_results) {
+                writeText(result, file);
+                file << '\n';
+            }
             break;
 
         case OutputFormat::JSON:
-            writeJson(result, file);
+            writeJson(exp, cfg, file);
             break;
 
         default:
             return makeErrorMessage(ErrorCode::FormatNotFound,
-                "Unsupported output format."
-            );
+                "Unsupported output format.");
         }
 
-
-        /*
-         * Force buffered data to disk and verify the stream.
-         */
         file.flush();
 
         if (!file.good()) {
             return makeErrorMessage(ErrorCode::RuntimeError,
-                "Failed while writing output file: " +output_path.string());
+                "Failed while writing output file: "+ output_path.string());
         }
-
-        file.close();
 
         return {};
     }
@@ -483,269 +453,184 @@ private:
         return escaped;
     }
 
-    static void writeJson(const IRoutingResult& result,std::ostream& out)
+    static void writeJson(
+    const RoutingExperimentResult& experiment,
+    const Config& cfg,
+    std::ostream& out
+)
     {
         out << "{\n";
 
-        bool first_field = true;
-
-        auto nextField = [&]() {
-            if (!first_field) {
-                out << ",\n";
-            }
-
-            first_field = false;
-        };
-
-
         /*
-         * Basic metadata
+         * Schema metadata
          */
-        nextField();
-        out << "  \"date\": \""
+        out << "  \"schema_version\": \"1.0\",\n";
+
+        out << "  \"timestamp\": \""
             << jsonEscape(
                 std::format(
                     "{}",
                     std::chrono::system_clock::now()
                 )
             )
-            << "\"";
-
-
-        nextField();
-        out << "  \"solver\": \""
-            << jsonEscape(result.solver_name)
-            << "\"";
-
-
-        nextField();
-        out << "  \"graph\": \""
-            << jsonEscape(result.graph_name)
-            << "\"";
-
-
-        nextField();
-        out << "  \"nodes\": "
-            << result.nodes;
-
-
-        nextField();
-        out << "  \"edges\": "
-            << result.edges;
-
-
-        nextField();
-        out << "  \"status\": "
-            << static_cast<int>(result.status);
+            << "\",\n";
 
 
         /*
-         * Optional routing base
+         * Graph metadata
          */
-        if (!result.routing_base.empty()) {
-            nextField();
+        out << "  \"graph\": {\n";
 
-            out << "  \"routing_base\": \""
-                << jsonEscape(result.routing_base)
+        out << "    \"name\": \""
+            << jsonEscape(experiment.graph_name)
+            << "\",\n";
+
+        out << "    \"path\": \""
+            << jsonEscape(experiment.graph_path)
+            << "\",\n";
+
+        out << "    \"nodes\": "
+            << experiment.nodes
+            << ",\n";
+
+        out << "    \"edges\": "
+            << experiment.edges
+            << "\n";
+
+        out << "  },\n";
+
+
+        /*
+         * Run configuration
+         */
+        out << "  \"configuration\": {\n";
+
+        out << "    \"seed\": "
+            << cfg.seed
+            << ",\n";
+
+        out << "    \"threads\": "
+            << cfg.num_threads
+            << ",\n";
+
+        out << "    \"demand_models\": [";
+
+        for (std::size_t i = 0; i < cfg.demand_models.size(); ++i) {
+            if (i > 0) {
+                out << ", ";
+            }
+
+            out << "\""
+                << jsonEscape(
+                    demandModelName(cfg.demand_models[i])
+                )
                 << "\"";
         }
 
+        out << "]\n";
 
-        /*
-         * Runtime information
-         */
-        nextField();
-        out << "  \"total_runtime_microseconds\": "
-            << result.total_runtime_microseconds;
-
-
-        if (result.preprocessing_runtime_microseconds >= 0.0) {
-            nextField();
-
-            out << "  \"preprocessing_runtime_microseconds\": "
-                << result.preprocessing_runtime_microseconds;
-        }
-
-
-        if (result.solve_runtime_microseconds >= 0.0) {
-            nextField();
-
-            out << "  \"solve_runtime_microseconds\": "
-                << result.solve_runtime_microseconds;
-        }
+        out << "  },\n";
 
 
         /*
-         * Main result metrics
+         * Solver results
          */
-        nextField();
-        out << "  \"oblivious_ratio\": "
-            << result.oblivious_ratio;
+        out << "  \"solver_results\": [\n";
 
+        for (
+            std::size_t solver_index = 0;
+            solver_index < experiment.solver_results.size();
+            ++solver_index
+        ) {
+            const auto& result =
+                experiment.solver_results[solver_index];
 
-        if (result.candidate_paths > 0) {
-            nextField();
+            out << "    {\n";
 
-            out << "  \"candidate_paths\": "
-                << result.candidate_paths;
+            /*
+             * Solver identity
+             */
+            out << "      \"solver\": \""
+                << jsonEscape(result.solver_name)
+                << "\",\n";
 
+            out << "      \"solver_type\": \""
+                << jsonEscape(getSolverTypeName(result.type))
+                << "\",\n";
 
-            nextField();
+            out << "      \"status\": \""
+                << resultStatusName(result.status)
+                << "\"";
 
-            out << "  \"average_paths_per_pair\": "
-                << result.average_paths_per_pair;
-        }
-
-
-        /*
-         * MWU metrics
-         */
-        if (!result.mwu_metrics.empty()) {
-            const auto& mwu = result.mwu_metrics;
-
-            nextField();
-
-            out << "  \"mwu_metrics\": {\n";
-
-            out << "    \"iteration_count\": "
-                << mwu.iteration_count
-                << ",\n";
-
-            out << "    \"solve_time_microseconds\": "
-                << mwu.solve_time
-                << ",\n";
-
-            out << "    \"transformation_time_microseconds\": "
-                << mwu.transformation_time
-                << ",\n";
-
-            out << "    \"load_computation_time_microseconds\": "
-                << mwu.load_computation_time
-                << ",\n";
-
-            out << "    \"weight_update_time_microseconds\": "
-                << mwu.mwu_weight_update_time;
-
-            if (!mwu.oracle_running_times.empty()) {
+            if (!result.routing_base.empty()) {
                 out << ",\n";
 
-                out << "    \"average_oracle_time_microseconds\": "
-                    << mwu.averageOracleTime()
-                    << ",\n";
-
-                out << "    \"oracle_calls\": "
-                    << mwu.oracle_running_times.size()
-                    << "\n";
-            } else {
-                out << "\n";
+                out << "      \"routing_base\": \""
+                    << jsonEscape(result.routing_base)
+                    << "\"";
             }
 
-            out << "  }";
-        }
-
-
-        /*
-         * Expander hierarchy metrics
-         */
-        if (!result.expander_metrics.empty()) {
-            const auto& metrics = result.expander_metrics;
-
-            nextField();
-
-            out << "  \"expander_metrics\": {\n";
-
-            out << "    \"hierarchy_runtime_microseconds\": "
-                << metrics.hierarchy_runtime_microseconds
-                << ",\n";
-
-            out << "    \"tree_runtime_microseconds\": "
-                << metrics.tree_runtime_microseconds
-                << ",\n";
-
-            out << "    \"basis_flow_runtime_microseconds\": "
-                << metrics.basis_flow_runtime_microseconds
-                << ",\n";
-
-            out << "    \"hierarchy_levels\": "
-                << metrics.hierarchy_levels
-                << ",\n";
-
-            out << "    \"hierarchy_clusters\": "
-                << metrics.hierarchy_clusters
-                << ",\n";
+            out << ",\n";
 
 
             /*
-             * Array: clusters per level
+             * Runtime
              */
-            out << "    \"clusters_per_level\": [";
+            out << "      \"runtime\": {\n";
 
-            for (
-                std::size_t i = 0;
-                i < metrics.clusters_per_level.size();
-                ++i
-            ) {
-                if (i > 0) {
-                    out << ", ";
-                }
+            out << "        \"total_microseconds\": "
+                << result.total_runtime_microseconds;
 
-                out << metrics.clusters_per_level[i];
+            if (result.preprocessing_runtime_microseconds >= 0.0) {
+                out << ",\n";
+
+                out << "        \"preprocessing_microseconds\": "
+                    << result.preprocessing_runtime_microseconds;
             }
 
-            out << "],\n";
+            if (result.solve_runtime_microseconds >= 0.0) {
+                out << ",\n";
+
+                out << "        \"solve_microseconds\": "
+                    << result.solve_runtime_microseconds;
+            }
+
+            out << "\n";
+            out << "      },\n";
 
 
-            out << "    \"max_cluster_vertices\": "
-                << metrics.max_cluster_vertices
-                << ",\n";
+            /*
+             * Quality metrics
+             */
+            out << "      \"quality\": {\n";
 
-            out << "    \"average_cluster_vertices\": "
-                << metrics.average_cluster_vertices
-                << ",\n";
-
-            out << "    \"tree_nodes\": "
-                << metrics.tree_nodes
-                << ",\n";
-
-            out << "    \"tree_edges\": "
-                << metrics.tree_edges
-                << ",\n";
-
-            out << "    \"tree_depth\": "
-                << metrics.tree_depth
-                << ",\n";
-
-            out << "    \"basis_flows\": "
-                << metrics.basis_flows
-                << ",\n";
-
-            out << "    \"total_electrical_solves\": "
-                << metrics.total_electrical_solves
-                << ",\n";
-
-            out << "    \"average_electrical_solves\": "
-                << metrics.averageElectricalSolves()
-                << ",\n";
-
-            out << "    \"max_basis_embedding_congestion\": "
-                << metrics.max_basis_embedding_congestion
-                << ",\n";
-
-            out << "    \"max_conservation_error\": "
-                << metrics.max_conservation_error
+            out << "        \"oblivious_ratio\": "
+                << result.oblivious_ratio
                 << "\n";
 
-            out << "  }";
-        }
+            out << "      },\n";
 
 
-        /*
-         * Demand evaluations
-         */
-        if (!result.demand_evaluations.empty()) {
-            nextField();
+            /*
+             * Routing scheme information
+             */
+            out << "      \"routing_scheme\": {\n";
 
-            out << "  \"demand_evaluations\": [\n";
+            out << "        \"candidate_paths\": "
+                << result.candidate_paths
+                << ",\n";
+
+            out << "        \"average_paths_per_pair\": "
+                << result.average_paths_per_pair
+                << "\n";
+
+            out << "      },\n";
+
+
+            /*
+             * Demand evaluations
+             */
+            out << "      \"demand_evaluations\": [\n";
 
             for (
                 std::size_t i = 0;
@@ -755,28 +640,28 @@ private:
                 const auto& eval =
                     result.demand_evaluations[i];
 
-                out << "    {\n";
+                out << "        {\n";
 
-                out << "      \"demand_model\": \""
+                out << "          \"demand_model\": \""
                     << jsonEscape(
                         demandModelName(eval.demand_type)
                     )
                     << "\",\n";
 
-                out << "      \"congestion\": "
+                out << "          \"congestion\": "
                     << eval.congestion;
 
                 if (eval.runtime_microseconds >= 0.0) {
                     out << ",\n";
 
-                    out << "      \"runtime_microseconds\": "
+                    out << "          \"runtime_microseconds\": "
                         << eval.runtime_microseconds
                         << "\n";
                 } else {
                     out << "\n";
                 }
 
-                out << "    }";
+                out << "        }";
 
                 if (
                     i + 1 <
@@ -788,11 +673,174 @@ private:
                 out << "\n";
             }
 
-            out << "  ]";
+            out << "      ],\n";
+
+
+            /*
+             * Solver-specific metrics.
+             */
+            out << "      \"algorithm_metrics\": {";
+
+            bool wrote_algorithm_metrics = false;
+
+            if (!result.mwu_metrics.empty()) {
+                const auto& mwu = result.mwu_metrics;
+
+                out << "\n";
+                out << "        \"mwu\": {\n";
+
+                out << "          \"iteration_count\": "
+                    << mwu.iteration_count
+                    << ",\n";
+
+                out << "          \"solve_time_microseconds\": "
+                    << mwu.solve_time
+                    << ",\n";
+
+                out << "          \"transformation_time_microseconds\": "
+                    << mwu.transformation_time
+                    << ",\n";
+
+                out << "          \"load_computation_time_microseconds\": "
+                    << mwu.load_computation_time
+                    << ",\n";
+
+                out << "          \"weight_update_time_microseconds\": "
+                    << mwu.mwu_weight_update_time;
+
+                if (!mwu.oracle_running_times.empty()) {
+                    out << ",\n";
+
+                    out << "          \"average_oracle_time_microseconds\": "
+                        << mwu.averageOracleTime()
+                        << ",\n";
+
+                    out << "          \"oracle_calls\": "
+                        << mwu.oracle_running_times.size()
+                        << "\n";
+                } else {
+                    out << "\n";
+                }
+
+                out << "        }";
+
+                wrote_algorithm_metrics = true;
+            }
+
+
+            if (!result.expander_metrics.empty()) {
+                const auto& metrics =
+                    result.expander_metrics;
+
+                if (wrote_algorithm_metrics) {
+                    out << ",";
+                }
+
+                out << "\n";
+                out << "        \"expander\": {\n";
+
+                out << "          \"hierarchy_runtime_microseconds\": "
+                    << metrics.hierarchy_runtime_microseconds
+                    << ",\n";
+
+                out << "          \"tree_runtime_microseconds\": "
+                    << metrics.tree_runtime_microseconds
+                    << ",\n";
+
+                out << "          \"basis_flow_runtime_microseconds\": "
+                    << metrics.basis_flow_runtime_microseconds
+                    << ",\n";
+
+                out << "          \"hierarchy_levels\": "
+                    << metrics.hierarchy_levels
+                    << ",\n";
+
+                out << "          \"hierarchy_clusters\": "
+                    << metrics.hierarchy_clusters
+                    << ",\n";
+
+                out << "          \"clusters_per_level\": [";
+
+                for (
+                    std::size_t i = 0;
+                    i < metrics.clusters_per_level.size();
+                    ++i
+                ) {
+                    if (i > 0) {
+                        out << ", ";
+                    }
+
+                    out << metrics.clusters_per_level[i];
+                }
+
+                out << "],\n";
+
+                out << "          \"max_cluster_vertices\": "
+                    << metrics.max_cluster_vertices
+                    << ",\n";
+
+                out << "          \"average_cluster_vertices\": "
+                    << metrics.average_cluster_vertices
+                    << ",\n";
+
+                out << "          \"tree_nodes\": "
+                    << metrics.tree_nodes
+                    << ",\n";
+
+                out << "          \"tree_edges\": "
+                    << metrics.tree_edges
+                    << ",\n";
+
+                out << "          \"tree_depth\": "
+                    << metrics.tree_depth
+                    << ",\n";
+
+                out << "          \"basis_flows\": "
+                    << metrics.basis_flows
+                    << ",\n";
+
+                out << "          \"total_electrical_solves\": "
+                    << metrics.total_electrical_solves
+                    << ",\n";
+
+                out << "          \"average_electrical_solves\": "
+                    << metrics.averageElectricalSolves()
+                    << ",\n";
+
+                out << "          \"max_basis_embedding_congestion\": "
+                    << metrics.max_basis_embedding_congestion
+                    << ",\n";
+
+                out << "          \"max_conservation_error\": "
+                    << metrics.max_conservation_error
+                    << "\n";
+
+                out << "        }";
+
+                wrote_algorithm_metrics = true;
+            }
+
+            if (wrote_algorithm_metrics) {
+                out << "\n";
+                out << "      }\n";
+            } else {
+                out << "}\n";
+            }
+
+            out << "    }";
+
+            if (
+                solver_index + 1 <
+                experiment.solver_results.size()
+            ) {
+                out << ",";
+            }
+
+            out << "\n";
         }
 
-
-        out << "\n}\n";
+        out << "  ]\n";
+        out << "}\n";
     }
 
     static void writeExpanderMetricsJson(const ExpanderMetrics& metrics,std::ostream& out)
@@ -874,6 +922,8 @@ private:
         out << "  }\n";
     }
 
+
+    // Helpers
     static std::string safeFileName(std::string name) {
 
         for (char& c : name) {
@@ -885,6 +935,21 @@ private:
         }
 
         return name;
+    }
+
+    static std::string resultStatusName(ResultStatus status) {
+        switch (status) {
+        case ResultStatus::OK:
+            return "ok";
+        case ResultStatus::ERROR_INVALID_SOLVER:
+            return "error: invalid solver";
+        case ResultStatus::ERROR_INVALID_ROUTING_SCHEME:
+            return "error: invalid routing scheme";
+        case ResultStatus::ERROR_MISSING_DEMAND_MODELS:
+            return "error: missing demand models";
+        default:
+            return "error";
+        }
     }
 };
 

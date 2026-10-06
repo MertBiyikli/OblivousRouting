@@ -51,6 +51,9 @@ Result<void> RoutingEngine::entry(Config &cfg) {
 
     RoutingEngine engine;
 
+    RoutingExperimentResult exp_result;
+    exp_result.graph_path = cfg.filename;
+
     for (SolverType type: cfg.solvers) {
         auto result = engine.solve(*graph.value(), cfg, type);
 
@@ -58,12 +61,12 @@ Result<void> RoutingEngine::entry(Config &cfg) {
             return getError(result);
         }
 
-
-
-        auto output = RoutingResultWriter::write(result.value(), cfg, type);
-        if (!output) {
-            return getError(output);
+        if (exp_result.graph_name.empty()) {
+            exp_result.graph_name = std::filesystem::path(result->graph_name).stem().string();
+            exp_result.nodes = result->nodes;
+            exp_result.edges = result->edges;
         }
+
 
         if (!cfg.visualization_output_directory.empty()) {
             for (const auto &visualization: result->visualization_results) {
@@ -78,6 +81,14 @@ Result<void> RoutingEngine::entry(Config &cfg) {
                 }
             }
         }
+
+        exp_result.solver_results.push_back(std::move(result.value()));
+    }
+
+
+    auto output = RoutingResultWriter::write(exp_result, cfg);
+    if (!output) {
+        return getError(output);
     }
 
     m_graph = std::move(graph.value());
