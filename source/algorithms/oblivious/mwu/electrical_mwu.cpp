@@ -97,19 +97,24 @@ Result<void> ElectricalMWU::run(LinearRoutingTable &table) {
             rhs[u]       =  1.0;
             rhs[x_fixed] = -1.0;
 
+            auto solve_start = timeNow();
             potentials = amg->solve(rhs, epsilon_L);
+
+            const double solve_time = duration(timeNow() - solve_start);
 
             if (!potentials) {
                 return getError(potentials);
             }
-            double oracle_time_iter = duration(timeNow() - t0);
-            oracle_iteration += oracle_time_iter;
+
+            oracle_iteration += solve_time;
+            metrics.solve_time += solve_time;
+
 
             // addFlowToTable measures its own time and adds to transformation_time
             addFlowToTable(u, potentials.value(), table);
 
             // solve_time includes setup_time + oracle_time (but not transformation_time)
-            metrics.solve_time += oracle_time_iter;
+            metrics.solve_time += solve_time;
         }
 
         t0 = timeNow();

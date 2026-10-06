@@ -41,8 +41,115 @@ endif()
 find_package(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen3 REQUIRED)
 
+# ============================================================================
+# OpenMP
+# ============================================================================
+
 if(OR_ENABLE_OPENMP)
-    find_package(OpenMP REQUIRED COMPONENTS CXX)
+
+    if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang")
+
+        # Homebrew locations:
+        #
+        # Apple Silicon:
+        #   /opt/homebrew/opt/libomp
+        #
+        # Intel macOS:
+        #   /usr/local/opt/libomp
+
+        set(_OR_OPENMP_ROOT_CANDIDATES)
+
+        if(OpenMP_ROOT)
+            list(
+                    APPEND
+                    _OR_OPENMP_ROOT_CANDIDATES
+                    "${OpenMP_ROOT}"
+            )
+        endif()
+
+        list(
+                APPEND
+                _OR_OPENMP_ROOT_CANDIDATES
+                "/opt/homebrew/opt/libomp"
+                "/usr/local/opt/libomp"
+        )
+
+        find_path(
+                OR_OPENMP_INCLUDE_DIR
+                NAMES omp.h
+                HINTS ${_OR_OPENMP_ROOT_CANDIDATES}
+                PATH_SUFFIXES include
+        )
+
+        find_library(
+                OR_OPENMP_LIBRARY
+                NAMES omp libomp
+                HINTS ${_OR_OPENMP_ROOT_CANDIDATES}
+                PATH_SUFFIXES lib
+        )
+
+        if(
+                NOT OR_OPENMP_INCLUDE_DIR
+                OR
+                NOT OR_OPENMP_LIBRARY
+        )
+            message(
+                    FATAL_ERROR
+                    "OpenMP was requested but Homebrew libomp "
+                    "could not be found. Install it with:\n"
+                    "  brew install libomp\n"
+                    "or configure with OR_ENABLE_OPENMP=OFF."
+            )
+        endif()
+
+        if(NOT TARGET OpenMP::OpenMP_CXX)
+            add_library(
+                    OpenMP::OpenMP_CXX
+                    INTERFACE
+                    IMPORTED
+            )
+
+            set_target_properties(
+                    OpenMP::OpenMP_CXX
+                    PROPERTIES
+
+                    INTERFACE_COMPILE_OPTIONS
+                    "-Xpreprocessor;-fopenmp"
+
+                    INTERFACE_INCLUDE_DIRECTORIES
+                    "${OR_OPENMP_INCLUDE_DIR}"
+
+                    INTERFACE_LINK_LIBRARIES
+                    "${OR_OPENMP_LIBRARY}"
+            )
+        endif()
+
+        message(
+                STATUS
+                "OpenMP: using Homebrew libomp"
+        )
+
+        message(
+                STATUS
+                "OpenMP include: ${OR_OPENMP_INCLUDE_DIR}"
+        )
+
+        message(
+                STATUS
+                "OpenMP library: ${OR_OPENMP_LIBRARY}"
+        )
+
+    else()
+
+        # GCC/Clang on Linux.
+        find_package(
+                OpenMP
+                REQUIRED
+                COMPONENTS CXX
+        )
+
+    endif()
+
 endif()
 
 # Prefer an already-installed Catch2 (CI installs the pinned version). For

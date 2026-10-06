@@ -15,7 +15,7 @@ endif()
 # ============================================================================
 option(BUILD_TESTING "Build unit and integration tests" OFF)
 option(OR_ENABLE_WARNINGS "Enable strict compiler warnings" OFF)
-option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" ON)
+option(OR_ENABLE_OPENMP "Enable OpenMP support for parallel algorithms" OFF)
 option(OR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 set(CMAKE_CXX_STANDARD 23)

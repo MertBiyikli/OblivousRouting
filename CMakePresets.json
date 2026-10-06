@@ -1,10 +1,12 @@
 {
   "version": 6,
+
   "cmakeMinimumRequired": {
     "major": 3,
     "minor": 25,
     "patch": 0
   },
+
   "configurePresets": [
     {
       "name": "base",
@@ -14,160 +16,287 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "BUILD_TESTING": "OFF",
-        "OR_ENABLE_OPENMP": "ON",
         "OR_ENABLE_WARNINGS": "OFF",
         "OR_ENABLE_ASAN": "OFF"
       }
     },
+
     {
-      "name": "debug",
-      "displayName": "Debug",
+      "name": "openmp",
+      "hidden": true,
+      "cacheVariables": {
+        "OR_ENABLE_OPENMP": "ON"
+      }
+    },
+
+    {
+      "name": "no-openmp",
+      "hidden": true,
+      "cacheVariables": {
+        "OR_ENABLE_OPENMP": "OFF"
+      }
+    },
+
+    {
+      "name": "debug-base",
+      "hidden": true,
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "OR_ENABLE_WARNINGS": "ON"
       }
     },
+
     {
-      "name": "release",
-      "displayName": "Release",
+      "name": "release-base",
+      "hidden": true,
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
     },
+
     {
-      "name": "relwithdebinfo",
-      "displayName": "RelWithDebInfo",
+      "name": "relwithdebinfo-base",
+      "hidden": true,
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
       }
     },
+
     {
-      "name": "minsizerel",
-      "displayName": "MinSizeRel",
+      "name": "minsizerel-base",
+      "hidden": true,
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MinSizeRel"
       }
     },
+
+    {
+      "name": "debug-openmp",
+      "displayName": "Debug + OpenMP",
+      "inherits": [
+        "debug-base",
+        "openmp"
+      ]
+    },
+
     {
       "name": "debug-no-openmp",
       "displayName": "Debug - No OpenMP",
-      "inherits": "debug",
-      "cacheVariables": {
-        "OR_ENABLE_OPENMP": "OFF"
-      }
+      "inherits": [
+        "debug-base",
+        "no-openmp"
+      ]
     },
+
+    {
+      "name": "release-openmp",
+      "displayName": "Release + OpenMP",
+      "inherits": [
+        "release-base",
+        "openmp"
+      ]
+    },
+
     {
       "name": "release-no-openmp",
       "displayName": "Release - No OpenMP",
-      "inherits": "release",
-      "cacheVariables": {
-        "OR_ENABLE_OPENMP": "OFF"
-      }
+      "inherits": [
+        "release-base",
+        "no-openmp"
+      ]
     },
+
     {
-      "name": "debug-tests",
-      "displayName": "Debug + Tests",
-      "inherits": "debug",
+      "name": "relwithdebinfo-openmp",
+      "displayName": "RelWithDebInfo + OpenMP",
+      "inherits": [
+        "relwithdebinfo-base",
+        "openmp"
+      ]
+    },
+
+    {
+      "name": "relwithdebinfo-no-openmp",
+      "displayName": "RelWithDebInfo - No OpenMP",
+      "inherits": [
+        "relwithdebinfo-base",
+        "no-openmp"
+      ]
+    },
+
+    {
+      "name": "minsizerel-openmp",
+      "displayName": "MinSizeRel + OpenMP",
+      "inherits": [
+        "minsizerel-base",
+        "openmp"
+      ]
+    },
+
+    {
+      "name": "minsizerel-no-openmp",
+      "displayName": "MinSizeRel - No OpenMP",
+      "inherits": [
+        "minsizerel-base",
+        "no-openmp"
+      ]
+    },
+
+    {
+      "name": "debug-tests-openmp",
+      "displayName": "Debug + Tests + OpenMP",
+      "inherits": [
+        "debug-base",
+        "openmp"
+      ],
       "cacheVariables": {
         "BUILD_TESTING": "ON"
       }
     },
-    {
-      "name": "release-tests",
-      "displayName": "Release + Tests",
-      "inherits": "release",
-      "cacheVariables": {
-        "BUILD_TESTING": "ON"
-      }
-    },
+
     {
       "name": "debug-tests-no-openmp",
       "displayName": "Debug + Tests - No OpenMP",
-      "inherits": "debug-tests",
+      "inherits": [
+        "debug-base",
+        "no-openmp"
+      ],
       "cacheVariables": {
-        "OR_ENABLE_OPENMP": "OFF"
+        "BUILD_TESTING": "ON"
       }
     },
+
+    {
+      "name": "release-tests-openmp",
+      "displayName": "Release + Tests + OpenMP",
+      "inherits": [
+        "release-base",
+        "openmp"
+      ],
+      "cacheVariables": {
+        "BUILD_TESTING": "ON"
+      }
+    },
+
+    {
+      "name": "release-tests-no-openmp",
+      "displayName": "Release + Tests - No OpenMP",
+      "inherits": [
+        "release-base",
+        "no-openmp"
+      ],
+      "cacheVariables": {
+        "BUILD_TESTING": "ON"
+      }
+    },
+
     {
       "name": "debug-asan-tests",
-      "displayName": "Debug + ASan + Tests",
-      "inherits": "debug-tests",
+      "displayName": "Debug + ASan + Tests - No OpenMP",
+      "inherits": [
+        "debug-base",
+        "no-openmp"
+      ],
       "cacheVariables": {
+        "BUILD_TESTING": "ON",
         "OR_ENABLE_ASAN": "ON"
       }
     }
   ],
+
   "buildPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "debug-openmp",
+      "configurePreset": "debug-openmp",
       "jobs": 0
     },
-    {
-      "name": "release",
-      "configurePreset": "release",
-      "jobs": 0
-    },
-    {
-      "name": "relwithdebinfo",
-      "configurePreset": "relwithdebinfo",
-      "jobs": 0
-    },
-    {
-      "name": "minsizerel",
-      "configurePreset": "minsizerel",
-      "jobs": 0
-    },
+
     {
       "name": "debug-no-openmp",
       "configurePreset": "debug-no-openmp",
       "jobs": 0
     },
+
+    {
+      "name": "release-openmp",
+      "configurePreset": "release-openmp",
+      "jobs": 0
+    },
+
     {
       "name": "release-no-openmp",
       "configurePreset": "release-no-openmp",
       "jobs": 0
     },
+
     {
-      "name": "debug-tests",
-      "configurePreset": "debug-tests",
+      "name": "relwithdebinfo-openmp",
+      "configurePreset": "relwithdebinfo-openmp",
       "jobs": 0
     },
+
     {
-      "name": "release-tests",
-      "configurePreset": "release-tests",
+      "name": "relwithdebinfo-no-openmp",
+      "configurePreset": "relwithdebinfo-no-openmp",
       "jobs": 0
     },
+
+    {
+      "name": "minsizerel-openmp",
+      "configurePreset": "minsizerel-openmp",
+      "jobs": 0
+    },
+
+    {
+      "name": "minsizerel-no-openmp",
+      "configurePreset": "minsizerel-no-openmp",
+      "jobs": 0
+    },
+
+    {
+      "name": "debug-tests-openmp",
+      "configurePreset": "debug-tests-openmp",
+      "jobs": 0
+    },
+
     {
       "name": "debug-tests-no-openmp",
       "configurePreset": "debug-tests-no-openmp",
       "jobs": 0
     },
+
+    {
+      "name": "release-tests-openmp",
+      "configurePreset": "release-tests-openmp",
+      "jobs": 0
+    },
+
+    {
+      "name": "release-tests-no-openmp",
+      "configurePreset": "release-tests-no-openmp",
+      "jobs": 0
+    },
+
     {
       "name": "debug-asan-tests",
       "configurePreset": "debug-asan-tests",
       "jobs": 0
     }
   ],
+
   "testPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug-tests",
+      "name": "debug-openmp",
+      "configurePreset": "debug-tests-openmp",
       "output": {
         "outputOnFailure": true
       }
     },
-    {
-      "name": "release",
-      "configurePreset": "release-tests",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
+
     {
       "name": "debug-no-openmp",
       "configurePreset": "debug-tests-no-openmp",
@@ -175,6 +304,23 @@
         "outputOnFailure": true
       }
     },
+
+    {
+      "name": "release-openmp",
+      "configurePreset": "release-tests-openmp",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+
+    {
+      "name": "release-no-openmp",
+      "configurePreset": "release-tests-no-openmp",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+
     {
       "name": "debug-asan",
       "configurePreset": "debug-asan-tests",

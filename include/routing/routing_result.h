@@ -120,14 +120,14 @@ struct IRoutingResult {
 
 
     // Runtime
-    double total_runtime_microseconds = 0.0;
-    double preprocessing_runtime_microseconds = 0.0;
-    double solve_runtime_microseconds = 0.0;
+    double total_runtime_microseconds = -1;
+    double preprocessing_runtime_microseconds = -1;
+    double solve_runtime_microseconds = -1;
 
     // Optional: only filled for normal solvers or last scheme if needed
     std::unique_ptr<RoutingScheme> scheme;
-    std::size_t candidate_paths = 0;
-    double average_paths_per_pair = 0.0;
+    int candidate_paths = -1;
+    double average_paths_per_pair = -1.0;
 
     MWUMetrics mwu_metrics;
     ExpanderMetrics expander_metrics;

@@ -22,6 +22,7 @@ void LaplacianSolver::init(optimized::Graph<EdgeData>& g, std::vector<double>& _
      m_col_ind.clear();
      m_values.clear();
 
+
      weight_model.init(g);
      for (int e = 0; e < edges.size(); e++) {
          int u = edges[e].first;
@@ -139,28 +140,23 @@ void LaplacianSolver::init(
 }
 
 Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vector<std::pair<int, int>>& edges,const std::vector<double>& edge_weights,const int grounded_vertex) {
+    OpenMPThreadGuard omp_guard(num_internal_threads);
     hierarchy.reset();
 
     if (node_count <= 0) {
-        return makeErrorMessage(
-            ErrorCode::InvalidGraph,
-            "Grounded Laplacian requires at least one vertex."
-        );
+        return makeErrorMessage(ErrorCode::InvalidGraph,
+            "Grounded Laplacian requires at least one vertex.");
     }
 
     if (grounded_vertex < 0 ||
         grounded_vertex >= node_count) {
-        return makeErrorMessage(
-            ErrorCode::InvalidGraph,
-            "Invalid grounded vertex."
-        );
+        return makeErrorMessage(ErrorCode::InvalidGraph,
+            "Invalid grounded vertex.");
     }
 
     if (edges.size() != edge_weights.size()) {
-        return makeErrorMessage(
-            ErrorCode::InvalidGraph,
-            "Local edges and conductances have different sizes."
-        );
+        return makeErrorMessage(ErrorCode::InvalidGraph,
+            "Local edges and conductances have different sizes.");
     }
 
     n = node_count;
@@ -181,10 +177,8 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
 
         if (u < 0 || v < 0 ||
             u >= n || v >= n) {
-            return makeErrorMessage(
-                ErrorCode::InvalidGraph,
-                "Local edge has an invalid endpoint."
-            );
+            return makeErrorMessage(ErrorCode::InvalidGraph,
+                "Local edge has an invalid endpoint.");
         }
 
         if (u == v) {
@@ -405,6 +399,7 @@ Result<void> LaplacianSolver::updateAllEdges(const std::vector<double> &new_weig
 
 
 void LaplacianSolver::buildLaplacian() {
+    OpenMPThreadGuard omp_guard(num_internal_threads);
     std::unordered_map<std::pair<int,int>, double, PairHash> L;
 
     for (int e = 0; e<weight_model.weights.size(); e++) {
@@ -499,35 +494,37 @@ void LaplacianSolver::buildLaplacian() {
 
 
 
-Result<std::vector<double>>
-LaplacianSolver::solve(
-    const std::vector<double>& b,
-    const double /* eps */
-) {
+Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double>& b,const double /* eps */) {
     if (b.size() != static_cast<std::size_t>(n)) {
-        return makeErrorMessage(
-            ErrorCode::InvalidDemand,
-            "AMGCL RHS size mismatch."
-        );
+        return makeErrorMessage(ErrorCode::InvalidDemand,
+            "AMGCL RHS size mismatch.");
     }
 
     if (!hierarchy) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL solver is not initialized."
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed,
+            "AMGCL solver is not initialized.");
     }
 
-    std::vector<double> rhs = b;
-    std::vector<double> potential(n, 0.0);
+
+    OpenMPThreadGuard omp_guard(num_internal_threads);
+
+    rhs_buffer.assign(
+        b.begin(),
+        b.end()
+    );
+
+    potential_buffer.assign(
+        static_cast<std::size_t>(n),
+        0.0
+    );
+
+    auto& rhs = rhs_buffer;
+    auto& potential = potential_buffer;
 
     if (use_dirichlet) {
         if (dirichlet_root < 0 ||
             dirichlet_root >= n) {
-            return makeErrorMessage(
-                ErrorCode::InvalidGraph,
-                "Invalid Dirichlet root."
-            );
+            return makeErrorMessage(ErrorCode::InvalidGraph,"Invalid Dirichlet root.");
         }
 
         rhs[dirichlet_root] = 0.0;
@@ -644,6 +641,7 @@ Result<Eigen::VectorXd> LaplacianSolver::solve(const Eigen::VectorXd& b, double 
 
 
 void LaplacianSolver::updateSolver() {
+    OpenMPThreadGuard omp_guard(num_internal_threads);
     // Update hierarchy numeric values (same structure)
     if (use_dirichlet) {
         m_values_dirichlet = m_values;

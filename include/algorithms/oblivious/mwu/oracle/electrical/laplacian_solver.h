@@ -62,6 +62,10 @@ protected:
     // this for configuration of the solver, e.g. coarsening and relaxation types
     boost::property_tree::ptree params;
 
+    // reuse to not reallocate memory for each solve
+    std::vector<double> rhs_buffer, potential_buffer;
+    static constexpr int num_internal_threads = 1;
+
 public:
     LaplacianSolver() {
         n = 0;

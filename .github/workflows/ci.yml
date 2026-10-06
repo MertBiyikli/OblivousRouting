@@ -2,12 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
     paths-ignore:
       - Dockerfile.ortools.linux
       - .github/workflows/build-ortools.yml
+
   pull_request:
-    branches: [master]
+    branches:
+      - master
+
   workflow_dispatch:
 
 permissions:
@@ -21,24 +25,27 @@ concurrency:
 jobs:
   linux:
     name: Linux / ${{ matrix.name }}
+
     runs-on: ubuntu-24.04
+
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
+
       matrix:
         include:
           - name: Debug + Tests + OpenMP
-            configure_preset: debug-tests
-            build_preset: debug-tests
-            test_preset: debug
+            configure_preset: debug-tests-openmp
+            build_preset: debug-tests-openmp
+            test_preset: debug-openmp
             run_tests: true
             upload_binary: false
 
           - name: Release + Tests + OpenMP
-            configure_preset: release-tests
-            build_preset: release-tests
-            test_preset: release
+            configure_preset: release-tests-openmp
+            build_preset: release-tests-openmp
+            test_preset: release-openmp
             run_tests: true
             upload_binary: true
 
@@ -49,6 +56,13 @@ jobs:
             run_tests: true
             upload_binary: false
 
+          - name: Release + Tests + No OpenMP
+            configure_preset: release-tests-no-openmp
+            build_preset: release-tests-no-openmp
+            test_preset: release-no-openmp
+            run_tests: true
+            upload_binary: false
+
           - name: Debug + ASan + Tests
             configure_preset: debug-asan-tests
             build_preset: debug-asan-tests
@@ -56,17 +70,15 @@ jobs:
             run_tests: true
             upload_binary: false
 
-          - name: RelWithDebInfo
-            configure_preset: relwithdebinfo
-            build_preset: relwithdebinfo
+          - name: RelWithDebInfo + OpenMP
+            configure_preset: relwithdebinfo-openmp
+            build_preset: relwithdebinfo-openmp
             run_tests: false
             upload_binary: false
 
-    # BOOTSTRAP ONLY:
-    # After build-ortools.yml publishes the image, replace this versioned tag
-    # with the exact ghcr.io/...@sha256:<digest> printed by that workflow.
     container:
       image: ghcr.io/mertbiyikli/ortools@sha256:9f9e38fa700e5bdea953bd1ca43efe5d0670e4a153d877b659a2e83ada6495d7
+
       credentials:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -76,34 +88,46 @@ jobs:
         shell: bash
 
     steps:
-      # actions/checkout@v4
       - name: Checkout repository and pinned submodules
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
         with:
           submodules: recursive
 
       - name: Show toolchain
-        run: cat /opt/oblivious-routing-toolchain.txt
+        run: |
+          cat /opt/oblivious-routing-toolchain.txt
 
       - name: Verify dependency checkout
-        run: ./scripts/check-build-reproducibility.sh
+        run: |
+          ./scripts/check-build-reproducibility.sh
 
       - name: Configure
-        run: cmake --preset "${{ matrix.configure_preset }}"
+        run: |
+          cmake --preset "${{ matrix.configure_preset }}"
 
       - name: Build
-        run: cmake --build --preset "${{ matrix.build_preset }}"
+        run: |
+          cmake --build --preset "${{ matrix.build_preset }}"
 
       - name: Test
         if: matrix.run_tests
-        run: ctest --preset "${{ matrix.test_preset }}" --output-on-failure
+        run: |
+          ctest \
+            --preset "${{ matrix.test_preset }}" \
+            --output-on-failure
 
-      # actions/upload-artifact@v4
       - name: Upload Release binary
         if: matrix.upload_binary && github.event_name != 'pull_request'
+
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+
         with:
           name: oblivious-routing-linux-${{ github.sha }}
-          path: build/release-tests/oblivious_routing
+
+          path: |
+            build/release-tests-openmp/oblivious_routing
+
           if-no-files-found: error
+
           retention-days: 14
