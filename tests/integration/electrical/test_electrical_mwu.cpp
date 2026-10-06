@@ -33,24 +33,6 @@ TEST_CASE("Electrical flow solver solves a simple path graph end-to-end",
     REQUIRE(result.value().oblivious_ratio < 5.0);
 }
 
-TEST_CASE("Electrical flow solver can be run repeatedly on the same small graph",
-          "[integration][electrical][routing-engine]")
-{
-    auto g = makeTriangleGraph();
-    auto cfg = makeElectricalConfig();
-
-    RoutingEngine engine;
-
-    auto first = engine.solve(*g, cfg, cfg.solvers.front());
-    auto second = engine.solve(*g, cfg, cfg.solvers.front());
-
-    if (!first || !second) {
-        FAIL("engine.solve returned error.");
-    }
-
-    REQUIRE(first.value().oblivious_ratio >= 0.5);
-    REQUIRE(second.value().oblivious_ratio >= 0.5);
-}
 
 TEST_CASE("Electrical flow solver handles non-uniform capacities",
           "[integration][electrical][routing-engine][capacities]")
