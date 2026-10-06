@@ -2,40 +2,104 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import subprocess
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from generate_report import generate_report_from_summary
 
-def safe_name(path_or_name: str) -> str:
-    name = Path(path_or_name).stem
+
+GRAPH_SUFFIXES = {
+    ".lgf",
+}
+
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+
+def safe_name(value):
+    name = str(value)
+
+    for char in (
+            " ",
+            "/",
+            "\\",
+            "(",
+            ")",
+            ":",
+    ):
+        name = name.replace(
+            char,
+            "_",
+        )
 
     return (
-        name.replace(" ", "_")
-        .replace("/", "_")
-        .replace("\\", "_")
-        .replace("(", "")
-        .replace(")", "")
+            name.strip("_")
+            or "graph"
     )
+
+
+def as_number(value):
+    if (
+            value is None
+            or value == ""
+    ):
+        return None
+
+    try:
+        number = float(
+            value
+        )
+
+        if number.is_integer():
+            return int(
+                number
+            )
+
+        return number
+
+    except (
+            TypeError,
+            ValueError,
+    ):
+        return value
+
+
+# ============================================================================
+# CLI
+# ============================================================================
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run E-Routing experiments."
+        description=(
+            "Run E-Routing experiments, generate summary.csv "
+            "and automatically generate benchmark reports."
+        )
     )
 
     parser.add_argument(
         "--bin",
         required=True,
-        help="Path to oblivious_routing binary.",
+        help=(
+            "Path to oblivious_routing binary."
+        ),
     )
 
     parser.add_argument(
         "--graphs",
         nargs="+",
         required=True,
-        help="Graph files to run.",
+        help=(
+            "Graph files and/or directories. "
+            "Directories are searched recursively "
+            "for .lgf files."
+        ),
     )
 
     parser.add_argument(
@@ -50,8 +114,13 @@ def parse_args():
 
     parser.add_argument(
         "--demands",
-        default="gravity,bimodal,uniform,gaussian",
-        help="Comma-separated demand models.",
+        default=(
+            "gravity,bimodal,"
+            "uniform,gaussian"
+        ),
+        help=(
+            "Comma-separated demand models."
+        ),
     )
 
     parser.add_argument(
@@ -67,105 +136,226 @@ def parse_args():
         "--threads",
         type=int,
         default=None,
-        help="Optional number of worker threads.",
+        help=(
+            "Optional number of worker threads."
+        ),
+    )
+
+    parser.add_argument(
+        "--report-title",
+        default=(
+            "E-Routing Benchmark Report"
+        ),
+        help=(
+            "Title used for the generated report."
+        ),
     )
 
     return parser.parse_args()
 
 
-def as_number(value):
-    if value is None:
-        return None
-
-    try:
-        number = float(value)
-
-        if number.is_integer():
-            return int(number)
-
-        return number
-
-    except (TypeError, ValueError):
-        return value
+# ============================================================================
+# Graph discovery
+# ============================================================================
 
 
-def extract_summary_rows(result_json_path: Path):
-    """
-    Convert one schema-1.0 E-Routing result JSON into
-    normalized CSV rows.
+def discover_graphs(inputs):
+    discovered = []
 
-    One CSV row represents:
+    for raw in inputs:
+        path = Path(
+            raw
+        ).expanduser()
 
-        graph x solver x demand model
-    """
+        if not path.exists():
+            raise ValueError(
+                f"Graph input does not exist: "
+                f"{path}"
+            )
 
-    with result_json_path.open() as f:
-        data = json.load(f)
+        if path.is_file():
 
-    schema_version = data.get("schema_version")
+            if (
+                    path.suffix.lower()
+                    not in GRAPH_SUFFIXES
+            ):
+                raise ValueError(
+                    f"Unsupported graph file: "
+                    f"{path}"
+                )
 
-    if schema_version != "1.0":
+            discovered.append(
+                path
+            )
+
+            continue
+
+        if path.is_dir():
+
+            matches = sorted(
+                p
+                for p in path.rglob("*")
+                if (
+                        p.is_file()
+                        and
+                        p.suffix.lower()
+                        in GRAPH_SUFFIXES
+                )
+            )
+
+            discovered.extend(
+                matches
+            )
+
+            continue
+
         raise ValueError(
-            f"Unsupported result schema version: "
-            f"{schema_version!r}"
+            f"Unsupported graph input: "
+            f"{path}"
         )
 
-    # ------------------------------------------------------------------
-    # Graph metadata
-    # ------------------------------------------------------------------
+    unique = []
+    seen = set()
 
-    graph = data.get("graph", {})
-
-    if not isinstance(graph, dict):
-        raise ValueError(
-            "Invalid schema: 'graph' must be an object."
+    for path in discovered:
+        resolved = (
+            path.resolve()
         )
 
-    graph_name = graph.get("name")
-    graph_path = graph.get("path")
+        if resolved in seen:
+            continue
 
-    nodes = as_number(
-        graph.get("nodes")
+        seen.add(
+            resolved
+        )
+
+        unique.append(
+            path
+        )
+
+    if not unique:
+        raise ValueError(
+            "No .lgf graph files were discovered."
+        )
+
+    return unique
+
+
+def make_output_stems(
+        graph_paths,
+):
+    by_stem = defaultdict(
+        list
     )
 
-    edges = as_number(
-        graph.get("edges")
+    for path in graph_paths:
+        by_stem[
+            path.stem
+        ].append(path)
+
+    result = {}
+
+    for (
+            stem,
+            paths,
+    ) in by_stem.items():
+
+        if len(paths) == 1:
+
+            result[
+                paths[0]
+            ] = safe_name(
+                stem
+            )
+
+            continue
+
+        for path in paths:
+
+            digest = hashlib.sha1(
+                str(
+                    path.resolve()
+                ).encode(
+                    "utf-8"
+                )
+            ).hexdigest()[:8]
+
+            result[path] = (
+                f"{safe_name(stem)}"
+                f"__{digest}"
+            )
+
+    return result
+
+
+# ============================================================================
+# JSON -> summary.csv
+# ============================================================================
+
+
+def extract_summary_rows(
+        result_json_path,
+):
+    with Path(
+            result_json_path
+    ).open(
+        encoding="utf-8"
+    ) as f:
+
+        data = json.load(
+            f
+        )
+
+    schema_version = (
+        data.get(
+            "schema_version"
+        )
     )
 
-    # ------------------------------------------------------------------
-    # Experiment configuration
-    # ------------------------------------------------------------------
+    if (
+            schema_version
+            != "1.0"
+    ):
+        raise ValueError(
+            "Unsupported result schema "
+            f"version: {schema_version!r}"
+        )
+
+    graph = data.get(
+        "graph",
+        {},
+    )
 
     configuration = data.get(
         "configuration",
-        {}
+        {},
     )
-
-    if not isinstance(configuration, dict):
-        raise ValueError(
-            "Invalid schema: "
-            "'configuration' must be an object."
-        )
-
-    seed = as_number(
-        configuration.get("seed")
-    )
-
-    threads = as_number(
-        configuration.get("threads")
-    )
-
-    # ------------------------------------------------------------------
-    # Solver results
-    # ------------------------------------------------------------------
 
     solver_results = data.get(
         "solver_results"
     )
 
-    if not isinstance(solver_results, list):
+    if not isinstance(
+            graph,
+            dict,
+    ):
         raise ValueError(
-            "Invalid schema: "
+            "'graph' must be an object."
+        )
+
+    if not isinstance(
+            configuration,
+            dict,
+    ):
+        raise ValueError(
+            "'configuration' must be an object."
+        )
+
+    if not isinstance(
+            solver_results,
+            list,
+    ):
+        raise ValueError(
             "'solver_results' must be an array."
         )
 
@@ -173,180 +363,359 @@ def extract_summary_rows(result_json_path: Path):
 
     for solver_result in solver_results:
 
-        if not isinstance(solver_result, dict):
-            raise ValueError(
-                "Invalid schema: "
-                "solver result must be an object."
+        runtime = (
+            solver_result.get(
+                "runtime",
+                {},
             )
-
-        solver_name = solver_result.get(
-            "solver"
         )
 
-        solver_type = solver_result.get(
-            "solver_type"
+        quality = (
+            solver_result.get(
+                "quality",
+                {},
+            )
         )
 
-        status = solver_result.get(
-            "status"
+        routing_scheme = (
+            solver_result.get(
+                "routing_scheme",
+                {},
+            )
         )
 
-        routing_base = solver_result.get(
-            "routing_base"
+        metrics = (
+            solver_result.get(
+                "algorithm_metrics",
+                {},
+            )
         )
 
-        # --------------------------------------------------------------
-        # Common solver metrics
-        # --------------------------------------------------------------
-
-        runtime = solver_result.get(
-            "runtime",
-            {}
-        )
-
-        quality = solver_result.get(
-            "quality",
-            {}
-        )
-
-        routing_scheme = solver_result.get(
-            "routing_scheme",
-            {}
-        )
-
-        algorithm_metrics = solver_result.get(
-            "algorithm_metrics",
-            {}
-        )
-
-        if not isinstance(runtime, dict):
+        if not isinstance(
+                runtime,
+                dict,
+        ):
             runtime = {}
 
-        if not isinstance(quality, dict):
+        if not isinstance(
+                quality,
+                dict,
+        ):
             quality = {}
 
-        if not isinstance(routing_scheme, dict):
+        if not isinstance(
+                routing_scheme,
+                dict,
+        ):
             routing_scheme = {}
 
-        if not isinstance(algorithm_metrics, dict):
-            algorithm_metrics = {}
+        if not isinstance(
+                metrics,
+                dict,
+        ):
+            metrics = {}
 
-        total_runtime = as_number(
-            runtime.get(
-                "total_microseconds"
-            )
-        )
-
-        preprocessing_runtime = as_number(
-            runtime.get(
-                "preprocessing_microseconds"
-            )
-        )
-
-        solve_runtime = as_number(
-            runtime.get(
-                "solve_microseconds"
-            )
-        )
-
-        oblivious_ratio = as_number(
-            quality.get(
-                "oblivious_ratio"
-            )
-        )
-
-        candidate_paths = as_number(
-            routing_scheme.get(
-                "candidate_paths"
-            )
-        )
-
-        average_paths_per_pair = as_number(
-            routing_scheme.get(
-                "average_paths_per_pair"
-            )
-        )
-
-        # --------------------------------------------------------------
-        # Solver-specific metrics
-        # --------------------------------------------------------------
-
-        mwu = algorithm_metrics.get(
+        mwu = metrics.get(
             "mwu",
-            {}
+            {},
         )
 
-        expander = algorithm_metrics.get(
+        expander = metrics.get(
             "expander",
-            {}
+            {},
         )
 
-        if not isinstance(mwu, dict):
+        if not isinstance(
+                mwu,
+                dict,
+        ):
             mwu = {}
 
-        if not isinstance(expander, dict):
+        if not isinstance(
+                expander,
+                dict,
+        ):
             expander = {}
 
-        # --------------------------------------------------------------
-        # Demand evaluations
-        # --------------------------------------------------------------
+        common = {
+            "schema_version":
+                schema_version,
 
-        demand_evaluations = solver_result.get(
-            "demand_evaluations",
-            []
+            "graph":
+                graph.get(
+                    "name"
+                ),
+
+            "graph_path":
+                graph.get(
+                    "path"
+                ),
+
+            "nodes":
+                as_number(
+                    graph.get(
+                        "nodes"
+                    )
+                ),
+
+            "edges":
+                as_number(
+                    graph.get(
+                        "edges"
+                    )
+                ),
+
+            "seed":
+                as_number(
+                    configuration.get(
+                        "seed"
+                    )
+                ),
+
+            "threads":
+                as_number(
+                    configuration.get(
+                        "threads"
+                    )
+                ),
+
+            "solver":
+                solver_result.get(
+                    "solver"
+                ),
+
+            "solver_type":
+                solver_result.get(
+                    "solver_type"
+                ),
+
+            "routing_base":
+                solver_result.get(
+                    "routing_base"
+                ),
+
+            "status":
+                solver_result.get(
+                    "status"
+                ),
+
+            "oblivious_ratio":
+                as_number(
+                    quality.get(
+                        "oblivious_ratio"
+                    )
+                ),
+
+            "total_runtime_microseconds":
+                as_number(
+                    runtime.get(
+                        "total_microseconds"
+                    )
+                ),
+
+            "preprocessing_runtime_microseconds":
+                as_number(
+                    runtime.get(
+                        "preprocessing_microseconds"
+                    )
+                ),
+
+            "solve_runtime_microseconds":
+                as_number(
+                    runtime.get(
+                        "solve_microseconds"
+                    )
+                ),
+
+            "candidate_paths":
+                as_number(
+                    routing_scheme.get(
+                        "candidate_paths"
+                    )
+                ),
+
+            "average_paths_per_pair":
+                as_number(
+                    routing_scheme.get(
+                        "average_paths_per_pair"
+                    )
+                ),
+
+            "mwu_iteration_count":
+                as_number(
+                    mwu.get(
+                        "iteration_count"
+                    )
+                ),
+
+            "mwu_solve_time_microseconds":
+                as_number(
+                    mwu.get(
+                        "solve_time_microseconds"
+                    )
+                ),
+
+            "mwu_transformation_time_microseconds":
+                as_number(
+                    mwu.get(
+                        "transformation_time_microseconds"
+                    )
+                ),
+
+            "mwu_load_computation_time_microseconds":
+                as_number(
+                    mwu.get(
+                        "load_computation_time_microseconds"
+                    )
+                ),
+
+            "mwu_weight_update_time_microseconds":
+                as_number(
+                    mwu.get(
+                        "weight_update_time_microseconds"
+                    )
+                ),
+
+            "mwu_average_oracle_time_microseconds":
+                as_number(
+                    mwu.get(
+                        "average_oracle_time_microseconds"
+                    )
+                ),
+
+            "mwu_oracle_calls":
+                as_number(
+                    mwu.get(
+                        "oracle_calls"
+                    )
+                ),
+
+            "expander_hierarchy_runtime_microseconds":
+                as_number(
+                    expander.get(
+                        "hierarchy_runtime_microseconds"
+                    )
+                ),
+
+            "expander_tree_runtime_microseconds":
+                as_number(
+                    expander.get(
+                        "tree_runtime_microseconds"
+                    )
+                ),
+
+            "expander_basis_flow_runtime_microseconds":
+                as_number(
+                    expander.get(
+                        "basis_flow_runtime_microseconds"
+                    )
+                ),
+
+            "expander_hierarchy_levels":
+                as_number(
+                    expander.get(
+                        "hierarchy_levels"
+                    )
+                ),
+
+            "expander_hierarchy_clusters":
+                as_number(
+                    expander.get(
+                        "hierarchy_clusters"
+                    )
+                ),
+
+            "expander_tree_nodes":
+                as_number(
+                    expander.get(
+                        "tree_nodes"
+                    )
+                ),
+
+            "expander_tree_edges":
+                as_number(
+                    expander.get(
+                        "tree_edges"
+                    )
+                ),
+
+            "expander_tree_depth":
+                as_number(
+                    expander.get(
+                        "tree_depth"
+                    )
+                ),
+
+            "expander_basis_flows":
+                as_number(
+                    expander.get(
+                        "basis_flows"
+                    )
+                ),
+
+            "expander_total_electrical_solves":
+                as_number(
+                    expander.get(
+                        "total_electrical_solves"
+                    )
+                ),
+
+            "expander_average_electrical_solves":
+                as_number(
+                    expander.get(
+                        "average_electrical_solves"
+                    )
+                ),
+
+            "expander_max_basis_embedding_congestion":
+                as_number(
+                    expander.get(
+                        "max_basis_embedding_congestion"
+                    )
+                ),
+
+            "expander_max_conservation_error":
+                as_number(
+                    expander.get(
+                        "max_conservation_error"
+                    )
+                ),
+
+            "json_file":
+                str(
+                    result_json_path
+                ),
+        }
+
+        demand_evaluations = (
+            solver_result.get(
+                "demand_evaluations",
+                [],
+            )
         )
 
-        if not isinstance(demand_evaluations, list):
+        if not isinstance(
+                demand_evaluations,
+                list,
+        ):
             raise ValueError(
-                "Invalid schema: "
-                "'demand_evaluations' must be an array."
+                "'demand_evaluations' "
+                "must be an array."
             )
 
         for evaluation in demand_evaluations:
 
-            if not isinstance(evaluation, dict):
+            if not isinstance(
+                    evaluation,
+                    dict,
+            ):
                 continue
 
-            rows.append({
+            row = dict(
+                common
+            )
 
-                # Schema
-                "schema_version":
-                    schema_version,
-
-                # Graph
-                "graph":
-                    graph_name,
-
-                "graph_path":
-                    graph_path,
-
-                "nodes":
-                    nodes,
-
-                "edges":
-                    edges,
-
-                # Configuration
-                "seed":
-                    seed,
-
-                "threads":
-                    threads,
-
-                # Solver
-                "solver":
-                    solver_name,
-
-                "solver_type":
-                    solver_type,
-
-                "routing_base":
-                    routing_base,
-
-                "status":
-                    status,
-
-                # Demand result
+            row.update({
                 "demand_model":
                     evaluation.get(
                         "demand_model"
@@ -365,243 +734,218 @@ def extract_summary_rows(result_json_path: Path):
                             "runtime_microseconds"
                         )
                     ),
-
-                # Common quality
-                "oblivious_ratio":
-                    oblivious_ratio,
-
-                # Runtime
-                "total_runtime_microseconds":
-                    total_runtime,
-
-                "preprocessing_runtime_microseconds":
-                    preprocessing_runtime,
-
-                "solve_runtime_microseconds":
-                    solve_runtime,
-
-                # Routing scheme
-                "candidate_paths":
-                    candidate_paths,
-
-                "average_paths_per_pair":
-                    average_paths_per_pair,
-
-                # ------------------------------------------------------
-                # MWU metrics
-                # ------------------------------------------------------
-
-                "mwu_iteration_count":
-                    as_number(
-                        mwu.get(
-                            "iteration_count"
-                        )
-                    ),
-
-                "mwu_solve_time_microseconds":
-                    as_number(
-                        mwu.get(
-                            "solve_time_microseconds"
-                        )
-                    ),
-
-                "mwu_transformation_time_microseconds":
-                    as_number(
-                        mwu.get(
-                            "transformation_time_microseconds"
-                        )
-                    ),
-
-                "mwu_load_computation_time_microseconds":
-                    as_number(
-                        mwu.get(
-                            "load_computation_time_microseconds"
-                        )
-                    ),
-
-                "mwu_weight_update_time_microseconds":
-                    as_number(
-                        mwu.get(
-                            "weight_update_time_microseconds"
-                        )
-                    ),
-
-                "mwu_average_oracle_time_microseconds":
-                    as_number(
-                        mwu.get(
-                            "average_oracle_time_microseconds"
-                        )
-                    ),
-
-                "mwu_oracle_calls":
-                    as_number(
-                        mwu.get(
-                            "oracle_calls"
-                        )
-                    ),
-
-                # ------------------------------------------------------
-                # Expander metrics
-                # ------------------------------------------------------
-
-                "expander_hierarchy_runtime_microseconds":
-                    as_number(
-                        expander.get(
-                            "hierarchy_runtime_microseconds"
-                        )
-                    ),
-
-                "expander_tree_runtime_microseconds":
-                    as_number(
-                        expander.get(
-                            "tree_runtime_microseconds"
-                        )
-                    ),
-
-                "expander_basis_flow_runtime_microseconds":
-                    as_number(
-                        expander.get(
-                            "basis_flow_runtime_microseconds"
-                        )
-                    ),
-
-                "expander_hierarchy_levels":
-                    as_number(
-                        expander.get(
-                            "hierarchy_levels"
-                        )
-                    ),
-
-                "expander_hierarchy_clusters":
-                    as_number(
-                        expander.get(
-                            "hierarchy_clusters"
-                        )
-                    ),
-
-                "expander_tree_nodes":
-                    as_number(
-                        expander.get(
-                            "tree_nodes"
-                        )
-                    ),
-
-                "expander_tree_edges":
-                    as_number(
-                        expander.get(
-                            "tree_edges"
-                        )
-                    ),
-
-                "expander_tree_depth":
-                    as_number(
-                        expander.get(
-                            "tree_depth"
-                        )
-                    ),
-
-                "expander_basis_flows":
-                    as_number(
-                        expander.get(
-                            "basis_flows"
-                        )
-                    ),
-
-                "expander_total_electrical_solves":
-                    as_number(
-                        expander.get(
-                            "total_electrical_solves"
-                        )
-                    ),
-
-                "expander_average_electrical_solves":
-                    as_number(
-                        expander.get(
-                            "average_electrical_solves"
-                        )
-                    ),
-
-                "expander_max_basis_embedding_congestion":
-                    as_number(
-                        expander.get(
-                            "max_basis_embedding_congestion"
-                        )
-                    ),
-
-                "expander_max_conservation_error":
-                    as_number(
-                        expander.get(
-                            "max_conservation_error"
-                        )
-                    ),
-
-                # Source result file
-                "json_file":
-                    str(result_json_path),
             })
 
+            rows.append(
+                row
+            )
+
     return rows
+
+
+SUMMARY_FIELDS = [
+    "schema_version",
+
+    "graph",
+    "graph_path",
+    "nodes",
+    "edges",
+
+    "seed",
+    "threads",
+
+    "solver",
+    "solver_type",
+    "routing_base",
+    "status",
+
+    "demand_model",
+    "congestion",
+    "oblivious_ratio",
+
+    "total_runtime_microseconds",
+    "preprocessing_runtime_microseconds",
+    "solve_runtime_microseconds",
+    "evaluation_runtime_microseconds",
+
+    "candidate_paths",
+    "average_paths_per_pair",
+
+    "mwu_iteration_count",
+    "mwu_solve_time_microseconds",
+    "mwu_transformation_time_microseconds",
+    "mwu_load_computation_time_microseconds",
+    "mwu_weight_update_time_microseconds",
+    "mwu_average_oracle_time_microseconds",
+    "mwu_oracle_calls",
+
+    "expander_hierarchy_runtime_microseconds",
+    "expander_tree_runtime_microseconds",
+    "expander_basis_flow_runtime_microseconds",
+    "expander_hierarchy_levels",
+    "expander_hierarchy_clusters",
+    "expander_tree_nodes",
+    "expander_tree_edges",
+    "expander_tree_depth",
+    "expander_basis_flows",
+    "expander_total_electrical_solves",
+    "expander_average_electrical_solves",
+    "expander_max_basis_embedding_congestion",
+    "expander_max_conservation_error",
+
+    "json_file",
+]
+
+
+def write_summary(
+        summary_path,
+        rows,
+):
+    with Path(
+            summary_path
+    ).open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as f:
+
+        writer = csv.DictWriter(
+            f,
+            fieldnames=SUMMARY_FIELDS,
+        )
+
+        writer.writeheader()
+
+        writer.writerows(
+            rows
+        )
+
+
+# ============================================================================
+# Main
+# ============================================================================
 
 
 def main():
     args = parse_args()
 
-    timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
+    if (
+            args.threads is not None
+            and args.threads <= 0
+    ):
+        raise SystemExit(
+            "--threads must be positive."
+        )
+
+    binary = Path(
+        args.bin
+    ).expanduser()
+
+    if not binary.exists():
+        raise SystemExit(
+            f"Binary does not exist: "
+            f"{binary}"
+        )
+
+    try:
+        graph_paths = (
+            discover_graphs(
+                args.graphs
+            )
+        )
+
+    except ValueError as exc:
+        raise SystemExit(
+            str(exc)
+        ) from exc
+
+    timestamp = (
+        datetime.now().strftime(
+            "%Y%m%d_%H%M%S"
+        )
     )
 
     out_dir = (
-        Path(args.out)
+        Path(
+            args.out
+        ).expanduser()
         if args.out
-        else Path("results") / f"run_{timestamp}"
+        else
+        Path(
+            "results"
+        )
+        / f"run_{timestamp}"
     )
 
     out_dir.mkdir(
         parents=True,
-        exist_ok=True
+        exist_ok=True,
     )
 
-    all_rows = []
-    failures = []
-
-    # ------------------------------------------------------------------
-    # The C++ CLI accepts comma-separated solvers:
-    #
-    #   --solver electrical,raecke_ckr,expander
-    #
-    # Therefore we run the binary once per graph instead of once for
-    # every graph/solver combination.
-    # ------------------------------------------------------------------
+    output_stems = (
+        make_output_stems(
+            graph_paths
+        )
+    )
 
     solver_argument = ",".join(
         args.solvers
     )
 
-    for graph in args.graphs:
+    all_rows = []
+    failures = []
 
-        graph_name = safe_name(
-            graph
+    print()
+    print(
+        f"Discovered "
+        f"{len(graph_paths)} graph(s)."
+    )
+
+    print(
+        f"Results directory: "
+        f"{out_dir}"
+    )
+
+    print()
+
+    # ------------------------------------------------------------------
+    # Run experiments
+    # ------------------------------------------------------------------
+
+    for (
+            index,
+            graph_path,
+    ) in enumerate(
+        graph_paths,
+        start=1,
+    ):
+
+        stem = (
+            output_stems[
+                graph_path
+            ]
         )
 
         json_path = (
-                out_dir /
-                f"{graph_name}.json"
+                out_dir
+                / f"{stem}.json"
         )
 
         stderr_path = (
-                out_dir /
-                f"{graph_name}.stderr.txt"
+                out_dir
+                / f"{stem}.stderr.txt"
         )
 
         cmd = [
-            args.bin,
+            str(binary),
+
             "solve",
 
             "--solver",
             solver_argument,
 
             "--graph",
-            graph,
+            str(graph_path),
 
             "--demand",
             args.demands,
@@ -616,43 +960,41 @@ def main():
         if args.threads is not None:
             cmd += [
                 "--threads",
-                str(args.threads),
+                str(
+                    args.threads
+                ),
             ]
 
         print(
-            f"[RUN] {graph_name}"
+            f"[RUN {index}/"
+            f"{len(graph_paths)}] "
+            f"{graph_path}"
         )
 
-        print(
-            f"      solvers: "
-            f"{solver_argument}"
+        completed = (
+            subprocess.run(
+                cmd,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
         )
 
-        print(
-            f"      demands: "
-            f"{args.demands}"
-        )
-
-        completed = subprocess.run(
-            cmd,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        # --------------------------------------------------------------
-        # C++ execution failed
-        # --------------------------------------------------------------
-
-        if completed.returncode != 0:
+        if (
+                completed.returncode
+                != 0
+        ):
 
             stderr_path.write_text(
-                completed.stderr
+                completed.stderr,
+                encoding="utf-8",
             )
 
             failures.append({
                 "graph":
-                    graph,
+                    str(
+                        graph_path
+                    ),
 
                 "solvers":
                     args.solvers,
@@ -661,23 +1003,24 @@ def main():
                     completed.returncode,
 
                 "stderr_file":
-                    str(stderr_path),
+                    str(
+                        stderr_path
+                    ),
             })
 
             print(
-                f"[FAIL] {graph_name}"
+                f"[FAIL] "
+                f"{graph_path}"
             )
 
             continue
 
-        # --------------------------------------------------------------
-        # Parse standardized result
-        # --------------------------------------------------------------
-
         try:
 
-            rows = extract_summary_rows(
-                json_path
+            rows = (
+                extract_summary_rows(
+                    json_path
+                )
             )
 
             all_rows.extend(
@@ -685,24 +1028,30 @@ def main():
             )
 
             print(
-                f"[OK]   {graph_name} "
-                f"| {len(rows)} summary rows"
+                f"[OK]   "
+                f"{graph_path} "
+                f"| {len(rows)} rows"
             )
 
         except Exception as exc:
 
             stderr_path.write_text(
-                "JSON parsing/extraction failed:\n"
-                f"{exc}\n\n"
-                f"stdout:\n"
-                f"{completed.stdout}\n\n"
-                f"stderr:\n"
-                f"{completed.stderr}\n"
+                (
+                    "JSON parsing/extraction failed:\n"
+                    f"{exc}\n\n"
+                    f"stdout:\n"
+                    f"{completed.stdout}\n\n"
+                    f"stderr:\n"
+                    f"{completed.stderr}\n"
+                ),
+                encoding="utf-8",
             )
 
             failures.append({
                 "graph":
-                    graph,
+                    str(
+                        graph_path
+                    ),
 
                 "solvers":
                     args.solvers,
@@ -711,133 +1060,152 @@ def main():
                     "json_error",
 
                 "stderr_file":
-                    str(stderr_path),
+                    str(
+                        stderr_path
+                    ),
             })
 
             print(
-                f"[BAD JSON] {graph_name}"
+                f"[BAD JSON] "
+                f"{graph_path}"
             )
 
     # ------------------------------------------------------------------
-    # Summary CSV
+    # summary.csv
     # ------------------------------------------------------------------
 
     summary_path = (
-            out_dir /
-            "summary.csv"
+            out_dir
+            / "summary.csv"
     )
 
-    fieldnames = [
+    write_summary(
+        summary_path,
+        all_rows,
+    )
 
-        "schema_version",
+    # ------------------------------------------------------------------
+    # Report
+    # ------------------------------------------------------------------
 
-        # Graph
-        "graph",
-        "graph_path",
-        "nodes",
-        "edges",
+    report_path = (
+            out_dir
+            / "report.md"
+    )
 
-        # Configuration
-        "seed",
-        "threads",
+    report_error = None
+    report_outputs = None
 
-        # Solver
-        "solver",
-        "solver_type",
-        "routing_base",
-        "status",
+    if all_rows:
 
-        # Demand evaluation
-        "demand_model",
-        "congestion",
-        "oblivious_ratio",
+        try:
 
-        # Runtime
-        "total_runtime_microseconds",
-        "preprocessing_runtime_microseconds",
-        "solve_runtime_microseconds",
-        "evaluation_runtime_microseconds",
+            report_outputs = (
+                generate_report_from_summary(
+                    summary_path=summary_path,
+                    report_path=report_path,
+                    title=args.report_title,
+                )
+            )
 
-        # Routing scheme
-        "candidate_paths",
-        "average_paths_per_pair",
+            print()
+            print(
+                "[REPORT] Generated:"
+            )
 
-        # MWU
-        "mwu_iteration_count",
-        "mwu_solve_time_microseconds",
-        "mwu_transformation_time_microseconds",
-        "mwu_load_computation_time_microseconds",
-        "mwu_weight_update_time_microseconds",
-        "mwu_average_oracle_time_microseconds",
-        "mwu_oracle_calls",
+            print(
+                f"  Markdown: "
+                f"{report_outputs['markdown']}"
+            )
 
-        # Expander hierarchy
-        "expander_hierarchy_runtime_microseconds",
-        "expander_tree_runtime_microseconds",
-        "expander_basis_flow_runtime_microseconds",
-        "expander_hierarchy_levels",
-        "expander_hierarchy_clusters",
-        "expander_tree_nodes",
-        "expander_tree_edges",
-        "expander_tree_depth",
-        "expander_basis_flows",
-        "expander_total_electrical_solves",
-        "expander_average_electrical_solves",
-        "expander_max_basis_embedding_congestion",
-        "expander_max_conservation_error",
+            if (
+                    report_outputs[
+                        "html"
+                    ]
+                    is not None
+            ):
 
-        # Origin
-        "json_file",
-    ]
+                print(
+                    f"  HTML:     "
+                    f"{report_outputs['html']}"
+                )
 
-    with summary_path.open(
-            "w",
-            newline=""
-    ) as f:
+            else:
 
-        writer = csv.DictWriter(
-            f,
-            fieldnames=fieldnames
-        )
+                print(
+                    "  HTML:     skipped"
+                )
 
-        writer.writeheader()
+            if (
+                    report_outputs[
+                        "pdf"
+                    ]
+                    is not None
+            ):
 
-        writer.writerows(
-            all_rows
+                print(
+                    f"  PDF:      "
+                    f"{report_outputs['pdf']}"
+                )
+
+            else:
+
+                print(
+                    "  PDF:      skipped"
+                )
+
+        except Exception as exc:
+
+            report_error = str(
+                exc
+            )
+
+            print()
+            print(
+                f"[REPORT ERROR] "
+                f"{report_error}"
+            )
+
+    else:
+
+        report_error = (
+            "No successful experiment "
+            "rows were produced."
         )
 
     # ------------------------------------------------------------------
-    # Failures
+    # failures.json
     # ------------------------------------------------------------------
 
     if failures:
 
         failure_path = (
-                out_dir /
-                "failures.json"
+                out_dir
+                / "failures.json"
         )
 
         failure_path.write_text(
             json.dumps(
                 failures,
-                indent=2
-            )
+                indent=2,
+            ),
+            encoding="utf-8",
         )
 
         print()
-
         print(
             f"Finished with "
-            f"{len(failures)} failed graph runs."
+            f"{len(failures)} "
+            f"failed graph run(s)."
         )
 
         print(
-            f"Failures written to: "
+            f"Failures: "
             f"{failure_path}"
         )
 
     # ------------------------------------------------------------------
-    # Final report
+    # Final summary
     # ------------------------------------------------------------------
 
     print()
@@ -845,6 +1213,21 @@ def main():
     print(
         f"Results directory: "
         f"{out_dir}"
+    )
+
+    print(
+        f"Graphs discovered: "
+        f"{len(graph_paths)}"
+    )
+
+    print(
+        f"Graphs succeeded:  "
+        f"{len(graph_paths) - len(failures)}"
+    )
+
+    print(
+        f"Graphs failed:     "
+        f"{len(failures)}"
     )
 
     print(
@@ -857,7 +1240,70 @@ def main():
         f"{len(all_rows)}"
     )
 
+    if report_outputs is not None:
+
+        print(
+            f"Markdown report:   "
+            f"{report_outputs['markdown']}"
+        )
+
+        if (
+                report_outputs[
+                    "html"
+                ]
+                is not None
+        ):
+
+            print(
+                f"HTML report:       "
+                f"{report_outputs['html']}"
+            )
+
+        else:
+
+            print(
+                "HTML report:       skipped"
+            )
+
+        if (
+                report_outputs[
+                    "pdf"
+                ]
+                is not None
+        ):
+
+            print(
+                f"PDF report:        "
+                f"{report_outputs['pdf']}"
+            )
+
+        else:
+
+            print(
+                "PDF report:        skipped"
+            )
+
+        print(
+            f"Plots:             "
+            f"{out_dir / 'plots'}"
+        )
+
+    elif report_error is not None:
+
+        print(
+            f"Report error:      "
+            f"{report_error}"
+        )
+
+    # Graph experiment failures should still produce
+    # a non-zero exit code.
+    #
+    # A skipped PDF export does NOT count as failure.
+
     if failures:
+        raise SystemExit(1)
+
+    if report_error is not None:
         raise SystemExit(1)
 
 
