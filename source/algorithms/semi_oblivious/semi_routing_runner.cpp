@@ -252,6 +252,13 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>
             .recovery_slowest_recovery_runtime_microseconds = recovery_available ? recovery_analysis.summary.slowest_recovery_runtime_microseconds : -1.0,
         });
 
+
+
+        if (recovery_available) {
+            semiResult.demand_evaluations.back().recovery_events = std::move(recovery_analysis.failures);
+        }
+
+
         /*
          * Preserve the exact demand-specific routing scheme.
          */

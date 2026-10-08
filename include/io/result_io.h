@@ -619,6 +619,45 @@ class RoutingResultWriter {
                     out << "            \"slowest_recovery_runtime_microseconds\": " << eval.recovery_slowest_recovery_runtime_microseconds << "\n";
 
                     out << "          }";
+
+
+                    out << ",\n";
+                    out << "          \"failure_recovery_events\": [\n";
+
+                    for (std::size_t event_index = 0; event_index < eval.recovery_events.size(); ++event_index) {
+                        const auto& event = eval.recovery_events[event_index];
+
+                        out << "            {\n";
+
+                        out << "              \"failed_edge_id\": " << event.failed_edge_id << ",\n";
+                        out << "              \"source\": " << event.source << ",\n";
+                        out << "              \"target\": " << event.target << ",\n";
+
+                        out << "              \"graph_disconnected\": " << (event.graph_disconnected ? "true" : "false") << ",\n";
+
+                        out << "              \"total_demand\": " << event.total_demand << ",\n";
+                        out << "              \"unroutable_demand\": " << event.unroutable_demand << ",\n";
+                        out << "              \"unroutable_demand_fraction\": " << event.unroutable_demand_fraction << ",\n";
+
+                        out << "              \"baseline_congestion\": " << event.baseline_congestion << ",\n";
+                        out << "              \"post_failure_congestion\": " << event.post_failure_congestion << ",\n";
+                        out << "              \"congestion_increase_factor\": " << event.congestion_increase_factor << ",\n";
+
+                        out << "              \"recomputation_attempted\": " << (event.recomputation_attempted ? "true" : "false") << ",\n";
+                        out << "              \"recomputation_succeeded\": " << (event.recomputation_succeeded ? "true" : "false") << ",\n";
+                        out << "              \"recomputation_runtime_microseconds\": " << event.recomputation_runtime_microseconds << "\n";
+
+                        out << "            }";
+
+                        if (event_index + 1 < eval.recovery_events.size()) {
+                            out << ",";
+                        }
+
+                        out << "\n";
+                    }
+
+                    out << "          ]";
+
                 }
 
                 /*

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:erouting:analysis-result:1.0.0",
+  "title": "E-Routing Canonical Analysis Result",
+  "type": "object",
+  "required": ["schema_version", "analysis_metadata", "topology", "demand", "solver", "baseline", "capacity_headroom", "layer1_exposure", "n1_recovery", "critical_links", "capacity_violations", "disconnecting_failures", "maintenance_scenarios", "growth_scenarios", "upgrade_candidates", "recommendations", "provenance"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "analysis_metadata": {
+      "type": "object", "required": ["run_id", "scenario_id", "created_at", "status", "enabled_analyses"],
+      "properties": {"run_id": {"type": "string", "minLength": 1}, "scenario_id": {"type": "string", "minLength": 1}, "created_at": {"type": "string", "format": "date-time"}, "status": {"$ref": "#/$defs/status"}, "enabled_analyses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}
+    },
+    "topology": {
+      "type": "object", "required": ["topology_id", "sha256", "source", "node_count", "reported_edge_count", "physical_link_count"],
+      "properties": {"topology_id": {"type": "string"}, "sha256": {"$ref": "#/$defs/nullableSha256"}, "source": {"type": "string"}, "node_count": {"$ref": "#/$defs/nullableCount"}, "reported_edge_count": {"$ref": "#/$defs/nullableCount"}, "physical_link_count": {"$ref": "#/$defs/nullableCount"}}
+    },
+    "demand": {
+      "type": "object", "required": ["demand_id", "sha256", "source_type", "model", "scale_factor", "total_demand", "unit"],
+      "properties": {"demand_id": {"type": "string"}, "sha256": {"$ref": "#/$defs/nullableSha256"}, "source_type": {"type": "string"}, "model": {"type": "string"}, "scale_factor": {"$ref": "#/$defs/nullableNonnegative"}, "total_demand": {"$ref": "#/$defs/nullableNonnegative"}, "unit": {"type": "string"}}
+    },
+    "solver": {
+      "type": "object", "required": ["id", "name", "status", "routing_base"],
+      "properties": {"id": {"type": ["string", "null"]}, "name": {"type": ["string", "null"]}, "status": {"type": ["string", "null"]}, "routing_base": {"type": ["string", "null"]}}
+    },
+    "baseline": {
+      "type": "object", "required": ["status", "metrics"],
+      "properties": {"status": {"$ref": "#/$defs/status"}, "metrics": {"type": "object", "required": ["max_congestion", "average_utilization", "links", "overloaded_link_ids", "solver_runtime_microseconds", "evaluation_runtime_microseconds"], "properties": {"max_congestion": {"$ref": "#/$defs/nullableNonnegative"}, "average_utilization": {"$ref": "#/$defs/nullableNonnegative"}, "links": {"type": "array"}, "overloaded_link_ids": {"type": "array", "items": {"type": "integer", "minimum": 0}}, "solver_runtime_microseconds": {"$ref": "#/$defs/nullableNonnegative"}, "evaluation_runtime_microseconds": {"$ref": "#/$defs/nullableNonnegative"}}}}
+    },
+    "capacity_headroom": {"type": "object", "required": ["status", "minimum_headroom", "violating_link_ids"], "properties": {"status": {"$ref": "#/$defs/status"}, "minimum_headroom": {"type": ["number", "null"]}, "violating_link_ids": {"type": "array", "items": {"type": "integer", "minimum": 0}}}},
+    "layer1_exposure": {"type": "object", "required": ["status", "tested_link_count", "links"], "properties": {"status": {"$ref": "#/$defs/status"}, "tested_link_count": {"$ref": "#/$defs/nullableCount"}, "links": {"type": "array"}}},
+    "n1_recovery": {
+      "type": "object", "required": ["status", "tested_link_count", "events", "service_survivability_rate", "capacity_compliance_rate"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"}, "tested_link_count": {"$ref": "#/$defs/nullableCount"},
+        "events": {"type": "array", "items": {"$ref": "#/$defs/recoveryEvent"}},
+        "summary": {"$ref": "#/$defs/recoverySummary"},
+        "service_survivability_rate": {"$ref": "#/$defs/nullableFraction"}, "capacity_compliance_rate": {"$ref": "#/$defs/nullableFraction"}
+      }
+    },
+    "critical_links": {"type": "array"}, "capacity_violations": {"type": "array"},
+    "disconnecting_failures": {"type": "array", "items": {"$ref": "#/$defs/disconnectingFailure"}},
+    "maintenance_scenarios": {"type": "array"}, "growth_scenarios": {"type": "array"}, "upgrade_candidates": {"type": "array"}, "recommendations": {"type": "array"},
+    "provenance": {"type": "object", "required": ["engine_version", "engine_commit", "solver_id", "solver_version", "random_seed", "thread_count", "determinism", "configuration", "tool_calls"], "properties": {"engine_version": {"type": ["string", "null"]}, "engine_commit": {"type": ["string", "null"]}, "solver_id": {"type": ["string", "null"]}, "solver_version": {"type": ["string", "null"]}, "random_seed": {"$ref": "#/$defs/nullableCount"}, "thread_count": {"type": ["integer", "null"], "minimum": 1}, "determinism": {"type": "string"}, "configuration": {"type": "object"}, "tool_calls": {"type": "array"}}}
+  },
+  "$defs": {
+    "status": {"enum": ["pending", "running", "completed", "complete", "partial", "failed", "cancelled", "not_requested", "not_available", "unavailable"]},
+    "nullableCount": {"type": ["integer", "null"], "minimum": 0},
+    "nullableNonnegative": {"type": ["number", "null"], "minimum": 0},
+    "nullableFraction": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "nullableSha256": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"}]},
+    "recoveryEvent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["failed_edge_id", "source", "target", "graph_disconnected", "recomputation_attempted", "recomputation_succeeded", "total_demand", "unroutable_demand", "unroutable_demand_fraction", "baseline_congestion", "post_failure_congestion", "congestion_increase_factor", "recomputation_runtime_microseconds"],
+      "properties": {"failed_edge_id": {"type": "integer", "minimum": 0}, "source": {"type": "integer", "minimum": 0}, "target": {"type": "integer", "minimum": 0}, "graph_disconnected": {"type": "boolean"}, "recomputation_attempted": {"type": "boolean"}, "recomputation_succeeded": {"type": "boolean"}, "total_demand": {"$ref": "#/$defs/nullableNonnegative"}, "unroutable_demand": {"$ref": "#/$defs/nullableNonnegative"}, "unroutable_demand_fraction": {"$ref": "#/$defs/nullableFraction"}, "baseline_congestion": {"$ref": "#/$defs/nullableNonnegative"}, "post_failure_congestion": {"$ref": "#/$defs/nullableNonnegative"}, "congestion_increase_factor": {"$ref": "#/$defs/nullableNonnegative"}, "recomputation_runtime_microseconds": {"$ref": "#/$defs/nullableNonnegative"}}
+    },
+    "recoverySummary": {"type": "object", "required": ["tested_links", "disconnected_failures", "successful_recomputations", "failed_recomputations"], "properties": {"tested_links": {"type": "integer", "minimum": 0}, "disconnected_failures": {"type": "integer", "minimum": 0}, "successful_recomputations": {"type": "integer", "minimum": 0}, "failed_recomputations": {"type": "integer", "minimum": 0}, "maximum_unroutable_demand_fraction": {"$ref": "#/$defs/nullableFraction"}, "average_unroutable_demand_fraction": {"$ref": "#/$defs/nullableFraction"}, "maximum_post_failure_congestion": {"$ref": "#/$defs/nullableNonnegative"}, "average_post_failure_congestion": {"$ref": "#/$defs/nullableNonnegative"}, "maximum_congestion_increase_factor": {"$ref": "#/$defs/nullableNonnegative"}, "average_congestion_increase_factor": {"$ref": "#/$defs/nullableNonnegative"}, "average_recomputation_runtime_microseconds": {"$ref": "#/$defs/nullableNonnegative"}, "maximum_recomputation_runtime_microseconds": {"$ref": "#/$defs/nullableNonnegative"}}},
+    "disconnectingFailure": {"type": "object", "additionalProperties": false, "required": ["failed_edge_id", "source", "target", "unroutable_demand_fraction"], "properties": {"failed_edge_id": {"type": "integer", "minimum": 0}, "source": {"type": "integer", "minimum": 0}, "target": {"type": "integer", "minimum": 0}, "unroutable_demand_fraction": {"$ref": "#/$defs/nullableFraction"}}}
+  }
+}

@@ -5,15 +5,15 @@
 #ifndef OBLIVIOUSROUTING_ROUTING_RESULT_H
 #define OBLIVIOUSROUTING_ROUTING_RESULT_H
 
-#include <unordered_map>
-#include <vector>
-#include <memory>
+#include "core/types.h"
 #include "io/demand_io.h"
 #include "routing_table.h"
-#include "core/types.h"
 #include "utils/my_math.h"
 #include "visualization/failure_analysis.h"
-
+#include "visualization/failure_recovery_types.h"
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 struct DemandEvaluationResult {
     DemandModelType demand_type{};
@@ -183,6 +183,21 @@ struct DemandEvaluationResult {
     int recovery_slowest_recovery_target = -1;
 
     double recovery_slowest_recovery_runtime_microseconds = -1.0;
+
+
+
+    /*
+     * Complete Layer-2 N-1 recovery results.
+     *
+     * Each entry represents one tested physical-link failure.
+     *
+     * Includes disconnected failures, successful recomputations,
+     * and failed recomputations.
+     *
+     * The aggregate recovery_* fields above are preserved for
+     * backward compatibility.
+     */
+    std::vector<LinkFailureRecoveryResult> recovery_events;
 };
 
 class MWUMetrics{

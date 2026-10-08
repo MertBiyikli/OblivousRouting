@@ -190,6 +190,12 @@ class DemandEvaluator {
                 .recovery_slowest_recovery_runtime_microseconds = recovery_available ? recovery_analysis.summary.slowest_recovery_runtime_microseconds : -1.0,
             });
 
+
+            if (recovery_available) {
+                result.demand_evaluations.back().recovery_events = std::move(recovery_analysis.failures);
+            }
+
+
             result.visualization_results.push_back(std::move(visualization.value()));
         }
 
