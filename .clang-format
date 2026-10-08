@@ -1,0 +1,37 @@
+BasedOnStyle: LLVM
+
+# Allow long lines
+ColumnLimit: 200
+
+# Keep function declarations/definitions on one line when possible
+BinPackParameters: true
+BinPackArguments: true
+
+# Don't force every parameter onto its own line
+AllowAllParametersOfDeclarationOnNextLine: true
+
+# Avoid unnecessary wrapping
+PenaltyBreakBeforeFirstCallParameter: 1000000
+PenaltyBreakAssignment: 1000000
+PenaltyBreakString: 1000000
+PenaltyExcessCharacter: 100000
+
+# General C++ style
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Pointer/reference style
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# Braces
+BreakBeforeBraces: Attach
+
+# Keep short constructs compact
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Includes
+SortIncludes: true

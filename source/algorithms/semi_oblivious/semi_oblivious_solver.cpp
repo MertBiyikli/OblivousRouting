@@ -5,6 +5,7 @@
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
 
 #include "utils/time_tracking.h"
+#include "visualization/visualization_result.h"
 
 
 Result<std::unique_ptr<RoutingScheme>> SemiObliviousRoutingSolver::solve() {
@@ -98,21 +99,8 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
             graph,
             *res.scheme,
             demand,
-
-            /*
-             * Replace this with graph.getName() if your graph interface
-             * exposes a graph name.
-             */
-            "",
-
-            /*
-             * Path-selection strategy identifies the semi-oblivious solver
-             * variant, such as electrical, tree or expander hierarchy.
-             */
-            res.path_selection_strategy,
-
-            demandModelName(demandType)
-        );
+            res,
+            demandModelName(demandType));
 
     if (!vis_result) {
         return getError(vis_result);

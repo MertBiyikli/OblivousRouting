@@ -151,6 +151,28 @@ def parse_args():
         ),
     )
 
+    recovery_group = parser.add_mutually_exclusive_group()
+    recovery_group.add_argument(
+        "--failure-recovery",
+        dest="failure_recovery",
+        action="store_true",
+        help=(
+            "Enable Layer-2 N-1 failure recovery analysis "
+            "(default)."
+        ),
+    )
+    recovery_group.add_argument(
+        "--no-failure-recovery",
+        dest="failure_recovery",
+        action="store_false",
+        help=(
+            "Disable Layer-2 N-1 failure recovery analysis."
+        ),
+    )
+    parser.set_defaults(
+        failure_recovery=True
+    )
+
     return parser.parse_args()
 
 
@@ -479,6 +501,12 @@ def extract_summary_rows(
                     )
                 ),
 
+            "failure_recovery":
+                configuration.get(
+                    "failure_recovery",
+                    False,
+                ),
+
             "solver":
                 solver_result.get(
                     "solver"
@@ -711,6 +739,32 @@ def extract_summary_rows(
             ):
                 continue
 
+            failure_analysis = (
+                evaluation.get(
+                    "failure_analysis",
+                    {},
+                )
+            )
+
+            if not isinstance(
+                    failure_analysis,
+                    dict,
+            ):
+                failure_analysis = {}
+
+            failure_recovery = (
+                evaluation.get(
+                    "failure_recovery",
+                    {},
+                )
+            )
+
+            if not isinstance(
+                    failure_recovery,
+                    dict,
+            ):
+                failure_recovery = {}
+
             row = dict(
                 common
             )
@@ -728,10 +782,310 @@ def extract_summary_rows(
                         )
                     ),
 
+                # Demand evaluation only: route the demand through the
+                # already-constructed routing scheme and compute baseline
+                # metrics. This excludes solver construction and failure
+                # analysis.
                 "evaluation_runtime_microseconds":
                     as_number(
                         evaluation.get(
                             "runtime_microseconds"
+                        )
+                    ),
+
+                # Layer-1 static N-1 link-failure exposure analysis only.
+                "failure_analysis_runtime_microseconds":
+                    as_number(
+                        failure_analysis.get(
+                            "runtime_microseconds"
+                        )
+                    ),
+
+                "failure_tested_links":
+                    as_number(
+                        failure_analysis.get(
+                            "tested_links"
+                        )
+                    ),
+
+                "failure_most_critical_edge_id":
+                    as_number(
+                        failure_analysis.get(
+                            "most_critical_edge_id"
+                        )
+                    ),
+
+                "failure_most_critical_source":
+                    as_number(
+                        failure_analysis.get(
+                            "most_critical_source"
+                        )
+                    ),
+
+                "failure_most_critical_target":
+                    as_number(
+                        failure_analysis.get(
+                            "most_critical_target"
+                        )
+                    ),
+
+                "failure_maximum_lost_traffic_fraction":
+                    as_number(
+                        failure_analysis.get(
+                            "maximum_lost_traffic_fraction"
+                        )
+                    ),
+
+                "failure_average_lost_traffic_fraction":
+                    as_number(
+                        failure_analysis.get(
+                            "average_lost_traffic_fraction"
+                        )
+                    ),
+
+                "failure_median_lost_traffic_fraction":
+                    as_number(
+                        failure_analysis.get(
+                            "median_lost_traffic_fraction"
+                        )
+                    ),
+
+                "failure_maximum_affected_demand_fraction":
+                    as_number(
+                        failure_analysis.get(
+                            "maximum_affected_demand_fraction"
+                        )
+                    ),
+
+                "failure_traffic_carrying_links":
+                    as_number(
+                        failure_analysis.get(
+                            "traffic_carrying_links"
+                        )
+                    ),
+
+                "failure_critical_links_10_percent":
+                    as_number(
+                        failure_analysis.get(
+                            "critical_links_10_percent"
+                        )
+                    ),
+
+                "failure_critical_links_25_percent":
+                    as_number(
+                        failure_analysis.get(
+                            "critical_links_25_percent"
+                        )
+                    ),
+
+                "failure_critical_links_50_percent":
+                    as_number(
+                        failure_analysis.get(
+                            "critical_links_50_percent"
+                        )
+                    ),
+
+                # Layer-2 N-1 recovery analysis.
+                "recovery_tested_links":
+                    as_number(
+                        failure_recovery.get(
+                            "tested_links"
+                        )
+                    ),
+
+                "recovery_disconnected_failures":
+                    as_number(
+                        failure_recovery.get(
+                            "disconnected_failures"
+                        )
+                    ),
+
+                "recovery_successful_recomputations":
+                    as_number(
+                        failure_recovery.get(
+                            "successful_recomputations"
+                        )
+                    ),
+
+                "recovery_failed_recomputations":
+                    as_number(
+                        failure_recovery.get(
+                            "failed_recomputations"
+                        )
+                    ),
+
+                "recovery_maximum_unroutable_demand_fraction":
+                    as_number(
+                        failure_recovery.get(
+                            "maximum_unroutable_demand_fraction"
+                        )
+                    ),
+
+                "recovery_average_unroutable_demand_fraction":
+                    as_number(
+                        failure_recovery.get(
+                            "average_unroutable_demand_fraction"
+                        )
+                    ),
+
+                "recovery_maximum_post_failure_congestion":
+                    as_number(
+                        failure_recovery.get(
+                            "maximum_post_failure_congestion"
+                        )
+                    ),
+
+                "recovery_average_post_failure_congestion":
+                    as_number(
+                        failure_recovery.get(
+                            "average_post_failure_congestion"
+                        )
+                    ),
+
+                "recovery_maximum_congestion_increase_factor":
+                    as_number(
+                        failure_recovery.get(
+                            "maximum_congestion_increase_factor"
+                        )
+                    ),
+
+                "recovery_average_congestion_increase_factor":
+                    as_number(
+                        failure_recovery.get(
+                            "average_congestion_increase_factor"
+                        )
+                    ),
+
+                "recovery_average_recomputation_runtime_microseconds":
+                    as_number(
+                        failure_recovery.get(
+                            "average_recomputation_runtime_microseconds"
+                        )
+                    ),
+
+                "recovery_maximum_recomputation_runtime_microseconds":
+                    as_number(
+                        failure_recovery.get(
+                            "maximum_recomputation_runtime_microseconds"
+                        )
+                    ),
+
+                "recovery_worst_failed_edge_id":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_failed_edge_id"
+                        )
+                    ),
+
+                "recovery_worst_failed_source":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_failed_source"
+                        )
+                    ),
+
+                "recovery_worst_failed_target":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_failed_target"
+                        )
+                    ),
+
+                "recovery_worst_disconnect_edge_id":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_disconnect_edge_id"
+                        )
+                    ),
+
+                "recovery_worst_disconnect_source":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_disconnect_source"
+                        )
+                    ),
+
+                "recovery_worst_disconnect_target":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_disconnect_target"
+                        )
+                    ),
+
+                "recovery_worst_disconnect_unroutable_demand_fraction":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_disconnect_unroutable_demand_fraction"
+                        )
+                    ),
+
+                "recovery_worst_congestion_edge_id":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_edge_id"
+                        )
+                    ),
+
+                "recovery_worst_congestion_source":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_source"
+                        )
+                    ),
+
+                "recovery_worst_congestion_target":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_target"
+                        )
+                    ),
+
+                "recovery_worst_congestion_baseline":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_baseline"
+                        )
+                    ),
+
+                "recovery_worst_congestion_post_failure":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_post_failure"
+                        )
+                    ),
+
+                "recovery_worst_congestion_increase_factor":
+                    as_number(
+                        failure_recovery.get(
+                            "worst_congestion_increase_factor"
+                        )
+                    ),
+
+                "recovery_slowest_recovery_edge_id":
+                    as_number(
+                        failure_recovery.get(
+                            "slowest_recovery_edge_id"
+                        )
+                    ),
+
+                "recovery_slowest_recovery_source":
+                    as_number(
+                        failure_recovery.get(
+                            "slowest_recovery_source"
+                        )
+                    ),
+
+                "recovery_slowest_recovery_target":
+                    as_number(
+                        failure_recovery.get(
+                            "slowest_recovery_target"
+                        )
+                    ),
+
+                "recovery_slowest_recovery_runtime_microseconds":
+                    as_number(
+                        failure_recovery.get(
+                            "slowest_recovery_runtime_microseconds"
                         )
                     ),
             })
@@ -753,6 +1107,7 @@ SUMMARY_FIELDS = [
 
     "seed",
     "threads",
+    "failure_recovery",
 
     "solver",
     "solver_type",
@@ -763,10 +1118,73 @@ SUMMARY_FIELDS = [
     "congestion",
     "oblivious_ratio",
 
+    # Solver construction/runtime metrics.
     "total_runtime_microseconds",
     "preprocessing_runtime_microseconds",
     "solve_runtime_microseconds",
+
+    # Demand evaluation only.
     "evaluation_runtime_microseconds",
+
+    # Layer-1 static N-1 link-failure analysis only.
+    "failure_analysis_runtime_microseconds",
+
+    "failure_tested_links",
+
+    "failure_most_critical_edge_id",
+    "failure_most_critical_source",
+    "failure_most_critical_target",
+
+    "failure_maximum_lost_traffic_fraction",
+    "failure_average_lost_traffic_fraction",
+    "failure_median_lost_traffic_fraction",
+
+    "failure_maximum_affected_demand_fraction",
+
+    "failure_traffic_carrying_links",
+
+    "failure_critical_links_10_percent",
+    "failure_critical_links_25_percent",
+    "failure_critical_links_50_percent",
+
+    # Layer-2 N-1 recovery analysis.
+    "recovery_tested_links",
+    "recovery_disconnected_failures",
+    "recovery_successful_recomputations",
+    "recovery_failed_recomputations",
+
+    "recovery_maximum_unroutable_demand_fraction",
+    "recovery_average_unroutable_demand_fraction",
+
+    "recovery_maximum_post_failure_congestion",
+    "recovery_average_post_failure_congestion",
+
+    "recovery_maximum_congestion_increase_factor",
+    "recovery_average_congestion_increase_factor",
+
+    "recovery_average_recomputation_runtime_microseconds",
+    "recovery_maximum_recomputation_runtime_microseconds",
+
+    "recovery_worst_failed_edge_id",
+    "recovery_worst_failed_source",
+    "recovery_worst_failed_target",
+
+    "recovery_worst_disconnect_edge_id",
+    "recovery_worst_disconnect_source",
+    "recovery_worst_disconnect_target",
+    "recovery_worst_disconnect_unroutable_demand_fraction",
+
+    "recovery_worst_congestion_edge_id",
+    "recovery_worst_congestion_source",
+    "recovery_worst_congestion_target",
+    "recovery_worst_congestion_baseline",
+    "recovery_worst_congestion_post_failure",
+    "recovery_worst_congestion_increase_factor",
+
+    "recovery_slowest_recovery_edge_id",
+    "recovery_slowest_recovery_source",
+    "recovery_slowest_recovery_target",
+    "recovery_slowest_recovery_runtime_microseconds",
 
     "candidate_paths",
     "average_paths_per_pair",
@@ -906,6 +1324,15 @@ def main():
         f"{out_dir}"
     )
 
+    print(
+        "Layer-2 failure recovery: "
+        + (
+            "enabled"
+            if args.failure_recovery
+            else "disabled"
+        )
+    )
+
     print()
 
     # ------------------------------------------------------------------
@@ -964,6 +1391,11 @@ def main():
                     args.threads
                 ),
             ]
+
+        if args.failure_recovery:
+            cmd.append(
+                "--failure-recovery"
+            )
 
         print(
             f"[RUN {index}/"

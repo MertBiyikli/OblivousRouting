@@ -18,10 +18,12 @@ struct Config {
     OutputFormat                 output_format;
     int seed = 42;
 
+    bool failure_recovery = false;
     /*
      * Empty means that visualization export is disabled.
      */
     std::string visualization_output_directory{};
+
 };
 
 

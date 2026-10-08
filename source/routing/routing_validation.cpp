@@ -174,9 +174,12 @@ Result<void> RoutingValidation::validateTimeStats(const IRoutingResult& result) 
             return makeErrorMessage(ErrorCode::RuntimeError, "Iteration count is negative.");
         }
 
-        if (result.mwu_metrics.averageOracleTime() == -1.0) {
-            return makeErrorMessage(ErrorCode::RuntimeError, "Negative oracle running time.");
+        for (const double &time : result.mwu_metrics.oracle_running_times) {
+            if (time < 0.0 || !std::isfinite(time) ) {
+                return makeErrorMessage(ErrorCode::RuntimeError, "Negative or non-finite oracle running time.");
+            }
         }
+
     }
     return {};
 }

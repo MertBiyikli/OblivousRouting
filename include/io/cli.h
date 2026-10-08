@@ -107,6 +107,10 @@ boost::program_options::options_description solveOptions() {
          boost::program_options::value<int>()->default_value(42),
          "Non-negative random seed")
 
+        ("failure-recovery",
+         boost::program_options::bool_switch()->default_value(false),
+         "Run Layer-2 N-1 link-failure recovery analysis")
+
         ("visualization",
          boost::program_options::value<std::string>(),
          "Visualization JSON output directory");
@@ -381,6 +385,8 @@ inline Result<Command> parse(int argc, char** argv)
         }
 
 
+
+
         /*
          * Visualization output.
          */
@@ -414,6 +420,7 @@ inline Result<Command> parse(int argc, char** argv)
             .output_filename = std::move(outputFilename),
             .output_format = outputFormat,
             .seed = seed,
+            .failure_recovery = variables["failure-recovery"].as<bool>(),
             .visualization_output_directory =std::move(visualizationDirectory)
         };
         return Command{ .action = Action::Run,.config = std::move(config)};

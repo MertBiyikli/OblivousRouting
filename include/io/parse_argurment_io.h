@@ -12,16 +12,6 @@
 #include <optional>
 #include <map>
 
-struct Config {
-    std::vector<SolverType>      solvers;
-    std::string                  filename;
-    bool evaluate_demand_models = false;
-    std::vector<DemandModelType> demand_models;
-    std::map<std::string, double> offline_opt_per_model;
-    std::map<std::string, demands> demand_maps;
-    GraphFormat                  graph_format;
-    int num_threads = 1;
-};
 
 inline std::string to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),

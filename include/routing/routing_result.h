@@ -12,14 +12,177 @@
 #include "routing_table.h"
 #include "core/types.h"
 #include "utils/my_math.h"
-#include "visualization/visualization_result.h"
+#include "visualization/failure_analysis.h"
 
 
 struct DemandEvaluationResult {
     DemandModelType demand_type{};
+
     double congestion = -1.0;
 
+
+    /*
+     * Demand evaluation only:
+     *
+     * routing the demand through the already constructed
+     * routing scheme and computing congestion.
+     *
+     * Does NOT include failure analysis.
+     */
     double runtime_microseconds = -1.0;
+
+    /*
+     * Static N-1 link-failure exposure analysis only.
+     */
+    double failure_analysis_runtime_microseconds = -1.0;
+
+    /*
+     * Static single-link failure exposure metrics.
+     */
+    std::size_t failure_tested_links = 0;
+
+    int failure_most_critical_edge_id = -1;
+    int failure_most_critical_source = -1;
+    int failure_most_critical_target = -1;
+
+    double failure_maximum_lost_traffic_fraction = 0.0;
+    double failure_average_lost_traffic_fraction = 0.0;
+    double failure_median_lost_traffic_fraction = 0.0;
+
+    double failure_maximum_affected_demand_fraction = 0.0;
+
+    std::size_t failure_traffic_carrying_links = 0;
+
+    std::size_t failure_critical_links_10_percent = 0;
+    std::size_t failure_critical_links_25_percent = 0;
+    std::size_t failure_critical_links_50_percent = 0;
+
+    /*
+ * ------------------------------------------------------------
+ * Layer-2 failure recovery metrics
+ * ------------------------------------------------------------
+ */
+
+    bool failure_recovery_available = false;
+
+    std::size_t recovery_tested_links = 0;
+
+    std::size_t recovery_disconnected_failures = 0;
+
+    std::size_t recovery_successful_recomputations = 0;
+
+    std::size_t recovery_failed_recomputations = 0;
+
+    double recovery_maximum_unroutable_demand_fraction = -1.0;
+
+    double recovery_average_unroutable_demand_fraction = -1.0;
+
+    double recovery_maximum_post_failure_congestion = -1.0;
+
+    double recovery_average_post_failure_congestion = -1.0;
+
+    double recovery_maximum_congestion_increase_factor = -1.0;
+
+    double recovery_average_congestion_increase_factor = -1.0;
+
+    double recovery_average_recomputation_runtime_microseconds = -1.0;
+
+    double recovery_maximum_recomputation_runtime_microseconds = -1.0;
+
+    int recovery_worst_failed_edge_id = -1;
+    int recovery_worst_failed_source = -1;
+    int recovery_worst_failed_target = -1;
+
+    /*
+ * ------------------------------------------------------------
+ * Overall worst failure
+ * ------------------------------------------------------------
+ *
+ * Preserved for backwards compatibility.
+ *
+ * The ordering is primarily based on unroutable demand and
+ * secondarily on congestion degradation.
+ */
+    int worst_failed_edge_id = -1;
+    int worst_failed_source = -1;
+    int worst_failed_target = -1;
+
+
+    /*
+     * ------------------------------------------------------------
+     * Worst disconnecting failure
+     * ------------------------------------------------------------
+     *
+     * Among failures that make demand unreachable, this is the
+     * physical link whose removal produces the largest fraction
+     * of unroutable demand.
+     */
+    int worst_disconnect_edge_id = -1;
+    int worst_disconnect_source = -1;
+    int worst_disconnect_target = -1;
+
+    double worst_disconnect_unroutable_demand_fraction = -1.0;
+
+
+    /*
+     * ------------------------------------------------------------
+     * Worst survivable congestion failure
+     * ------------------------------------------------------------
+     *
+     * The topology remains connected and the solver successfully
+     * recomputes a routing scheme, but this failure produces the
+     * largest absolute post-failure congestion.
+     */
+    int worst_congestion_edge_id = -1;
+    int worst_congestion_source = -1;
+    int worst_congestion_target = -1;
+
+    double worst_congestion_baseline = -1.0;
+    double worst_congestion_post_failure = -1.0;
+    double worst_congestion_increase_factor = -1.0;
+
+
+    /*
+     * ------------------------------------------------------------
+     * Slowest successful recovery
+     * ------------------------------------------------------------
+     */
+    int slowest_recovery_edge_id = -1;
+    int slowest_recovery_source = -1;
+    int slowest_recovery_target = -1;
+
+    double slowest_recovery_runtime_microseconds = -1.0;
+
+    /*
+ * Worst disconnecting failure.
+ */
+    int recovery_worst_disconnect_edge_id = -1;
+    int recovery_worst_disconnect_source = -1;
+    int recovery_worst_disconnect_target = -1;
+
+    double recovery_worst_disconnect_unroutable_demand_fraction = -1.0;
+
+
+    /*
+     * Worst survivable congestion failure.
+     */
+    int recovery_worst_congestion_edge_id = -1;
+    int recovery_worst_congestion_source = -1;
+    int recovery_worst_congestion_target = -1;
+
+    double recovery_worst_congestion_baseline = -1.0;
+    double recovery_worst_congestion_post_failure = -1.0;
+    double recovery_worst_congestion_increase_factor = -1.0;
+
+
+    /*
+     * Slowest successful recovery.
+     */
+    int recovery_slowest_recovery_edge_id = -1;
+    int recovery_slowest_recovery_source = -1;
+    int recovery_slowest_recovery_target = -1;
+
+    double recovery_slowest_recovery_runtime_microseconds = -1.0;
 };
 
 class MWUMetrics{
@@ -106,6 +269,7 @@ struct ExpanderMetrics {
                basis_flows == 0;
     }
 };
+
 
 
 struct IRoutingResult {
