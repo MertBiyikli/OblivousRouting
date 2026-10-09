@@ -155,6 +155,7 @@ struct CapacityViolation {
 struct NamedScenario {
     std::string scenario_id, status;
 };
+
 /**
  * @brief Represents a growth scenario in the network.
  */
