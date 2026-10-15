@@ -100,7 +100,7 @@ jobs:
 
       - name: Verify dependency checkout
         run: |
-          ./scripts/check-build-reproducibility.sh
+          bash ./scripts/check-build-reproducibility.sh
 
       - name: Configure
         run: |
