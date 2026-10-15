@@ -47,7 +47,7 @@ Result<IRoutingResult> ObliviousSolverRunner::run(optimized::Graph<EdgeData>& gr
         return result;
     }
 
-    auto evaluate = DemandEvaluator::evaluate(graph, result.scheme, cfg, result);
+    auto evaluate = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis);
     if (!evaluate) {
         return getError(evaluate);
     }

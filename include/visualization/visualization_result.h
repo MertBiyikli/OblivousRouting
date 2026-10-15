@@ -18,11 +18,11 @@
 #include "visualization/failure_analysis.h"
 
 
-
-
 class RoutingAnalyzer {
 public:
-    static Result<RoutingVisualizationResult> analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map, const IRoutingResult& result,std::string demand_model);
+    static Result<RoutingVisualizationResult> analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map, const IRoutingResult& result,std::string demand_model, bool run_failure_analysis = false);
     static Result<void> analyzeSingleLinkFailures(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,RoutingVisualizationResult& result);
 };
+
+
 #endif //OBLIVIOUSROUTING_VISUALIZATION_RESULT_H

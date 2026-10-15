@@ -16,18 +16,18 @@
 class RoutingEngine {
 public:
 
-    Result<void> entry(Config& cfg);
+    Result<RoutingExperimentResult> entry(Config& cfg);
 
 
     Result<IRoutingResult> solve(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type);
 
     Config cfg;
     std::unique_ptr<optimized::Graph<EdgeData>> m_graph;
-    Result<std::unique_ptr<optimized::Graph<EdgeData>>> getGraph() {
+    Result<optimized::Graph<EdgeData>*> getGraph() {
         if (!m_graph) {
             return makeErrorMessage(ErrorCode::RuntimeError, "RoutingEngine::getGraph: graph not set");
         }else {
-            return std::move(m_graph);
+            return m_graph.get();
         }
     }
 

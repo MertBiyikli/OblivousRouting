@@ -42,7 +42,7 @@ std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {
 }
 
 
-Result<void> RoutingEngine::entry(Config &cfg) {
+Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
 
     auto graph = load_graph_optimized(cfg);
     if (!graph) {
@@ -93,7 +93,7 @@ Result<void> RoutingEngine::entry(Config &cfg) {
 
     m_graph = std::move(graph.value());
     this->cfg = cfg;
-    return {};
+    return exp_result;
 }
 
 

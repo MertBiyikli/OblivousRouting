@@ -107,6 +107,10 @@ boost::program_options::options_description solveOptions() {
          boost::program_options::value<int>()->default_value(42),
          "Non-negative random seed")
 
+        ("failure-analysis",
+         boost::program_options::bool_switch()->default_value(false),
+         "Run Layer-2 N-1 link-failure analysis")
+
         ("failure-recovery",
          boost::program_options::bool_switch()->default_value(false),
          "Run Layer-2 N-1 link-failure recovery analysis")
@@ -401,6 +405,14 @@ inline Result<Command> parse(int argc, char** argv)
             }
         }
 
+        /*
+         * Failure analysis and recovery.
+         */
+        bool failure_analysis = variables["failure-analysis"].as<bool>();
+
+        bool failure_recovery = variables["failure-recovery"].as<bool>();
+
+
 
         /*
          * The CLI's job ends here.
@@ -420,7 +432,8 @@ inline Result<Command> parse(int argc, char** argv)
             .output_filename = std::move(outputFilename),
             .output_format = outputFormat,
             .seed = seed,
-            .failure_recovery = variables["failure-recovery"].as<bool>(),
+            .failure_analysis = failure_analysis,
+            .failure_recovery = failure_recovery,
             .visualization_output_directory =std::move(visualizationDirectory)
         };
         return Command{ .action = Action::Run,.config = std::move(config)};
@@ -429,6 +442,7 @@ inline Result<Command> parse(int argc, char** argv)
     } catch (const std::exception& error) {
         return fromStdException(error,ErrorCode::InvalidArgument);
     }
+
 }
 
 

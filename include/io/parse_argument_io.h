@@ -202,6 +202,7 @@ inline Result<Config> parse_parameter(int argc, char** argv) {
         out_fmt,
         42,
         false,
+        false,
         visualization_output_directory};
 }
 

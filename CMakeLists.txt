@@ -155,6 +155,10 @@ add_library(oblivious_routing_core STATIC
         source/visualization/failure_recover_analysis.cpp
         include/analysis/analysis_result.h
         include/visualization/failure_recovery_types.h
+        include/routing/storage/routing_table_serializer.h
+        source/routing/storage/routing_table_serializer.cpp
+        include/routing/storage/routing_table_adapter.h
+        source/routing/storage/routing_table_adapter.cpp
 )
 
 target_include_directories(oblivious_routing_core

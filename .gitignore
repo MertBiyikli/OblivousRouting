@@ -7,4 +7,5 @@ results
 /results_latest/
 /results/
 /plots/
+/scripts/check-build-reproducibility.sh
 CMakeUserPresets.json
