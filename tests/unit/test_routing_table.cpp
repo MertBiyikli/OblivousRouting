@@ -4,6 +4,11 @@
 #include "../../include/routing/routing_table.h"
 #include "routing/storage/allpair_routing_table.h"
 #include "routing/storage/linear_routing_table.h"
+#include "routing/storage/routing_table_adapter.h"
+#include "routing/storage/routing_scheme_verifier.h"
+#include <filesystem>
+#include <string>
+#include <vector>
 
 using Catch::Approx;
 
@@ -192,23 +197,125 @@ TEST_CASE("LinearRoutingTable - Multiple Edges Different Sources", "[RoutingTabl
     REQUIRE(table.getFlow(2, 2) == Approx(0.5));
 }
 
-TEST_CASE("LinearRoutingScheme - Reconstructs flow orientation across anti-edge basis entries", "[RoutingTable]") {
-    std::vector<optimized::Graph<EdgeData>::InputEdge> input = {
-        {0, 1, EdgeData{1.0, 1.0}}
+
+
+
+namespace fs = std::filesystem;
+
+optimized::Graph<EdgeData> makeGraph(double capacity = 10.0) {
+    std::vector<optimized::Graph<EdgeData>::InputEdge> edges = {
+        {0, 1, EdgeData{capacity, 1.0}},
+        {1, 2, EdgeData{10.0, 1.0}}
     };
-    optimized::Graph<EdgeData> graph(2, input);
+
+    return optimized::Graph<EdgeData>(3, edges);
+}
+
+struct TemporaryRoutingFile {
+    fs::path path;
+
+    explicit TemporaryRoutingFile(std::string name)
+        : path(fs::temp_directory_path() / std::move(name)) {}
+
+    ~TemporaryRoutingFile() {
+        std::error_code ec;
+        fs::remove(path, ec);
+    }
+};
+
+TEST_CASE("Routing table rejects changed graph capacity", "[routing][persistence]") {
+    auto original = makeGraph(10.0);
+    auto modified = makeGraph(20.0);
+
+    const auto originalFingerprint = optimized::GraphFingerprint::compute(original);
+    const auto modifiedFingerprint = optimized::GraphFingerprint::compute(modified);
+
+    REQUIRE(originalFingerprint != modifiedFingerprint);
+
+    LinearRoutingTable table;
+    table.init(original);
+    table.addFlow(original.edgeId(1, 0), 1, 1.0);
+    table.addFlow(original.edgeId(2, 1), 2, 1.0);
+    table.addFlow(original.edgeId(1, 0), 2, 1.0);
+
+    TemporaryRoutingFile file("erouting_wrong_graph_test.bin");
+
+    auto saved = RoutingTableAdapter::saveLinear(table, original, file.path.string(), originalFingerprint, 0);
+    REQUIRE(saved.has_value());
+
+    std::int32_t root = -1;
+    auto loaded = RoutingTableAdapter::loadLinear(modified, file.path.string(), modifiedFingerprint, &root);
+
+    REQUIRE_FALSE(loaded.has_value());
+}
+
+TEST_CASE("Routing table rejects truncated binary", "[routing][persistence]") {
+    auto graph = makeGraph();
+    const auto fingerprint = optimized::GraphFingerprint::compute(graph);
 
     LinearRoutingTable table;
     table.init(graph);
+    table.addFlow(graph.edgeId(1, 0), 1, 1.0);
 
-    const int edge_01 = graph.edgeId(0, 1);
-    const int edge_10 = graph.edgeId(1, 0);
+    TemporaryRoutingFile file("erouting_truncated_integration_test.bin");
 
-    // Basis flow for source 1 -> root 0 is stored on 1 -> 0.
-    table.addFlow(edge_10, 1, 1.0);
+    auto saved = RoutingTableAdapter::saveLinear(table, graph, file.path.string(), fingerprint, 0);
+    REQUIRE(saved.has_value());
 
-    LinearRoutingScheme scheme(graph, 0, std::move(table));
+    const auto originalSize = fs::file_size(file.path);
+    REQUIRE(originalSize > 44);
 
-    REQUIRE(scheme.getFlow(edge_01, 0, 1) == Approx(1.0));
-    REQUIRE(scheme.getFlow(edge_10, 0, 1) == Approx(-1.0));
+    fs::resize_file(file.path, originalSize - 1);
+
+    std::int32_t root = -1;
+    auto loaded = RoutingTableAdapter::loadLinear(graph, file.path.string(), fingerprint, &root);
+
+    REQUIRE_FALSE(loaded.has_value());
 }
+
+TEST_CASE("All-pairs scheme survives binary round trip", "[routing][persistence]") {
+    auto graph = makeGraph();
+    const auto fingerprint = optimized::GraphFingerprint::compute(graph);
+
+    AllPairRoutingTable table;
+    table.init(graph);
+
+    const int edge01 = graph.edgeId(0, 1);
+    const int edge12 = graph.edgeId(1, 2);
+
+    // Unit flow for 0 -> 1.
+    table.addFlow(edge01, 0, 1, 1.0);
+
+    // Unit flow for 0 -> 2.
+    table.addFlow(edge01, 0, 2, 1.0);
+    table.addFlow(edge12, 0, 2, 1.0);
+
+    // Unit flow for 1 -> 2.
+    table.addFlow(edge12, 1, 2, 1.0);
+
+    AllPairRoutingScheme original(graph, std::move(table));
+
+    TemporaryRoutingFile file("erouting_allpairs_integration_test.bin");
+
+    auto saved = RoutingTableAdapter::saveAllPair(original.routing_table, graph, file.path.string(), fingerprint);
+    REQUIRE(saved.has_value());
+
+    auto loaded = RoutingTableAdapter::loadAllPair(graph, file.path.string(), fingerprint);
+    REQUIRE(loaded.has_value());
+
+    AllPairRoutingScheme restored(graph, std::move(loaded.value()));
+
+    for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+        for (int s = 0; s < graph.getNumNodes(); ++s) {
+            for (int t = 0; t < graph.getNumNodes(); ++t) {
+                if (s == t) continue;
+
+                CHECK(restored.getFlow(e, s, t) == Catch::Approx(original.getFlow(e, s, t)));
+            }
+        }
+    }
+
+    auto verified = RoutingSchemeVerifier::verify(graph, restored);
+    REQUIRE(verified.has_value());
+}
+

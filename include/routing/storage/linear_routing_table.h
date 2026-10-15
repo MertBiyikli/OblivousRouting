@@ -24,7 +24,6 @@ public:
     void printFlows(const optimized::Graph<EdgeData>& g) const override;
     void printFlowsForSource(const optimized::Graph<EdgeData>& g, const int& source) const;
     const int getSize() const override;
-    const int getRootX() const;
 };
 
 

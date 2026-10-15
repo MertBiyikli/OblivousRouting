@@ -22,6 +22,8 @@ struct Config {
     bool failure_recovery = false;
 
 
+    std::string routing_table_input_file{};
+
     std::string routing_table_output_directory{};
     /*
      * Empty means that visualization export is disabled.

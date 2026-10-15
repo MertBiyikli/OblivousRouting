@@ -1,7 +1,11 @@
 #include "../include/io/cli.h"
 #include "../include/routing/routing_engine.h"
+#include "io/result_io.h"
+#include "routing/routing_runner.h"
+#include "routing/storage/routing_scheme_verifier.h"
 #include "routing/storage/routing_table_adapter.h"
 #include "routing/storage/routing_table_exporter.h"
+#include "routing/storage/routing_table_importer.h"
 
 int main(int argc, char** argv) {
 
@@ -28,6 +32,70 @@ int main(int argc, char** argv) {
 
     // Running engine
     auto cfg = cmd.value().config;
+
+    if (!cfg.routing_table_input_file.empty()) {
+        auto loadedGraph = load_graph_optimized(cfg);
+
+        if (!loadedGraph) {
+            std::cerr << "Error loading graph: " << loadedGraph.error().message << '\n';
+            return 1;
+        }
+
+        auto& graph = *loadedGraph.value();
+
+        auto imported = RoutingTableImporter::load(graph, cfg.routing_table_input_file);
+
+        if (!imported) {
+            std::cerr << "Error loading routing table: " << imported.error().message << '\n';
+            return 1;
+        }
+
+        auto verified = RoutingSchemeVerifier::verify(graph, *imported.value());
+
+        if (!verified) {
+            std::cerr << "Error validating routing scheme: " << verified.error().message << '\n';
+            return 1;
+        }
+
+        IRoutingResult result{};
+        result.status = ResultStatus::OK;
+        result.type = cfg.solvers.front();
+        result.solver_name = getSolverTypeName(result.type);
+        result.graph_name = std::filesystem::path(cfg.filename).stem().string();
+        result.nodes = graph.getNumNodes();
+        result.edges = graph.getNumUndirectedEdges();
+        result.total_runtime_microseconds = 0.0;
+        result.solve_runtime_microseconds = 0.0;
+        result.oblivious_ratio = -1.0;
+        result.scheme = std::move(imported.value());
+
+        if (cfg.evaluate_demand_models) {
+            auto evaluation = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis);
+
+            if (!evaluation) {
+                std::cerr << "Error evaluating imported scheme: " << evaluation.error().message << '\n';
+                return 1;
+            }
+        }
+
+        RoutingExperimentResult experiment{};
+        experiment.graph_name = result.graph_name;
+        experiment.graph_path = cfg.filename;
+        experiment.nodes = result.nodes;
+        experiment.edges = result.edges;
+        experiment.solver_results.push_back(std::move(result));
+
+        auto written = RoutingResultWriter::write(experiment, cfg);
+
+        if (!written) {
+            std::cerr << "Error writing results: " << written.error().message << '\n';
+            return 1;
+        }
+
+        std::cout << "Routing scheme loaded and verified. Optimization solver was not executed.\n";
+        return 0;
+    }
+
     RoutingEngine engine;
     auto res = engine.entry(cfg);
     if (!res) {
@@ -35,101 +103,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Access the graph without transferring ownership.
-    auto graphResult = engine.getGraph();
-    if (!graphResult) {
-        std::cerr << "Error: " << getError(graphResult).error().message << '\n';
-        return 1;
-    }
-
-    auto& graph = *graphResult.value();
-    const std::uint64_t graphFingerprint = optimized::GraphFingerprint::compute(graph); // Temporary test placeholder.
-    constexpr double tolerance = 1e-10;
-
-    for (std::size_t i = 0; i < res.value().solver_results.size(); ++i) {
-        auto& solverResult = res.value().solver_results[i];
-        auto* originalScheme = solverResult.scheme.get();
-
-        std::unique_ptr<RoutingScheme> restoredScheme;
-        const std::string path = "routing_table_" + std::to_string(i) + ".bin";
-
-        if (auto* linear = dynamic_cast<LinearRoutingScheme*>(originalScheme)) {
-            auto saved = RoutingTableAdapter::saveLinear(linear->routing_table, graph, path, graphFingerprint);
-            if (!saved) {
-                std::cerr << getError(saved).error().message << '\n';
-                return 1;
-            }
-
-            auto loaded = RoutingTableAdapter::loadLinear(graph, path, graphFingerprint);
-            if (!loaded) {
-                std::cerr << getError(loaded).error().message << '\n';
-                return 1;
-            }
-
-            restoredScheme = std::make_unique<LinearRoutingScheme>(graph, linear->root_x, std::move(loaded.value()));
-        } else if (auto* allPairs = dynamic_cast<AllPairRoutingScheme*>(originalScheme)) {
-            auto saved = RoutingTableAdapter::saveAllPair(allPairs->routing_table, graph, path, graphFingerprint);
-            if (!saved) {
-                std::cerr << getError(saved).error().message << '\n';
-                return 1;
-            }
-
-            auto loaded = RoutingTableAdapter::loadAllPair(graph, path, graphFingerprint);
-            if (!loaded) {
-                std::cerr << getError(loaded).error().message << '\n';
-                return 1;
-            }
-
-            restoredScheme = std::make_unique<AllPairRoutingScheme>(graph, std::move(loaded.value()));
-        } else {
-            std::cout << "Skipping unsupported scheme at index " << i << '\n';
-            continue;
-        }
-
-        double maxError = 0.0;
-
-        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
-            for (int s = 0; s < graph.getNumNodes(); ++s) {
-                for (int t = 0; t < graph.getNumNodes(); ++t) {
-                    if (s == t)
-                        continue;
-
-                    const double original = originalScheme->getFlow(e, s, t);
-                    const double restored = restoredScheme->getFlow(e, s, t);
-
-                    if (!std::isfinite(original) || !std::isfinite(restored)) {
-                        std::cerr << "Non-finite flow detected.\n";
-                        return 1;
-                    }
-
-                    maxError = std::max(maxError, std::abs(original - restored));
-                }
-            }
-        }
-
-        std::cout << "Scheme " << i << " maximum round-trip flow error: " << maxError << '\n';
-
-        if (maxError > tolerance) {
-            std::cerr << "Round-trip verification failed.\n";
-            return 1;
-        }
-
-        std::cout << "Scheme " << i << " round-trip verification passed.\n";
-    }
-
-
     if (!cfg.routing_table_output_directory.empty()) {
         auto graphResult = engine.getGraph();
 
         if (!graphResult) {
-            std::cerr << getError(graphResult).error().message << '\n';
+            std::cerr << "Error: " << getError(graphResult).error().message << '\n';
             return 1;
         }
 
         auto saved = RoutingTableExporter::save(res.value(), *graphResult.value(), cfg.routing_table_output_directory);
 
         if (!saved) {
-            std::cerr << getError(saved).error().message << '\n';
+            std::cerr << "Error: " << getError(saved).error().message << '\n';
             return 1;
         }
 

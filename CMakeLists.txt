@@ -160,6 +160,8 @@ add_library(oblivious_routing_core STATIC
         include/routing/storage/routing_table_adapter.h
         source/routing/storage/routing_table_adapter.cpp
         include/routing/storage/routing_table_exporter.h
+        include/routing/storage/routing_table_importer.h
+        include/routing/storage/routing_scheme_verifier.h
 )
 
 target_include_directories(oblivious_routing_core

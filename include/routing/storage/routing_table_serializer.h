@@ -6,6 +6,8 @@
 #define E_ROUTING_ROUTING_TABLE_SERIALIZER_H
 
 #include "routing/routing_table.h"
+#include <algorithm>
+#include <vector>
 #include <core/errors.h>
 #include <string>
 
@@ -13,6 +15,13 @@ enum class RoutingTableType {
     Linear = 0,
     AllPair = 1
 };
+
+
+struct RoutingTableHeader {
+    RoutingTableType type;
+    uint32_t version;
+};
+
 
 struct Docu {
     RoutingTableType type;
@@ -40,7 +49,9 @@ public:
                      std::uint64_t expected_graph_fingerprint, RoutingTableType expected_kind);
 
 
+    static Result<RoutingTableHeader> inspect(const std::string& path);
 };
+
 
 
 #endif // E_ROUTING_ROUTING_TABLE_SERIALIZER_H

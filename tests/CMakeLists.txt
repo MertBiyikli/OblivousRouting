@@ -13,6 +13,7 @@ add_executable(unit_tests
     unit/tree/test_mst.cpp
     unit/test_electrical_flow.cpp
     unit/test_routing_table.cpp
+        unit/routing/test_routing_table_serializer.cpp
 )
 
 target_include_directories(unit_tests PRIVATE

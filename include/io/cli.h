@@ -83,6 +83,9 @@ boost::program_options::options_description solveOptions() {
          boost::program_options::value<std::string>(),
          "Input graph file")
 
+        ("load-routing-table", boost::program_options::value<std::string>(),
+            "Load a serialized routing scheme instead of executing the solver")
+
         ("demand,d",
          boost::program_options::value<std::string>(),
          "Demand models: uniform,gravity,bimodal,gaussian")
@@ -426,8 +429,33 @@ inline Result<Command> parse(int argc, char** argv)
         }
 
 
-
+        std::string routingTableInput;
         std::string routingTableDirectory;
+
+        if (variables.count("load-routing-table")) {
+            routingTableInput = variables["load-routing-table"].as<std::string>();
+
+            if (routingTableInput.empty()) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "--load-routing-table requires a non-empty path");
+            }
+
+            if (solvers.value().size() != 1) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "Loading a routing table requires exactly one --solver");
+            }
+
+            if (failure_recovery) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "Layer-2 recomputation is not supported when loading a saved routing table");
+            }
+
+            if (!routingTableDirectory.empty()) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "Cannot use --load-routing-table and --save-routing-table together");
+            }
+        }
+
+
+
+
+
 
         if (variables.count("save-routing-table")) {
             routingTableDirectory = variables["save-routing-table"].as<std::string>();
@@ -458,6 +486,7 @@ inline Result<Command> parse(int argc, char** argv)
             .seed = seed,
             .failure_analysis = failure_analysis,
             .failure_recovery = failure_recovery,
+            .routing_table_input_file = std::move(routingTableInput),
             .routing_table_output_directory = std::move(routingTableDirectory),
             .visualization_output_directory =std::move(visualizationDirectory)
         };

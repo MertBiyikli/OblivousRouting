@@ -65,7 +65,7 @@ class RoutingTableExporter {
   private:
     static Result<void> saveScheme(const RoutingScheme& scheme, const optimized::Graph<EdgeData>& graph, const std::string& path, std::uint64_t fingerprint) {
         if (const auto* linear = dynamic_cast<const LinearRoutingScheme*>(&scheme)) {
-            return RoutingTableAdapter::saveLinear(linear->routing_table, graph, path, fingerprint);
+            return RoutingTableAdapter::saveLinear(linear->routing_table, graph, path, fingerprint, linear->root_x);
         }
 
         if (const auto* allPairs = dynamic_cast<const AllPairRoutingScheme*>(&scheme)) {

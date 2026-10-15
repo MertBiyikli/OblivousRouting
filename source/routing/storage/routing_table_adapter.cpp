@@ -7,13 +7,13 @@
 #include "routing/storage/routing_table_serializer.h"
 
 Result<uint32_t> RoutingTableAdapter::checked_u32(int value, const char* field) {
-    if (value < 0 || value > std::numeric_limits<std::uint32_t>::max()) {
+    if (value < 0) {
         return makeErrorMessage(ErrorCode::InvalidArgument, std::string(field) + " is out of range for u32");
     }
     return static_cast<std::uint32_t>(value);
 }
 
-Result<Docu> RoutingTableAdapter::exportLinear(const LinearRoutingTable& table, const optimized::Graph<EdgeData>& g, u_int32_t fingerprint) {
+Result<Docu> RoutingTableAdapter::exportLinear(const LinearRoutingTable& table, const optimized::Graph<EdgeData>& g, std::uint64_t fingerprint, std::int32_t root) {
     auto m = checked_u32(g.getNumDirectedEdges(), "edge_count(directed)");
     if (!m) {
         return getError(m);
@@ -33,7 +33,7 @@ Result<Docu> RoutingTableAdapter::exportLinear(const LinearRoutingTable& table, 
         n.value(),
         m.value(),
         fingerprint,
-        table.getRootX(),
+        root,
         std::vector<std::vector<std::pair<u_int32_t, double>>>(m.value())};
 
     for (std::size_t e = 0; e < m.value(); ++e) {
@@ -69,7 +69,7 @@ Result<Docu> RoutingTableAdapter::exportAllPair(const AllPairRoutingTable& table
     }
 
     if (table.n != g.getNumNodes() || table.adj_ids.size() != m || table.adj_vals.size() != m) {
-        throw std::runtime_error("All-pair table dimensions differ from graph");
+        return makeErrorMessage(ErrorCode::InvalidArgument, "All-pair table dimensions differ from graph");
     }
 
     Docu doc{RoutingTableType::AllPair,
@@ -100,15 +100,15 @@ Result<Docu> RoutingTableAdapter::exportAllPair(const AllPairRoutingTable& table
     return doc;
 }
 
-Result<void> RoutingTableAdapter::saveLinear(const LinearRoutingTable& table, const optimized::Graph<EdgeData>& g, const std::string& path, const u_int32_t& fingerprint) {
-    auto docu = exportLinear(table, g, fingerprint);
+Result<void> RoutingTableAdapter::saveLinear(const LinearRoutingTable& table, const optimized::Graph<EdgeData>& g, const std::string& path, std::uint64_t fingerprint, std::int32_t root) {
+    auto docu = exportLinear(table, g, fingerprint, root);
     if (!docu) {
         return getError(docu);
     }
     return RoutingTableSerializer::save(docu.value(), path);
 }
 
-Result<void> RoutingTableAdapter::saveAllPair(const AllPairRoutingTable& table, const optimized::Graph<EdgeData>& g, const std::string& path, const u_int64_t& fingerprint) {
+Result<void> RoutingTableAdapter::saveAllPair(const AllPairRoutingTable& table, const optimized::Graph<EdgeData>& g, const std::string& path, std::uint64_t fingerprint) {
     auto docu = exportAllPair(table, g, fingerprint);
     if (!docu) {
         return getError(docu);
@@ -116,7 +116,7 @@ Result<void> RoutingTableAdapter::saveAllPair(const AllPairRoutingTable& table, 
     return RoutingTableSerializer::save(docu.value(), path);
 }
 
-Result<LinearRoutingTable> RoutingTableAdapter::loadLinear(const optimized::Graph<EdgeData>& g, const std::string& path, const u_int32_t& fingerprint) {
+Result<LinearRoutingTable> RoutingTableAdapter::loadLinear(const optimized::Graph<EdgeData>& g, const std::string& path, std::uint64_t fingerprint, std::int32_t* root) {
     auto check_n = checked_u32(g.getNumNodes(), "node count");
     if (!check_n) {
         return getError(check_n);
@@ -138,6 +138,10 @@ Result<LinearRoutingTable> RoutingTableAdapter::loadLinear(const optimized::Grap
     LinearRoutingTable table;
     table.init(g);
 
+    if (root != nullptr) {
+        *root = doc.value().root_node;
+    }
+
     for (std::size_t e = 0; e < doc.value().edges.size(); ++e) {
         for (const auto& entry : doc.value().edges[e]) {
             if (entry.first > static_cast<std::uint32_t>(std::numeric_limits<int>::max())) {
@@ -154,7 +158,7 @@ Result<LinearRoutingTable> RoutingTableAdapter::loadLinear(const optimized::Grap
 
 
 
-Result<AllPairRoutingTable> RoutingTableAdapter::loadAllPair(const optimized::Graph<EdgeData>& g, const std::string& path, const u_int64_t& fingerprint) {
+Result<AllPairRoutingTable> RoutingTableAdapter::loadAllPair(const optimized::Graph<EdgeData>& g, const std::string& path, std::uint64_t fingerprint) {
     auto check_n = checked_u32(g.getNumNodes(), "node count");
     if (!check_n) {
         return getError(check_n);
