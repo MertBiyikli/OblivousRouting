@@ -86,6 +86,9 @@ const int LinearRoutingTable::getSize() const {
     assert(src_ids.size() == src_ids.size());
     return src_ids.size();
 }
+const int LinearRoutingTable::getRootX() const {
+    return 0; // By default, the root node is 0. This can be modified if needed.
+}
 
 void LinearRoutingTable::eraseFlow(int e, int s) {
     // remove flow at edge e with commodity s

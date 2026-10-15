@@ -33,6 +33,7 @@ Result<Docu> RoutingTableAdapter::exportLinear(const LinearRoutingTable& table, 
         n.value(),
         m.value(),
         fingerprint,
+        table.getRootX(),
         std::vector<std::vector<std::pair<u_int32_t, double>>>(m.value())};
 
     for (std::size_t e = 0; e < m.value(); ++e) {
@@ -75,6 +76,7 @@ Result<Docu> RoutingTableAdapter::exportAllPair(const AllPairRoutingTable& table
         n.value(),
         m.value(),
         fingerprint,
+        -1,
         std::vector<std::vector<std::pair<u_int32_t, double>>>(m.value())};
 
     for (std::size_t e = 0; e < m.value(); ++e) {

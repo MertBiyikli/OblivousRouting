@@ -6,11 +6,12 @@
 #include <vector>
 #include <cmath>
 
-#include "graph_test_helpers.h"
 #include "catch2/catch_template_test_macros.hpp"
+#include "data_structures/graph/Igraph.h"
+#include "data_structures/graph/graph.h"
 #include "data_structures/graph/graph_adj.h"
 #include "data_structures/graph/graph_csr.h"
-#include "data_structures/graph/Igraph.h"
+#include "graph_test_helpers.h"
 
 using Catch::Approx;
 

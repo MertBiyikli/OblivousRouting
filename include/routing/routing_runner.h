@@ -61,7 +61,7 @@ class DemandEvaluator {
             bool recovery_available = false;
 
             // Layer 2: Optional N-1 recovery analysis.
-            if (run_failure_analysis) {
+            if (cfg.failure_recovery) {
                 auto recovery = FailureRecoveryAnalyzer::analyze(graph, result.type, dmap.value(), demandType, analysis.summary.maximum_congestion);
 
                 if (!recovery) {

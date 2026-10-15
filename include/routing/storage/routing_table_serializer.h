@@ -19,6 +19,7 @@ struct Docu {
     u_int32_t n;
     u_int32_t m_directed;
     u_int64_t graph_fingerprint;
+    int32_t root_node = -1;
     std::vector<std::vector<std::pair<u_int32_t, double>>> edges;
 };
 

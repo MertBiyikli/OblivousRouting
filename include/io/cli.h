@@ -107,13 +107,21 @@ boost::program_options::options_description solveOptions() {
          boost::program_options::value<int>()->default_value(42),
          "Non-negative random seed")
 
+
         ("failure-analysis",
          boost::program_options::bool_switch()->default_value(false),
-         "Run Layer-2 N-1 link-failure analysis")
+         "Run Layer-1 static N-1 link-failure exposure analysis")
 
         ("failure-recovery",
          boost::program_options::bool_switch()->default_value(false),
-         "Run Layer-2 N-1 link-failure recovery analysis")
+         "Run Layer-2 N-1 routing recomputation and recovery analysis")
+
+
+        ("save-routing-table",
+         boost::program_options::value<std::string>(),
+         "Save computed routing tables as binary files in the specified directory")
+
+
 
         ("visualization",
          boost::program_options::value<std::string>(),
@@ -413,6 +421,22 @@ inline Result<Command> parse(int argc, char** argv)
         bool failure_recovery = variables["failure-recovery"].as<bool>();
 
 
+        if (failure_recovery && !failure_analysis) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "--failure-recovery requires --failure-analysis");
+        }
+
+
+
+        std::string routingTableDirectory;
+
+        if (variables.count("save-routing-table")) {
+            routingTableDirectory = variables["save-routing-table"].as<std::string>();
+
+            if (routingTableDirectory.empty()) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "--save-routing-table requires a non-empty directory");
+            }
+        }
+
 
         /*
          * The CLI's job ends here.
@@ -434,6 +458,7 @@ inline Result<Command> parse(int argc, char** argv)
             .seed = seed,
             .failure_analysis = failure_analysis,
             .failure_recovery = failure_recovery,
+            .routing_table_output_directory = std::move(routingTableDirectory),
             .visualization_output_directory =std::move(visualizationDirectory)
         };
         return Command{ .action = Action::Run,.config = std::move(config)};

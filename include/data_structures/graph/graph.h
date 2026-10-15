@@ -1113,5 +1113,46 @@ Result<ReindexedSubgraph> reindexedSubgraph(std::span<const int> subset) const {
         // newToOldEdge[newEdgeId] = originalEdgeId
         std::vector<int> newToOldEdge;
     };
+
+
+class GraphFingerprint {
+public:
+    static std::uint64_t compute(const optimized::Graph<EdgeData>& graph) {
+        std::uint64_t hash = offset;
+
+        appendU64(hash, 1); // Fingerprint algorithm version.
+        appendU64(hash, static_cast<std::uint64_t>(graph.getNumNodes()));
+        appendU64(hash, static_cast<std::uint64_t>(graph.getNumDirectedEdges()));
+
+        for (int edge = 0; edge < graph.getNumDirectedEdges(); ++edge) {
+            const auto [source, target] = graph.getEdgeEndpoints(edge);
+            const double capacity = graph.edgeData(edge).capacity;
+
+            if (source < 0 || target < 0 || !std::isfinite(capacity) || capacity <= 0.0) {
+                throw std::invalid_argument("GraphFingerprint: invalid edge");
+            }
+
+            appendU64(hash, static_cast<std::uint64_t>(edge));
+            appendU64(hash, static_cast<std::uint64_t>(source));
+            appendU64(hash, static_cast<std::uint64_t>(target));
+            appendU64(hash, static_cast<std::uint64_t>(graph.reverse(edge).id));
+            appendU64(hash, std::bit_cast<std::uint64_t>(capacity == 0.0 ? 0.0 : capacity));
+        }
+
+        return hash;
+    }
+
+private:
+    static constexpr std::uint64_t offset = 14695981039346656037ULL;
+    static constexpr std::uint64_t prime = 1099511628211ULL;
+
+    static void appendU64(std::uint64_t& hash, std::uint64_t value) {
+        for (int i = 0; i < 8; ++i) {
+            hash ^= (value & 0xffULL);
+            hash *= prime;
+            value >>= 8;
+        }
+    }
+};
 }
 #endif //OBLIVIOUSROUTING_GRAPH_H

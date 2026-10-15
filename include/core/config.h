@@ -20,6 +20,9 @@ struct Config {
 
     bool failure_analysis = false;
     bool failure_recovery = false;
+
+
+    std::string routing_table_output_directory{};
     /*
      * Empty means that visualization export is disabled.
      */

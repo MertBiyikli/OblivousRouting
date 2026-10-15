@@ -1,6 +1,7 @@
 #include "../include/io/cli.h"
 #include "../include/routing/routing_engine.h"
 #include "routing/storage/routing_table_adapter.h"
+#include "routing/storage/routing_table_exporter.h"
 
 int main(int argc, char** argv) {
 
@@ -42,7 +43,7 @@ int main(int argc, char** argv) {
     }
 
     auto& graph = *graphResult.value();
-    constexpr std::uint64_t graphFingerprint = 0; // Temporary test placeholder.
+    const std::uint64_t graphFingerprint = optimized::GraphFingerprint::compute(graph); // Temporary test placeholder.
     constexpr double tolerance = 1e-10;
 
     for (std::size_t i = 0; i < res.value().solver_results.size(); ++i) {
@@ -114,6 +115,25 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "Scheme " << i << " round-trip verification passed.\n";
+    }
+
+
+    if (!cfg.routing_table_output_directory.empty()) {
+        auto graphResult = engine.getGraph();
+
+        if (!graphResult) {
+            std::cerr << getError(graphResult).error().message << '\n';
+            return 1;
+        }
+
+        auto saved = RoutingTableExporter::save(res.value(), *graphResult.value(), cfg.routing_table_output_directory);
+
+        if (!saved) {
+            std::cerr << getError(saved).error().message << '\n';
+            return 1;
+        }
+
+        std::cout << "Routing tables saved to: " << cfg.routing_table_output_directory << '\n';
     }
 
     return 0; // something new

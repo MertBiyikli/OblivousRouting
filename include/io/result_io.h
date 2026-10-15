@@ -417,7 +417,10 @@ class RoutingResultWriter {
 
         out << "],\n";
 
+
+        out << "    \"failure_analysis\": " << (cfg.failure_analysis ? "true" : "false") << ",\n";
         out << "    \"failure_recovery\": " << (cfg.failure_recovery ? "true" : "false") << "\n";
+
 
         out << "  },\n";
 
