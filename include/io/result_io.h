@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iomanip>
 
 class RoutingResultWriter {
   public:
@@ -372,6 +373,7 @@ class RoutingResultWriter {
     }
 
     static void writeJson(const RoutingExperimentResult& experiment, const Config& cfg, std::ostream& out) {
+        out << std::setprecision(17);
         out << "{\n";
 
         /*
@@ -419,7 +421,16 @@ class RoutingResultWriter {
 
 
         out << "    \"failure_analysis\": " << (cfg.failure_analysis ? "true" : "false") << ",\n";
+        out << "    \"demand_scale\": " << cfg.demand_scale << ",\n";
+        out << "    \"capacity_upgrades\": [";
+        for (std::size_t upgrade_index = 0; upgrade_index < cfg.capacity_upgrades.size(); ++upgrade_index) {
+            if (upgrade_index != 0) out << ", ";
+            const auto& upgrade = cfg.capacity_upgrades[upgrade_index];
+            out << "{\"edge_id\": " << upgrade.edge_id << ", \"capacity_factor\": " << upgrade.factor << "}";
+        }
+        out << "],\n";
         out << "    \"failure_recovery\": " << (cfg.failure_recovery ? "true" : "false") << "\n";
+
 
 
         out << "  },\n";
@@ -542,7 +553,27 @@ class RoutingResultWriter {
 
                 out << "            \"critical_links_50_percent\": " << eval.failure_critical_links_50_percent << "\n";
 
-                out << "          }";
+                out << "          },\n";
+
+                // Per-physical-link congestion metrics for capacity planning.
+                // Visualization results are indexed by the corresponding demand model.
+                out << "          \"link_utilizations\": [\n";
+                if (i < result.visualization_results.size()) {
+                    const auto& links = result.visualization_results[i].edges;
+                    for (std::size_t link_index = 0; link_index < links.size(); ++link_index) {
+                        const auto& edge = links[link_index];
+                        out << "            {\"edge_id\": " << edge.id
+                            << ", \"source\": " << edge.source
+                            << ", \"target\": " << edge.target
+                            << ", \"capacity\": " << edge.capacity
+                            << ", \"load\": " << edge.load
+                            << ", \"utilization\": " << edge.utilization
+                            << ", \"overloaded\": " << (edge.utilization > 1.0 ? "true" : "false") << "}";
+                        if (link_index + 1 < links.size()) out << ",";
+                        out << "\n";
+                    }
+                }
+                out << "          ]";
 
                 /*
                  * ------------------------------------------------------------

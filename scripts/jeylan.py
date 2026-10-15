@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from scenario_analysis import assess_link_maintenance
+from scenario_jeylan_bridge import ScenarioBridge
+from scenario_runtime import TrustedRun
 
 
 SYSTEM_INSTRUCTIONS = """You are Jeylan, a read-only network resilience analyst for E-Routing.
@@ -51,6 +53,15 @@ Rules:
 - Never approve maintenance based on simulation evidence alone.
 - Do not interpret solver recomputation runtime as production failover latency.
 - Treat missing capacity and telemetry information as unknown, not safe.
+- For new baseline demand evaluations, use evaluate_persisted_scenario.
+- Its results are fresh evidence from a persisted routing scheme, not from the selected canonical run.
+- Treat the returned scenario_id and evidence paths as identifiers of the new calculation.
+- Never attribute a fresh scenario result to the canonical run or vice versa.
+- Layer-1 measures static lost-traffic exposure. It does not model successful rerouting or post-failure congestion.
+- Do not describe this tool as modifying a network or recomputing an optimization solution.
+- Cite the evidence ID associated with the scenario tool result.
+- If the user requests demand scaling, simultaneous link failures, or traffic rerouting, state that this scenario tool does not support those operations.
+
 """
 
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
@@ -126,6 +137,52 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "additionalProperties": False
         }
     },
+
+
+    {
+        "type": "function",
+        "name": "evaluate_persisted_scenario",
+        "strict": True,
+        "description": (
+            "Run a new baseline demand evaluation using a prevalidated, "
+            "persisted E-Routing scheme. Optionally compute static Layer-1 "
+            "single-link failure exposure. This does not perform routing "
+            "optimization, link removal, recovery, or demand scaling."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "demand_model": {
+                    "type": "string",
+                    "enum": ["uniform", "gravity", "bimodal", "gaussian"]
+                },
+                "include_layer1": {
+                    "type": "boolean"
+                },
+
+                "demand_scale": {
+                    "type": "number",
+                    "description": "Demand multiplier, e.g. 1.3 for 30 percent growth"
+                },
+                "capacity_upgrades": {
+                    "type": "array",
+                    "description": "Hypothetical capacity upgrades to canonical physical link IDs",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "edge_id": {"type": "integer"},
+                            "capacity_factor": {"type": "number"}
+                        },
+                        "required": ["edge_id", "capacity_factor"],
+                        "additionalProperties": False
+                    }
+                }
+            },
+            "required": ["demand_model", "include_layer1", "demand_scale", "capacity_upgrades"],
+            "additionalProperties": False
+        }
+    },
+
 ]
 
 
@@ -146,11 +203,22 @@ def _require_exact_keys(args: Any, required: set[str]) -> dict[str, Any]:
 class JeylanAssistant:
     """Model orchestration only. The AnalysisAPI implements all numerical operations."""
 
-    def __init__(self, analysis_api: Any, client: Any, run_id: str, model: str = "gpt-5.4-mini", depth: str = "operational", scenario_data: dict[str, Any] | None = None) -> None:
+
+    def __init__(
+            self,
+            analysis_api: Any,
+            client: Any,
+            run_id: str,
+            model: str = "gpt-5.4-mini",
+            depth: str = "operational",
+            scenario_data: dict[str, Any] | None = None,
+            scenario_bridge: Any | None = None,
+    ) -> None:
         if not run_id or not isinstance(run_id, str):
-            raise ValueError("run_id must be a non-empty string")
+                raise ValueError("run_id must be a non-empty string")
         if depth not in {"executive", "operational", "technical"}:
-            raise ValueError("depth must be executive, operational, or technical")
+                raise ValueError("depth must be executive, operational, or technical")
+
         self.api = analysis_api
         self.client = client
         self.scenario_data = scenario_data
@@ -159,6 +227,7 @@ class JeylanAssistant:
         self.depth = depth
         self.history: list[dict[str, Any]] = []
         self.last_evidence: list[Evidence] = []
+        self.scenario_bridge = scenario_bridge
 
     def reset(self) -> None:
         self.history.clear()
@@ -229,6 +298,16 @@ class JeylanAssistant:
                 raise ValueError("Canonical scenario data unavailable")
 
             return assess_link_maintenance(self.scenario_data, edge_id)
+
+
+        if name == "evaluate_persisted_scenario":
+            _require_exact_keys(args, {"demand_model", "include_layer1"})
+
+            if self.scenario_bridge is None:
+                raise ValueError("Persisted-scheme scenario execution is not configured")
+
+            return self.scenario_bridge.evaluate(args)
+
         raise ValueError(f"Unknown/unauthorized tool: {name}")
 
     def ask(self, question: str) -> str:
@@ -286,6 +365,13 @@ def main() -> int:
     parser.add_argument("--depth", choices=("executive", "operational", "technical"), default="operational")
     parser.add_argument("--ask", help="One-shot question; omit for an interactive session")
     parser.add_argument("--show-evidence", action="store_true", help="Print the tools used after each answer")
+    parser.add_argument("--engine", type=Path)
+    parser.add_argument("--graph", type=Path)
+    parser.add_argument("--routing-table", type=Path)
+    parser.add_argument("--scenario-solver")
+    parser.add_argument("--scenario-workspace", type=Path, default=Path("results/scenarios"))
+    parser.add_argument("--scenario-seed", type=int, default=42)
+
     args = parser.parse_args()
 
     if not os.getenv("OPENAI_API_KEY"):
@@ -312,6 +398,31 @@ def main() -> int:
     if scenario_data.get("analysis_metadata", {}).get("run_id") != args.run:
         parser.error("Canonical result run ID does not match selected run")
 
+    scenario_bridge = None
+    scenario_bridge = None
+
+    scenario_options = [
+        args.engine,
+        args.graph,
+        args.routing_table,
+        args.scenario_solver,
+    ]
+
+    if any(option is not None for option in scenario_options):
+        if not all(option is not None for option in scenario_options):
+            parser.error("--engine, --graph, --routing-table and --scenario-solver must be provided together")
+
+        scenario_bridge = ScenarioBridge(
+            TrustedRun(
+                executable=args.engine,
+                graph=args.graph,
+                routing_table=args.routing_table,
+                solver_label=args.scenario_solver,
+                workspace=args.scenario_workspace,
+                seed=args.scenario_seed,
+            )
+        )
+
 
     agent = JeylanAssistant(
         AnalysisAPI(args.results, args.schema),
@@ -320,13 +431,19 @@ def main() -> int:
         args.model,
         args.depth,
         scenario_data=scenario_data,
+        scenario_bridge=scenario_bridge
     )
 
     def answer(question: str) -> None:
         print(f"\nJeylan: {agent.ask(question)}")
         if args.show_evidence:
             for e in agent.last_evidence:
-                print(f"  [{e.id}] {e.tool}({e.arguments}) for run {args.run}")
+                if e.tool == "evaluate_persisted_scenario":
+                    print(f"  [{e.id}] {e.tool}({e.arguments}) "
+                          f"scenario={e.data.get('scenario_id')}")
+                else:
+                    print(f"  [{e.id}] {e.tool}({e.arguments}) "
+                          f"run={args.run}")
 
     try:
         if args.ask:

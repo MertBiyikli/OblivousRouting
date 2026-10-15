@@ -3,7 +3,7 @@
 import argparse
 import json
 from pathlib import Path
-
+import openai
 from jsonschema import Draft202012Validator, FormatChecker
 from validate_analysis_results import validate_semantics
 

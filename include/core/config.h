@@ -5,6 +5,12 @@
 #include "types.h"
 #include "utils/demands.h"
 
+
+struct CapacityUpgrade {
+    int edge_id = -1;
+    double factor = 1.0;
+};
+
 struct Config {
     std::vector<SolverType>      solvers;
     std::string                  filename;
@@ -30,7 +36,16 @@ struct Config {
      */
     std::string visualization_output_directory{};
 
+
+    // Inside Config:
+    double demand_scale = 1.0;
+    std::vector<CapacityUpgrade> capacity_upgrades;
+
+
+
 };
+
+
 
 
 

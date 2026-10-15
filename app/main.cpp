@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+
+
         IRoutingResult result{};
         result.status = ResultStatus::OK;
         result.type = cfg.solvers.front();
@@ -69,8 +71,43 @@ int main(int argc, char** argv) {
         result.oblivious_ratio = -1.0;
         result.scheme = std::move(imported.value());
 
+
+        std::unordered_set<int> upgradedEdges;
+
+        for (const auto& upgrade : cfg.capacity_upgrades) {
+            const int edge = upgrade.edge_id;
+
+            if (edge < 0 || edge >= graph.getNumDirectedEdges()) {
+                std::cerr << "Invalid capacity-upgrade edge ID: " << edge << '\n';
+                return 1;
+            }
+
+            const int reverse = graph.reverse(edge).id;
+            const int canonical = std::min(edge, reverse);
+
+            if (edge != canonical || !upgradedEdges.insert(canonical).second) {
+                std::cerr << "Capacity upgrades must use distinct canonical physical edge IDs\n";
+                return 1;
+            }
+
+            const auto oldData = graph.edgeData(edge);
+            const double newCapacity = oldData.capacity * upgrade.factor;
+
+            if (!std::isfinite(newCapacity) || newCapacity <= 0.0) {
+                std::cerr << "Invalid upgraded capacity for edge " << edge << '\n';
+                return 1;
+            }
+
+            auto newData = oldData;
+            newData.capacity = newCapacity;
+            graph.setEdgeData(edge, newData);
+        }
+
+
         if (cfg.evaluate_demand_models) {
-            auto evaluation = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis);
+
+            auto evaluation = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis, cfg.demand_scale);
+
 
             if (!evaluation) {
                 std::cerr << "Error evaluating imported scheme: " << evaluation.error().message << '\n';

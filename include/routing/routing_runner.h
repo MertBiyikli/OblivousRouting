@@ -19,7 +19,7 @@ class IRoutingExperimentRunner {
 
 class DemandEvaluator {
   public:
-    static Result<void> evaluate(optimized::Graph<EdgeData>& graph, const std::unique_ptr<RoutingScheme>& scheme, const Config& cfg, IRoutingResult& result, bool run_failure_analysis = false) {
+    static Result<void> evaluate(optimized::Graph<EdgeData>& graph, const std::unique_ptr<RoutingScheme>& scheme, const Config& cfg, IRoutingResult& result, bool run_failure_analysis = false, double demand_scale = 1.0) {
         if (!cfg.evaluate_demand_models) {
             return makeErrorMessage(ErrorCode::InvalidDemand, "Evaluating demand model is set off.");
         }
@@ -40,6 +40,27 @@ class DemandEvaluator {
             if (!dmap) {
                 return getError(dmap);
             }
+
+
+            if (!std::isfinite(demand_scale) || demand_scale <= 0.0) {
+                return makeErrorMessage(ErrorCode::InvalidArgument, "Demand scale must be finite and positive");
+            }
+
+            demands scaledDemands;
+
+            for (std::size_t i = 0; i < dmap->size(); ++i) {
+                const auto [source, target] = dmap->getDemandPair(i);
+                const double value = dmap->getDemandValue(i) * demand_scale;
+
+                if (!std::isfinite(value)) {
+                    return makeErrorMessage(ErrorCode::InvalidDemand, "Scaled demand overflow");
+                }
+
+                scaledDemands.addDemand(source, target, value);
+            }
+
+            dmap = std::move(scaledDemands);
+
 
             /*
              * RoutingAnalyzer now measures:

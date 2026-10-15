@@ -126,6 +126,10 @@ boost::program_options::options_description solveOptions() {
 
 
 
+        ("demand-scale", boost::program_options::value<double>()->default_value(1.0), "Demand multiplier for persisted routing analysis")
+        ("capacity-upgrade", boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(), "Physical link capacity multiplier as edge_id:factor")
+
+
         ("visualization",
          boost::program_options::value<std::string>(),
          "Visualization JSON output directory");
@@ -401,6 +405,47 @@ inline Result<Command> parse(int argc, char** argv)
 
 
 
+        const double demandScale = variables["demand-scale"].as<double>();
+
+        if (!std::isfinite(demandScale) || demandScale <= 0.0) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "--demand-scale must be finite and positive");
+        }
+
+        std::vector<CapacityUpgrade> upgrades;
+
+        if (variables.count("capacity-upgrade")) {
+            for (const auto& token : variables["capacity-upgrade"].as<std::vector<std::string>>()) {
+                const auto colon = token.find(':');
+
+                if (colon == std::string::npos) {
+                    return makeErrorMessage(ErrorCode::InvalidArgument, "Expected capacity upgrade as edge_id:factor");
+                }
+
+                try {
+                    std::size_t usedId = 0;
+                    std::size_t usedFactor = 0;
+                    const std::string idText = token.substr(0, colon);
+                    const std::string factorText = token.substr(colon + 1);
+
+                    const int edgeId = std::stoi(idText, &usedId);
+                    const double factor = std::stod(factorText, &usedFactor);
+
+                    if (usedId != idText.size() || usedFactor != factorText.size() || edgeId < 0 || !std::isfinite(factor) || factor < 1.0) {
+                        return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid capacity upgrade: " + token);
+                    }
+
+                    upgrades.push_back({edgeId, factor});
+                } catch (const std::exception&) {
+                    return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid capacity upgrade: " + token);
+                }
+            }
+        }
+
+        if ((demandScale != 1.0 || !upgrades.empty()) && !variables.count("load-routing-table")) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Traffic/capacity scenarios currently require --load-routing-table");
+        }
+
+
 
         /*
          * Visualization output.
@@ -488,7 +533,9 @@ inline Result<Command> parse(int argc, char** argv)
             .failure_recovery = failure_recovery,
             .routing_table_input_file = std::move(routingTableInput),
             .routing_table_output_directory = std::move(routingTableDirectory),
-            .visualization_output_directory =std::move(visualizationDirectory)
+            .visualization_output_directory =std::move(visualizationDirectory),
+            .demand_scale = demandScale,
+            .capacity_upgrades = std::move(upgrades)
         };
         return Command{ .action = Action::Run,.config = std::move(config)};
     } catch (const boost::program_options::error& error) {
