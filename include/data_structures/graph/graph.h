@@ -11,6 +11,7 @@
 #include <queue>
 #include <span>
 #include <stack>
+#include <cmath>
 #include <vector>
 
 #include "core/errors.h"
