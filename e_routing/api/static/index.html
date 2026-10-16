@@ -485,6 +485,44 @@
                 <div class="small">Evaluated links</div>
                 <strong id="count">—</strong><span>Persisted-routing scenario</span></div>
         </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="small">Baseline congestion</div>
+                <strong id="baseline-congestion">—</strong>
+                <span>Original network · Same demand model</span>
+            </div>
+            <div class="metric">
+                <div class="small">Scenario congestion</div>
+                <strong id="scenario-congestion">—</strong>
+                <span>Modified demand and capacity</span>
+            </div>
+            <div class="metric">
+                <div class="small">Congestion change</div>
+                <strong id="congestion-delta">—</strong>
+                <span>Relative to baseline</span>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="small">Same-demand reference</div>
+                <strong id="reference-congestion">—</strong>
+                <span>Current demand · No capacity upgrades</span>
+            </div>
+            <div class="metric">
+                <div class="small">With upgrades</div>
+                <strong id="upgraded-congestion">—</strong>
+                <span>Current demand · Selected upgrades</span>
+            </div>
+            <div class="metric">
+                <div class="small">Capacity improvement</div>
+                <strong id="capacity-improvement">—</strong>
+                <span>Maximum congestion reduction</span>
+            </div>
+        </div>
+
+
         <div class="result-info" id="evidence">No scenario executed yet.</div>
     </section>
     <aside class="panel assistant">
@@ -533,6 +571,26 @@
         return el
     }
 
+    async function executeScenario(request) {
+        const response = await fetch('/api/v1/scenarios', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(request)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw Error(
+                typeof data.detail === 'string'
+                    ? data.detail
+                    : `API returned HTTP ${response.status}`
+            );
+        }
+
+        return data;
+    }
+
     function drawGraph(links) {
         const svg = $('graph');
         svg.replaceChildren();
@@ -557,8 +615,18 @@
                 'stroke-opacity': .88
             });
             const tip = svgEl('title', {});
-            tip.textContent = `Edge ${l.edge_id}: ${l.source} → ${l.target} | utilization ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'}`;
-            line.appendChild(tip);
+
+            tip.textContent = [
+                `Edge ${l.edge_id}: ${l.source} → ${l.target}`,
+                `Current utilization: ${Number(l.utilization).toFixed(3)}`,
+                l.baseline_utilization != null
+                    ? `Without upgrade: ${Number(l.baseline_utilization).toFixed(3)}`
+                    : '',
+                l.utilization_change != null
+                    ? `Change: ${l.utilization_change >= 0 ? '+' : ''}${l.utilization_change.toFixed(3)}`
+                    : ''
+            ].filter(Boolean).join('\n');
+
             line.addEventListener('click', () => {
                 $('edge').value = l.edge_id;
                 $('selected').textContent = `Selected edge ${l.edge_id} (${l.source} → ${l.target}) · utilization ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'} · capacity ${l.capacity}`
@@ -594,15 +662,107 @@
         $('run').textContent = 'Simulating…';
         $('status').textContent = 'Running';
         try {
-            const response = await fetch('/api/v1/scenarios', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(request)
-            });
-            const data = await response.json();
-            if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : `API returned HTTP ${response.status}`);
+            const baselineRequest = {
+                ...request,
+                scenario_id: request.scenario_id + '-baseline',
+                scenario_type: 'baseline',
+                demand_scale: 1.0,
+                capacity_upgrades: []
+            };
+
+
+            const baseline = await executeScenario(baselineRequest);
+
+            const referenceRequest = {
+                ...request,
+                scenario_id: request.scenario_id + '-reference',
+                scenario_type: 'capacity_planning',
+                demand_scale: request.demand_scale,
+                capacity_upgrades: []
+            };
+
+            const reference = request.demand_scale === 1.0
+                ? baseline
+                : await executeScenario(referenceRequest);
+
+            const data = upgrades.size === 0
+                ? reference
+                : await executeScenario(request);
+
+
+            const referenceCongestion = reference.metrics?.congestion;
+            const upgradedCongestion = data.metrics?.congestion;
+
+            $('reference-congestion').textContent =
+                typeof referenceCongestion === 'number'
+                    ? referenceCongestion.toFixed(3) : '—';
+
+            $('upgraded-congestion').textContent =
+                typeof upgradedCongestion === 'number'
+                    ? upgradedCongestion.toFixed(3) : '—';
+
+            if (
+                typeof referenceCongestion === 'number' &&
+                typeof upgradedCongestion === 'number' &&
+                referenceCongestion > 0
+            ) {
+                const improvement =
+                    100 * (referenceCongestion - upgradedCongestion) / referenceCongestion;
+
+                $('capacity-improvement').textContent =
+                    `${improvement > 0 ? '+' : ''}${improvement.toFixed(2)}%`;
+
+                $('capacity-improvement').style.color =
+                    improvement > 0 ? '#22c55e' :
+                        improvement < 0 ? '#ef4444' : '#94a3b8';
+            } else {
+                $('capacity-improvement').textContent = 'N/A';
+            }
+
+            const baselineCongestion = Number(baseline.metrics?.congestion);
+            const scenarioCongestion = Number(data.metrics?.congestion);
+
+            $('baseline-congestion').textContent =
+                Number.isFinite(baselineCongestion) ? baselineCongestion.toFixed(3) : '—';
+
+            $('scenario-congestion').textContent =
+                Number.isFinite(scenarioCongestion) ? scenarioCongestion.toFixed(3) : '—';
+
+            if (Number.isFinite(baselineCongestion) &&
+                Number.isFinite(scenarioCongestion) &&
+                baselineCongestion > 0) {
+
+                const delta = 100 * (scenarioCongestion - baselineCongestion) / baselineCongestion;
+
+                $('congestion-delta').textContent =
+                    `${delta > 0 ? '+' : ''}${delta.toFixed(2)}%`;
+
+                $('congestion-delta').style.color =
+                    delta < 0 ? '#22c55e' : delta > 0 ? '#ef4444' : '#94a3b8';
+            } else {
+                $('congestion-delta').textContent = 'N/A';
+            }
             const metrics = data.metrics || {};
             lastLinks = metrics.links || [];
+
+            const referenceLinks = new Map(
+                (reference.metrics?.links || []).map(
+                    link => [link.edge_id, link]
+                )
+            );
+
+            lastLinks = lastLinks.map(link => {
+                const previous = referenceLinks.get(link.edge_id);
+
+                return {
+                    ...link,
+                    baseline_utilization: previous?.utilization ?? null,
+                    utilization_change: previous
+                        ? Number(link.utilization) - Number(previous.utilization)
+                        : null
+                };
+            });
+
             drawGraph(lastLinks);
             $('congestion').textContent = typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : '—';
             $('overloaded').textContent = String(metrics.overloaded_count ?? '—');
