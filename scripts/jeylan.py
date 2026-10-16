@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from scenario_analysis import assess_link_maintenance
 from scenario_jeylan_bridge import ScenarioBridge
-from scenario_runtime import TrustedRun
+from e_routing.scenarios.runtime import TrustedRun
 
 
 SYSTEM_INSTRUCTIONS = """You are Jeylan, a read-only network resilience analyst for E-Routing.

@@ -1,5 +1,5 @@
 import unittest
-from scenario_runtime import ScenarioRequest
+from e_routing.scenarios.runtime import ScenarioRequest
 
 class ScenarioRequestTests(unittest.TestCase):
     def test_baseline(self):

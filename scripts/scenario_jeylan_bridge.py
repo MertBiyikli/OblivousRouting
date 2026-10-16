@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import uuid4
 from typing import Any
+from uuid import uuid4
 
-from scenario_runtime import ScenarioRequest, TrustedRun, execute
+from e_routing.scenarios.runtime import ScenarioRequest, TrustedRun, execute
 
 
 @dataclass(frozen=True)
