@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>E-Routing | Scenario Studio</title>
+    <style>
+        :root {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #e8edf8;
+            background: #091120;
+            --panel: #111e32;
+            --line: #223450;
+            --muted: #91a4c2;
+            --blue: #3e88ff
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0
+        }
+
+        button, input, select {
+            font: inherit
+        }
+
+        button {
+            cursor: pointer
+        }
+
+        header {
+            height: 66px;
+            display: flex;
+            align-items: center;
+            gap: 35px;
+            padding: 0 32px;
+            border-bottom: 1px solid var(--line);
+            background: #0e192c
+        }
+
+        .logo {
+            font-weight: 800;
+            letter-spacing: -.5px;
+            font-size: 20px
+        }
+
+        .logo b {
+            color: #488fff
+        }
+
+        nav {
+            display: flex;
+            gap: 22px;
+            color: #8ca0bf;
+            font-size: 13px
+        }
+
+        nav strong {
+            color: white;
+            border-bottom: 2px solid var(--blue);
+            padding: 24px 0
+        }
+
+        .tag {
+            margin-left: auto;
+            font-size: 12px;
+            color: #8aa7cd
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns:252px minmax(450px, 1fr) 306px;
+            gap: 16px;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 22px;
+            min-height: calc(100vh - 66px)
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: 11px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 700
+        }
+
+        .side h2, .assistant h2 {
+            font-size: 16px;
+            margin: 13px 0 18px
+        }
+
+        .mode {
+            padding: 12px;
+            background: #1a3357;
+            color: #dceaff;
+            border-radius: 7px;
+            font-size: 13px;
+            margin-bottom: 20px
+        }
+
+        .field {
+            margin: 17px 0
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #adbed7
+        }
+
+        select, input {
+            width: 100%;
+            background: #0c1728;
+            color: #eff5ff;
+            border: 1px solid #2a3c59;
+            border-radius: 7px;
+            padding: 10px;
+            outline: none
+        }
+
+        input:focus, select:focus {
+            border-color: #488fff
+        }
+
+        .help {
+            font-size: 11px;
+            color: #849ab9;
+            margin-top: 8px;
+            line-height: 1.5
+        }
+
+        .primary {
+            border: 0;
+            border-radius: 8px;
+            background: #327dff;
+            color: #fff;
+            padding: 13px 16px;
+            font-weight: 700;
+            width: 100%;
+            margin-top: 17px
+        }
+
+        .primary:disabled {
+            opacity: .5;
+            cursor: wait
+        }
+
+        .secondary {
+            background: #203554;
+            color: #c9d9f5;
+            border: 1px solid #355071;
+            padding: 9px;
+            border-radius: 7px;
+            width: 100%;
+            margin-top: 10px
+        }
+
+        .heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px
+        }
+
+        .heading h1 {
+            font-size: 18px;
+            margin: 0
+        }
+
+        .pill {
+            border-radius: 50px;
+            background: #183a31;
+            color: #64dfae;
+            padding: 6px 11px;
+            font-size: 11px
+        }
+
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 16px
+        }
+
+        .graph-panel {
+            min-height: 450px
+        }
+
+        .sub {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px
+        }
+
+        .graph-wrap {
+            background: #0b1729;
+            border: 1px solid #22334f;
+            border-radius: 9px;
+            margin-top: 18px;
+            min-height: 340px;
+            position: relative;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            background-image: linear-gradient(#ffffff05 1px, transparent 1px), linear-gradient(90deg, #ffffff05 1px, transparent 1px);
+            background-size: 32px 32px
+        }
+
+        svg {
+            width: 100%;
+            height: 340px
+        }
+
+        svg line {
+            cursor: pointer;
+            stroke-linecap: round
+        }
+
+        svg circle {
+            fill: #102742;
+            stroke: #73c9ff;
+            stroke-width: 2.5;
+            cursor: pointer
+        }
+
+        svg text {
+            fill: #acc4e2;
+            font-size: 12px;
+            pointer-events: none
+        }
+
+        .empty {
+            position: absolute;
+            text-align: center;
+            color: #8298b9;
+            padding: 24px;
+            line-height: 1.7;
+            font-size: 14px
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            font-size: 11px;
+            color: #97aecb;
+            margin-top: 14px
+        }
+
+        .dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 6px
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns:repeat(3, 1fr);
+            gap: 14px
+        }
+
+        .metric {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 17px
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 10px;
+            font-size: 23px;
+            letter-spacing: -.5px
+        }
+
+        .metric span {
+            display: block;
+            margin-top: 6px;
+            color: #91a4c2;
+            font-size: 11px
+        }
+
+        .assistant {
+            display: flex;
+            flex-direction: column;
+            min-height: 535px
+        }
+
+        .assistant-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .orb {
+            width: 12px;
+            height: 12px;
+            background: #a86fff;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 13px #9855ff
+        }
+
+        .chat {
+            background: #1b3049;
+            padding: 13px;
+            border-radius: 9px;
+            font-size: 13px;
+            color: #d3e3fa;
+            line-height: 1.7;
+            margin-top: 18px
+        }
+
+        .chat small {
+            color: #8ab7f6;
+            display: block;
+            margin-bottom: 6px
+        }
+
+        .prompts {
+            margin-top: auto
+        }
+
+        .prompt {
+            display: block;
+            width: 100%;
+            text-align: left;
+            color: #afc4dd;
+            background: #17283e;
+            border: 1px solid #263b59;
+            border-radius: 6px;
+            margin-top: 9px;
+            padding: 10px;
+            font-size: 12px
+        }
+
+        .alert {
+            background: #4d2731;
+            border: 1px solid #9a4453;
+            color: #ffd2d7;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            margin-top: 10px;
+            line-height: 1.6
+        }
+
+        .muted {
+            color: #7b92b4
+        }
+
+        .result-info {
+            background: #10243a;
+            border: 1px solid #27405e;
+            border-radius: 8px;
+            margin-top: 12px;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #b0c7df
+        }
+
+        #selected {
+            color: #8bc5ff;
+            font-size: 12px;
+            margin-top: 8px;
+            min-height: 20px
+        }
+
+        @media (max-width: 1100px) {
+            .layout {
+                grid-template-columns:220px minmax(350px, 1fr)
+            }
+
+            .assistant {
+                grid-column: 1/-1;
+                min-height: 230px
+            }
+
+            .prompts {
+                margin-top: 16px
+            }
+        }
+
+        @media (max-width: 700px) {
+            nav {
+                display: none
+            }
+
+            .layout {
+                display: block;
+                padding: 12px
+            }
+
+            .panel, .workspace {
+                margin-bottom: 12px
+            }
+
+            .metrics {
+                grid-template-columns:1fr
+            }
+
+            .graph-panel {
+                min-height: 400px
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo">E-<b>Routing</b></div>
+    <nav><span>Overview</span><span>Topology</span><strong>Analysis</strong><span>Experiments</span><span>Reports</span>
+    </nav>
+    <span class="tag">Local prototype · v0.1</span></header>
+<main class="layout">
+    <aside class="panel side">
+        <div class="small">Analysis</div>
+        <h2>Scenario Studio</h2>
+        <div class="mode">Traffic & capacity planning</div>
+        <div class="small">Scenario configuration</div>
+        <div class="field"><label for="demand">Demand model</label><select id="demand">
+            <option>uniform</option>
+            <option>gravity</option>
+            <option>bimodal</option>
+            <option>gaussian</option>
+        </select></div>
+        <div class="field"><label for="scale">Traffic demand scale</label><input id="scale" type="number" min="0.01"
+                                                                                 max="100" step="0.1" value="1.3">
+            <div class="help">1.0 = reference demand; 1.3 = 30% greater modeled demand.</div>
+        </div>
+        <div class="field"><label for="edge">Capacity upgrade · selected edge</label><input id="edge" type="number"
+                                                                                            min="0" step="1"
+                                                                                            placeholder="Click a link in graph or enter ID">
+        </div>
+        <div class="field"><label for="factor">Capacity factor</label><input id="factor" type="number" min="1" max="100"
+                                                                             step="0.1" value="1.5">
+            <button id="add" type="button" class="secondary">Add capacity upgrade</button>
+            <div class="help" id="upgrades">No upgrades selected</div>
+        </div>
+        <div class="field"><label><input type="checkbox" id="layer1" style="width:auto;margin-right:6px"> Include
+            Layer-1 static failure exposure</label></div>
+        <button id="run" class="primary">Run simulation</button>
+        <div class="help">This uses your real persisted routing scheme. No live network changes.</div>
+        <div id="alert" role="alert" hidden class="alert"></div>
+    </aside>
+    <section class="workspace">
+        <div class="panel graph-panel">
+            <div class="heading">
+                <div><h1 id="topology">Network topology</h1>
+                    <div class="sub">Actual link data from the most recent scenario evaluation</div>
+                </div>
+                <span class="pill" id="status">Ready</span></div>
+            <div class="graph-wrap">
+                <div class="empty" id="empty">Run a scenario to load the network topology.<br>Links and utilization will
+                    come from the C++ engine.
+                </div>
+                <svg id="graph" viewBox="0 0 720 340" role="img" aria-label="Network link utilization graph"></svg>
+            </div>
+            <div class="legend"><span><i class="dot" style="background:#40b7ef"></i>Within capacity</span><span><i
+                    class="dot" style="background:#f0aa36"></i>Overloaded</span><span><i class="dot"
+                                                                                         style="background:#f26873"></i>High overload</span>
+            </div>
+            <div id="selected">Select a link after running a scenario.</div>
+        </div>
+        <div class="metrics">
+            <div class="metric">
+                <div class="small">Maximum utilization</div>
+                <strong id="congestion">—</strong><span>Maximum link load / capacity</span></div>
+            <div class="metric">
+                <div class="small">Overloaded links</div>
+                <strong id="overloaded">—</strong><span>Based on returned engine flags</span></div>
+            <div class="metric">
+                <div class="small">Evaluated links</div>
+                <strong id="count">—</strong><span>Persisted-routing scenario</span></div>
+        </div>
+        <div class="result-info" id="evidence">No scenario executed yet.</div>
+    </section>
+    <aside class="panel assistant">
+        <div class="assistant-head">
+            <div><span class="orb"></span> <strong>Jeylan</strong></div>
+            <span class="pill">Preview</span></div>
+        <div class="chat"><small>Scenario interpretation</small><span id="interpretation">Execute a scenario to inspect observed link loads and overloads. AI-generated interpretation is not connected in this prototype.</span>
+        </div>
+        <div class="prompts">
+            <div class="small">Next integrations</div>
+            <button class="prompt" disabled>Which links are most critical? · Coming soon</button>
+            <button class="prompt" disabled>What if edge 14 fails? · Coming soon</button>
+            <button class="prompt" disabled>Compare scenarios · Coming soon</button>
+        </div>
+    </aside>
+</main>
+<script>
+    const $ = id => document.getElementById(id);
+    const upgrades = new Map();
+    let lastLinks = [];
+
+    function showError(message) {
+        $('alert').hidden = false;
+        $('alert').textContent = message
+    }
+
+    function clearError() {
+        $('alert').hidden = true;
+        $('alert').textContent = ''
+    }
+
+    $('add').addEventListener('click', () => {
+        const id = Number($('edge').value), factor = Number($('factor').value);
+        if ($('edge').value === '' || !Number.isInteger(id) || id < 0 || !Number.isFinite(factor) || factor < 1 || factor > 100) {
+            showError('Enter a nonnegative integer edge ID and a capacity factor between 1 and 100.');
+            return
+        }
+        clearError();
+        upgrades.set(id, factor);
+        $('upgrades').textContent = [...upgrades].map(([e, f]) => `Edge ${e}: ×${f}`).join(' · ');
+    });
+
+    function svgEl(name, attrs) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+        return el
+    }
+
+    function drawGraph(links) {
+        const svg = $('graph');
+        svg.replaceChildren();
+        if (!links.length) return;
+        const vertices = [...new Set(links.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b), centerX = 360,
+            centerY = 167, rx = 270, ry = 125, positions = new Map(vertices.map((v, i) => {
+                const a = -Math.PI / 2 + 2 * Math.PI * i / vertices.length;
+                return [v, {x: centerX + rx * Math.cos(a), y: centerY + ry * Math.sin(a)}]
+            }));
+        for (const l of links) {
+            const a = positions.get(l.source), b = positions.get(l.target);
+            if (!a || !b) continue;
+            const util = Number(l.utilization);
+            const color = util > 2 ? '#f26873' : util > 1 ? '#f0aa36' : '#40b7ef';
+            const line = svgEl('line', {
+                x1: a.x,
+                y1: a.y,
+                x2: b.x,
+                y2: b.y,
+                stroke: color,
+                'stroke-width': 4,
+                'stroke-opacity': .88
+            });
+            const tip = svgEl('title', {});
+            tip.textContent = `Edge ${l.edge_id}: ${l.source} → ${l.target} | utilization ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'}`;
+            line.appendChild(tip);
+            line.addEventListener('click', () => {
+                $('edge').value = l.edge_id;
+                $('selected').textContent = `Selected edge ${l.edge_id} (${l.source} → ${l.target}) · utilization ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'} · capacity ${l.capacity}`
+            });
+            svg.appendChild(line)
+        }
+        for (const v of vertices) {
+            const p = positions.get(v);
+            svg.appendChild(svgEl('circle', {cx: p.x, cy: p.y, r: 9}));
+            const t = svgEl('text', {x: p.x + 13, y: p.y - 11});
+            t.textContent = `${v}`;
+            svg.appendChild(t)
+        }
+        $('empty').hidden = true;
+    }
+
+    $('run').addEventListener('click', async () => {
+        clearError();
+        const demandScale = Number($('scale').value);
+        if (!Number.isFinite(demandScale) || demandScale <= 0 || demandScale > 100) {
+            showError('Demand scale must be greater than zero and at most 100.');
+            return
+        }
+        const request = {
+            scenario_id: 'web-' + (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, ''),
+            scenario_type: 'capacity_planning',
+            demand_model: $('demand').value,
+            include_layer1: $('layer1').checked,
+            demand_scale: demandScale,
+            capacity_upgrades: [...upgrades].map(([edge_id, capacity_factor]) => ({edge_id, capacity_factor}))
+        };
+        $('run').disabled = true;
+        $('run').textContent = 'Simulating…';
+        $('status').textContent = 'Running';
+        try {
+            const response = await fetch('/api/v1/scenarios', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(request)
+            });
+            const data = await response.json();
+            if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : `API returned HTTP ${response.status}`);
+            const metrics = data.metrics || {};
+            lastLinks = metrics.links || [];
+            drawGraph(lastLinks);
+            $('congestion').textContent = typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : '—';
+            $('overloaded').textContent = String(metrics.overloaded_count ?? '—');
+            $('count').textContent = String(lastLinks.length);
+            $('status').textContent = 'Completed';
+            $('evidence').textContent = `Scenario: ${data.scenario_id} · Demand: ${data.demand_model} × ${data.demand_scale} · Mode: ${data.execution_mode} · ${data.evidence?.result_path || 'No result path'}`;
+            const ranked = [...lastLinks].sort((a, b) => Number(b.utilization) - Number(a.utilization));
+            $('interpretation').textContent = `Deterministic results: ${metrics.overloaded_count ?? 0} of ${lastLinks.length} returned links are flagged overloaded. Maximum modeled utilization: ${typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : 'unknown'}. ${ranked.length ? `Highest-utilization edge: ${ranked[0].edge_id} (${Number(ranked[0].utilization).toFixed(3)}).` : ''} This is a computed summary, not an AI assessment.`;
+        } catch (e) {
+            $('status').textContent = 'Error';
+            showError(e.message || String(e))
+        } finally {
+            $('run').disabled = false;
+            $('run').textContent = 'Run simulation'
+        }
+    });
+</script>
+</body>
+</html>

@@ -14,19 +14,23 @@ class ScenarioRepository:
         self.directory.mkdir(parents=True, exist_ok=True)
 
     def _path(self, scenario_id: str) -> Path:
-        if not isinstance(scenario_id, str) or not scenario_id or len(scenario_id) > 80 or not all(c.isascii() and (c.isalnum() or c in "-_") for c in scenario_id):
+        # Validate the scenario ID and return the corresponding file path.
+        if (not isinstance(scenario_id, str)
+                or not scenario_id
+                or len(scenario_id) > 80
+                or not all(c.isascii() and (c.isalnum() or c in "-_") for c in scenario_id)):
             raise ValueError("Invalid scenario ID")
         return self.directory / f"{scenario_id}.json"
 
     def reserve(self, scenario_id: str) -> None:
-        """Atomically claim a scenario ID before execution."""
+        # Reserve a scenario ID for execution, creating a placeholder file.
         path = self._path(scenario_id)
 
         with path.open("x", encoding="utf-8") as file:
             json.dump({"scenario_id": scenario_id, "status": "running"}, file)
 
     def complete(self, result: dict[str, Any]) -> None:
-        """Replace the reservation with a completed response."""
+        # Replace the reservation with a completed response.
         path = self._path(result["scenario_id"])
 
         if not path.is_file():
@@ -44,14 +48,14 @@ class ScenarioRepository:
             temporary.unlink(missing_ok=True)
 
     def release(self, scenario_id: str) -> None:
-        """Release an incomplete reservation."""
+        # Release an incomplete reservation.
         path = self._path(scenario_id)
 
         if path.is_file() and self.get(scenario_id).get("status") == "running":
             path.unlink()
 
     def save(self, result: dict[str, Any]) -> None:
-        """Preserve compatibility with direct result persistence."""
+        # Preserve compatibility with direct result persistence.
         path = self._path(result["scenario_id"])
         with path.open("x", encoding="utf-8") as file:
             json.dump(result, file, indent=2, allow_nan=False)

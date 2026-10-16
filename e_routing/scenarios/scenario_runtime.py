@@ -1,7 +1,7 @@
 
 """Backward-compatible CLI for the E-Routing scenario runtime."""
 
-from e_routing.scenarios.runtime import ScenarioRequest, TrustedRun, execute, main
+from runtime import ScenarioRequest, TrustedRun, execute, main
 
 __all__ = ["ScenarioRequest", "TrustedRun", "execute", "main"]
 

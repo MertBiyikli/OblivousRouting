@@ -8,6 +8,12 @@ from uuid import uuid4
 from e_routing.scenarios.runtime import ScenarioRequest, TrustedRun, execute
 
 
+# TODO: extend this bridge to support additional scenario types and analysis requests, including:
+# - baseline scenarios (no capacity upgrades)
+# - N-1 link failure scenarios (for planned maintenance)
+# - N-(N-1) multi-link failure scenarios (for planned maintenance with redundancy)
+# - capacity planning scenarios with multiple upgrades
+# - optimizing capacity planning scenarios (finding the best set of upgrades for a given budget) -> requires a new API endpoint for optimization, not just evaluation
 @dataclass(frozen=True)
 class ScenarioBridge:
     trusted: TrustedRun
@@ -24,12 +30,21 @@ class ScenarioBridge:
             'demand_scale': arguments['demand_scale'],
             'capacity_upgrades': arguments['capacity_upgrades'],
         })
+
         result = execute(request, self.trusted)
-        if result.get('status') != 'completed' or result.get('execution_mode') != 'persisted_routing_scheme':
+
+        if (result.get('status') != 'completed'
+                or result.get('execution_mode') != 'persisted_routing_scheme'):
             raise ValueError('Unexpected scenario result status or execution mode')
+
         metrics = result.get('metrics')
-        if not isinstance(metrics, dict) or not isinstance(metrics.get('congestion'), (float, int)) or isinstance(metrics.get('congestion'), bool):
+
+        if (not isinstance(metrics, dict)
+                or not isinstance(metrics.get('congestion'), (float, int))
+                or isinstance(metrics.get('congestion'), bool)):
             raise ValueError('Missing congestion evidence')
-        if arguments['include_layer1'] and not isinstance(metrics.get('layer1'), dict):
+
+        if (arguments['include_layer1']
+                and not isinstance(metrics.get('layer1'), dict)):
             raise ValueError('Missing requested Layer-1 evidence')
         return result

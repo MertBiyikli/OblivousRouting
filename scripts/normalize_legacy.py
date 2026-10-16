@@ -18,7 +18,7 @@ import math
 
 from datetime import datetime, timezone
 from pathlib import Path
-from canonical_recovery import  normalize_recovery
+from e_routing.analysis.recovery import  normalize_recovery
 
 SCHEMA_VERSION = "1.0.0"
 

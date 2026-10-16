@@ -2,8 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scenario_jeylan_bridge import ScenarioBridge
-from scenario_runtime import TrustedRun
+from e_routing.assistant.scenario_bridge import ScenarioBridge
 from e_routing.scenarios.runtime import TrustedRun
 
 
@@ -30,7 +29,7 @@ class BridgeTests(unittest.TestCase):
                 'include_layer1': True
             })
 
-    @patch('scenario_jeylan_bridge.execute')
+    @patch('e_routing.assistant.scenario_bridge.execute')
     def test_executes_using_trusted_paths_and_returns_evidence(self, run):
         run.return_value = {'status': 'completed', 'execution_mode': 'persisted_routing_scheme', 'metrics': {'congestion': 186.006, 'layer1': {'tested_links': 9}}}
         result = self.bridge.evaluate({

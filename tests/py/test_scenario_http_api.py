@@ -10,8 +10,7 @@ from fastapi.testclient import TestClient
 
 from e_routing.api.main import app
 from e_routing.scenarios.repository import ScenarioRepository
-from e_routing.scenarios.runtime import TrustedRun
-from scripts.scenario_runtime import ScenarioRequest
+from e_routing.scenarios.runtime import ScenarioRequest, TrustedRun
 
 client = TestClient(app)
 
