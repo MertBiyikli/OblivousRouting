@@ -159,7 +159,7 @@ struct RoutingVisualizationResult {
 class LinkFailureAnalyzer {
 public:
 
-    static Result<LinkFailureSummary> analyze(const optimized::Graph<EdgeData>& graph,const RoutingScheme& scheme,const demands& demand_map,int failed_edge);
+    static Result<LinkFailureSummary> analyze(const optimized::Graph<EdgeData>& graph, const RoutingScheme& scheme, const demands& demand_map, int failed_edge, double total_demand);
 };
 
 #endif //OBLIVIOUSROUTING_EDGE_LOAD_ANALYZER_H

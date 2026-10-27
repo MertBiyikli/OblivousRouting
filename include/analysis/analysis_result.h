@@ -5,17 +5,16 @@
 #ifndef E_ROUTING_ANALYSIS_RESULT_H
 #define E_ROUTING_ANALYSIS_RESULT_H
 
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
-
 /*
  * This file defines the data structures used to represent the analysis result of a network routing analysis.
  * The structures are designed to be serializable and can be used to store and retrieve analysis results in a structured format.
  */
-
 
 /**
  * @brief Represents an error that occurred during the analysis.
@@ -68,6 +67,12 @@ struct LinkMetric {
     std::string link_id;
     double load = 0, capacity = 0, utilization = 0, headroom = 0;
     bool overloaded = false;
+};
+
+struct ScenarioMetrics {
+    double maximum_congestion;
+    int overloaded_links;
+    std::vector<double> utilization;
 };
 
 /**
@@ -215,4 +220,5 @@ struct AnalysisResult {
     std::vector<Recommendation> recommendations;
     Provenance provenance;
 };
+
 #endif // E_ROUTING_ANALYSIS_RESULT_H

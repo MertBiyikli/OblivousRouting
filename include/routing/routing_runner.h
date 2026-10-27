@@ -6,7 +6,8 @@
 #define OBLIVIOUSROUTING_ROUTING_RUNNER_H
 
 #include "core/errors.h"
-#include "routing_engine.h"
+#include "io/parse_argument_io.h"
+#include "routing_result.h"
 #include "visualization/failure_recover_analysis.h"
 #include "visualization/visualization_result.h"
 

@@ -1,15 +1,12 @@
 //
 // Created by Mert Biyikli on 23.06.26.
 //
+#include "core/errors.h"
+#include "io/result_io.h"
 #include "routing/routing_engine.h"
 #include "routing/routing_runner.h"
 #include "routing/routing_validation.h"
-#include "algorithms/oblivious/oblivious_routing_runner.h"
-#include "algorithms/semi_oblivious/semi_routing_runner.h"
-#include "core/errors.h"
-#include "io/result_io.h"
 #include "visualization/json_exporter.h"
-
 
 std::string safeFileComponent(std::string value) {
     for (char &character: value) {
@@ -28,18 +25,7 @@ std::string safeFileComponent(std::string value) {
     return value;
 }
 
-bool isSemiObliviousSolver(SolverType type) {
-    return type == SolverType::SEMI_ELECTRICAL ||
-           type == SolverType::SEMI_TREE ||
-           type == SolverType::SEMI_EXPANDER_HIERARCHY;
-}
 
-std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {
-    if (isSemiObliviousSolver(type)) {
-        return std::make_unique<SemiObliviousSolverRunner>();
-    }
-    return std::make_unique<ObliviousSolverRunner>();
-}
 
 
 Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {

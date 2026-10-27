@@ -14,6 +14,9 @@ add_executable(unit_tests
     unit/test_electrical_flow.cpp
     unit/test_routing_table.cpp
         unit/routing/test_routing_table_serializer.cpp
+        unit/analysis/test_fixed_routing_scenario.cpp
+        unit/routing/test_combined_demands.cpp
+        unit/analysis/test_scenario_analysis.cpp
 )
 
 target_include_directories(unit_tests PRIVATE

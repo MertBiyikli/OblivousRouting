@@ -6,6 +6,7 @@
 #define OBLIVIOUSROUTING_SEMI_ROUTING_RUNNER_H
 
 #include "routing/routing_runner.h"
+#include "core/types.h"
 
 static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(SolverType type, optimized::Graph<EdgeData>& graph);
 

@@ -13,8 +13,59 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from dataclasses import replace
+from uuid import uuid4
+
+from e_routing.scenarios.fixed_routing import transform_fixed_routing
 
 ALLOWED_MODELS = frozenset({'uniform', 'gravity', 'bimodal', 'gaussian'})
+
+
+
+def execute_comparison(
+        request: ScenarioRequest,
+        trusted: TrustedRun,
+) -> dict[str, Any]:
+    if request.scenario_type != "capacity_planning":
+        raise ValueError("Comparison requires capacity_planning")
+
+    if request.include_layer1:
+        raise ValueError("Fast comparison does not support Layer-1 analysis")
+
+    if request.demand_model not in {"uniform", "bimodal", "gaussian"}:
+        raise ValueError("Demand model is not eligible for fast comparison")
+
+    baseline_request = replace(
+        request,
+        scenario_id="baseline-" + uuid4().hex,
+        scenario_type="baseline",
+        demand_scale=1.0,
+        capacity_upgrades=(),
+        include_layer1=False,
+    )
+
+    # The only invocation of the C++ solver.
+    baseline = execute(baseline_request, trusted)
+
+    reference = transform_fixed_routing(
+        baseline,
+        scenario_id=request.scenario_id + "-reference",
+        demand_scale=request.demand_scale,
+    )
+
+    final = transform_fixed_routing(
+        baseline,
+        scenario_id=request.scenario_id,
+        demand_scale=request.demand_scale,
+        capacity_upgrades=request.capacity_upgrades,
+    )
+
+    final["comparison"] = {
+        "baseline": baseline,
+        "reference": reference,
+    }
+
+    return final
 
 
 @dataclass(frozen=True)
@@ -38,7 +89,7 @@ class ScenarioRequest:
                 f'unknown fields: {sorted(set(raw) - allowed)}'
             )
         sid = raw['scenario_id']
-        if not isinstance(sid, str) or not sid or len(sid) > 80 or not all(c.isalnum() or c in '-_' for c in sid):
+        if not isinstance(sid, str) or not 1 <= len(sid) <= 80 or not all(c.isascii() and (c.isalnum() or c in "-_") for c in sid):
             raise ValueError('scenario_id must be 1..80 alphanumeric, dash or underscore characters')
         if raw['scenario_type'] not in {'baseline', 'capacity_planning'}:
             raise ValueError('Only baseline and capacity_planning scenarios are supported')
@@ -58,7 +109,9 @@ class ScenarioRequest:
             if not isinstance(upgrade, dict) or set(upgrade) != {'edge_id', 'capacity_factor'}:
                 raise ValueError('Capacity upgrade requires edge_id and capacity_factor')
             edge, factor = upgrade['edge_id'], upgrade['capacity_factor']
-            if type(edge) is not int or edge < 0 or edge in seen:
+            if (type(edge) is not int
+                    or edge < 0
+                    or edge in seen):
                 raise ValueError('Capacity edge IDs must be unique nonnegative integers')
             if isinstance(factor, bool) or not isinstance(factor, (float, int)) or not math.isfinite(factor) or not 1 <= factor <= 100:
                 raise ValueError('capacity_factor must be finite and between 1 and 100')

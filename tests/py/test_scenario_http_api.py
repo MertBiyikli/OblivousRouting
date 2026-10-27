@@ -184,3 +184,11 @@ def test_get_running_scenario(scenario_environment):
     assert response.json()["detail"] == "Scenario is still running"
 
 
+@pytest.mark.parametrize("scenario_id", ["übung", "scénario", "测试"])
+def test_rejects_non_ascii_scenario_id(scenario_id):
+    payload = valid_payload()
+    payload["scenario_id"] = scenario_id
+
+    response = client.post("/api/v1/scenarios", json=payload)
+
+    assert response.status_code == 422

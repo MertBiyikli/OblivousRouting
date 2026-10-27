@@ -11,6 +11,13 @@ struct PairHash {
     }
 };
 
+
+struct SetHash {
+    size_t operator()(const std::pair<int, double>& p) const noexcept {
+        return ((size_t)p.first << 32) ^ (size_t)p.second;
+    }
+};
+
 struct TuplePair {
     std::size_t operator()(const std::tuple<int, std::pair<int, int>>& t) const {
         std::size_t h1 = std::hash<int>{}(std::get<0>(t));

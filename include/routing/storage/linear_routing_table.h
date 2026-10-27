@@ -53,6 +53,7 @@ public:
 
     bool isValid() override;
     virtual void printFlowForSource(const int& s) const override;
+    void getEdgeBasis(int edge, std::vector<double>& basis) const;
 };
 
 

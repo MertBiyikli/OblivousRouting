@@ -61,16 +61,17 @@ Result<std::uint64_t> RoutingTableSerializer::entry_count(const Docu& doc) {
     return total;
 }
 
-
 bool RoutingTableSerializer::is_valid_id(const RoutingTableType& type, const uint32_t& id, const uint32_t& n) {
-    if (n == 0) return false;
+    if (n == 0)
+        return false;
 
     if (type == RoutingTableType::Linear) {
         return id < n;
     }
 
     if (type == RoutingTableType::AllPair) {
-        if (static_cast<uint64_t>(id) >= static_cast<uint64_t>(n) * n) return false;
+        if (static_cast<uint64_t>(id) >= static_cast<uint64_t>(n) * n)
+            return false;
 
         const uint32_t s = id / n;
         const uint32_t t = id % n;
@@ -80,7 +81,6 @@ bool RoutingTableSerializer::is_valid_id(const RoutingTableType& type, const uin
 
     return false;
 }
-
 
 Result<void> RoutingTableSerializer::validate(const Docu& docu) {
     if (docu.n == 0) {
@@ -105,12 +105,8 @@ Result<void> RoutingTableSerializer::validate(const Docu& docu) {
         return makeErrorMessage(ErrorCode::InvalidArgument, "Unknown routing table type");
     }
 
-
-
     for (const auto& edge : docu.edges) {
-        const std::uint64_t maximum = docu.type == RoutingTableType::Linear
-            ? static_cast<std::uint64_t>(docu.n)
-            : static_cast<std::uint64_t>(docu.n) * (docu.n - 1) / 2;
+        const std::uint64_t maximum = docu.type == RoutingTableType::Linear ? static_cast<std::uint64_t>(docu.n) : static_cast<std::uint64_t>(docu.n) * (docu.n - 1) / 2;
 
         if (edge.size() > maximum) {
             return makeErrorMessage(ErrorCode::InvalidArgument, "Too many sparse coefficients on an edge");
@@ -137,7 +133,6 @@ Result<void> RoutingTableSerializer::validate(const Docu& docu) {
         }
     }
 
-
     return {};
 }
 
@@ -147,9 +142,10 @@ Result<void> RoutingTableSerializer::save(const Docu& doc, const std::string& pa
         return res;
     }
 
-    std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    if (!out) {
-        return makeErrorMessage(ErrorCode::RuntimeError, "Failed to open file: " + path);
+    std::ofstream out(path, std::ios::binary | std::ios::out | std::ios::trunc);
+
+    if (!out.is_open()) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "Failed to open routing table for writing: " + path);
     }
 
     out.write("EROUTE01", 8);
@@ -183,12 +179,10 @@ Result<void> RoutingTableSerializer::save(const Docu& doc, const std::string& pa
         return res;
     }
 
-
     res = write_u32(out, std::bit_cast<std::uint32_t>(doc.root_node));
     if (!res) {
         return getError(res);
     }
-
 
     for (const auto& edge : doc.edges) {
         res = write_u64(out, edge.size());
@@ -215,8 +209,8 @@ Result<void> RoutingTableSerializer::save(const Docu& doc, const std::string& pa
     return {};
 }
 
-
-Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t expected_nodes, std::uint32_t expected_directed_edges, std::uint64_t expected_graph_fingerprint, RoutingTableType expected_kind) {
+Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t expected_nodes, std::uint32_t expected_directed_edges, std::uint64_t expected_graph_fingerprint,
+                                          RoutingTableType expected_kind) {
     std::ifstream in(path, std::ios::binary);
 
     if (!in) {
@@ -230,33 +224,40 @@ Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t
     }
 
     auto version = read_u32(in);
-    if (!version) return getError(version);
+    if (!version)
+        return getError(version);
 
     if (version.value() != 2) {
         return makeErrorMessage(ErrorCode::RuntimeError, "Unsupported routing table version");
     }
 
     auto type = read_u32(in);
-    if (!type) return getError(type);
+    if (!type)
+        return getError(type);
 
     if (type.value() != static_cast<std::uint32_t>(expected_kind)) {
         return makeErrorMessage(ErrorCode::RuntimeError, "Unexpected routing table type");
     }
 
     auto nodes = read_u32(in);
-    if (!nodes) return getError(nodes);
+    if (!nodes)
+        return getError(nodes);
 
     auto directed_edges = read_u32(in);
-    if (!directed_edges) return getError(directed_edges);
+    if (!directed_edges)
+        return getError(directed_edges);
 
     auto fingerprint = read_u64(in);
-    if (!fingerprint) return getError(fingerprint);
+    if (!fingerprint)
+        return getError(fingerprint);
 
     auto entry_total = read_u64(in);
-    if (!entry_total) return getError(entry_total);
+    if (!entry_total)
+        return getError(entry_total);
 
     auto root_bits = read_u32(in);
-    if (!root_bits) return getError(root_bits);
+    if (!root_bits)
+        return getError(root_bits);
 
     if (nodes.value() != expected_nodes || directed_edges.value() != expected_directed_edges) {
         return makeErrorMessage(ErrorCode::InvalidGraph, "Routing table graph dimensions differ");
@@ -266,18 +267,9 @@ Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t
         return makeErrorMessage(ErrorCode::InvalidGraph, "Routing table graph fingerprint mismatch");
     }
 
-    Docu doc{
-        expected_kind,
-        nodes.value(),
-        directed_edges.value(),
-        fingerprint.value(),
-        std::bit_cast<std::int32_t>(root_bits.value()),
-        {}
-    };
+    Docu doc{expected_kind, nodes.value(), directed_edges.value(), fingerprint.value(), std::bit_cast<std::int32_t>(root_bits.value()), {}};
 
-    const std::uint64_t maximum_per_edge = expected_kind == RoutingTableType::Linear
-        ? static_cast<std::uint64_t>(doc.n)
-        : static_cast<std::uint64_t>(doc.n) * (doc.n - 1) / 2;
+    const std::uint64_t maximum_per_edge = expected_kind == RoutingTableType::Linear ? static_cast<std::uint64_t>(doc.n) : static_cast<std::uint64_t>(doc.n) * (doc.n - 1) / 2;
 
     if (doc.n == 0 || doc.m_directed == 0 || entry_total.value() > maximum_per_edge * static_cast<std::uint64_t>(doc.m_directed)) {
         return makeErrorMessage(ErrorCode::RuntimeError, "Invalid routing table dimensions or coefficient count");
@@ -314,7 +306,8 @@ Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t
 
     for (auto& edge : doc.edges) {
         auto count_result = read_u64(in);
-        if (!count_result) return getError(count_result);
+        if (!count_result)
+            return getError(count_result);
 
         const std::uint64_t count = count_result.value();
 
@@ -330,10 +323,12 @@ Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t
 
         for (std::uint64_t i = 0; i < count; ++i) {
             auto id_result = read_u32(in);
-            if (!id_result) return getError(id_result);
+            if (!id_result)
+                return getError(id_result);
 
             auto value_result = read_u64(in);
-            if (!value_result) return getError(value_result);
+            if (!value_result)
+                return getError(value_result);
 
             const std::uint32_t id = id_result.value();
             const double value = std::bit_cast<double>(value_result.value());
@@ -357,7 +352,8 @@ Result<Docu> RoutingTableSerializer::load(const std::string& path, std::uint32_t
     }
 
     auto valid = validate(doc);
-    if (!valid) return getError(valid);
+    if (!valid)
+        return getError(valid);
 
     return doc;
 }
@@ -376,14 +372,16 @@ Result<RoutingTableHeader> RoutingTableSerializer::inspect(const std::string& pa
     }
 
     auto version = read_u32(in);
-    if (!version) return getError(version);
+    if (!version)
+        return getError(version);
 
     if (version.value() != 2) {
         return makeErrorMessage(ErrorCode::RuntimeError, "Unsupported routing-table version");
     }
 
     auto kind = read_u32(in);
-    if (!kind) return getError(kind);
+    if (!kind)
+        return getError(kind);
 
     if (kind.value() > static_cast<std::uint32_t>(RoutingTableType::AllPair)) {
         return makeErrorMessage(ErrorCode::InvalidRouting, "Unknown routing-table representation");

@@ -2,8 +2,8 @@
 // Created by Mert Biyikli on 23.06.26.
 //
 #include "routing/storage/linear_routing_table.h"
-#include <cassert>
 #include "utils/my_math.h"
+#include <cassert>
 #include <iostream>
 
 void LinearRoutingTable::init(const optimized::Graph<EdgeData>& g) {
@@ -13,10 +13,9 @@ void LinearRoutingTable::init(const optimized::Graph<EdgeData>& g) {
     src_flows.assign(numEdges, {});
 }
 
-
 void LinearRoutingTable::addFlow(int e, int s, double flow_sx) {
     assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
-    auto& ids  = src_ids[e];
+    auto& ids = src_ids[e];
     auto& vals = src_flows[e];
 
     // keep the ids sorted by s for binary search later
@@ -43,17 +42,16 @@ void LinearRoutingTable::addFlow(int e, int s, double flow_sx) {
     // if found, update
     if (lo < len && ids[lo] == s) {
         vals[lo] += flow_sx;
-    }else {
+    } else {
         // insert new value at the new position
-        ids.insert(ids.begin()+static_cast<long>(lo), s);
-        vals.insert(vals.begin()+static_cast<long>(lo), flow_sx);
+        ids.insert(ids.begin() + static_cast<long>(lo), s);
+        vals.insert(vals.begin() + static_cast<long>(lo), flow_sx);
     }
 }
 
-
 const double LinearRoutingTable::getFlow(int e, int s) const {
     assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
-    const auto& ids  = src_ids[e];
+    const auto& ids = src_ids[e];
     const auto& vals = src_flows[e];
 
     // small linear scan first (your trick)
@@ -90,7 +88,7 @@ const int LinearRoutingTable::getSize() const {
 void LinearRoutingTable::eraseFlow(int e, int s) {
     // remove flow at edge e with commodity s
     assert(e >= 0 && e < src_ids.size() && s >= 0 && s < n);
-    auto& ids  = src_ids[e];
+    auto& ids = src_ids[e];
     auto& vals = src_flows[e];
 
     int index_s = -1;
@@ -105,8 +103,8 @@ void LinearRoutingTable::eraseFlow(int e, int s) {
     }
 
     if (index_s != -1) {
-        ids.erase(ids.begin()+index_s);
-        vals.erase(vals.begin()+index_s);
+        ids.erase(ids.begin() + index_s);
+        vals.erase(vals.begin() + index_s);
         return;
     }
 
@@ -121,11 +119,10 @@ void LinearRoutingTable::eraseFlow(int e, int s) {
             hi = mid;
     }
     if (lo < len && ids[lo] == s) {
-        ids.erase(ids.begin()+lo);
-        vals.erase(vals.begin()+lo);
+        ids.erase(ids.begin() + lo);
+        vals.erase(vals.begin() + lo);
         return;
     }
-
 }
 
 // TODO: isValid returns true only for valid oblivious routing table, e.g. all linear flows must be stored
@@ -135,7 +132,7 @@ bool LinearRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     for (int e = 0; e < m; ++e) {
         const auto& ids = src_ids[e];
         for (size_t i = 1; i < ids.size(); ++i) {
-            if (ids[i] <= ids[i-1]) {
+            if (ids[i] <= ids[i - 1]) {
                 return false;
             }
         }
@@ -148,10 +145,10 @@ bool LinearRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
         const auto& [u, v] = g.getEdgeEndpoints(e);
         // int sign = (u < v) ? 1 : -1;
         for (int s = 1; s < n; ++s) { // By default the root node is 0
-            if ( s == 9) {
+            if (s == 9) {
                 bool stop = true;
             }
-            if ( u == s) {
+            if (u == s) {
                 double flow = getFlow(e, s);
                 net_flow[s] += flow;
             }
@@ -167,8 +164,6 @@ bool LinearRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     }
     return all_unit_flow;
 }
-
-
 
 void LinearRoutingTable::printFlows(const optimized::Graph<EdgeData>& g) const {
     for (int s : g) {
@@ -216,14 +211,23 @@ void LinearRoutingTable::printFlowsForSource(const optimized::Graph<EdgeData>& g
     }
 }
 
-
-
 void LinearRoutingScheme::printRoutingTable() const {
     routing_table.printFlows(g);
 }
 
 void LinearRoutingScheme::printFlowForSource(const int& s) const {
     routing_table.printFlowsForSource(g, s);
+}
+
+void LinearRoutingScheme::getEdgeBasis(int edge, std::vector<double>& basis) const {
+
+    const int reverse_edge = g.reverse(edge).id;
+    const int n = g.getNumNodes();
+    basis.assign(n, 0.0);
+
+    for (int s = 0; s < n; ++s) {
+        basis[s] = routing_table.getFlow(edge, s) - routing_table.getFlow(reverse_edge, s);
+    }
 }
 
 double LinearRoutingScheme::computeObliviousRatio() const {
@@ -233,9 +237,10 @@ double LinearRoutingScheme::computeObliviousRatio() const {
     demands worst_case_demands;
     for (int e = 0; e < m; ++e) {
         auto [u, v] = g.getEdgeEndpoints(e);
-        if (u > v) continue; // only consider one orientation for undirected edges
+        if (u > v)
+            continue; // only consider one orientation for undirected edges
         double capacity = g.edgeData(e).capacity;
-        worst_case_demands.addDemand(u,v,capacity);
+        worst_case_demands.addDemand(u, v, capacity);
     }
 
     std::vector<double> congestion;
@@ -248,24 +253,18 @@ void LinearRoutingScheme::initRoutingTable() {
     routing_table.init(g);
 }
 
-
-
 // Basis flows can be stored on either directed orientation of the same physical
 // edge. Reconstruct signed basis flow on orientation e by subtracting the
 // anti-edge contribution before applying linearity across sources.
 double LinearRoutingScheme::getFlow(int e, int s, int t) const {
     const int reverse_edge = g.reverse(e).id;
 
-    const double flow_sx =
-        routing_table.getFlow(e, s) -
-        routing_table.getFlow(reverse_edge, s);
+    const double flow_sx = routing_table.getFlow(e, s) - routing_table.getFlow(reverse_edge, s);
 
-    const double flow_tx =
-        routing_table.getFlow(e, t) -
-        routing_table.getFlow(reverse_edge, t);
+    const double flow_tx = routing_table.getFlow(e, t) - routing_table.getFlow(reverse_edge, t);
 
     const double total_flow = flow_sx - flow_tx;
-    return ( std::abs(total_flow) < EPS ? 0.0 : total_flow );
+    return (std::abs(total_flow) < EPS ? 0.0 : total_flow);
 }
 
 void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
@@ -273,37 +272,45 @@ void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, t, -flow_sx);
 }
 
-void LinearRoutingScheme::routeDemands(std::vector<double>& congestion,const demands& demands) const {
+void LinearRoutingScheme::routeDemands(std::vector<double>& congestion, const demands& demand_map) const {
+    //std::cerr << "[PERF] LinearRoutingScheme::routeDemands\n";
     const int m = g.getNumDirectedEdges();
     const int n = g.getNumNodes();
 
-    std::vector<double> directed_congestion(m, 0.0);
+    congestion.assign(m, 0.0);
+
+    const auto& sources = demand_map.source;
+    const auto& targets = demand_map.target;
+    const auto& values = demand_map.demand_values;
+
+    std::vector<double> basis(n);
+
+    auto combinedDemands = combineDemandPairs(demand_map, n);
 
     for (int e = 0; e < m; ++e) {
-        double flow = 0.0;
+        const int reverse = g.reverse(e).id;
 
-        for (int s = 0; s < n; ++s) {
-            for (int t = 0; t < n; ++t) {
-                if (s == t) {
-                    continue;
-                }
+        if (e > reverse)
+            continue;
 
-                const auto demandValueOpt = demands.getDemandValue(s, t);
+        getEdgeBasis(e, basis);
 
-                if (!demandValueOpt || *demandValueOpt <= 0.0) {
-                    continue;
-                }
+        double load = 0.0;
 
-                flow += *demandValueOpt * std::abs(
-                    this->getFlow(e, s, t)
-                );
+        for (const auto& demand : combinedDemands) {
+            const double magnitude = std::abs(basis[demand.source] - basis[demand.target]);
+
+            if (magnitude < EPS) {
+                continue;
             }
+
+            load += demand.value * magnitude;
         }
 
-        directed_congestion[e] = flow / g.edgeData(e).capacity;
+        congestion[e] = load / g.edgeData(e).capacity;
+        congestion[reverse] = load / g.edgeData(reverse).capacity;
+        //std::cerr << "[PERF] AllPairRoutingScheme::routeDemands\n";
     }
-
-    congestion = std::move(directed_congestion);
 }
 
 bool LinearRoutingScheme::isValid() {

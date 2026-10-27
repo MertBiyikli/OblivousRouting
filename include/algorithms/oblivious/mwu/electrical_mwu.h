@@ -12,6 +12,7 @@
 #include "oracle/electrical/laplacian_solver.h"
 #include "core/errors.h"
 
+
 /**
 * This is the implementation of the electrical flow based MWU oblivious routing algorithm presented by Goranci et. al. in 2023.
 * The idea is to repeatedly invoke an electrical flow computation (Laplacian solve)
@@ -37,6 +38,7 @@ protected:
     int x_fixed = 0; // fixed node
 
     bool use_sketching;
+
 
     std::vector<std::pair<int, int> > edges; // u<v only
     std::vector<double> edge_weights;             // w_e

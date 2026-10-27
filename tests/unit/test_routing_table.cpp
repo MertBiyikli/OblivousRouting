@@ -1,11 +1,13 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
-#include "data_structures/graph/graph.h"
 #include "../../include/routing/routing_table.h"
+#include "data_structures/graph/graph.h"
 #include "routing/storage/allpair_routing_table.h"
 #include "routing/storage/linear_routing_table.h"
-#include "routing/storage/routing_table_adapter.h"
 #include "routing/storage/routing_scheme_verifier.h"
+#include "routing/storage/routing_table_adapter.h"
+#include "utils/my_math.h"
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -319,3 +321,140 @@ TEST_CASE("All-pairs scheme survives binary round trip", "[routing][persistence]
     REQUIRE(verified.has_value());
 }
 
+
+TEST_CASE(
+    "LinearRoutingScheme - Optimized demand routing matches reference",
+    "[RoutingTable][CombinedRouting]"
+) {
+    auto graph = createSimpleGraph();
+
+    LinearRoutingTable table;
+    table.init(graph);
+
+    // Populate deterministic routing coefficients.
+    // These are test coefficients, not a complete valid routing scheme.
+    for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+        for (int s = 0; s < graph.getNumNodes(); ++s) {
+            const double coefficient =
+                0.01 * static_cast<double>((e + 1) * (s + 2));
+
+            table.addFlow(e, s, coefficient);
+        }
+    }
+
+    LinearRoutingScheme scheme(graph, 0, std::move(table));
+
+    SECTION("Asymmetric demand matrix") {
+        demands demandMap;
+
+        demandMap.addDemand(0, 1, 100.0);
+        demandMap.addDemand(1, 0, 300.0);
+        demandMap.addDemand(0, 2, 75.0);
+        demandMap.addDemand(2, 3, 125.0);
+        demandMap.addDemand(3, 1, 50.0);
+
+        std::vector<double> actual;
+        scheme.routeDemands(actual, demandMap);
+
+        REQUIRE(actual.size() ==
+                static_cast<std::size_t>(graph.getNumDirectedEdges()));
+
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+            const int reverse = graph.reverse(e).id;
+
+            if (e > reverse) {
+                continue;
+            }
+
+            std::vector<double> basis;
+            scheme.getEdgeBasis(e, basis);
+
+            double referenceLoad = 0.0;
+
+            for (std::size_t i = 0; i < demandMap.size(); ++i) {
+                const int s = demandMap.source[i];
+                const int t = demandMap.target[i];
+                const double value = demandMap.demand_values[i];
+
+                if (s == t || value <= 0.0) {
+                    continue;
+                }
+
+                const double magnitude = std::abs(
+                    basis[s] - basis[t]
+                );
+
+                if (magnitude < EPS) {
+                    continue;
+                }
+
+                referenceLoad += value * magnitude;
+            }
+
+            const double expectedForward =
+                referenceLoad / graph.edgeData(e).capacity;
+
+            const double expectedReverse =
+                referenceLoad / graph.edgeData(reverse).capacity;
+
+            CHECK(actual[e] == Catch::Approx(expectedForward).epsilon(1e-10));
+            CHECK(actual[reverse] == Catch::Approx(expectedReverse).epsilon(1e-10));
+        }
+    }
+
+    SECTION("Sparse and zero-valued demands") {
+        demands demandMap;
+
+        demandMap.addDemand(0, 3, 50.0);
+        demandMap.addDemand(3, 0, 0.0);
+        demandMap.addDemand(1, 2, 0.0);
+        demandMap.addDemand(2, 1, 25.0);
+
+        std::vector<double> actual;
+        scheme.routeDemands(actual, demandMap);
+
+        REQUIRE(actual.size() ==
+                static_cast<std::size_t>(graph.getNumDirectedEdges()));
+
+        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+            const int reverse = graph.reverse(e).id;
+
+            if (e > reverse) {
+                continue;
+            }
+
+            std::vector<double> basis;
+            scheme.getEdgeBasis(e, basis);
+
+            double referenceLoad = 0.0;
+
+            for (std::size_t i = 0; i < demandMap.size(); ++i) {
+                const int s = demandMap.source[i];
+                const int t = demandMap.target[i];
+                const double value = demandMap.demand_values[i];
+
+                if (s == t || value <= 0.0) {
+                    continue;
+                }
+
+                const double magnitude = std::abs(
+                    basis[s] - basis[t]
+                );
+
+                if (magnitude < EPS) {
+                    continue;
+                }
+
+                referenceLoad += value * magnitude;
+            }
+
+            CHECK(actual[e] ==
+                  Catch::Approx(referenceLoad / graph.edgeData(e).capacity)
+                      .epsilon(1e-10));
+
+            CHECK(actual[reverse] ==
+                  Catch::Approx(referenceLoad / graph.edgeData(reverse).capacity)
+                      .epsilon(1e-10));
+        }
+    }
+}

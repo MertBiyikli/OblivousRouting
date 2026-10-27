@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+import os
+import tempfile
 
 
 class ScenarioRepository:
@@ -30,7 +32,6 @@ class ScenarioRepository:
             json.dump({"scenario_id": scenario_id, "status": "running"}, file)
 
     def complete(self, result: dict[str, Any]) -> None:
-        # Replace the reservation with a completed response.
         path = self._path(result["scenario_id"])
 
         if not path.is_file():
@@ -39,13 +40,30 @@ class ScenarioRepository:
         if self.get(result["scenario_id"]).get("status") != "running":
             raise RuntimeError("Scenario reservation is not running")
 
-        temporary = path.with_suffix(".tmp")
+        # Serialize before touching the filesystem.
+        serialized = json.dumps(result, indent=2, allow_nan=False)
+
+        temporary = None
 
         try:
-            temporary.write_text(json.dumps(result, indent=2, allow_nan=False), encoding="utf-8")
+            with tempfile.NamedTemporaryFile(
+                    mode="w",
+                    encoding="utf-8",
+                    dir=self.directory,
+                    prefix=f".{path.stem}-",
+                    suffix=".tmp",
+                    delete=False,
+            ) as file:
+                temporary = Path(file.name)
+                file.write(serialized)
+                file.flush()
+                os.fsync(file.fileno())
+
             temporary.replace(path)
+
         finally:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def release(self, scenario_id: str) -> None:
         # Release an incomplete reservation.

@@ -162,6 +162,16 @@ add_library(oblivious_routing_core STATIC
         include/routing/storage/routing_table_exporter.h
         include/routing/storage/routing_table_importer.h
         include/routing/storage/routing_scheme_verifier.h
+        include/analysis/fixed_routing_scenario.h
+        source/analysis/fixed_routing_scenario.cpp
+        include/analysis/scenario_analysis.h
+        source/analysis/scenario_analysis.cpp
+        include/analysis/scenario_results.h
+        include/analysis/scenario_demands.h
+        include/analysis/scenario_engine.h
+        source/analysis/scenario_engine.cpp
+        include/analysis/commodity_flow_diagnostics.h
+        include/analysis/scenario_result_json.h
 )
 
 target_include_directories(oblivious_routing_core

@@ -53,8 +53,10 @@ inline std::unique_ptr<DemandModel> makeDemandModel(DemandModelType type) {
 
 
 
+// TODO: As of now, I think to ensure compability and fairness between AllPair and LinearRouting Table
+//      computing and storing the complete n*(n-1) pair seems an overkill though....
 // Generate all-pairs demand list
-inline std::vector<std::pair<int,int>> generateAllDemandPairs(optimized::Graph<EdgeData>& g) {
+inline std::vector<std::pair<int,int>> generateAllDemandPairs(const optimized::Graph<EdgeData>& g) {
     std::vector<std::pair<int,int>> result;
     result.reserve(static_cast<size_t>(g.getNumNodes()) * (g.getNumNodes() - 1));
     for (int v : g)

@@ -31,7 +31,15 @@ Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const optimized::Gra
 
     std::vector<double> utilization_by_edge(static_cast<std::size_t>(graph.getNumDirectedEdges()), 0.0);
 
+    const auto routingStart = std::chrono::steady_clock::now();
+
     scheme.routeDemands(utilization_by_edge, demand_map);
+
+    const auto routingEnd = std::chrono::steady_clock::now();
+
+    const double routingSeconds = std::chrono::duration<double>(routingEnd - routingStart).count();
+
+    std::cerr << "[PERF] Demand routing: " << routingSeconds << " s\n";
 
     result.edges.reserve(static_cast<std::size_t>(graph.getNumUndirectedEdges()));
 
@@ -100,7 +108,6 @@ Result<RoutingVisualizationResult> RoutingAnalyzer::analyze(const optimized::Gra
 }
 Result<void> RoutingAnalyzer::analyzeSingleLinkFailures(const optimized::Graph<EdgeData>& graph, const RoutingScheme& scheme, const demands& demand_map, RoutingVisualizationResult& result) {
     result.link_failures.clear();
-
     result.link_failures.reserve(static_cast<std::size_t>(graph.getNumUndirectedEdges()));
 
     for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
@@ -117,7 +124,19 @@ Result<void> RoutingAnalyzer::analyzeSingleLinkFailures(const optimized::Graph<E
             continue;
         }
 
-        auto failure = LinkFailureAnalyzer::analyze(graph, scheme, demand_map, e);
+        double total_demand = 0.0;
+
+        for (size_t i = 0; i < demand_map.size(); ++i) {
+            const double value = demand_map.demand_values[i];
+
+            if (!std::isfinite(value) || value < 0.0) {
+                return makeErrorMessage(ErrorCode::InvalidDemand, "Failure analysis: invalid demand value.");
+            }
+
+            total_demand += value;
+        }
+
+        auto failure = LinkFailureAnalyzer::analyze(graph, scheme, demand_map, e, total_demand);
 
         if (!failure) {
             return getError(failure);

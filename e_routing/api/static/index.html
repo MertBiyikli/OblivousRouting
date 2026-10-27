@@ -23,7 +23,7 @@
             margin: 0
         }
 
-        button, input, select {
+        button, input, select, textarea {
             font: inherit
         }
 
@@ -32,13 +32,68 @@
         }
 
         header {
-            height: 66px;
+            min-height: 66px;
             display: flex;
             align-items: center;
-            gap: 35px;
-            padding: 0 32px;
+            gap: 32px;
+            padding: 0 28px;
             border-bottom: 1px solid var(--line);
-            background: #0e192c
+            background: #0e192c;
+        }
+
+
+        .large-network-analysis {
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid #28415f;
+            border-radius: 10px;
+            background: #101f34;
+        }
+
+        .large-network-analysis[hidden] {
+            display: none;
+        }
+
+        .analysis-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        #topology-mode,
+        #topology-summary {
+            font-size: 12px;
+            color: #94a9c7;
+        }
+
+        #bottleneck-list {
+            display: grid;
+            gap: 6px;
+        }
+
+        .bottleneck-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px;
+            border: 1px solid #28415f;
+            border-radius: 6px;
+            background: #142741;
+            color: #e5eefc;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .bottleneck-row:hover {
+            border-color: #3b82f6;
+            background: #1c3555;
+        }
+
+        .bottleneck-row:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
         }
 
         .logo {
@@ -53,18 +108,31 @@
 
         nav {
             display: flex;
-            gap: 22px;
+            align-items: stretch;
+            align-self: stretch;
+            gap: 6px;
             color: #8ca0bf;
-            font-size: 13px
+            font-size: 13px;
+            white-space: nowrap;
         }
 
-        nav strong {
-            color: white;
-            border-bottom: 2px solid var(--blue);
-            padding: 24px 0
+        nav > span, nav > strong {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 13px;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+
+        nav > strong {
+            color: #fff;
+            border-bottom-color: var(--blue);
+            font-weight: 700;
         }
 
         .tag {
+            white-space: nowrap;
             margin-left: auto;
             font-size: 12px;
             color: #8aa7cd
@@ -72,7 +140,7 @@
 
         .layout {
             display: grid;
-            grid-template-columns:252px minmax(450px, 1fr) 306px;
+            grid-template-columns: 252px minmax(0, 1fr) 330px;
             gap: 16px;
             max-width: 1600px;
             margin: 0 auto;
@@ -81,6 +149,7 @@
         }
 
         .panel {
+            min-width: 0;
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 12px;
@@ -313,21 +382,108 @@
             box-shadow: 0 0 13px #9855ff
         }
 
-        .chat {
-            background: #1b3049;
-            padding: 13px;
-            border-radius: 9px;
-            font-size: 13px;
-            color: #d3e3fa;
-            line-height: 1.7;
-            margin-top: 18px
+
+        .assistant {
+            min-height: 0;
+            max-height: calc(100vh - 110px);
+            position: sticky;
+            top: 20px;
+            overflow: hidden;
         }
+
+        .chat {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: 12px;
+        }
+
+        #interpretation {
+            flex: 1;
+            min-height: 180px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 4px;
+            line-height: 1.65;
+        }
+
+        #jeylan-question {
+            flex-shrink: 0;
+            min-height: 85px;
+            max-height: 150px;
+        }
+
+        #jeylan-ask,
+        #jeylan-status {
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 1100px) {
+            .assistant {
+                position: static;
+                max-height: 700px;
+            }
+        }
+
 
         .chat small {
             color: #8ab7f6;
             display: block;
-            margin-bottom: 6px
+            margin-bottom: 6px;
         }
+
+        .chat textarea {
+            width: 100%;
+            min-height: 98px;
+            margin-top: 14px;
+            padding: 11px;
+            resize: vertical;
+            background: #0c1728;
+            border: 1px solid #2a3c59;
+            border-radius: 8px;
+            color: #eff5ff;
+            line-height: 1.5;
+            outline: none;
+        }
+
+        .chat textarea:focus { border-color: var(--blue); }
+        .chat textarea:disabled { opacity: .55; }
+
+        #jeylan-ask {
+            width: 100%;
+            margin-top: 10px;
+            padding: 11px;
+            border: 0;
+            border-radius: 8px;
+            background: #327dff;
+            color: white;
+            font-weight: 700;
+        }
+
+        #jeylan-ask:disabled { opacity: .45; cursor: not-allowed; }
+        #jeylan-status { margin-top: 10px; overflow-wrap: anywhere; }
+
+        #interpretation {
+            overflow-wrap: anywhere;
+            max-height: 390px;
+            overflow-y: auto;
+        }
+        #interpretation p { margin: 0 0 11px; }
+        #interpretation p:last-child { margin-bottom: 0; }
+        #interpretation h3, #interpretation h4 {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #f4f7ff;
+            margin: 15px 0 7px;
+        }
+        #interpretation ul, #interpretation ol { padding-left: 19px; margin: 5px 0 12px; }
+        #interpretation li { margin-bottom: 5px; }
+        #interpretation strong { color: #fff; }
+        #interpretation code { color: #9fd0ff; background: #10243a; padding: 1px 4px; border-radius: 3px; }
+        .selected-edge { stroke: #fff !important; stroke-width: 8 !important; stroke-opacity: 1 !important; filter: drop-shadow(0 0 5px #67c4ff); }
+        .unit-note { color: #91a4c2; font-size: 11px; margin-top: 10px; line-height: 1.5; }
+
 
         .prompts {
             margin-top: auto
@@ -379,9 +535,9 @@
             min-height: 20px
         }
 
-        @media (max-width: 1100px) {
+        @media (max-width: 1200px) {
             .layout {
-                grid-template-columns:220px minmax(350px, 1fr)
+                grid-template-columns: 220px minmax(0, 1fr);
             }
 
             .assistant {
@@ -428,6 +584,17 @@
     <aside class="panel side">
         <div class="small">Analysis</div>
         <h2>Scenario Studio</h2>
+
+        <div class="field">
+            <label for="network">Registered network</label>
+            <select id="network" disabled>
+                <option value="">Loading networks...</option>
+            </select>
+            <div class="help" id="network-info">
+                Select a registered graph and its persisted routing scheme.
+            </div>
+        </div>
+
         <div class="mode">Traffic & capacity planning</div>
         <div class="small">Scenario configuration</div>
         <div class="field"><label for="demand">Demand model</label><select id="demand">
@@ -447,7 +614,13 @@
         <div class="field"><label for="factor">Capacity factor</label><input id="factor" type="number" min="1" max="100"
                                                                              step="0.1" value="1.5">
             <button id="add" type="button" class="secondary">Add capacity upgrade</button>
-            <div class="help" id="upgrades">No upgrades selected</div>
+            <div class="help">
+                Capacity changes are not applied until you click
+                <strong>Add capacity upgrade</strong>.
+            </div>
+            <div class="result-info" id="upgrades">
+                Applied upgrades: none
+            </div>
         </div>
         <div class="field"><label><input type="checkbox" id="layer1" style="width:auto;margin-right:6px"> Include
             Layer-1 static failure exposure</label></div>
@@ -468,6 +641,16 @@
                 </div>
                 <svg id="graph" viewBox="0 0 720 340" role="img" aria-label="Network link utilization graph"></svg>
             </div>
+
+            <div id="large-network-analysis" class="large-network-analysis" hidden>
+                <div class="analysis-heading">
+                    <strong>Network bottlenecks</strong>
+                    <span id="topology-mode"></span>
+                </div>
+                <p id="topology-summary"></p>
+                <div id="bottleneck-list"></div>
+            </div>
+
             <div class="legend"><span><i class="dot" style="background:#40b7ef"></i>Within capacity</span><span><i
                     class="dot" style="background:#f0aa36"></i>Overloaded</span><span><i class="dot"
                                                                                          style="background:#f26873"></i>High overload</span>
@@ -516,9 +699,9 @@
                 <span>Current demand · Selected upgrades</span>
             </div>
             <div class="metric">
-                <div class="small">Capacity improvement</div>
+                <div class="small">Congestion vs. reference</div>
                 <strong id="capacity-improvement">—</strong>
-                <span>Maximum congestion reduction</span>
+                <span>Negative = lower congestion · Positive = higher congestion</span>
             </div>
         </div>
 
@@ -529,11 +712,33 @@
         <div class="assistant-head">
             <div><span class="orb"></span> <strong>Jeylan</strong></div>
             <span class="pill">Preview</span></div>
-        <div class="chat"><small>Scenario interpretation</small><span id="interpretation">Execute a scenario to inspect observed link loads and overloads. AI-generated interpretation is not connected in this prototype.</span>
+
+        <div class="chat">
+            <small>Scenario interpretation</small>
+
+            <div id="interpretation" aria-live="polite">
+                Execute a scenario, then ask Jeylan a question about its results.
+            </div>
+
+            <textarea
+                    id="jeylan-question"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Which links are most overloaded, and what should I investigate?"
+                    disabled
+            ></textarea>
+
+            <button id="jeylan-ask" disabled>
+                Ask Jeylan
+            </button>
+
+            <small id="jeylan-status"></small>
+            <div class="unit-note">Utilization values are load/capacity ratios (1.0 = 100%). Scenario interpretations are not live telemetry.</div>
         </div>
+
         <div class="prompts">
             <div class="small">Next integrations</div>
-            <button class="prompt" disabled>Which links are most critical? · Coming soon</button>
+            <button class="prompt" id="ask-selected-link" disabled>Analyze selected link</button>
             <button class="prompt" disabled>What if edge 14 fails? · Coming soon</button>
             <button class="prompt" disabled>Compare scenarios · Coming soon</button>
         </div>
@@ -543,6 +748,189 @@
     const $ = id => document.getElementById(id);
     const upgrades = new Map();
     let lastLinks = [];
+
+
+    let activeScenarioId = null;
+    let selectedLinkId = null;
+    let jeylanBusy = false;
+    let networkGeneration = 0;
+
+    // Safe, deliberately small Markdown renderer. It constructs DOM nodes
+    // and never inserts model-generated HTML into the document.
+    function appendInlineMarkdown(container, value) {
+        const tokens = String(value).split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+        for (const token of tokens) {
+            if (token.startsWith('**') && token.endsWith('**')) {
+                const strong = document.createElement('strong');
+                strong.textContent = token.slice(2, -2);
+                container.appendChild(strong);
+            } else if (token.startsWith('`') && token.endsWith('`')) {
+                const code = document.createElement('code');
+                code.textContent = token.slice(1, -1);
+                container.appendChild(code);
+            } else {
+                container.appendChild(document.createTextNode(token));
+            }
+        }
+    }
+
+    function renderJeylanAnswer(answer) {
+        const root = $('interpretation');
+        root.replaceChildren();
+        let currentList = null;
+        let currentListType = null;
+        for (const line of String(answer).split(/\r?\n/)) {
+            const trimmed = line.trim();
+            if (!trimmed) { currentList = null; currentListType = null; continue; }
+            const heading = trimmed.match(/^#{1,4}\s+(.+)$/);
+            const bullet = trimmed.match(/^[-*]\s+(.+)$/);
+            const numbered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+            if (heading) {
+                currentList = null;
+                currentListType = null;
+                const element = document.createElement('h3');
+                appendInlineMarkdown(element, heading[1]);
+                root.appendChild(element);
+            } else if (bullet || numbered) {
+                const kind = bullet ? 'ul' : 'ol';
+                if (currentListType !== kind) {
+                    currentList = document.createElement(kind);
+                    root.appendChild(currentList);
+                    currentListType = kind;
+                }
+                const item = document.createElement('li');
+                appendInlineMarkdown(item, (bullet || numbered)[1]);
+                currentList.appendChild(item);
+            } else {
+                currentList = null;
+                currentListType = null;
+                const paragraph = document.createElement('p');
+                appendInlineMarkdown(paragraph, trimmed);
+                root.appendChild(paragraph);
+            }
+        }
+    }
+
+    async function askJeylan(question) {
+        if (!activeScenarioId) {
+            throw new Error("Execute a scenario before asking Jeylan.");
+        }
+
+        const requestedId = activeScenarioId;
+        const response = await fetch(
+            `/api/v1/scenarios/${encodeURIComponent(requestedId)}/ask`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof data.detail === "string"
+                    ? data.detail
+                    : `Jeylan request failed (${response.status})`
+            );
+        }
+
+        return data;
+    }
+
+
+
+    document.getElementById("jeylan-ask").addEventListener("click", async () => {
+        if (jeylanBusy || !activeScenarioId) return;
+
+        const questionInput = document.getElementById("jeylan-question");
+        const answerArea = document.getElementById("interpretation");
+        const status = document.getElementById("jeylan-status");
+        const button = document.getElementById("jeylan-ask");
+
+        const question = questionInput.value.trim();
+        if (!question) return;
+
+        // Capture the scenario context before the asynchronous request.
+        const requestedGeneration = networkGeneration;
+        const requestedScenarioId = activeScenarioId;
+
+        jeylanBusy = true;
+        button.disabled = true;
+        status.textContent = "Jeylan is examining the scenario evidence…";
+
+        try {
+            const link = lastLinks.find(
+                item => item.edge_id === selectedLinkId
+            );
+
+            const context = link
+                ? `For edge ${link.edge_id} (${link.source} to ${link.target}) in the selected persisted scenario: `
+                : '';
+
+            const result = await askJeylan(
+                (context + question).slice(0, 2000)
+            );
+
+            // Discard responses from a previous network or scenario.
+            if (
+                requestedGeneration !== networkGeneration ||
+                requestedScenarioId !== activeScenarioId
+            ) {
+                return;
+            }
+
+            if (result.scenario_id !== requestedScenarioId) {
+                throw new Error('Scenario evidence mismatch');
+            }
+
+            renderJeylanAnswer(result.answer);
+
+            const ids = Array.isArray(result.evidence)
+                ? result.evidence.map(item => item.id).join(', ')
+                : 'Unavailable';
+
+            status.textContent =
+                `Evidence: ${ids} · Scenario: ${result.scenario_id}`;
+
+        } catch (error) {
+            // Old requests must not overwrite the current network's status.
+            if (
+                requestedGeneration === networkGeneration &&
+                requestedScenarioId === activeScenarioId
+            ) {
+                status.textContent =
+                    error.message || "Jeylan is unavailable.";
+            }
+
+        } finally {
+            jeylanBusy = false;
+
+            // Do not modify controls belonging to another network.
+            if (requestedGeneration === networkGeneration) {
+                button.disabled = !activeScenarioId;
+            }
+        }
+    });
+
+
+
+    $('jeylan-question').addEventListener('keydown', event => {
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            $('jeylan-ask').click();
+        }
+    });
+
+    $('ask-selected-link').addEventListener('click', () => {
+        const link = lastLinks.find(item => item.edge_id === selectedLinkId);
+        if (!link || !activeScenarioId) return;
+        $('jeylan-question').value =
+            `Explain this link's recorded load/capacity ratio, whether it is overloaded, ` +
+            `what the scenario does and does not establish, and what to investigate next.`;
+        $('jeylan-question').focus();
+    });
 
     function showError(message) {
         $('alert').hidden = false;
@@ -554,6 +942,132 @@
         $('alert').textContent = ''
     }
 
+
+    async function loadNetworks() {
+        const selector = $('network');
+        selector.disabled = true;
+        selector.replaceChildren(new Option('Loading networks...', ''));
+
+        try {
+            const response = await fetch('/api/v1/networks', {
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Network registry returned HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (!Array.isArray(data.networks)) {
+                throw new Error('Invalid network registry response');
+            }
+
+            selector.replaceChildren();
+
+            for (const network of data.networks) {
+                selector.add(new Option(
+                    `${network.name} · ${network.solver}`,
+                    network.id
+                ));
+            }
+
+            if (data.networks.length === 0) {
+                selector.add(new Option('No registered networks', ''));
+                $('network-info').textContent =
+                    'No networks are currently registered.';
+                $('run').disabled = true;
+                return;
+            }
+
+            selector.disabled = false;
+            $('run').disabled = false;
+
+            $('network-info').textContent =
+                `${data.networks.length} registered network(s) available.`;
+
+        } catch (error) {
+            selector.replaceChildren(
+                new Option('Network registry unavailable', '')
+            );
+
+            $('run').disabled = true;
+            $('network-info').textContent =
+                'Unable to load registered networks.';
+
+            showError(error.message);
+        }
+    }
+
+
+
+    function resetNetworkState() {
+        networkGeneration++;
+        $('run').textContent = 'Run simulation';
+        $('run').disabled = !$('network').value || $('network').disabled;
+        // Invalidate results and topology from the previous network.
+        upgrades.clear();
+        lastLinks = [];
+        activeScenarioId = null;
+        selectedLinkId = null;
+        networkGeneration++;
+
+        $('edge').value = '';
+        $('upgrades').textContent = 'Applied upgrades: none';
+
+        $('graph').replaceChildren();
+        $('selected').textContent =
+            'Select a link after running a scenario.';
+
+        $('topology').textContent = 'Network topology';
+        $('empty').hidden = false;
+        $('empty').textContent =
+            'Run a scenario to load the selected network topology.';
+
+        $('large-network-analysis').hidden = true;
+        $('bottleneck-list').replaceChildren();
+        $('topology-summary').textContent = '';
+
+        const metricIds = [
+            'congestion',
+            'overloaded',
+            'count',
+            'baseline-congestion',
+            'scenario-congestion',
+            'congestion-delta',
+            'reference-congestion',
+            'upgraded-congestion'
+        ];
+
+        for (const id of metricIds) {
+            const element = $(id);
+            if (element) element.textContent = '—';
+        }
+
+        lastLinks = [];
+        activeScenarioId = null;
+        selectedLinkId = null;
+
+        $('capacity-improvement').textContent = '—';
+        $('evidence').textContent = '';
+        $('interpretation').textContent =
+            'Run a scenario to inspect the selected network.';
+
+        $('jeylan-question').value = '';
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+        $('jeylan-status').textContent =
+            'Run a scenario before asking Jeylan.';
+
+        $('status').textContent = 'Ready';
+        clearError();
+    }
+
+
+    $('network').addEventListener('change', resetNetworkState);
+
+
     $('add').addEventListener('click', () => {
         const id = Number($('edge').value), factor = Number($('factor').value);
         if ($('edge').value === '' || !Number.isInteger(id) || id < 0 || !Number.isFinite(factor) || factor < 1 || factor > 100) {
@@ -562,7 +1076,10 @@
         }
         clearError();
         upgrades.set(id, factor);
-        $('upgrades').textContent = [...upgrades].map(([e, f]) => `Edge ${e}: ×${f}`).join(' · ');
+        $('upgrades').textContent = upgrades.size
+            ? 'Applied upgrades: ' +
+            [...upgrades].map(([edge, factor]) => `Edge ${edge} ×${factor}`).join(' · ')
+            : 'Applied upgrades: none';
     });
 
     function svgEl(name, attrs) {
@@ -571,18 +1088,23 @@
         return el
     }
 
-    async function executeScenario(request) {
-        const response = await fetch('/api/v1/scenarios', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+
+
+    async function executeScenario(request, networkId, comparison = false) {
+        const endpoint = comparison ? "comparisons" : "scenarios";
+        const url = `/api/v1/networks/${encodeURIComponent(networkId)}/${endpoint}`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(request)
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            throw Error(
-                typeof data.detail === 'string'
+            throw new Error(
+                typeof data.detail === "string"
                     ? data.detail
                     : `API returned HTTP ${response.status}`
             );
@@ -591,10 +1113,57 @@
         return data;
     }
 
+
+
+    const LARGE_NETWORK_THRESHOLD = 150;
+    const MAX_RENDERED_LINKS = 30;
+    const MAX_RANKED_LINKS = 10;
+
+    function selectTopologyLinks(links) {
+        if (links.length <= LARGE_NETWORK_THRESHOLD) {
+            return {
+                large: false,
+                visible: links,
+                ranked: []
+            };
+        }
+
+        const ranked = [...links].sort(
+            (a, b) =>
+                Number(b.utilization) - Number(a.utilization)
+        );
+
+        return {
+            large: true,
+            visible: ranked.slice(0, MAX_RENDERED_LINKS),
+            ranked: ranked.slice(0, MAX_RANKED_LINKS)
+        };
+    }
+
+
+
     function drawGraph(links) {
         const svg = $('graph');
         svg.replaceChildren();
+
+        const selection = selectTopologyLinks(links);
+        const analysis = $('large-network-analysis');
+
+        analysis.hidden = !selection.large;
+        $('topology-mode').textContent =
+            selection.large ? 'Analytical mode' : '';
+
+        if (selection.large) {
+            $('topology-summary').textContent =
+                `Showing ${selection.visible.length} of ${links.length} links, ` +
+                `ranked by modeled utilization. ` +
+                `All ${links.length} links remain available for analysis.`;
+        }
+
+        links = selection.visible;
+
         if (!links.length) return;
+
         const vertices = [...new Set(links.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b), centerX = 360,
             centerY = 167, rx = 270, ry = 125, positions = new Map(vertices.map((v, i) => {
                 const a = -Math.PI / 2 + 2 * Math.PI * i / vertices.length;
@@ -614,6 +1183,7 @@
                 'stroke-width': 4,
                 'stroke-opacity': .88
             });
+            line.dataset.edgeId = String(l.edge_id);
             const tip = svgEl('title', {});
 
             tip.textContent = [
@@ -627,9 +1197,15 @@
                     : ''
             ].filter(Boolean).join('\n');
 
+            if (l.edge_id === selectedLinkId) line.classList.add('selected-edge');
             line.addEventListener('click', () => {
+                selectedLinkId = l.edge_id;
+                svg.querySelectorAll('line.selected-edge').forEach(el => el.classList.remove('selected-edge'));
+                line.classList.add('selected-edge');
                 $('edge').value = l.edge_id;
-                $('selected').textContent = `Selected edge ${l.edge_id} (${l.source} → ${l.target}) · utilization ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'} · capacity ${l.capacity}`
+                $('selected').textContent = `Selected edge ${l.edge_id} (${l.source} → ${l.target}) · utilization ratio ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'} (${Number.isFinite(util) ? (util * 100).toFixed(1) + '%' : 'unknown'}) · capacity ${l.capacity}`;
+                $('ask-selected-link').disabled = !activeScenarioId;
+                if (activeScenarioId) $('jeylan-status').textContent = `Edge ${l.edge_id} selected · Ready to ask Jeylan`;
             });
             svg.appendChild(line)
         }
@@ -642,6 +1218,55 @@
         }
         $('empty').hidden = true;
     }
+
+
+    function renderBottleneckRanking(allLinks) {
+        const container = $('bottleneck-list');
+        container.replaceChildren();
+
+        const selection = selectTopologyLinks(allLinks);
+
+        if (!selection.large) return;
+
+        for (const link of selection.ranked) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'bottleneck-row';
+
+            const label = document.createElement('span');
+            label.textContent =
+                `Edge ${link.edge_id} · ${link.source} → ${link.target}`;
+
+            const utilization = document.createElement('strong');
+            utilization.textContent =
+                Number(link.utilization).toFixed(3);
+
+            button.append(label, utilization);
+
+            button.addEventListener('click', () => {
+                const graphLines = $('graph').querySelectorAll('line');
+
+                const matchingLine = [...graphLines].find(
+                    line => line.dataset.edgeId === String(link.edge_id)
+                );
+
+                if (matchingLine) {
+                    matchingLine.dispatchEvent(new Event('click'));
+                } else {
+                    selectedLinkId = link.edge_id;
+                    $('edge').value = link.edge_id;
+                    $('selected').textContent =
+                        `Selected edge ${link.edge_id} ` +
+                        `(${link.source} → ${link.target})`;
+
+                    $('ask-selected-link').disabled = !activeScenarioId;
+                }
+            });
+
+            container.appendChild(button);
+        }
+    }
+
 
     $('run').addEventListener('click', async () => {
         clearError();
@@ -659,36 +1284,92 @@
             capacity_upgrades: [...upgrades].map(([edge_id, capacity_factor]) => ({edge_id, capacity_factor}))
         };
         $('run').disabled = true;
+
         $('run').textContent = 'Simulating…';
         $('status').textContent = 'Running';
+        activeScenarioId = null;
+        selectedLinkId = null;
+        $('ask-selected-link').disabled = true;
+        $('selected').textContent = 'Select a link after running a scenario.';
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('jeylan-status').textContent = 'Waiting for scenario execution…';
+        $('interpretation').textContent = 'Running deterministic scenario analysis…';
+
+        const executionGeneration = networkGeneration;
+        const executionNetworkId = $('network').value;
+
+        if (!executionNetworkId || $('network').disabled) {
+            showError('Select a registered network.');
+            return;
+        }
+
+        const stillCurrent = () =>
+            executionGeneration === networkGeneration &&
+            $('network').value === executionNetworkId;
+
         try {
-            const baselineRequest = {
-                ...request,
-                scenario_id: request.scenario_id + '-baseline',
-                scenario_type: 'baseline',
-                demand_scale: 1.0,
-                capacity_upgrades: []
-            };
+            const executionGeneration = networkGeneration;
 
+// Use the existing selected-network state from Scenario Studio.
+// Capture it once so changing the dropdown cannot silently switch networks.
+            const networkId = $('network').value;
 
-            const baseline = await executeScenario(baselineRequest);
+            if (!networkId) {
+                throw new Error("Select a network before running a scenario.");
+            }
 
-            const referenceRequest = {
-                ...request,
-                scenario_id: request.scenario_id + '-reference',
-                scenario_type: 'capacity_planning',
-                demand_scale: request.demand_scale,
-                capacity_upgrades: []
-            };
+            const fastEligible =
+                ["uniform", "bimodal", "gaussian"].includes(request.demand_model)
+                && !request.include_layer1;
 
-            const reference = request.demand_scale === 1.0
-                ? baseline
-                : await executeScenario(referenceRequest);
+            let baseline;
+            let reference;
+            let data;
 
-            const data = upgrades.size === 0
-                ? reference
-                : await executeScenario(request);
+            if (fastEligible) {
+                data = await executeScenario(request, networkId, true);
 
+                if (
+                    data.execution_mode !== "fixed_routing_transformation" ||
+                    !data.comparison?.baseline ||
+                    !data.comparison?.reference
+                ) {
+                    throw new Error("Incomplete fast comparison response");
+                }
+
+                baseline = data.comparison.baseline;
+                reference = data.comparison.reference;
+            } else {
+                const baselineRequest = {
+                    ...request,
+                    scenario_id: request.scenario_id + "-baseline",
+                    scenario_type: "baseline",
+                    demand_scale: 1.0,
+                    capacity_upgrades: []
+                };
+
+                baseline = await executeScenario(baselineRequest, networkId);
+
+                const referenceRequest = {
+                    ...request,
+                    scenario_id: request.scenario_id + "-reference",
+                    demand_scale: request.demand_scale,
+                    capacity_upgrades: []
+                };
+
+                reference = request.demand_scale === 1.0
+                    ? baseline
+                    : await executeScenario(referenceRequest, networkId);
+
+                data = request.capacity_upgrades.length === 0
+                    ? reference
+                    : await executeScenario(request, networkId);
+            }
+
+            if (executionGeneration !== networkGeneration) {
+                return;
+            }
 
             const referenceCongestion = reference.metrics?.congestion;
             const upgradedCongestion = data.metrics?.congestion;
@@ -702,19 +1383,19 @@
                     ? upgradedCongestion.toFixed(3) : '—';
 
             if (
-                typeof referenceCongestion === 'number' &&
-                typeof upgradedCongestion === 'number' &&
+                Number.isFinite(referenceCongestion) &&
+                Number.isFinite(upgradedCongestion) &&
                 referenceCongestion > 0
             ) {
-                const improvement =
-                    100 * (referenceCongestion - upgradedCongestion) / referenceCongestion;
+                const change =
+                    100 * (upgradedCongestion - referenceCongestion) / referenceCongestion;
 
                 $('capacity-improvement').textContent =
-                    `${improvement > 0 ? '+' : ''}${improvement.toFixed(2)}%`;
+                    `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
 
                 $('capacity-improvement').style.color =
-                    improvement > 0 ? '#22c55e' :
-                        improvement < 0 ? '#ef4444' : '#94a3b8';
+                    change < 0 ? '#22c55e' :
+                        change > 0 ? '#ef4444' : '#94a3b8';
             } else {
                 $('capacity-improvement').textContent = 'N/A';
             }
@@ -764,21 +1445,37 @@
             });
 
             drawGraph(lastLinks);
+            renderBottleneckRanking(lastLinks);
             $('congestion').textContent = typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : '—';
             $('overloaded').textContent = String(metrics.overloaded_count ?? '—');
             $('count').textContent = String(lastLinks.length);
             $('status').textContent = 'Completed';
             $('evidence').textContent = `Scenario: ${data.scenario_id} · Demand: ${data.demand_model} × ${data.demand_scale} · Mode: ${data.execution_mode} · ${data.evidence?.result_path || 'No result path'}`;
             const ranked = [...lastLinks].sort((a, b) => Number(b.utilization) - Number(a.utilization));
-            $('interpretation').textContent = `Deterministic results: ${metrics.overloaded_count ?? 0} of ${lastLinks.length} returned links are flagged overloaded. Maximum modeled utilization: ${typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : 'unknown'}. ${ranked.length ? `Highest-utilization edge: ${ranked[0].edge_id} (${Number(ranked[0].utilization).toFixed(3)}).` : ''} This is a computed summary, not an AI assessment.`;
+            $('interpretation').textContent = `Deterministic results: ${metrics.overloaded_count ?? 0} of ${lastLinks.length} returned links are flagged overloaded. Maximum modeled utilization ratio: ${typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : 'unknown'}. ${ranked.length ? `Highest-utilization edge: ${ranked[0].edge_id} (ratio ${Number(ranked[0].utilization).toFixed(3)}).` : ''} This is a computed summary, not an AI assessment.`;
+            activeScenarioId = data.scenario_id;
+            $('jeylan-question').disabled = false;
+            $('jeylan-ask').disabled = jeylanBusy;
+            $('jeylan-status').textContent = `Jeylan ready · Scenario ${data.scenario_id}`;
+
         } catch (e) {
-            $('status').textContent = 'Error';
-            showError(e.message || String(e))
+            if (stillCurrent()) {
+                $('status').textContent = 'Error';
+                showError(e.message || String(e));
+            }
         } finally {
-            $('run').disabled = false;
-            $('run').textContent = 'Run simulation'
+            if (stillCurrent()) {
+                $('run').disabled = false;
+                $('run').textContent = 'Run simulation';
+            }
         }
+
     });
+
+
+    // initial load
+    $('run').disabled = true;
+    loadNetworks();
 </script>
 </body>
 </html>

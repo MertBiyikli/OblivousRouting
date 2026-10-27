@@ -6,7 +6,7 @@
 #include "utils/demands.h"
 
 
-struct CapacityUpgrade {
+struct _CapacityUpgrade {
     int edge_id = -1;
     double factor = 1.0;
 };
@@ -39,7 +39,7 @@ struct Config {
 
     // Inside Config:
     double demand_scale = 1.0;
-    std::vector<CapacityUpgrade> capacity_upgrades;
+    std::vector<_CapacityUpgrade> capacity_upgrades;
 
 
 

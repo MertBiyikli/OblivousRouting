@@ -2,16 +2,16 @@
 // Created by Mert Biyikli on 09.06.26.
 //
 
-#ifndef OBLIVIOUSROUTING_ROUTING_ENGINE_H
-#define OBLIVIOUSROUTING_ROUTING_ENGINE_H
 
-#include "routing_result.h"
+#pragma once
+
 #include "../core/errors.h"
-#include <optional>
-#include "../algorithms/oblivious/mwu/electrical_mwu.h"
-#include "../algorithms/oblivious/mwu/tree_mwu.h"
+#include "algorithms/oblivious/oblivious_routing_runner.h"
+#include "algorithms/semi_oblivious/semi_routing_runner.h"
 #include "io/parse_argument_io.h"
+#include "routing_result.h"
 
+#include <optional>
 
 class RoutingEngine {
 public:
@@ -36,8 +36,15 @@ public:
 };
 
 
+inline bool isSemiObliviousSolver(SolverType type) {
+    return type == SolverType::SEMI_ELECTRICAL ||
+           type == SolverType::SEMI_TREE ||
+           type == SolverType::SEMI_EXPANDER_HIERARCHY;
+}
 
-
-
-
-#endif //OBLIVIOUSROUTING_ROUTING_ENGINE_H
+inline std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {
+    if (isSemiObliviousSolver(type)) {
+        return std::make_unique<SemiObliviousSolverRunner>();
+    }
+    return std::make_unique<ObliviousSolverRunner>();
+}

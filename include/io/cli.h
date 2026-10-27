@@ -411,7 +411,7 @@ inline Result<Command> parse(int argc, char** argv)
             return makeErrorMessage(ErrorCode::InvalidArgument, "--demand-scale must be finite and positive");
         }
 
-        std::vector<CapacityUpgrade> upgrades;
+        std::vector<_CapacityUpgrade> upgrades;
 
         if (variables.count("capacity-upgrade")) {
             for (const auto& token : variables["capacity-upgrade"].as<std::vector<std::string>>()) {
@@ -440,10 +440,10 @@ inline Result<Command> parse(int argc, char** argv)
                 }
             }
         }
-
+/*
         if ((demandScale != 1.0 || !upgrades.empty()) && !variables.count("load-routing-table")) {
             return makeErrorMessage(ErrorCode::InvalidArgument, "Traffic/capacity scenarios currently require --load-routing-table");
-        }
+        }*/
 
 
 

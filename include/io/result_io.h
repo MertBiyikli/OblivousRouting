@@ -7,6 +7,7 @@
 
 #include "../routing/routing_result.h"
 #include "core/errors.h"
+#include "io/solver_io.h"
 #include <cctype>
 #include <filesystem>
 #include <format>

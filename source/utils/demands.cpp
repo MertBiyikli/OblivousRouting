@@ -7,6 +7,7 @@
 
 void demands::addDemand(int s, int t, double demand) {
     assert(demand_values.size() == source.size() && demand_values.size() == target.size());
+    assert(demand_map.size() == demand_map.size());
     source.push_back(s);
     target.push_back(t);
     demand_values.push_back(demand);
@@ -20,12 +21,12 @@ size_t demands::size() const {
 }
 
 std::pair<int, int> demands::getDemandPair(size_t idx) const {
-    assert(idx <= source.size() && idx <= target.size());
+    assert(idx < source.size() && idx < target.size());
     return {source[idx], target[idx]};
 }
 
 double demands::getDemandValue(size_t idx) const {
-    assert(idx <= demand_values.size());
+    assert(idx < demand_values.size());
     return demand_values[idx];
 }
 

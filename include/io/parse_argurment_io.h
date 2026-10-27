@@ -85,24 +85,8 @@ inline std::vector<std::pair<int,int>> generateAllDemandPairs(IGraph& g) {
     return result;
 }
 
-// Demand model handling
-inline void HandleDemandModels(const std::optional<Config>& cfg, IGraph& g,
-                               std::function<void(const std::string&, const demands&)> callback) {
-    if (!cfg || cfg->demand_models.empty()) return;
-    auto pairs = generateAllDemandPairs(g);
-    for (DemandModelType type : cfg->demand_models) {
-        auto model = makeDemandModel(type);
-        demands dmap = model->generate(g, pairs);
-        callback(demandModelName(type), dmap);
-    }
-}
 
-inline demands GetSingleDemandModel(const std::optional<Config>& cfg, IGraph& g) {
-    if (!cfg || cfg->demand_models.empty()) return demands{};
-    auto pairs = generateAllDemandPairs(g);
-    auto model = makeDemandModel(cfg->demand_models.front());
-    return model->generate(g, pairs);
-}
+
 
 
 inline std::string usage(const char* prog) {
@@ -169,35 +153,6 @@ inline std::optional<Config> parse_parameter(int argc, char** argv, std::string*
 }
 
 
-inline std::unique_ptr<IGraph> load_graph(Config& cfg, int argc, char** argv) {
-    std::string err;
-    auto tmp = parse_parameter(argc, argv, &err);
 
-    if (!tmp) {
-        std::cerr << err << std::endl;
-    }else {
-        cfg = std::move(*tmp);
-    }
-
-    // Load or create graph
-    auto graph = makegraph(cfg.graph_format);
-    if (!cfg.filename.empty()) {
-        readLGFFile(*graph, cfg.filename);
-    }
-
-    graph->finalize();
-    return graph;
-}
-
-
-inline void offlineOptimal(std::unique_ptr<IGraph>& g, Config cfg) {
-    if (cfg.evaluate_demand_models) {
-        HandleDemandModels(cfg, *g,
-            [&](const std::string& model_name, const demands& dmap) {
-                cfg.demand_maps[model_name] = dmap;
-                cfg.offline_opt_per_model[model_name] = computeOfflineOptimalCongestion(*g, dmap);
-            });
-    }
-}
 
 #endif //OBLIVIOUSROUTING_PARSE_ARGURMENT_IO_H
