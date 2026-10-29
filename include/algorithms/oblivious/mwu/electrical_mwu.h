@@ -38,6 +38,7 @@ protected:
     int x_fixed = 0; // fixed node
 
     bool use_sketching;
+    std::uint64_t random_seed = 42;
 
 
     std::vector<std::pair<int, int> > edges; // u<v only
@@ -96,8 +97,8 @@ public:
 
 
     // Helpers
-    void extractEdges();
-    void initEdgeDistances();
+    Result<void> extractEdges();
+    Result<void> initEdgeDistances();
     Eigen::SparseMatrix<double> buildIncidence();
     Eigen::MatrixXd getSketchMatrix(double epsilon = 0.5);
     void addFlowToTable(const int& u, const Eigen::VectorXd& potential, LinearRoutingTable &table);

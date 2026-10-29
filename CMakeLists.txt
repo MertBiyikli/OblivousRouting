@@ -172,6 +172,14 @@ add_library(oblivious_routing_core STATIC
         source/analysis/scenario_engine.cpp
         include/analysis/commodity_flow_diagnostics.h
         include/analysis/scenario_result_json.h
+        include/analysis/capacity_upgrade/capacity_upgrade.h
+        include/analysis/failures/link_failures.h
+        include/analysis/traffic_change/traffic_growth.h
+        source/analysis/capacity_upgrade/capacity_upgrade.cpp
+        source/analysis/failures/link_failures.cpp
+        source/analysis/traffic_change/traffic_growth.cpp
+        include/analysis/graph_rollback_guard.h
+        include/analysis/failures/network_connectivity.h
 )
 
 target_include_directories(oblivious_routing_core

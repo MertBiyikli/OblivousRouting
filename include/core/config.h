@@ -40,8 +40,7 @@ struct Config {
     // Inside Config:
     double demand_scale = 1.0;
     std::vector<_CapacityUpgrade> capacity_upgrades;
-
-
+    std::vector<int> failed_links;
 
 };
 

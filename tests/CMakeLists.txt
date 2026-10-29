@@ -17,6 +17,7 @@ add_executable(unit_tests
         unit/analysis/test_fixed_routing_scenario.cpp
         unit/routing/test_combined_demands.cpp
         unit/analysis/test_scenario_analysis.cpp
+        unit/analysis/network_connectivity_tests.cpp
 )
 
 target_include_directories(unit_tests PRIVATE

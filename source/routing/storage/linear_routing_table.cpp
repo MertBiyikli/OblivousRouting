@@ -7,8 +7,10 @@
 #include <iostream>
 
 void LinearRoutingTable::init(const optimized::Graph<EdgeData>& g) {
-    const int numEdges = g.getNumDirectedEdges();
+    const int numEdges = g.globalEdgeCount() * 2;
+
     n = g.getNumNodes();
+
     src_ids.assign(numEdges, {});
     src_flows.assign(numEdges, {});
 }
@@ -272,46 +274,59 @@ void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, t, -flow_sx);
 }
 
-void LinearRoutingScheme::routeDemands(std::vector<double>& congestion, const demands& demand_map) const {
-    //std::cerr << "[PERF] LinearRoutingScheme::routeDemands\n";
-    const int m = g.getNumDirectedEdges();
+
+void LinearRoutingScheme::routeDemands(
+    std::vector<double>& congestion,
+    const demands& demand_map
+) const {
+    // Allocate according to the complete stable edge-ID space.
+    const int m = g.globalEdgeCount() * 2;
     const int n = g.getNumNodes();
 
     congestion.assign(m, 0.0);
 
-    const auto& sources = demand_map.source;
-    const auto& targets = demand_map.target;
-    const auto& values = demand_map.demand_values;
-
     std::vector<double> basis(n);
 
-    auto combinedDemands = combineDemandPairs(demand_map, n);
+    const auto combinedDemands =
+        combineDemandPairs(demand_map, n);
 
-    for (int e = 0; e < m; ++e) {
-        const int reverse = g.reverse(e).id;
+    // Physical links have directed IDs (2k, 2k+1).
+    for (int e = 0; e < m; e += 2) {
 
-        if (e > reverse)
+        // Removed links must not carry traffic.
+        if (!g.edgeAlive(e))
             continue;
+
+        const int reverse = g.reverse(e).id;
 
         getEdgeBasis(e, basis);
 
         double load = 0.0;
 
         for (const auto& demand : combinedDemands) {
-            const double magnitude = std::abs(basis[demand.source] - basis[demand.target]);
+            const double magnitude =
+                std::abs(
+                    basis[demand.source] -
+                    basis[demand.target]
+                );
 
-            if (magnitude < EPS) {
+            if (magnitude < EPS)
                 continue;
-            }
 
             load += demand.value * magnitude;
         }
 
-        congestion[e] = load / g.edgeData(e).capacity;
-        congestion[reverse] = load / g.edgeData(reverse).capacity;
-        //std::cerr << "[PERF] AllPairRoutingScheme::routeDemands\n";
+        const double forwardCapacity =
+            g.edgeData(e).capacity;
+
+        const double reverseCapacity =
+            g.edgeData(reverse).capacity;
+
+        congestion[e] = load / forwardCapacity;
+        congestion[reverse] = load / reverseCapacity;
     }
 }
+
 
 bool LinearRoutingScheme::isValid() {
     return routing_table.isValid(g);

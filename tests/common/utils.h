@@ -207,4 +207,12 @@ namespace integration {
     }
 
 };
+
+
+using Graph = optimized::Graph<EdgeData>;
+static Graph createScenarioTestGraph() {
+    std::vector<Graph::InputEdge> edges = {{0, 1, EdgeData{10.0, 1.0}}, {1, 2, EdgeData{20.0, 1.0}}, {2, 3, EdgeData{30.0, 1.0}}, {0, 3, EdgeData{40.0, 1.0}}};
+
+    return Graph(4, edges);
+}
 #endif //OBLIVIOUSROUTING_UTILS_H

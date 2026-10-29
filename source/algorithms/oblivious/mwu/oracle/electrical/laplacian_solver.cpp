@@ -3,49 +3,54 @@
 //
 
 #include "algorithms/oblivious/mwu/oracle/electrical/laplacian_solver.h"
-#include "utils/my_math.h"
-#include "utils/hash.h"
-#include <amgcl/backend/builtin.hpp>
-#include <amgcl/amg.hpp>
-#include <amgcl/coarsening/runtime.hpp>
-#include <amgcl/relaxation/runtime.hpp>
 #include "amgcl/solver/runtime.hpp"
+#include "utils/hash.h"
+#include "utils/my_math.h"
+#include <amgcl/amg.hpp>
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/coarsening/runtime.hpp>
 #include <amgcl/make_solver.hpp>
+#include <amgcl/relaxation/runtime.hpp>
 #include <cassert>
 #include <stdexcept>
 
-void LaplacianSolver::init(optimized::Graph<EdgeData>& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug) {
-     assert(g.getNumUndirectedEdges() == static_cast<int>(_adj_edge_weights.size()));
-     this->debug = debug;
-     this->n = n;
-     m_row_ptr.clear();
-     m_col_ind.clear();
-     m_values.clear();
+Result<void> LaplacianSolver::init(optimized::Graph<EdgeData>& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug) {
+    assert(g.getNumUndirectedEdges() == static_cast<int>(_adj_edge_weights.size()));
+    this->debug = debug;
+    this->n = n;
+    m_row_ptr.clear();
+    m_col_ind.clear();
+    m_values.clear();
+
+    weight_model.init(g);
+    for (int e = 0; e < edges.size(); e++) {
+        int u = edges[e].first;
+        int v = edges[e].second;
+        double w = _adj_edge_weights[e];
+        auto set = weight_model.setEdgeWeight(u, v, w);
+        if (!set) {
+            return getError(set);
+        }
+        set = weight_model.setEdgeWeight(v, u, w); // keep it symmetric
+        if (!set) {
+            return getError(set);
+        }
+    }
 
 
-     weight_model.init(g);
-     for (int e = 0; e < edges.size(); e++) {
-         int u = edges[e].first;
-         int v = edges[e].second;
-         double w = _adj_edge_weights[e];
-         weight_model.setEdgeWeight(u, v, w);
-         weight_model.setEdgeWeight(v, u, w); // keep it symmetric
-     }
+    auto laplacian_result = buildLaplacian();
+    if (!laplacian_result) {
+        return getError(laplacian_result);
+    }
+    return {};
+}
 
-     buildLaplacian();
- }
-
-void LaplacianSolver::init(
-    int n_,
-    const std::vector<std::pair<int, int>>& edges,
-    const std::vector<double>& edge_weights,
-    bool debug_
-) {
+Result<void> LaplacianSolver::init(int n_, const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, bool debug_) {
     n = n_;
     debug = debug_;
 
     if (static_cast<int>(edge_weights.size()) != static_cast<int>(edges.size())) {
-        throw std::runtime_error("LaplacianSolver::init: edge_weights and edges size mismatch");
+        return makeErrorMessage(ErrorCode::RuntimeError, "LaplacianSolver::init: edge_weights and edges size mismatch");
     }
 
     m_values = edge_weights;
@@ -97,12 +102,12 @@ void LaplacianSolver::init(
         const auto [u, v] = edges[e];
         const double w = edge_weights[e];
 
-        rows[u].push_back({v, -w});
-        rows[v].push_back({u, -w});
+        rows[u].emplace_back(v, -w);
+        rows[v].emplace_back(u, -w);
     }
 
     for (int u = 0; u < n; ++u) {
-        rows[u].push_back({u, diag[u]});
+        rows[u].emplace_back(u, diag[u]);
     }
 
     m_row_ptr.assign(n + 1, 0);
@@ -132,31 +137,34 @@ void LaplacianSolver::init(
         int u = edges[e].first;
         int v = edges[e].second;
         double w = edge_weights[e];
-        weight_model.setEdgeWeight(u, v, w);
-        weight_model.setEdgeWeight(v, u, w); // keep it symmetric
+        auto set = weight_model.setEdgeWeight(u, v, w);
+        if (!set) {
+            return getError(set);
+        }
+        set = weight_model.setEdgeWeight(v, u, w); // keep it symmetric
+        if (!set) {
+            return getError(set);
+        }
     }
+
     buildLaplacian();
-    //updateSolver();
+    return {};
 }
 
-Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vector<std::pair<int, int>>& edges,const std::vector<double>& edge_weights,const int grounded_vertex) {
+Result<void> LaplacianSolver::initGrounded(const int node_count, const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, const int grounded_vertex) {
     OpenMPThreadGuard omp_guard(num_internal_threads);
     hierarchy.reset();
 
     if (node_count <= 0) {
-        return makeErrorMessage(ErrorCode::InvalidGraph,
-            "Grounded Laplacian requires at least one vertex.");
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Grounded Laplacian requires at least one vertex.");
     }
 
-    if (grounded_vertex < 0 ||
-        grounded_vertex >= node_count) {
-        return makeErrorMessage(ErrorCode::InvalidGraph,
-            "Invalid grounded vertex.");
+    if (grounded_vertex < 0 || grounded_vertex >= node_count) {
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Invalid grounded vertex.");
     }
 
     if (edges.size() != edge_weights.size()) {
-        return makeErrorMessage(ErrorCode::InvalidGraph,
-            "Local edges and conductances have different sizes.");
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Local edges and conductances have different sizes.");
     }
 
     n = node_count;
@@ -169,31 +177,20 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
      */
     std::vector<std::vector<int>> adjacency(n);
 
-    for (std::size_t edge_id = 0;
-         edge_id < edges.size();
-         ++edge_id) {
+    for (std::size_t edge_id = 0; edge_id < edges.size(); ++edge_id) {
         const auto [u, v] = edges[edge_id];
         const double weight = edge_weights[edge_id];
 
-        if (u < 0 || v < 0 ||
-            u >= n || v >= n) {
-            return makeErrorMessage(ErrorCode::InvalidGraph,
-                "Local edge has an invalid endpoint.");
+        if (u < 0 || v < 0 || u >= n || v >= n) {
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Local edge has an invalid endpoint.");
         }
 
         if (u == v) {
-            return makeErrorMessage(
-                ErrorCode::InvalidGraph,
-                "Local electrical graph contains a self-loop."
-            );
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Local electrical graph contains a self-loop.");
         }
 
-        if (!std::isfinite(weight) ||
-            weight <= 0.0) {
-            return makeErrorMessage(
-                ErrorCode::InvalidGraph,
-                "Local conductance must be finite and positive."
-            );
+        if (!std::isfinite(weight) || weight <= 0.0) {
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Local conductance must be finite and positive.");
         }
 
         adjacency[u].push_back(v);
@@ -224,14 +221,7 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
         }
 
         if (visited_count != n) {
-            return makeErrorMessage(
-                ErrorCode::InvalidGraph,
-                "Local cluster graph is disconnected. Visited " +
-                    std::to_string(visited_count) +
-                    " of " +
-                    std::to_string(n) +
-                    " vertices."
-            );
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Local cluster graph is disconnected. Visited " + std::to_string(visited_count) + " of " + std::to_string(n) + " vertices.");
         }
     }
 
@@ -243,9 +233,7 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
      */
     std::vector<std::unordered_map<int, double>> rows(n);
 
-    for (std::size_t edge_id = 0;
-         edge_id < edges.size();
-         ++edge_id) {
+    for (std::size_t edge_id = 0; edge_id < edges.size(); ++edge_id) {
         const auto [u, v] = edges[edge_id];
         const double weight = edge_weights[edge_id];
 
@@ -268,9 +256,7 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
     m_row_ptr.assign(n + 1, 0);
 
     for (int row = 0; row < n; ++row) {
-        m_row_ptr[row + 1] =
-            m_row_ptr[row] +
-            static_cast<int>(rows[row].size());
+        m_row_ptr[row + 1] = m_row_ptr[row] + static_cast<int>(rows[row].size());
     }
 
     m_col_ind.clear();
@@ -280,25 +266,13 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
     m_values.reserve(m_row_ptr.back());
 
     for (int row = 0; row < n; ++row) {
-        std::vector<std::pair<int, double>> entries(
-            rows[row].begin(),
-            rows[row].end()
-        );
+        std::vector<std::pair<int, double>> entries(rows[row].begin(), rows[row].end());
 
-        std::sort(
-            entries.begin(),
-            entries.end(),
-            [](const auto& lhs, const auto& rhs) {
-                return lhs.first < rhs.first;
-            }
-        );
+        std::sort(entries.begin(), entries.end(), [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
 
         for (const auto& [column, value] : entries) {
             if (!std::isfinite(value)) {
-                return makeErrorMessage(
-                    ErrorCode::InvalidGraph,
-                    "Local Laplacian contains a non-finite entry."
-                );
+                return makeErrorMessage(ErrorCode::InvalidGraph, "Local Laplacian contains a non-finite entry.");
             }
 
             m_col_ind.push_back(column);
@@ -321,123 +295,97 @@ Result<void> LaplacianSolver::initGrounded(const int node_count,const std::vecto
      * The grounded Laplacian is symmetric positive definite, so CG
      * is an appropriate outer solver.
      */
-    solver_params.put("solver.type","cg");
-    solver_params.put("solver.tol",1e-10);
-    solver_params.put("solver.maxiter",1000);
-    solver_params.put("precond.coarsening.type","smoothed_aggregation");
-    solver_params.put("precond.relax.type","spai0");
+    solver_params.put("solver.type", "cg");
+    solver_params.put("solver.tol", 1e-10);
+    solver_params.put("solver.maxiter", 1000);
+    solver_params.put("precond.coarsening.type", "smoothed_aggregation");
+    solver_params.put("precond.relax.type", "spai0");
     try {
-        hierarchy = std::make_unique<AMG>(
-            std::tie(
-                n,
-                m_row_ptr,
-                m_col_ind,
-                m_values_dirichlet
-            ),
-            params
-        );
+        hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values_dirichlet), params);
     } catch (const std::exception& error) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL hierarchy construction failed: " +
-                std::string(error.what())
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL hierarchy construction failed: " + std::string(error.what()));
     }
 
     if (!hierarchy) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL hierarchy was not constructed."
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL hierarchy was not constructed.");
     }
 
     return {};
 }
 
-Result<void> LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges) {
-     assert(new_weights.size() == edges.size());
+Result<void> LaplacianSolver::updateAllEdges(const std::vector<double>& new_weights, const std::vector<std::pair<int, int>>& edges) {
+    assert(new_weights.size() == edges.size());
 
-     for (size_t e = 0; e < edges.size(); ++e) {
-         int u = edges[e].first;
-         int v = edges[e].second;
-         double old_w = weight_model.getEdgeWeight(u, v);
-         double new_w = std::max(new_weights[e], EPS);
-         double delta = new_w - old_w;
+    for (size_t e = 0; e < edges.size(); ++e) {
+        int u = edges[e].first;
+        int v = edges[e].second;
+        double old_w = weight_model.getEdgeWeight(u, v);
+        double new_w = std::max(new_weights[e], EPS);
+        double delta = new_w - old_w;
 
-         if (std::abs(delta) < EPS) continue;
+        if (std::abs(delta) < EPS)
+            continue;
 
+        auto uu = weight_model.getLaplacianIndex(u, u), vv = weight_model.getLaplacianIndex(v, v), uv = weight_model.getLaplacianIndex(u, v), vu = weight_model.getLaplacianIndex(v, u);
 
-         auto uu = weight_model.getLaplacianIndex(u, u),
-             vv = weight_model.getLaplacianIndex(v, v),
-             uv = weight_model.getLaplacianIndex(u, v),
-             vu = weight_model.getLaplacianIndex(v, u);
+        if (!uu || !vv || !uv || !vu) {
+            return getError(uu);
+        }
 
-         if (!uu
-             || !vv
-             || !uv
-             || !vu) {
-             return getError(uu);
-         }
+        weight_model.setEdgeWeight(u, v, new_w);
+        weight_model.setEdgeWeight(v, u, new_w);
 
+        // --- Update CSR Laplacian entries ---
+        // Diagonal contributions
+        m_values[uu.value()] += delta;
+        m_values[vv.value()] += delta;
 
-
-         weight_model.setEdgeWeight(u, v, new_w);
-         weight_model.setEdgeWeight(v, u, new_w);
-
-         // --- Update CSR Laplacian entries ---
-         // Diagonal contributions
-         m_values[uu.value()] += delta;
-         m_values[vv.value()] += delta;
-
-         // Off-diagonal contributions
-         m_values[uv.value()] -= delta;
-         m_values[vu.value()] -= delta;
-
-     }
+        // Off-diagonal contributions
+        m_values[uv.value()] -= delta;
+        m_values[vu.value()] -= delta;
+    }
     return {};
- }
+}
 
-
-void LaplacianSolver::buildLaplacian() {
+Result<void> LaplacianSolver::buildLaplacian() {
     OpenMPThreadGuard omp_guard(num_internal_threads);
-    std::unordered_map<std::pair<int,int>, double, PairHash> L;
+    std::unordered_map<std::pair<int, int>, double, PairHash> L;
+    Result<void> res;
 
-    for (int e = 0; e<weight_model.weights.size(); e++) {
+    for (int e = 0; e < weight_model.weights.size(); e++) {
         int u = weight_model.from[e];
         int v = weight_model.to[e];
         double w = weight_model.getEdgeWeight(u, v);
-        if (u >= v) continue;
+        if (u >= v)
+            continue;
 
-        L[{u,u}] += w;
-        L[{v,v}] += w;
-        L[{u,v}] -= w;
-        L[{v,u}] -= w;
+        L[{u, u}] += w;
+        L[{v, v}] += w;
+        L[{u, v}] -= w;
+        L[{v, u}] -= w;
     }
 
     // Ensure every row has an explicit diagonal entry (needed for isolated vertices)
     for (int i = 0; i < n; ++i) {
         // If the diagonal is missing, this creates it with value 0.0.
         // (operator[] default-constructs to 0 and then we add 0)
-        L[{i,i}] += 0.0;
+        L[{i, i}] += 0.0;
     }
 
     const double eps_diag = 1e-12;
     for (int i = 0; i < n; ++i) {
         std::unordered_map<std::pair<int, int>, double, PairHash>::iterator it = L.find({i, i});
         if (it == L.end()) {
-            L[{i,i}] = eps_diag;
+            L[{i, i}] = eps_diag;
         } else if (it->second == 0.0) {
             // Only bump true isolates (degree 0 => diagonal 0)
             it->second = eps_diag;
         }
     }
 
-
-
-
     // Count non-zeros per row
     m_row_ptr.assign(n + 1, 0);
-    for (auto &entry : L) {
+    for (auto& entry : L) {
         int r = entry.first.first;
         m_row_ptr[r + 1]++;
     }
@@ -452,7 +400,7 @@ void LaplacianSolver::buildLaplacian() {
 
     std::vector<int> offset(n, 0);
 
-    for (auto &entry : L) {
+    for (auto& entry : L) {
         int r = entry.first.first;
         int c = entry.first.second;
         double val = entry.second;
@@ -460,7 +408,10 @@ void LaplacianSolver::buildLaplacian() {
         m_col_ind[pos] = c;
         m_values[pos] = val;
 
-        weight_model.setLaplacianIndex(r, c, pos);
+        res = weight_model.setLaplacianIndex(r, c, pos);
+        if (!res) {
+            return getError(res);
+        }
     }
 
     // --- Step 4: Sort columns within each row ---
@@ -472,16 +423,18 @@ void LaplacianSolver::buildLaplacian() {
         for (int k = start; k < end; ++k)
             row.emplace_back(m_col_ind[k], m_values[k]);
 
-        std::sort(row.begin(), row.end(), [](auto &a, auto &b) { return a.first < b.first; });
+        std::sort(row.begin(), row.end(), [](auto& a, auto& b) { return a.first < b.first; });
 
         for (int k = 0; k < (int)row.size(); ++k) {
             m_col_ind[start + k] = row[k].first;
             m_values[start + k] = row[k].second;
 
-            weight_model.setLaplacianIndex(r, row[k].first, start + k);
+            auto res = weight_model.setLaplacianIndex(r, row[k].first, start + k);
+            if (!res) {
+                return getError(res);
+            }
         }
     }
-
 
     if (use_dirichlet) {
         m_values_dirichlet = m_values;
@@ -490,53 +443,36 @@ void LaplacianSolver::buildLaplacian() {
     } else {
         hierarchy = std::make_unique<AMG>(std::tie(n, m_row_ptr, m_col_ind, m_values), params);
     }
+    return {};
 }
 
-
-
-Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double>& b,const double /* eps */) {
+Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double>& b, const double /* eps */) {
     if (b.size() != static_cast<std::size_t>(n)) {
-        return makeErrorMessage(ErrorCode::InvalidDemand,
-            "AMGCL RHS size mismatch.");
+        return makeErrorMessage(ErrorCode::InvalidDemand, "AMGCL RHS size mismatch.");
     }
 
     if (!hierarchy) {
-        return makeErrorMessage(ErrorCode::SolverFailed,
-            "AMGCL solver is not initialized.");
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL solver is not initialized.");
     }
-
 
     OpenMPThreadGuard omp_guard(num_internal_threads);
 
-    rhs_buffer.assign(
-        b.begin(),
-        b.end()
-    );
+    rhs_buffer.assign(b.begin(), b.end());
 
-    potential_buffer.assign(
-        static_cast<std::size_t>(n),
-        0.0
-    );
+    potential_buffer.assign(static_cast<std::size_t>(n), 0.0);
 
     auto& rhs = rhs_buffer;
     auto& potential = potential_buffer;
 
     if (use_dirichlet) {
-        if (dirichlet_root < 0 ||
-            dirichlet_root >= n) {
-            return makeErrorMessage(ErrorCode::InvalidGraph,"Invalid Dirichlet root.");
+        if (dirichlet_root < 0 || dirichlet_root >= n) {
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Invalid Dirichlet root.");
         }
 
         rhs[dirichlet_root] = 0.0;
         potential[dirichlet_root] = 0.0;
     } else {
-        const double mean =
-            std::reduce(
-                rhs.begin(),
-                rhs.end(),
-                0.0
-            ) /
-            static_cast<double>(n);
+        const double mean = std::reduce(rhs.begin(), rhs.end(), 0.0) / static_cast<double>(n);
 
         for (double& value : rhs) {
             value -= mean;
@@ -545,10 +481,7 @@ Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double>& b,
 
     for (const double value : rhs) {
         if (!std::isfinite(value)) {
-            return makeErrorMessage(
-                ErrorCode::InvalidDemand,
-                "AMGCL RHS contains a non-finite value."
-            );
+            return makeErrorMessage(ErrorCode::InvalidDemand, "AMGCL RHS contains a non-finite value.");
         }
     }
 
@@ -563,46 +496,27 @@ Result<std::vector<double>> LaplacianSolver::solve(const std::vector<double>& b,
          *
          * Do not wrap another CG solver around it.
          */
-        const auto solve_result =
-            (*hierarchy)(rhs, potential);
+        const auto solve_result = (*hierarchy)(rhs, potential);
 
-        iterations =
-            std::get<0>(solve_result);
+        iterations = std::get<0>(solve_result);
 
-        relative_error =
-            std::get<1>(solve_result);
+        relative_error = std::get<1>(solve_result);
     } catch (const std::exception& error) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL solve failed: " +
-                std::string(error.what())
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL solve failed: " + std::string(error.what()));
     }
 
     if (debug) {
-        std::cout
-            << "[AMGCL] n=" << n
-            << " iterations=" << iterations
-            << " relative_error=" << relative_error
-            << '\n';
+        std::cout << "[AMGCL] n=" << n << " iterations=" << iterations << " relative_error=" << relative_error << '\n';
     }
 
     if (!std::isfinite(relative_error)) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL returned a non-finite residual."
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL returned a non-finite residual.");
     }
 
     if (!allFinite(potential)) {
-        return makeErrorMessage(
-            ErrorCode::SolverFailed,
-            "AMGCL returned non-finite potentials. "
-            "Iterations=" +
-                std::to_string(iterations) +
-                ", relative residual=" +
-                std::to_string(relative_error)
-        );
+        return makeErrorMessage(ErrorCode::SolverFailed, "AMGCL returned non-finite potentials. "
+                                                         "Iterations=" +
+                                                             std::to_string(iterations) + ", relative residual=" + std::to_string(relative_error));
     }
 
     if (use_dirichlet) {
@@ -621,7 +535,6 @@ bool LaplacianSolver::allFinite(const std::vector<double>& vec) {
     return true;
 }
 
-
 Result<Eigen::VectorXd> LaplacianSolver::solve(const Eigen::VectorXd& b, double eps) {
     const int n_ = b.size();
     std::vector<double> bvec(n_);
@@ -639,7 +552,6 @@ Result<Eigen::VectorXd> LaplacianSolver::solve(const Eigen::VectorXd& b, double 
     return eigen_output;
 }
 
-
 void LaplacianSolver::updateSolver() {
     OpenMPThreadGuard omp_guard(num_internal_threads);
     // Update hierarchy numeric values (same structure)
@@ -653,25 +565,25 @@ void LaplacianSolver::updateSolver() {
 }
 
 void LaplacianSolver::applyDirichletInPlace(std::vector<double>& vals) {
-     const int r = dirichlet_root;
+    const int r = dirichlet_root;
 
-     // Row r: make it [0 ... 0 1 0 ... 0]
-     for (int jj = m_row_ptr[r]; jj < m_row_ptr[r+1]; ++jj) {
-         vals[jj] = (m_col_ind[jj] == r) ? 1.0 : 0.0;
-     }
+    // Row r: make it [0 ... 0 1 0 ... 0]
+    for (int jj = m_row_ptr[r]; jj < m_row_ptr[r + 1]; ++jj) {
+        vals[jj] = (m_col_ind[jj] == r) ? 1.0 : 0.0;
+    }
 
-     // Column r: zero out A[i,r] for i != r (keep symmetry)
-     for (int i = 0; i < n; ++i) {
-         if (i == r) continue;
-         for (int jj = m_row_ptr[i]; jj < m_row_ptr[i+1]; ++jj) {
-             if (m_col_ind[jj] == r) {
-                 vals[jj] = 0.0;
-                 break;
-             }
-         }
-     }
- }
-
+    // Column r: zero out A[i,r] for i != r (keep symmetry)
+    for (int i = 0; i < n; ++i) {
+        if (i == r)
+            continue;
+        for (int jj = m_row_ptr[i]; jj < m_row_ptr[i + 1]; ++jj) {
+            if (m_col_ind[jj] == r) {
+                vals[jj] = 0.0;
+                break;
+            }
+        }
+    }
+}
 
 void LaplacianSolver::setSolverParams(const boost::property_tree::ptree& new_params) {
     params = new_params;

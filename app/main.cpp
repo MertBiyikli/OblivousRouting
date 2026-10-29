@@ -1,6 +1,8 @@
 #include "../include/io/cli.h"
 #include "../include/routing/routing_engine.h"
 
+#include "analysis/capacity_upgrade/capacity_upgrade.h"
+#include "analysis/failures/link_failures.h"
 #include "analysis/scenario_engine.h"
 #include "analysis/scenario_result_json.h"
 #include "io/result_io.h"
@@ -9,6 +11,8 @@
 #include "routing/storage/routing_table_adapter.h"
 #include "routing/storage/routing_table_exporter.h"
 #include "routing/storage/routing_table_importer.h"
+#include <cstdlib>
+#include <string>
 
 int main(int argc, char** argv) {
 
@@ -102,6 +106,7 @@ int main(int argc, char** argv) {
         }
 
         std::cout << "Routing scheme loaded and verified. Optimization solver was not executed.\n";
+        return 0;
     }
 
     RoutingEngine engine;
@@ -112,57 +117,128 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    optimized::Graph<EdgeData>& graph = *engine.m_graph;
+
     // Obtain the graph when exporting routing tables
     // or executing a scenario.
-    if (!cfg.routing_table_output_directory.empty() || !cfg.capacity_upgrades.empty()) {
+    const bool hasCapacityUpgrades = !cfg.capacity_upgrades.empty();
 
-        auto graphResult = engine.getGraph();
+    const bool hasLinkFailures = !cfg.failed_links.empty();
 
-        if (!graphResult) {
-            std::cerr << "Error: " << getError(graphResult).error().message << '\n';
-            return 1;
+    const bool hasScenario = hasCapacityUpgrades || hasLinkFailures;
+
+    // Execute requested topology/capacity scenarios.
+    if (hasScenario) {
+
+        ScenarioEngine scenario_engine;
+
+        ExecutionMode scenario_mode = ExecutionMode::FAST;
+
+        if (const char* value = std::getenv("ER_SCENARIO_EXECUTION_MODE")) {
+
+            const std::string mode(value);
+
+            if (mode == "standard") {
+                scenario_mode = ExecutionMode::STANDARD;
+            } else if (mode == "research") {
+                scenario_mode = ExecutionMode::RESEARCH;
+            }
         }
 
-        auto& graph = *graphResult.value();
+        // Configure, validate, execute and optionally
+        // persist one individual scenario.
+        auto executeScenario = [&](Scenario& scenario) -> Result<void> {
+            auto configured = scenario.configure(cfg);
 
-        // Routing-table export is independent of scenario execution.
-        if (!cfg.routing_table_output_directory.empty()) {
+            if (!configured)
+                return getError(configured);
 
-            auto saved = RoutingTableExporter::save(res.value(), graph, cfg.routing_table_output_directory);
+            auto verified = scenario.verify(graph);
 
-            if (!saved) {
-                std::cerr << "Error: " << getError(saved).error().message << '\n';
-                return 1;
+            if (!verified)
+                return getError(verified);
+
+            auto result = scenario_engine.runScenario(graph, scenario, cfg, scenario_mode);
+
+            if (!result)
+                return getError(result);
+
+
+            std::filesystem::path reportPath;
+
+            const bool isCapacity =
+                scenario.kind() == ScenarioKind::CAPACITY_UPGRADE;
+
+            // Default paths for the individual scenario types.
+            if (isCapacity) {
+                reportPath = "results/scenarios/capacity.json";
+            } else {
+                reportPath = "results/scenarios/failure.json";
             }
 
-            std::cout << "Routing tables saved to: " << cfg.routing_table_output_directory << '\n';
+            // Allow callers and integration tests to override the path.
+            if (const char* configuredPath =
+                    std::getenv("ER_SCENARIO_REPORT_PATH")) {
+
+                if (*configuredPath != '\0') {
+                    reportPath = configuredPath;
+
+                    // Both scenarios may execute in one CLI invocation.
+                    // Give each scenario its own output file.
+                    if (hasCapacityUpgrades && hasLinkFailures) {
+                        const std::string suffix =
+                            isCapacity ? "_capacity" : "_failure";
+
+                        const auto parent = reportPath.parent_path();
+                        const auto stem = reportPath.stem().string();
+                        const auto extension = reportPath.extension().string();
+
+                        reportPath =
+                            parent / (stem + suffix +
+                                      (extension.empty() ? ".json" : extension));
+                    }
+                }
+                    }
+
+            auto written = ScenarioResultJsonWriter::write(
+                result.value(),
+                reportPath
+            );
+
+            if (!written) {
+                return getError(written);
+            }
+
+            std::cout
+                << "Scenario JSON written to: "
+                << reportPath
+                << '\n';
+
+            return {};
+        };
+
+        // Capacity upgrades.
+        if (hasCapacityUpgrades) {
+            CapacityUpgrade scenario;
+
+            auto result = executeScenario(scenario);
+
+            if (!result) {
+                std::cerr << "Capacity scenario error: " << getError(result).error().message << '\n';
+
+                return 1;
+            }
         }
 
-        // Execute capacity-upgrade scenarios independently.
-        if (!cfg.capacity_upgrades.empty()) {
+        // Link failures.
+        if (hasLinkFailures) {
+            LinkFailure scenario;
 
-            ScenarioEngine scenario_engine;
-            CapacityUpgrade capacity_upgrade(graph);
+            auto result = executeScenario(scenario);
 
-            auto scenario_results = scenario_engine.runScenario(graph, capacity_upgrade, cfg, ExecutionMode::STANDARD);
+            if (!result) {
+                std::cerr << "Link failure scenario error: " << getError(result).error().message << '\n';
 
-            if (!scenario_results) {
-                std::cerr << "Scenario error: " << getError(scenario_results).error().message << '\n';
-                return 1;
-            }
-
-            auto printed = printScenarioAnalysis(scenario_results.value());
-
-            if (!printed) {
-                std::cerr << "Error: " << getError(printed).error().message << '\n';
-                return 1;
-            }
-
-            // After successful scenario execution:
-            auto saved = ScenarioResultJsonWriter::write(scenario_results.value(), "results/scenarios/backbone_1221_capacity_upgrade.json");
-
-            if (!saved) {
-                std::cerr << "Scenario JSON export failed: " << getError(saved).error().message << '\n';
                 return 1;
             }
         }

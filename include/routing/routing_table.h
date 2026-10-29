@@ -23,7 +23,7 @@ inline int getCommodityID(const int& n, const int& s, const int& t) {
 // Base classes for storing the routing tables
 class RoutingTable {
 public:
-    int n=0;
+    int n=0, m = 0;
 
     virtual ~RoutingTable() = default;
     virtual void init(const optimized::Graph<EdgeData>& g) = 0;

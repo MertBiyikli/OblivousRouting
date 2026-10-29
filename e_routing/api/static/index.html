@@ -705,7 +705,12 @@
             </div>
         </div>
 
-
+        <section
+                id="scenario-analysis"
+                class="panel"
+                hidden
+                aria-live="polite">
+        </section>
         <div class="result-info" id="evidence">No scenario executed yet.</div>
     </section>
     <aside class="panel assistant">
@@ -744,6 +749,9 @@
         </div>
     </aside>
 </main>
+
+<script src="./scenario_studio_analysis.js"></script>
+
 <script>
     const $ = id => document.getElementById(id);
     const upgrades = new Map();
@@ -1003,6 +1011,8 @@
 
     function resetNetworkState() {
         networkGeneration++;
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
         $('run').textContent = 'Run simulation';
         $('run').disabled = !$('network').value || $('network').disabled;
         // Invalidate results and topology from the previous network.
@@ -1027,6 +1037,8 @@
         $('large-network-analysis').hidden = true;
         $('bottleneck-list').replaceChildren();
         $('topology-summary').textContent = '';
+
+
 
         const metricIds = [
             'congestion',
@@ -1457,6 +1469,49 @@
             $('jeylan-question').disabled = false;
             $('jeylan-ask').disabled = jeylanBusy;
             $('jeylan-status').textContent = `Jeylan ready · Scenario ${data.scenario_id}`;
+
+            if (stillCurrent()) {
+                const panel = $('scenario-analysis');
+                panel.hidden = false;
+
+                try {
+                    const response = await fetch(
+                        `/api/v1/networks/${encodeURIComponent(networkId)}/scenarios/detailed-analysis`,
+                        {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify(request)
+                        }
+                    );
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || "Detailed analysis failed");
+                    }
+
+                    const result = await response.json();
+
+                    if (result.status !== "completed" || !result.report_available) {
+                        throw new Error("Detailed analysis report unavailable");
+                    }
+
+                    await renderScenarioAnalysis(
+                        networkId,
+                        result.scenario_id
+                    );
+                } catch (error) {
+                    if (stillCurrent()) {
+                        panel.textContent =
+                            `Detailed scenario analysis unavailable: ${error.message}`;
+                    }
+                }
+
+                if (!stillCurrent()) {
+                    panel.hidden = true;
+                    panel.replaceChildren();
+                }
+            }
+
 
         } catch (e) {
             if (stillCurrent()) {

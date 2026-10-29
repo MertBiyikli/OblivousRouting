@@ -16,9 +16,21 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include "analysis/scenario_results.h"
+#include "core/errors.h"
+
+
+
+#include <boost/multiprecision/number.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <string>
+#include <system_error>
 
 // Dedicated scenario analysis JSON; intentionally does NOT change RoutingResultWriter.
 namespace scenario_json_detail {
+
 inline void quoted(std::ostream& os, const std::string& value) {
     constexpr char hex[] = "0123456789abcdef";
     os << '"';
@@ -144,7 +156,33 @@ inline const char* mode(ExecutionMode m) {
     }
     return "unknown";
 }
+
+inline void comparison(
+    std::ostream& os,
+    const std::optional<ComparisonData>& data
+) {
+    if (!data) {
+        os << "null";
+        return;
+    }
+
+    os << "{\"congestion_before\":";
+    number(os, data->congestion_before);
+
+    os << ",\"congestion_after\":";
+    number(os, data->congestion_after);
+
+    os << ",\"absolute_reduction\":";
+    number(os, data->absolute_reduction);
+
+    os << ",\"relative_reduction\":";
+    optionalNumber(os, data->relative_reduction);
+
+    os << '}';
+}
 } // namespace scenario_json_detail
+
+
 
 class ScenarioResultJsonWriter {
   public:
@@ -156,12 +194,15 @@ class ScenarioResultJsonWriter {
         const auto old_locale = os.getloc();
         os.imbue(std::locale::classic());
         os << std::setprecision(std::numeric_limits<double>::max_digits10);
-        os << "{\"schema_version\":\"1.0\",\"scenario_kind\":";
+        os << "{\"schema_version\":\"1.1\",\"scenario_kind\":";
         quoted(os, kind(result.kind));
         os << ",\"execution_mode\":";
         quoted(os, mode(result.execution_mode));
-        os << ",\"original_fingerprint\":" << result.original_fingerprint;
-        os << ",\"modified_fingerprint\":" << result.modified_fingerprint;
+        os << ",\"original_fingerprint\":";
+        quoted(os, std::to_string(result.original_fingerprint));
+
+        os << ",\"modified_fingerprint\":";
+        quoted(os, std::to_string(result.modified_fingerprint));
         os << ",\"capacity_upgrades\":[";
         for (std::size_t i = 0; i < result.capacity_upgrades.size(); ++i) {
             if (i)
@@ -175,6 +216,19 @@ class ScenarioResultJsonWriter {
             number(os, u.capacity_factor);
             os << '}';
         }
+
+
+        os << "],\"link_failures\":[";
+
+        for (std::size_t i = 0;
+             i < result.link_failures.size(); ++i) {
+
+            if (i)
+                os << ',';
+
+            os << result.link_failures[i];
+             }
+
         os << "],\"solver_results\":[";
         for (std::size_t i = 0; i < result.solver_results.size(); ++i) {
             if (i)
@@ -200,8 +254,16 @@ class ScenarioResultJsonWriter {
             network(os, s.fixed_routing_Data);
             os << ",\"reoptimized\":";
             network(os, s.modified_Data);
+
+            os << ",\"comparison\":";
+            comparison(os, s.comparison);
+
+            os << ",\"fixed_routing_comparison\":";
+            comparison(os, s.fixed_routing_comparison);
+
             os << ",\"performance_metrics\":";
             performance(os, s.performance_metrics);
+
             os << '}';
         }
         os << "]}";
@@ -231,5 +293,7 @@ class ScenarioResultJsonWriter {
         }
     }
 };
+
+
 
 #endif // E_ROUTING_SCENARIO_RESULT_JSON_H

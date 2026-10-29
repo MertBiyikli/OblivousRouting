@@ -54,6 +54,7 @@ struct CapacityUpgradeDetail {
     double capacity_factor = 1.0;
 };
 
+
 // Derived capacity-planning metrics for one fixed demand matrix.
 // All improvement values are fractions (0.15 = 15%); negative means worse.
 // Undefined relative improvements (zero denominator) remain nullopt.
@@ -183,6 +184,7 @@ struct ScenarioResult {
     std::uint64_t original_fingerprint = 0;
     std::uint64_t modified_fingerprint = 0;
     std::vector<CapacityUpgradeDetail> capacity_upgrades;
+    std::vector<int> link_failures;
     std::vector<SolverAnalysisResult> solver_results;
 };
 

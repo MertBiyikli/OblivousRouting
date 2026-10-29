@@ -19,10 +19,65 @@ from e_routing.assistant.scenario_chat import answer_scenario_question
 from e_routing.scenarios.repository import ScenarioRepository
 from e_routing.scenarios.runtime import ScenarioRequest, execute
 from e_routing.scenarios.runtime import ScenarioRequest, execute, execute_comparison
+from e_routing.api.scenario_report_api import (
+    create_scenario_analysis_router,
+)
 
+REPORTS_ROOT = Path("results/scenarios").resolve()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="E-Routing API", version="0.1.0")
+
+
+from e_routing.api.detailed_analysis_api import (
+    create_detailed_analysis_router,
+)
+
+app.include_router(
+    create_detailed_analysis_router("results/scenarios")
+)
+
+
+import json
+from pathlib import Path
+
+REPORTS_ROOT = Path("results/scenarios").resolve()
+
+def lookup_scenario_report(network_id: str, scenario_id: str):
+    from e_routing.api.detailed_analysis_api import detailed_report_path
+
+    report = detailed_report_path(
+        REPORTS_ROOT, network_id, scenario_id
+    )
+
+    request_file = report.parent / "request.json"
+
+    if not report.is_file() or not request_file.is_file():
+        return None
+
+    try:
+        metadata = json.loads(
+            request_file.read_text(encoding="utf-8")
+        )
+    except (ValueError, OSError):
+        return None
+
+    if (
+            metadata.get("network_id") != network_id
+            or metadata.get("scenario_id") != scenario_id
+    ):
+        return None
+
+    return report
+
+
+
+app.include_router(
+    create_scenario_analysis_router(
+        reports_root=REPORTS_ROOT,
+        lookup_report=lookup_scenario_report,
+    )
+)
 
 
 class ScenarioQuestion(BaseModel):
@@ -33,6 +88,15 @@ class ScenarioQuestion(BaseModel):
 def home() -> RedirectResponse:
     return RedirectResponse(url="/ui")
 
+
+from fastapi.responses import FileResponse
+
+@app.get("/scenario_studio_analysis.js", include_in_schema=False)
+def scenario_studio_analysis_js():
+    return FileResponse(
+        "e_routing/api/static/scenario_studio_analysis.js",
+        media_type="application/javascript"
+    )
 
 @app.get("/ui", include_in_schema=False)
 def web_ui() -> FileResponse:

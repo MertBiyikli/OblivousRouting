@@ -77,16 +77,22 @@ void LaplacianSolver::updateAllEdges(const std::vector<double> &new_weights, con
 void LaplacianSolver::buildLaplacian() {
     std::unordered_map<std::pair<int,int>, double, PairHash> L;
 
-    for (int e = 0; e<weight_model.weights.size(); e++) {
-        int u = weight_model.from[e];
-        int v = weight_model.to[e];
-        double w = weight_model.getEdgeWeight(u, v);
-        if (u >= v) continue;
+    for (std::size_t e = 0; e < weight_model.weights.size(); ++e) {
+        const int u = weight_model.from[e];
+        const int v = weight_model.to[e];
 
-        L[{u,u}] += w;
-        L[{v,v}] += w;
-        L[{u,v}] -= w;
-        L[{v,u}] -= w;
+        if (u >= v)
+            continue;
+
+        // e is a compact Laplacian-model edge index,
+        // not an original graph stable edge ID.
+        const double w =
+            weight_model.getEdgeWeight(static_cast<int>(e));
+
+        L[{u, u}] += w;
+        L[{v, v}] += w;
+        L[{u, v}] -= w;
+        L[{v, u}] -= w;
     }
 
     // Ensure every row has an explicit diagonal entry (needed for isolated vertices)

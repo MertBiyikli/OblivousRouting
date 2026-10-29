@@ -3,15 +3,18 @@
 //
 
 #include "routing/storage/allpair_routing_table.h"
-#include <cassert>
-#include "utils/my_math.h"
 #include "utils/hash.h"
+#include "utils/my_math.h"
+#include <cassert>
 #include <iostream>
 #include <unordered_map>
 
 void AllPairRoutingTable::init(const optimized::Graph<EdgeData>& g) {
-    const int numEdges = g.getNumDirectedEdges();
+    const int numEdges = g.globalEdgeCount() * 2;
+
     n = g.getNumNodes();
+    m = numEdges;
+
     adj_ids.assign(numEdges, {});
     adj_vals.assign(numEdges, {});
     anti_edge.resize(numEdges, INVALID_EDGE_ID);
@@ -21,24 +24,24 @@ void AllPairRoutingTable::init(const optimized::Graph<EdgeData>& g) {
     }
 }
 
-
 void AllPairRoutingTable::addFlow(const int& e, const int& s, const int& t, double fraction) {
     assert(e >= 0 && e < (int)adj_vals.size());
-    if (s >= t) return;
+    if (s >= t)
+        return;
 
     const int commodity_id = getCommodityID(n, s, t);
-    if (commodity_id == INVALID_COMMODITY_ID) return;
+    if (commodity_id == INVALID_COMMODITY_ID)
+        return;
 
-    if (std::abs(fraction) <= SOFT_EPS) return;
+    if (std::abs(fraction) <= SOFT_EPS)
+        return;
 
     addFlow(e, commodity_id, fraction);
 }
 
-
-
 void AllPairRoutingTable::addFlow(const int e, const int commodity_id, const double delta) {
     assert(e >= 0 && e < (int)adj_vals.size());
-    auto& ids  = adj_ids[e];
+    auto& ids = adj_ids[e];
     auto& vals = adj_vals[e];
     const int len = (int)ids.size();
 
@@ -55,8 +58,10 @@ void AllPairRoutingTable::addFlow(const int e, const int commodity_id, const dou
     int lo = 0, hi = len;
     while (lo < hi) {
         int mid = (lo + hi) >> 1;
-        if (ids[mid] < commodity_id) lo = mid + 1;
-        else hi = mid;
+        if (ids[mid] < commodity_id)
+            lo = mid + 1;
+        else
+            hi = mid;
     }
     ids.insert(ids.begin() + lo, commodity_id);
     vals.insert(vals.begin() + lo, delta);
@@ -67,7 +72,7 @@ void AllPairRoutingTable::addFlow(const int e, const int commodity_id, const dou
 
 void AllPairRoutingTable::eraseAt(int e, int idx) {
     assert(e >= 0 && e < (int)adj_vals.size());
-    auto& ids  = adj_ids[e];
+    auto& ids = adj_ids[e];
     auto& vals = adj_vals[e];
     ids.erase(ids.begin() + idx);
     vals.erase(vals.begin() + idx);
@@ -77,30 +82,30 @@ int AllPairRoutingTable::findIndexSorted(const std::vector<int>& ids, int commod
     const int len = (int)ids.size();
     int linear_bound = 8;
     for (int i = 0; i < std::min(len, linear_bound); ++i)
-        if (ids[i] == commodity_id) return i;
+        if (ids[i] == commodity_id)
+            return i;
 
     int lo = 0, hi = len;
     while (lo < hi) {
         int mid = (lo + hi) >> 1;
-        if (ids[mid] < commodity_id) lo = mid + 1;
-        else hi = mid;
+        if (ids[mid] < commodity_id)
+            lo = mid + 1;
+        else
+            hi = mid;
     }
     return (lo < len && ids[lo] == commodity_id) ? lo : -1;
 }
 
-
-
-
-double AllPairRoutingTable::getFlow(int e , int s, int t) const {
-    if ( s== t ) return 0.0;
+double AllPairRoutingTable::getFlow(int e, int s, int t) const {
+    if (s == t)
+        return 0.0;
     if (s > t) {
         return (-getFlow(e, t, s));
     }
     assert(e >= 0 && e < adj_vals.size());
-    auto& ids  = adj_ids[e];
+    auto& ids = adj_ids[e];
     auto& vals = adj_vals[e];
     int len = static_cast<int>(ids.size());
-
 
     int commodity_id = getCommodityID(n, s, t);
     assert(commodity_id != INVALID_COMMODITY_ID);
@@ -128,14 +133,12 @@ double AllPairRoutingTable::getFlow(int e , int s, int t) const {
     }
 }
 
-
-
 bool AllPairRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     const int m = adj_ids.size();
     for (int e = 0; e < m; ++e) {
         const auto& ids = adj_ids[e];
         for (size_t i = 1; i < ids.size(); ++i) {
-            if (ids[i] <= ids[i-1]) {
+            if (ids[i] <= ids[i - 1]) {
                 return false;
             }
         }
@@ -149,14 +152,15 @@ bool AllPairRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
         const auto& [u, v] = g.getEdgeEndpoints(e);
 
         for (int s = 0; s < n; ++s) { // By default the root node is 0
-            for ( int t = 0; t < n; ++t ) {
-                if ( s == t ) continue;
+            for (int t = 0; t < n; ++t) {
+                if (s == t)
+                    continue;
 
-                if ( u == s ) {
+                if (u == s) {
                     double flow = getFlow(e, s, t);
                     net_flow[{s, t}] += flow;
                 }
-                if ( v == s ) {
+                if (v == s) {
                     double flow = getFlow(e, s, t);
                     net_flow[{s, t}] += flow;
                 }
@@ -167,19 +171,18 @@ bool AllPairRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
     bool all_unit_flow = true;
     for (int s = 0; s < n; ++s) {
         for (int t = 0; t < n; ++t) {
-            if ( s == t ) continue;
+            if (s == t)
+                continue;
 
             if (s < t) {
                 if (std::abs(net_flow[{s, t}] - 1) > SOFT_EPS) {
                     all_unit_flow &= false;
-                    std::cout << "Commodity " << s << " -> " << t << " has net flow "
-                              << net_flow[{s, t}] << ")\n";
+                    std::cout << "Commodity " << s << " -> " << t << " has net flow " << net_flow[{s, t}] << ")\n";
                 }
-            }else {
+            } else {
                 if (std::abs(net_flow[{t, s}] - 1) > SOFT_EPS) {
                     all_unit_flow &= false;
-                    std::cout << "Commodity " << t << " -> " << s << " has net flow "
-                              << net_flow[{t, s}] << ")\n";
+                    std::cout << "Commodity " << t << " -> " << s << " has net flow " << net_flow[{t, s}] << ")\n";
                 }
             }
         }
@@ -190,7 +193,8 @@ bool AllPairRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
 void AllPairRoutingTable::printFlows(const optimized::Graph<EdgeData>& g) const {
     for (int s = 0; s < g.getNumNodes(); ++s) {
         for (int t = 0; t < g.getNumNodes(); ++t) {
-            if (s >= t) continue;
+            if (s >= t)
+                continue;
 
             std::cout << "Flows for commodity " << s << " -> " << t << ":\n";
             for (int e = 0; e < g.getNumDirectedEdges(); ++e) {
@@ -209,65 +213,89 @@ const int AllPairRoutingTable::getSize() const {
     return adj_ids.size();
 }
 
-
 void AllPairRoutingScheme::printRoutingTable() const {
     routing_table.printFlows(g);
 }
 
-
-double AllPairRoutingScheme::getFlow(int e, int s, int t) const{
+double AllPairRoutingScheme::getFlow(int e, int s, int t) const {
     int e_orig = e;
     return routing_table.getFlow(e_orig, s, t);
 }
 
 void AllPairRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
-    routing_table.addFlow(e, s,t, flow_sx);
+    routing_table.addFlow(e, s, t, flow_sx);
 }
 
-void AllPairRoutingScheme::routeDemands(
-    std::vector<double>& congestion,
-    const demands& demands
-) const {
-    const int m = g.getNumDirectedEdges();
+void AllPairRoutingScheme::routeDemands(std::vector<double>& congestion, const demands& demand_map) const {
+    const int m = g.globalEdgeCount() * 2;
     const int n = g.getNumNodes();
 
-    std::vector<double> directed_congestion(m, 0.0);
+    // One entry for every stable directed edge ID.
+    congestion.assign(m, 0.0);
 
-    for (int e = 0; e < m; ++e) {
-        double flow = 0.0;
+    for (int e = 0; e < m; e += 2) {
+
+        // A failed physical link cannot carry traffic.
+        if (!g.edgeAlive(e))
+            continue;
+
+        const int reverse = g.reverse(e).id;
+
+        double forward_load = 0.0;
+        double reverse_load = 0.0;
 
         for (int s = 0; s < n; ++s) {
             for (int t = 0; t < n; ++t) {
-                if (s == t) {
+
+                if (s == t)
                     continue;
-                }
 
-                const auto demandValueOpt = demands.getDemandValue(s, t);
+                const auto demand_value = demand_map.getDemandValue(s, t);
 
-                if (!demandValueOpt || *demandValueOpt <= 0.0) {
+                if (!demand_value || *demand_value <= 0.0)
                     continue;
-                }
 
-                flow += *demandValueOpt * std::abs(
-                    routing_table.getFlow(e, s, t)
-                );
+                const double demand = *demand_value;
+
+                forward_load += demand * std::abs(routing_table.getFlow(e, s, t));
+
+                reverse_load += demand * std::abs(routing_table.getFlow(reverse, s, t));
             }
         }
 
-        directed_congestion[e] = flow / g.edgeData(e).capacity;
-    }
+        // Preserve the existing physical-link aggregation:
+        // total load over both directed orientations.
+        const double physical_load = forward_load + reverse_load;
 
-    congestion.assign(m, 0.0);
+        const double capacity = g.edgeData(e).capacity;
 
-    for (int e = 0; e < m; ++e) {
-        const auto& [u, v] = g.getEdgeEndpoints(e);
-        const int undirected_idx = (u < v ? e : g.reverse(e).id);
+        const double reverse_capacity = g.edgeData(reverse).capacity;
 
-        congestion[undirected_idx] += directed_congestion[e];
+        if (!std::isfinite(capacity) || !std::isfinite(reverse_capacity) || capacity <= 0.0 || reverse_capacity <= 0.0) {
+            // The interface currently returns void, so a
+            // proper Result-based error mechanism would
+            // be preferable for invalid graph data.
+            throw std::runtime_error("Invalid physical-link capacity.");
+        }
+
+        congestion[e] = physical_load / capacity;
+
+        congestion[reverse] = physical_load / reverse_capacity;
     }
 }
 
-
 bool AllPairRoutingScheme::isValid() {
+    for (int e = 0; e < g.globalEdgeCount() * 2; ++e) {
+
+        if (!g.edgeAlive(e)) {
+            // Inactive edges must not participate in
+            // flow-conservation evaluation.
+            continue;
+        }
+
+        const auto [u, v] = g.getEdgeEndpoints(e);
+
+        // Existing flow-conservation validation...
+    }
     return routing_table.isValid(g);
 }

@@ -5,45 +5,36 @@
 #ifndef OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
 #define OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
 
-
 #ifdef OR_ENABLE_OPENMP
 #include <omp.h>
 #endif
 #include <vector>
 
-#include <amgcl/backend/builtin.hpp>
-#include <amgcl/amg.hpp>
-#include <amgcl/adapter/crs_tuple.hpp>
-#include <amgcl/coarsening/smoothed_aggregation.hpp>
-#include <amgcl/relaxation/spai0.hpp>
-#include <amgcl/coarsening/runtime.hpp>
-#include <amgcl/relaxation/runtime.hpp>
 #include "amgcl/coarsening/runtime.hpp"
 #include "amgcl/solver/runtime.hpp"
+#include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/amg.hpp>
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/coarsening/smoothed_aggregation.hpp>
 #include <amgcl/make_solver.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/relaxation/spai0.hpp>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <Eigen/Dense>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 
+#include "core/errors.h"
 #include "data_structures/graph/graph.h"
 #include "graph_to_laplacian.h"
 #include "utils/my_math.h"
-#include "core/errors.h"
-
 
 class LaplacianSolver {
-protected:
+  protected:
     using Backend = amgcl::backend::builtin<double>;
 
-    typedef amgcl::make_solver<
-        amgcl::amg<
-            Backend,
-            amgcl::runtime::coarsening::wrapper,
-            amgcl::runtime::relaxation::wrapper
-        >,
-        amgcl::runtime::solver::wrapper<Backend>
-    > AMG;
+    typedef amgcl::make_solver<amgcl::amg<Backend, amgcl::runtime::coarsening::wrapper, amgcl::runtime::relaxation::wrapper>, amgcl::runtime::solver::wrapper<Backend>> AMG;
 
     GraphToLaplacian weight_model;
 
@@ -66,7 +57,7 @@ protected:
     std::vector<double> rhs_buffer, potential_buffer;
     static constexpr int num_internal_threads = 1;
 
-public:
+  public:
     LaplacianSolver() {
         n = 0;
         use_dirichlet = true;
@@ -76,37 +67,32 @@ public:
 
     virtual ~LaplacianSolver() = default;
 
+    Result<void> init(optimized::Graph<EdgeData>& g, std::vector<double>& _adj_edge_weights, int n, const std::vector<std::pair<int, int>>& edges, bool debug = false);
 
-    void init(optimized::Graph<EdgeData>&g, std::vector<double> &_adj_edge_weights, int n, const std::vector<std::pair<int, int> > &edges,bool debug = false);
+    Result<void> init(int n, const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, bool debug = false);
 
-    void init(int n,
-          const std::vector<std::pair<int, int>>& edges,
-          const std::vector<double>& edge_weights,
-          bool debug = false);
-
-    Result<void> initGrounded(int n, const std::vector<std::pair<int, int>>& edges,  const std::vector<double>& edge_weights, int grounded_node);
+    Result<void> initGrounded(int n, const std::vector<std::pair<int, int>>& edges, const std::vector<double>& edge_weights, int grounded_node);
 
     void updateSolver();
 
-    Result<void> updateAllEdges(const std::vector<double> &new_weights, const std::vector<std::pair<int, int> > &edges);
+    Result<void> updateAllEdges(const std::vector<double>& new_weights, const std::vector<std::pair<int, int>>& edges);
 
-    void buildLaplacian();
+    Result<void> buildLaplacian();
 
-    Result<std::vector<double> > solve(const std::vector<double> &b, double eps = EPS);
+    Result<std::vector<double>> solve(const std::vector<double>& b, double eps = EPS);
 
-    Result<Eigen::VectorXd> solve(const Eigen::VectorXd &b, double eps = EPS);
+    Result<Eigen::VectorXd> solve(const Eigen::VectorXd& b, double eps = EPS);
 
+    bool allFinite(const std::vector<double>& vec);
+    void setSolverParams(const boost::property_tree::ptree& new_params);
 
-    bool allFinite(const std::vector<double> &vec);
-    void setSolverParams(const boost::property_tree::ptree &new_params);
+    void print_params(const boost::property_tree::ptree& prm);
 
-    void print_params(const boost::property_tree::ptree &prm);
-
-    void applyDirichletInPlace(std::vector<double> &vals);
+    void applyDirichletInPlace(std::vector<double>& vals);
 };
 
 class OpenMPThreadGuard {
-public:
+  public:
     explicit OpenMPThreadGuard(int temporaryThreads) {
 #ifdef OR_ENABLE_OPENMP
         previousThreads = omp_get_max_threads();
@@ -127,7 +113,7 @@ public:
 #endif
     }
 
-private:
+  private:
 #ifdef OR_ENABLE_OPENMP
     int previousThreads = 1;
     int previousDynamic = 0;
@@ -135,4 +121,4 @@ private:
 #endif
 };
 
-#endif //OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H
+#endif // OBLIVIOUSROUTING_LAPLACIAN_SOLVER_H

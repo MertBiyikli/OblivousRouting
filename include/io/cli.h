@@ -9,6 +9,7 @@
 #include "parse_argument_io.h"
 #include <boost/program_options.hpp>
 #include "core/config.h"
+#include <unordered_set>
 
 
 enum class Action {
@@ -128,6 +129,7 @@ boost::program_options::options_description solveOptions() {
 
         ("demand-scale", boost::program_options::value<double>()->default_value(1.0), "Demand multiplier for persisted routing analysis")
         ("capacity-upgrade", boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(), "Physical link capacity multiplier as edge_id:factor")
+        ("link-failure",boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(),"Simulate physical link failures using edge IDs, ""e.g. --link-failure 14 20 24")
 
 
         ("visualization",
@@ -440,6 +442,36 @@ inline Result<Command> parse(int argc, char** argv)
                 }
             }
         }
+
+
+
+        std::vector<int> failedLinks;
+
+        if (variables.count("link-failure")) {
+            const auto& tokens = variables["link-failure"].as<std::vector<std::string>>();
+            std::unordered_set<int> seen;
+
+            for (const auto& token : tokens) {
+                try {
+                    std::size_t used = 0;
+
+                    const int edgeId = std::stoi(token, &used);
+
+                    if (used != token.size() || edgeId < 0) {
+                        return makeErrorMessage(ErrorCode::InvalidArgument,"Invalid link failure edge ID: " + token);
+                    }
+
+                    if (!seen.insert(edgeId).second) {
+                        return makeErrorMessage(ErrorCode::InvalidArgument,"Duplicate link failure edge ID: " + token);
+                    }
+
+                    failedLinks.push_back(edgeId);
+                } catch (const std::exception&) {
+                    return makeErrorMessage(ErrorCode::InvalidArgument,"Invalid link failure edge ID: " + token);
+                }
+            }
+        }
+
 /*
         if ((demandScale != 1.0 || !upgrades.empty()) && !variables.count("load-routing-table")) {
             return makeErrorMessage(ErrorCode::InvalidArgument, "Traffic/capacity scenarios currently require --load-routing-table");
@@ -535,7 +567,8 @@ inline Result<Command> parse(int argc, char** argv)
             .routing_table_output_directory = std::move(routingTableDirectory),
             .visualization_output_directory =std::move(visualizationDirectory),
             .demand_scale = demandScale,
-            .capacity_upgrades = std::move(upgrades)
+            .capacity_upgrades = std::move(upgrades),
+            .failed_links = std::move(failedLinks)
         };
         return Command{ .action = Action::Run,.config = std::move(config)};
     } catch (const boost::program_options::error& error) {

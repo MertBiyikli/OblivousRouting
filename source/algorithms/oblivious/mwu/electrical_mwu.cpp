@@ -34,7 +34,10 @@ Result<void> ElectricalMWU::init(bool debug, boost::property_tree::ptree _params
     this->inv_m = 1.0 / static_cast<double>(m);
     this->x_fixed = 0;
 
-    initEdgeDistances();
+    auto res = initEdgeDistances();
+    if (!res) {
+        return getError(res);
+    }
 
     boost::property_tree::ptree params = make_amg_params();
     auto amg_init = initAMGSolver(params);
@@ -65,7 +68,10 @@ Result<void> ElectricalMWU::initAMGSolver(boost::property_tree::ptree _params) {
     }
     // tor parsing the configuration file for the AMG solver, e.g. coarsening and relaxation types
     amg->setSolverParams(_params);
-    amg->init(graph, edge_weights, n, edges, debug);
+    auto init_amg = amg->init(graph, edge_weights, n, edges, debug);
+    if (!init_amg) {
+        return getError(init_amg);
+    }
     return {};
 }
 
@@ -129,49 +135,49 @@ Result<void> ElectricalMWU::run(LinearRoutingTable& table) {
         }
 
         metrics.load_computation_time += duration(timeNow() - t0);
-/*
-        if (use_sketching && t == 0) {
-            std::vector<double> exact_load(m, 0.0);
+        /*
+                if (use_sketching && t == 0) {
+                    std::vector<double> exact_load(m, 0.0);
 
-            auto exact_result = getExactLoad(exact_load);
-            if (!exact_result)
-                return getError(exact_result);
+                    auto exact_result = getExactLoad(exact_load);
+                    if (!exact_result)
+                        return getError(exact_result);
 
-            for (int e = 0; e < m; ++e) {
-                std::cout
-                    << "[SKETCH_EXACT]"
-                    << " edge=" << e
-                    << " approx=" << load[e]
-                    << " exact=" << exact_load[e]
-                    << '\n';
-            }
-        }
+                    for (int e = 0; e < m; ++e) {
+                        std::cout
+                            << "[SKETCH_EXACT]"
+                            << " edge=" << e
+                            << " approx=" << load[e]
+                            << " exact=" << exact_load[e]
+                            << '\n';
+                    }
+                }
 
 
-        if (debug && use_sketching && t == 0) {
-            std::vector<double> exact_load(m, 0.0);
+                if (debug && use_sketching && t == 0) {
+                    std::vector<double> exact_load(m, 0.0);
 
-            auto exact_result = getExactLoad(exact_load);
-            if (!exact_result)
-                return getError(exact_result);
+                    auto exact_result = getExactLoad(exact_load);
+                    if (!exact_result)
+                        return getError(exact_result);
 
-            for (int e = 0; e < m; ++e) {
-                std::cout << "[SKETCH_EXACT]"
-                          << " edge=" << e << " approx=" << load[e] << " exact=" << exact_load[e] << '\n';
-            }
-        }
-        if (use_sketching && t == 0) {
-            std::vector<double> exact_load(m, 0.0);
+                    for (int e = 0; e < m; ++e) {
+                        std::cout << "[SKETCH_EXACT]"
+                                  << " edge=" << e << " approx=" << load[e] << " exact=" << exact_load[e] << '\n';
+                    }
+                }
+                if (use_sketching && t == 0) {
+                    std::vector<double> exact_load(m, 0.0);
 
-            auto result = getExactLoad(exact_load);
-            if (!result)
-                return getError(result);
+                    auto result = getExactLoad(exact_load);
+                    if (!result)
+                        return getError(result);
 
-            for (int e = 0; e < m; ++e) {
-                std::cout << "[SKETCH_EXACT]"
-                          << " edge=" << e << " approx=" << load[e] << " exact=" << exact_load[e] << '\n';
-            }
-        }*/
+                    for (int e = 0; e < m; ++e) {
+                        std::cout << "[SKETCH_EXACT]"
+                                  << " edge=" << e << " approx=" << load[e] << " exact=" << exact_load[e] << '\n';
+                    }
+                }*/
         t0 = timeNow();
         auto update = updateDistances(load);
         if (!update) {
@@ -288,15 +294,15 @@ Result<void> ElectricalMWU::getApproxLoad(std::vector<double>& load) {
         const double med = arr[ell >> 1];
         load[e] = (edge_weights[e] / edge_capacities[e]) * med;
     }
-/*
-    for (int e = 0; e < m; ++e) {
-        const auto [u, v] = edges[e];
+    /*
+        for (int e = 0; e < m; ++e) {
+            const auto [u, v] = edges[e];
 
-        const int directed_id = graph.edgeId(u, v);
+            const int directed_id = graph.edgeId(u, v);
 
-        std::cout << "Electrical index: " << e << " | Directed edge ID: " << directed_id << " | Endpoints: " << u << " -> " << v << " | Assigned capacity: " << edge_capacities[e]
-                  << " | Graph capacity: " << graph.edgeData(directed_id).capacity << '\n';
-    }*/
+            std::cout << "Electrical index: " << e << " | Directed edge ID: " << directed_id << " | Endpoints: " << u << " -> " << v << " | Assigned capacity: " << edge_capacities[e]
+                      << " | Graph capacity: " << graph.edgeData(directed_id).capacity << '\n';
+        }*/
 
     return {};
 }
@@ -383,9 +389,16 @@ Result<void> ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
 
     if (metrics.iteration_count > 0) {
         const double inv_iters = 1.0 / static_cast<double>(metrics.iteration_count);
-        for (int e = 0; e < graph.getNumDirectedEdges(); ++e) // dont use m here. m is undirected edges only
-            for (double& val : table.src_flows[e])
-                val *= (inv_iters);
+        const int stable_bound = graph.globalEdgeCount() * 2;
+
+        for (int e = 0; e < stable_bound; ++e) {
+            if (!graph.edgeAlive(e))
+                continue;
+
+            for (double& value : table.src_flows[e]) {
+                value *= inv_iters;
+            }
+        }
     } else {
         return makeErrorMessage(ErrorCode::NumericalFailure, "Dividing by zero.");
     }
@@ -393,8 +406,14 @@ Result<void> ElectricalMWU::scaleFlowDown(LinearRoutingTable& table) {
     return {};
 }
 
-void ElectricalMWU::initEdgeDistances() {
-    extractEdges();
+Result<void> ElectricalMWU::initEdgeDistances() {
+    auto res = extractEdges();
+    if (!res) {
+        return getError(res);
+    }
+    if (edges.size() != static_cast<std::size_t>(m)) {
+        return makeErrorMessage(ErrorCode::RuntimeError,"ElectricalMWU: invalid compact edge count.");
+    }
 
     edge_distances.assign(m, 1.0);
     edge_capacities.resize(m);
@@ -414,7 +433,7 @@ void ElectricalMWU::initEdgeDistances() {
         const double cap = graph.edgeData(directed_id).capacity;
 
         if (!std::isfinite(cap) || cap <= 0.0) {
-            throw std::runtime_error("Invalid electrical edge capacity");
+            return makeErrorMessage(ErrorCode::RuntimeError, "Invalid electrical edge capacity");
         }
 
         edge_capacities[e] = cap;
@@ -431,27 +450,40 @@ void ElectricalMWU::initEdgeDistances() {
         const double expected = graph.edgeData(id).capacity;
 
         if (std::abs(edge_capacities[e] - expected) > 1e-12 * std::max(1.0, std::abs(expected))) {
-            throw std::runtime_error("Electrical capacity mapping mismatch");
+            return makeErrorMessage(ErrorCode::RuntimeError, "Electrical capacity mapping mismatch");
         }
     }
+    return {};
 }
 
-void ElectricalMWU::extractEdges() {
-    // in edges we only store the undirected edges
-    edges.reserve(m);
-    for (int e = 0; e < graph.getNumDirectedEdges(); e++) {
-        auto [u, v] = graph.getEdgeEndpoints(e);
+Result<void> ElectricalMWU::extractEdges() {
+    edges.clear();
+    edges.reserve(graph.getNumUndirectedEdges());
+
+    const int stable_bound = graph.globalEdgeCount() * 2;
+
+    for (int e = 0; e < stable_bound; e += 2) {
+
+        // Physical link has been removed.
+        if (!graph.edgeAlive(e))
+            continue;
+
+        const auto [u, v] = graph.getEdgeEndpoints(e);
+
+        // Maintain canonical orientation u < v.
         if (u < v) {
             edges.emplace_back(u, v);
+        } else {
+            edges.emplace_back(v, u);
         }
     }
 
-    // sort the edges based on the first node, then second node
-    std::sort(edges.begin(), edges.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
-        if (a.first != b.first)
-            return a.first < b.first;
-        return a.second < b.second;
-    });
+    std::sort(edges.begin(), edges.end());
+
+    if (edges.size() != static_cast<std::size_t>(graph.getNumUndirectedEdges())) {
+        return makeErrorMessage(ErrorCode::RuntimeError, "ElectricalMWU: extracted edge count does not match active physical edges.");
+    }
+    return {};
 }
 
 Eigen::SparseMatrix<double> ElectricalMWU::buildIncidence() {
@@ -480,7 +512,7 @@ Eigen::MatrixXd ElectricalMWU::getSketchMatrix(double eps) {
     int l = (c / (epsilon * epsilon) * std::log(1.0 / delta));
 
     std::random_device rd;
-    std::mt19937_64 gen(rd());
+    std::mt19937_64 gen(random_seed);
     std::cauchy_distribution<double> dist(0.0, 1.0);
 
     Eigen::MatrixXd C(l, m);

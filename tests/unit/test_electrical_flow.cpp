@@ -290,3 +290,28 @@ TEST_CASE("LaplacianSolver - Zero RHS", "[LaplacianSolver]") {
     REQUIRE(solution.value().size() == 4);
 }
 
+TEST_CASE(
+    "Electrical graph preserves surviving high IDs",
+    "[ElectricalMWU][LinkFailure]"
+) {
+    auto graph = createScenarioTestGraph();
+
+    const auto checkpoint = graph.checkpoint();
+
+    REQUIRE(graph.globalEdgeCount() == 4);
+
+    REQUIRE(graph.removeEdge(2));
+
+    CHECK_FALSE(graph.edgeAlive(2));
+    CHECK_FALSE(graph.edgeAlive(3));
+
+    CHECK(graph.edgeAlive(4));
+    CHECK(graph.edgeAlive(5));
+    CHECK(graph.edgeAlive(6));
+    CHECK(graph.edgeAlive(7));
+
+    CHECK(graph.getNumDirectedEdges() == 6);
+    CHECK(graph.globalEdgeCount() * 2 == 8);
+
+    REQUIRE(graph.rollback(checkpoint).has_value());
+}
