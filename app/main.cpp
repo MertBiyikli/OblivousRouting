@@ -3,6 +3,8 @@
 
 #include "analysis/capacity_upgrade/capacity_upgrade.h"
 #include "analysis/failures/link_failures.h"
+#include "analysis/resilience/resilience_analyzer.h"
+#include "analysis/resilience/resilience_result_json.h"
 #include "analysis/scenario_engine.h"
 #include "analysis/scenario_result_json.h"
 #include "io/result_io.h"
@@ -34,11 +36,45 @@ int main(int argc, char** argv) {
         return 0;
 
     case Action::Run:
+    case Action::AnalyzeN1:
+    case Action::AnalyzeTraffic:
         break;
     }
 
     // Running engine
     auto cfg = cmd.value().config;
+    // ------------------------------------------------------------
+    // N-1 network resilience analysis
+    // ------------------------------------------------------------
+    if (cmd->action == Action::AnalyzeN1) {
+
+        // Load the original network using the existing graph loader.
+        auto loadedGraph = load_graph_optimized(cfg);
+
+        if (!loadedGraph) {
+            std::cerr << "Error loading N-1 graph: " << loadedGraph.error().message << '\n';
+            return 1;
+        }
+
+        optimized::Graph<EdgeData> graph = *loadedGraph.value();
+
+        // Execute one prepared baseline and independent link failures.
+        // Serialize the result into the requested JSON file.
+        auto analysis = analyzeN1(graph, cfg, cmd->execution_mode);
+        if (!analysis) {
+            std::cerr << getError(analysis).error().message << '\n';
+        }
+        auto written = ResilienceResultJsonWriter::write(analysis.value(), cfg.output_filename);
+
+        if (!written) {
+            std::cerr << "N-1 analysis error: " << getError(written).error().message << '\n';
+            return 1;
+        }
+
+        std::cout << "N-1 report written to: " << cfg.output_filename << '\n';
+
+        return 0;
+    }
 
     if (!cfg.routing_table_input_file.empty()) {
         auto loadedGraph = load_graph_optimized(cfg);
@@ -81,6 +117,99 @@ int main(int argc, char** argv) {
         result.oblivious_ratio = -1.0;
         result.scheme = std::move(imported.value());
 
+        if (cmd->action == Action::AnalyzeTraffic) {
+            // Build the baseline independently of the requested growth.
+            Config baselineConfig = cfg;
+            baselineConfig.demand_scale = 1.0;
+
+            auto generated = ScenarioEngine::computeTotalDemandVolume(graph, baselineConfig);
+
+            if (!generated) {
+                std::cerr << "Traffic demand generation error: " << getError(generated).error().message << '\n';
+                return 1;
+            }
+
+            TrafficGrowth scenario;
+
+            auto configured = scenario.setGlobalScale(cfg.demand_scale);
+
+            if (!configured) {
+                std::cerr << "Traffic configuration error: " << getError(configured).error().message << '\n';
+                return 1;
+            }
+
+            // Apply directed source-target demand multipliers.
+            for (const auto& override : cmd->commodity_scales) {
+                auto added = scenario.growPerCommodity(
+                    override.source,
+                    override.target,
+                    override.factor
+                );
+
+                if (!added) {
+                    std::cerr
+                        << "Invalid commodity override ("
+                        << override.source << ", "
+                        << override.target << "): "
+                        << getError(added).error().message
+                        << '\n';
+
+                    return 1;
+                }
+            }
+
+            auto analysis = ScenarioEngine::evaluateTrafficGrowth(graph, result, generated.value().first, scenario);
+
+            if (!analysis) {
+                std::cerr << "Traffic analysis error: " << getError(analysis).error().message << '\n';
+                return 1;
+            }
+
+
+            // Record the transformation the user actually requested.
+            // These fields describe inputs, not derived congestion metrics.
+            analysis->requested_global_scale = cfg.demand_scale;
+
+            analysis->commodity_overrides.clear();
+            analysis->commodity_overrides.reserve(
+                cmd->commodity_scales.size()
+            );
+
+            for (const auto& item : cmd->commodity_scales) {
+                analysis->commodity_overrides.push_back({
+                    item.source,
+                    item.target,
+                    item.factor
+                });
+            }
+
+            // Canonicalize output order for reproducible reports.
+            std::sort(
+                analysis->commodity_overrides.begin(),
+                analysis->commodity_overrides.end(),
+                [](const auto& a, const auto& b) {
+                    return std::tie(a.source, a.target) <
+                           std::tie(b.source, b.target);
+                }
+            );
+
+
+            auto written = TrafficGrowthResultJsonWriter::write(analysis.value(), cfg.output_filename);
+
+            if (!written) {
+                std::cerr << "Traffic report error: " << getError(written).error().message << '\n';
+                return 1;
+            }
+
+            std::cout << "Traffic analysis report written to: " << cfg.output_filename << '\n';
+
+            std::cout << "Baseline max congestion: " << analysis->baseline.max_congestion << '\n';
+
+            std::cout << "Modified max congestion: " << analysis->modified.max_congestion << '\n';
+
+            return 0;
+        }
+
         if (cfg.evaluate_demand_models) {
 
             auto evaluation = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis, cfg.demand_scale);
@@ -109,15 +238,49 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+
     RoutingEngine engine;
     auto res = engine.entry(cfg);
 
     if (!res) {
-        std::cerr << "Error: " << getError(res).error().message << '\n';
+        std::cerr
+            << "Error: "
+            << getError(res).error().message
+            << '\n';
+        return 1;
+    }
+
+    if (!engine.m_graph) {
+        std::cerr << "Error: RoutingEngine returned no graph.\n";
         return 1;
     }
 
     optimized::Graph<EdgeData>& graph = *engine.m_graph;
+
+    // ------------------------------------------------------------
+    // Persist newly computed routing schemes when requested.
+    // ------------------------------------------------------------
+    if (!cfg.routing_table_output_directory.empty()) {
+        auto exported = RoutingTableExporter::save(
+            res.value(),
+            graph,
+            cfg.routing_table_output_directory
+        );
+
+        if (!exported) {
+            std::cerr
+                << "Routing table export error: "
+                << getError(exported).error().message
+                << '\n';
+            return 1;
+        }
+
+        std::cout
+            << "Routing tables exported to: "
+            << cfg.routing_table_output_directory
+            << '\n';
+    }
+
 
     // Obtain the graph when exporting routing tables
     // or executing a scenario.
@@ -132,7 +295,7 @@ int main(int argc, char** argv) {
 
         ScenarioEngine scenario_engine;
 
-        ExecutionMode scenario_mode = ExecutionMode::FAST;
+        ExecutionMode scenario_mode = cmd->execution_mode;
 
         if (const char* value = std::getenv("ER_SCENARIO_EXECUTION_MODE")) {
 
@@ -163,11 +326,9 @@ int main(int argc, char** argv) {
             if (!result)
                 return getError(result);
 
-
             std::filesystem::path reportPath;
 
-            const bool isCapacity =
-                scenario.kind() == ScenarioKind::CAPACITY_UPGRADE;
+            const bool isCapacity = scenario.kind() == ScenarioKind::CAPACITY_UPGRADE;
 
             // Default paths for the individual scenario types.
             if (isCapacity) {
@@ -177,8 +338,7 @@ int main(int argc, char** argv) {
             }
 
             // Allow callers and integration tests to override the path.
-            if (const char* configuredPath =
-                    std::getenv("ER_SCENARIO_REPORT_PATH")) {
+            if (const char* configuredPath = std::getenv("ER_SCENARIO_REPORT_PATH")) {
 
                 if (*configuredPath != '\0') {
                     reportPath = configuredPath;
@@ -186,33 +346,24 @@ int main(int argc, char** argv) {
                     // Both scenarios may execute in one CLI invocation.
                     // Give each scenario its own output file.
                     if (hasCapacityUpgrades && hasLinkFailures) {
-                        const std::string suffix =
-                            isCapacity ? "_capacity" : "_failure";
+                        const std::string suffix = isCapacity ? "_capacity" : "_failure";
 
                         const auto parent = reportPath.parent_path();
                         const auto stem = reportPath.stem().string();
                         const auto extension = reportPath.extension().string();
 
-                        reportPath =
-                            parent / (stem + suffix +
-                                      (extension.empty() ? ".json" : extension));
+                        reportPath = parent / (stem + suffix + (extension.empty() ? ".json" : extension));
                     }
                 }
-                    }
+            }
 
-            auto written = ScenarioResultJsonWriter::write(
-                result.value(),
-                reportPath
-            );
+            auto written = ScenarioResultJsonWriter::write(result.value(), reportPath);
 
             if (!written) {
                 return getError(written);
             }
 
-            std::cout
-                << "Scenario JSON written to: "
-                << reportPath
-                << '\n';
+            std::cout << "Scenario JSON written to: " << reportPath << '\n';
 
             return {};
         };

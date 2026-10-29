@@ -3,6 +3,8 @@
 //
 
 #include "analysis/fixed_routing_scenario.h"
+#include <cmath>
+#include <unordered_set>
 
 Result<RoutingVisualizationResult> transformScenario(const RoutingVisualizationResult& baseline, double demandScale, const std::unordered_map<int, double>& capacityFactors) {
     if (demandScale <= 0 || !std::isfinite(demandScale)) {

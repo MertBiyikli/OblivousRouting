@@ -118,7 +118,7 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>
         FailureRecoveryAnalysis recovery_analysis;
 
         bool recovery_available = false;
-
+/*
         if (cfg.failure_recovery) {
             auto recovery = FailureRecoveryAnalyzer::analyze(graph, type, dmap.value(), demandType, analysis.summary.maximum_congestion);
 
@@ -130,6 +130,7 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>
 
             recovery_available = true;
         }
+        */
         semiResult.demand_evaluations.emplace_back(DemandEvaluationResult{
             .demand_type = demandType,
 

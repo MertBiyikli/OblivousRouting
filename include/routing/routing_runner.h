@@ -5,11 +5,12 @@
 #ifndef OBLIVIOUSROUTING_ROUTING_RUNNER_H
 #define OBLIVIOUSROUTING_ROUTING_RUNNER_H
 
+#include "analysis/scenario_engine.h"
 #include "core/errors.h"
 #include "io/parse_argument_io.h"
 #include "routing_result.h"
-#include "visualization/failure_recover_analysis.h"
-#include "visualization/visualization_result.h"
+
+#include "analysis/visualization_result.h"
 
 class IRoutingExperimentRunner {
   public:
@@ -20,7 +21,8 @@ class IRoutingExperimentRunner {
 
 class DemandEvaluator {
   public:
-    static Result<void> evaluate(optimized::Graph<EdgeData>& graph, const std::unique_ptr<RoutingScheme>& scheme, const Config& cfg, IRoutingResult& result, bool run_failure_analysis = false, double demand_scale = 1.0) {
+    static Result<void> evaluate(optimized::Graph<EdgeData>& graph, const std::unique_ptr<RoutingScheme>& scheme, const Config& cfg, IRoutingResult& result, bool run_failure_analysis = false,
+                                 double demand_scale = 1.0) {
         if (!cfg.evaluate_demand_models) {
             return makeErrorMessage(ErrorCode::InvalidDemand, "Evaluating demand model is set off.");
         }
@@ -42,7 +44,6 @@ class DemandEvaluator {
                 return getError(dmap);
             }
 
-
             if (!std::isfinite(demand_scale) || demand_scale <= 0.0) {
                 return makeErrorMessage(ErrorCode::InvalidArgument, "Demand scale must be finite and positive");
             }
@@ -62,77 +63,49 @@ class DemandEvaluator {
 
             dmap = std::move(scaledDemands);
 
+            const auto evaluation_start = std::chrono::steady_clock::now();
 
-            /*
-             * RoutingAnalyzer now measures:
-             *
-             * 1. normal demand evaluation runtime
-             * 2. failure-analysis runtime
-             *
-             * independently.
-             */
-            auto visualization = RoutingAnalyzer::analyze(graph, *scheme, dmap.value(), result, demandModelName(demandType), run_failure_analysis);
+            auto evaluated = DemandEvaluator::evaluate(graph, result, dmap.value());
 
-            if (!visualization) {
-                return getError(visualization);
+            if (!evaluated) {
+                return getError(evaluated);
             }
 
-            const auto& analysis = visualization.value();
+            const auto evaluation_end = std::chrono::steady_clock::now();
 
-            FailureRecoveryAnalysis recovery_analysis;
-            bool recovery_available = false;
+            DemandEvaluationResult summary{};
 
-            // Layer 2: Optional N-1 recovery analysis.
-            if (cfg.failure_recovery) {
-                auto recovery = FailureRecoveryAnalyzer::analyze(graph, result.type, dmap.value(), demandType, analysis.summary.maximum_congestion);
+            summary.demand_type = demandType;
+            summary.congestion = evaluated->max_congestion;
 
-                if (!recovery) {
-                    return getError(recovery);
-                }
+            summary.runtime_microseconds = std::chrono::duration<double, std::micro>(evaluation_end - evaluation_start).count();
 
-                recovery_analysis = std::move(recovery.value());
-                recovery_available = true;
-            }
 
-            // Always record the demand evaluation.
-            DemandEvaluationResult evaluation{};
 
-            evaluation.demand_type = demandType;
-            evaluation.congestion = analysis.summary.maximum_congestion;
-            evaluation.runtime_microseconds = analysis.demand_evaluation_runtime_microseconds;
-
-            // Only populate Layer-1 failure metrics when requested.
-            if (cfg.failure_analysis) {
-                const auto& failure_summary = analysis.failure_summary;
-
-                evaluation.failure_analysis_runtime_microseconds = analysis.failure_analysis_runtime_microseconds;
-                evaluation.failure_tested_links = failure_summary.tested_links;
-                evaluation.failure_most_critical_edge_id = failure_summary.most_critical_edge_id;
-                evaluation.failure_most_critical_source = failure_summary.most_critical_source;
-                evaluation.failure_most_critical_target = failure_summary.most_critical_target;
-                evaluation.failure_maximum_lost_traffic_fraction = failure_summary.maximum_lost_traffic_fraction;
-                evaluation.failure_average_lost_traffic_fraction = failure_summary.average_lost_traffic_fraction;
-                evaluation.failure_median_lost_traffic_fraction = failure_summary.median_lost_traffic_fraction;
-                evaluation.failure_maximum_affected_demand_fraction = failure_summary.maximum_affected_demand_fraction;
-                evaluation.failure_traffic_carrying_links = failure_summary.traffic_carrying_links;
-                evaluation.failure_critical_links_10_percent = failure_summary.critical_links_10_percent;
-                evaluation.failure_critical_links_25_percent = failure_summary.critical_links_25_percent;
-                evaluation.failure_critical_links_50_percent = failure_summary.critical_links_50_percent;
-            }
-
-            // Preserve the existing recovery assignments from your original
-            // initializer, using recovery_available and recovery_analysis.
-            evaluation.failure_recovery_available = recovery_available;
-
-            if (recovery_available) {
-                evaluation.recovery_events = std::move(recovery_analysis.failures);
-            }
-
-            result.demand_evaluations.push_back(std::move(evaluation));
-            result.visualization_results.push_back(std::move(visualization.value()));
+            result.demand_evaluations.push_back(std::move(summary));
         }
 
         return {};
+    }
+
+    static Result<NetworkData> evaluate(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& demand) {
+        double total_volume = 0.0;
+
+        for (std::size_t i = 0; i < demand.size(); ++i) {
+            const double value = demand.getDemandValue(i);
+
+            if (!std::isfinite(value) || value < 0.0) {
+                return makeErrorMessage(ErrorCode::InvalidDemand, "Demand must be finite and nonnegative.");
+            }
+
+            total_volume += value;
+
+            if (!std::isfinite(total_volume)) {
+                return makeErrorMessage(ErrorCode::InvalidDemand, "Total demand volume overflow.");
+            }
+        }
+
+        return evaluateRouting(graph, routing, demand, total_volume);
     }
 };
 

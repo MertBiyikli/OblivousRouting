@@ -51,7 +51,7 @@
         }
 
         .large-network-analysis[hidden] {
-            display: none;
+            display: none !important;
         }
 
         .analysis-heading {
@@ -595,7 +595,56 @@
             </div>
         </div>
 
-        <div class="mode">Traffic & capacity planning</div>
+        <div class="field">
+            <label for="analysis-type">Analysis type</label>
+            <select id="analysis-type">
+                <option value="capacity_upgrade">
+                    Capacity Planning
+                </option>
+                <option value="link_failure">
+                    Link Failure & Resilience
+                </option>
+                <option value="n1_resilience">
+                    N−1 Network Resilience
+                </option>
+                <option value="traffic_growth">
+                    Traffic Growth
+                </option>
+            </select>
+            <div class="help" id="analysis-type-help">
+                Evaluate capacity changes and traffic demand
+                using the registered network.
+            </div>
+        </div>
+
+        <div class="field" id="execution-mode-config">
+            <label for="execution-mode">Execution mode</label>
+            <select id="execution-mode">
+                <option value="fast">FAST</option>
+                <option value="standard">STANDARD</option>
+                <option value="research">RESEARCH</option>
+            </select>
+            <div class="help">
+                Controls analysis depth and selected solver execution.
+            </div>
+        </div>
+
+        <div class="field" id="failure-config" hidden>
+            <label for="failed-edge">Failed physical link</label>
+
+            <input
+                    id="failed-edge"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="Select a link or enter its edge ID"
+            >
+
+            <div class="help">
+                Simulate the failure of one physical link.
+                Routing will be recomputed on the surviving network.
+            </div>
+        </div>
         <div class="small">Scenario configuration</div>
         <div class="field"><label for="demand">Demand model</label><select id="demand">
             <option>uniform</option>
@@ -603,31 +652,91 @@
             <option>bimodal</option>
             <option>gaussian</option>
         </select></div>
-        <div class="field"><label for="scale">Traffic demand scale</label><input id="scale" type="number" min="0.01"
-                                                                                 max="100" step="0.1" value="1.3">
+
+
+        <div class="field">
+            <label for="scale">Traffic demand scale</label>
+            <input id="scale" type="number" min="0.01" max="100" step="0.1" value="1.3">
             <div class="help">1.0 = reference demand; 1.3 = 30% greater modeled demand.</div>
         </div>
-        <div class="field"><label for="edge">Capacity upgrade · selected edge</label><input id="edge" type="number"
-                                                                                            min="0" step="1"
-                                                                                            placeholder="Click a link in graph or enter ID">
-        </div>
-        <div class="field"><label for="factor">Capacity factor</label><input id="factor" type="number" min="1" max="100"
-                                                                             step="0.1" value="1.5">
-            <button id="add" type="button" class="secondary">Add capacity upgrade</button>
-            <div class="help">
-                Capacity changes are not applied until you click
-                <strong>Add capacity upgrade</strong>.
+
+        <div id="traffic-config" hidden>
+            <div class="field">
+                <label for="traffic-scale">Global demand multiplier</label>
+                <input
+                        id="traffic-scale"
+                        type="number"
+                        min="0.001"
+                        max="100"
+                        step="0.1"
+                        value="1.2"
+                >
+                <div class="help">
+                    1.0 = unchanged traffic; 1.2 = 20% more traffic.
+                    The existing routing scheme remains fixed.
+                </div>
             </div>
-            <div class="result-info" id="upgrades">
-                Applied upgrades: none
+
+            <div class="small">Commodity-specific changes</div>
+
+            <div class="field">
+                <label for="traffic-source">Source node</label>
+                <input id="traffic-source" type="number" min="0" step="1">
+            </div>
+
+            <div class="field">
+                <label for="traffic-target">Target node</label>
+                <input id="traffic-target" type="number" min="0" step="1">
+            </div>
+
+            <div class="field">
+                <label for="traffic-factor">Commodity multiplier</label>
+                <input
+                        id="traffic-factor"
+                        type="number"
+                        min="0.001"
+                        max="1000"
+                        step="0.1"
+                        value="2.0"
+                >
+                <button id="traffic-add" type="button" class="secondary">
+                    Add commodity override
+                </button>
+            </div>
+
+            <div id="traffic-overrides" class="result-info">
+                Commodity overrides: none
             </div>
         </div>
-        <div class="field"><label><input type="checkbox" id="layer1" style="width:auto;margin-right:6px"> Include
-            Layer-1 static failure exposure</label></div>
-        <button id="run" class="primary">Run simulation</button>
-        <div class="help">This uses your real persisted routing scheme. No live network changes.</div>
+
+        <div id="capacity-config">
+            <div class="field">
+                <label for="edge">Capacity upgrade · selected edge</label>
+                <input id="edge" type="number" min="0" step="1"
+                       placeholder="Click a link in graph or enter ID">
+            </div>
+            <div class="field">
+                <label for="factor">Capacity factor</label>
+                <input id="factor" type="number" min="1" max="100" step="0.1" value="1.5">
+                <button id="add" type="button" class="secondary">Add capacity upgrade</button>
+                <div class="help">
+                    Capacity changes are not applied until you click
+                    <strong>Add capacity upgrade</strong>.
+                </div>
+                <div class="result-info" id="upgrades">Applied upgrades: none</div>
+            </div>
+            <div class="field">
+                <label><input type="checkbox" id="layer1" style="width:auto;margin-right:6px">
+                    Include Layer-1 static failure exposure
+                </label>
+            </div>
+        </div>
+
+        <button id="run" type="button" class="primary">Run simulation</button>
+        <div id="run-help" class="help">This uses your real persisted routing scheme. No live network changes.</div>
         <div id="alert" role="alert" hidden class="alert"></div>
     </aside>
+
     <section class="workspace">
         <div class="panel graph-panel">
             <div class="heading">
@@ -654,6 +763,9 @@
             <div class="legend"><span><i class="dot" style="background:#40b7ef"></i>Within capacity</span><span><i
                     class="dot" style="background:#f0aa36"></i>Overloaded</span><span><i class="dot"
                                                                                          style="background:#f26873"></i>High overload</span>
+            </div>
+            <div id="failure-legend" class="unit-note" hidden>
+                <span style="color:#ffb454">━━ ━━</span> Dashed amber = failed physical link; solid lines = surviving links.
             </div>
             <div id="selected">Select a link after running a scenario.</div>
         </div>
@@ -689,19 +801,19 @@
 
         <div class="metrics">
             <div class="metric">
-                <div class="small">Same-demand reference</div>
+                <div class="small" id="third-label-1">Same-demand reference</div>
                 <strong id="reference-congestion">—</strong>
-                <span>Current demand · No capacity upgrades</span>
+                <span id="third-help-1">Current demand · No capacity upgrades</span>
             </div>
             <div class="metric">
-                <div class="small">With upgrades</div>
+                <div class="small" id="third-label-2">With upgrades</div>
                 <strong id="upgraded-congestion">—</strong>
-                <span>Current demand · Selected upgrades</span>
+                <span id="third-help-2">Current demand · Selected upgrades</span>
             </div>
             <div class="metric">
-                <div class="small">Congestion vs. reference</div>
+                <div class="small" id="third-label-3">Congestion vs. reference</div>
                 <strong id="capacity-improvement">—</strong>
-                <span>Negative = lower congestion · Positive = higher congestion</span>
+                <span id="third-help-3">Negative = lower congestion · Positive = higher congestion</span>
             </div>
         </div>
 
@@ -750,7 +862,7 @@
     </aside>
 </main>
 
-<script src="./scenario_studio_analysis.js"></script>
+<script src="./scenario_studio_analysis.js?v=3"></script>
 
 <script>
     const $ = id => document.getElementById(id);
@@ -762,6 +874,213 @@
     let selectedLinkId = null;
     let jeylanBusy = false;
     let networkGeneration = 0;
+
+
+    const trafficOverrides = new Map();
+
+    function renderTrafficOverrides() {
+        const container = $('traffic-overrides');
+        container.replaceChildren();
+
+        if (!trafficOverrides.size) {
+            container.textContent = 'Commodity overrides: none';
+            return;
+        }
+
+        for (const [key, factor] of trafficOverrides) {
+            const row = document.createElement('div');
+            const label = document.createElement('span');
+            const remove = document.createElement('button');
+
+            label.textContent = `${key.replace(':', ' → ')} ×${factor}`;
+
+            remove.type = 'button';
+            remove.className = 'secondary';
+            remove.textContent = 'Remove';
+
+            remove.addEventListener('click', () => {
+                trafficOverrides.delete(key);
+                renderTrafficOverrides();
+            });
+
+            row.append(label, remove);
+            container.appendChild(row);
+        }
+    }
+
+    $('traffic-add').addEventListener('click', () => {
+        const source = Number($('traffic-source').value);
+        const target = Number($('traffic-target').value);
+        const factor = Number($('traffic-factor').value);
+
+        if (
+            $('traffic-source').value.trim() === '' ||
+            $('traffic-target').value.trim() === '' ||
+            !Number.isSafeInteger(source) ||
+            !Number.isSafeInteger(target) ||
+            source < 0 ||
+            target < 0 ||
+            source === target ||
+            !Number.isFinite(factor) ||
+            factor <= 0 ||
+            factor > 1000
+        ) {
+            showError('Enter distinct nonnegative node IDs and a valid multiplier.');
+            return;
+        }
+
+        clearError();
+        trafficOverrides.set(`${source}:${target}`, factor);
+        renderTrafficOverrides();
+    });
+
+    function trafficPercent(value) {
+        return Number.isFinite(value)
+            ? `${value >= 0 ? '+' : ''}${(100 * value).toFixed(2)}%`
+            : 'N/A';
+    }
+
+    function renderTrafficReport(report) {
+        const baseline = report.baseline;
+        const modified = report.modified;
+
+        const baselineLinks = new Map(
+            baseline.links.map(link => [link.edge_id, link])
+        );
+
+        lastLinks = modified.links.map(link => {
+            const previous = baselineLinks.get(link.edge_id);
+
+            return {
+                ...link,
+                baseline_load: previous?.load ?? null,
+                baseline_utilization: previous?.utilization ?? null,
+                utilization_change: previous
+                    ? link.utilization - previous.utilization
+                    : null
+            };
+        });
+
+        selectedLinkId = null;
+        $('selected').textContent =
+            'Traffic analysis updated. Select a link to inspect ' +
+            'its baseline and modified load.';
+
+        $('topology').textContent =
+            'Network topology · Traffic Growth';
+
+        $('failure-legend').hidden = true;
+
+        $('baseline-congestion').textContent =
+            baseline.max_congestion.toFixed(3);
+
+        $('scenario-congestion').textContent =
+            modified.max_congestion.toFixed(3);
+
+        $('congestion-delta').textContent =
+            trafficPercent(report.relative_congestion_change);
+
+        $('reference-congestion').textContent =
+            baseline.total_demand_volume.toLocaleString(undefined, {
+                maximumFractionDigits: 2
+            });
+
+        $('upgraded-congestion').textContent =
+            modified.total_demand_volume.toLocaleString(undefined, {
+                maximumFractionDigits: 2
+            });
+
+        $('capacity-improvement').textContent =
+            trafficPercent(report.relative_demand_change);
+
+        $('congestion').textContent =
+            modified.max_congestion.toFixed(3);
+
+        $('overloaded').textContent = String(
+            lastLinks.filter(link => link.utilization > 1).length
+        );
+
+        $('count').textContent = String(lastLinks.length);
+
+        drawGraph(lastLinks);
+        renderBottleneckRanking(lastLinks);
+
+        const panel = $('scenario-analysis');
+        panel.hidden = false;
+        panel.replaceChildren();
+
+        const heading = document.createElement('h2');
+        heading.textContent = 'Traffic Growth Analysis';
+        panel.appendChild(heading);
+
+        const summary = [
+            `Baseline demand volume: ${baseline.total_demand_volume.toFixed(2)}`,
+            `Modified demand volume: ${modified.total_demand_volume.toFixed(2)}`,
+            `Demand change: ${trafficPercent(report.relative_demand_change)}`,
+            `Maximum congestion change: ${trafficPercent(report.relative_congestion_change)}`,
+            `Global multiplier: ${report.requested_global_scale}`,
+            `Commodity overrides: ${report.commodity_overrides.length}`
+        ];
+
+        for (const line of summary) {
+            const paragraph = document.createElement('p');
+            paragraph.textContent = line;
+            panel.appendChild(paragraph);
+        }
+
+
+        if (report.commodity_overrides.length > 0) {
+            const heading = document.createElement('h3');
+            heading.textContent = 'Commodity transformations';
+            panel.appendChild(heading);
+
+            const list = document.createElement('ul');
+
+            for (const item of report.commodity_overrides) {
+                const row = document.createElement('li');
+
+                row.textContent =
+                    `${item.source} → ${item.target}: ` +
+                    `${Number(item.factor).toFixed(2)}× demand`;
+
+                list.appendChild(row);
+            }
+
+            panel.appendChild(list);
+        }
+
+
+        const headingLinks = document.createElement('h3');
+        headingLinks.textContent = 'Largest utilization changes';
+        panel.appendChild(headingLinks);
+
+        const ranked = [...lastLinks]
+            .sort((a, b) =>
+                Math.abs(b.utilization_change ?? 0) -
+                Math.abs(a.utilization_change ?? 0)
+            )
+            .slice(0, 10);
+
+        for (const link of ranked) {
+            const paragraph = document.createElement('p');
+            paragraph.textContent =
+                `Edge ${link.edge_id} (${link.source} → ${link.target}): ` +
+                `${link.baseline_utilization.toFixed(3)} → ` +
+                `${link.utilization.toFixed(3)} ` +
+                `(Δ ${(link.utilization_change >= 0 ? '+' : '')}` +
+                `${link.utilization_change.toFixed(3)})`;
+
+            panel.appendChild(paragraph);
+        }
+
+        $('status').textContent = 'Completed';
+        $('interpretation').textContent =
+            `Fixed-routing analysis completed. Total traffic changed by ` +
+            `${trafficPercent(report.relative_demand_change)}, while maximum ` +
+            `congestion changed by ${trafficPercent(report.relative_congestion_change)}. ` +
+            `No routing optimization or network modification was performed.`;
+    }
+
 
     // Safe, deliberately small Markdown renderer. It constructs DOM nodes
     // and never inserts model-generated HTML into the document.
@@ -1010,7 +1329,7 @@
 
 
     function resetNetworkState() {
-        networkGeneration++;
+
         $('scenario-analysis').hidden = true;
         $('scenario-analysis').replaceChildren();
         $('run').textContent = 'Run simulation';
@@ -1026,6 +1345,7 @@
         $('upgrades').textContent = 'Applied upgrades: none';
 
         $('graph').replaceChildren();
+        $('failure-legend').hidden = true;
         $('selected').textContent =
             'Select a link after running a scenario.';
 
@@ -1154,7 +1474,7 @@
 
 
 
-    function drawGraph(links) {
+    function drawGraph(links, options = {}) {
         const svg = $('graph');
         svg.replaceChildren();
 
@@ -1176,11 +1496,36 @@
 
         if (!links.length) return;
 
-        const vertices = [...new Set(links.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b), centerX = 360,
+        // Use baseline vertices for both states: a failed edge must not move nodes.
+        const topologyLinks = options.baselineLinks || links;
+        const vertices = [...new Set(topologyLinks.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b), centerX = 360,
             centerY = 167, rx = 270, ry = 125, positions = new Map(vertices.map((v, i) => {
                 const a = -Math.PI / 2 + 2 * Math.PI * i / vertices.length;
                 return [v, {x: centerX + rx * Math.cos(a), y: centerY + ry * Math.sin(a)}]
             }));
+        // Failed links are still visible as dashed, non-operational topology.
+        const failedIds = new Set(options.failedIds || []);
+        for (const l of topologyLinks) {
+            if (!failedIds.has(l.edge_id)) continue;
+            const a = positions.get(l.source), b = positions.get(l.target);
+            if (!a || !b) continue;
+            const line = svgEl('line', {
+                x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+                stroke: '#ffb454', 'stroke-width': 5,
+                'stroke-dasharray': '9 7', 'stroke-opacity': 0.95
+            });
+            line.dataset.failedEdgeId = String(l.edge_id);
+            const tip = svgEl('title', {});
+            tip.textContent = `FAILED edge ${l.edge_id}: ${l.source} → ${l.target} (removed from routing)`;
+            line.appendChild(tip);
+            line.addEventListener('click', () => {
+                selectedLinkId = null;
+                $('failed-edge').value = l.edge_id;
+                $('selected').textContent = `FAILED physical link ${l.edge_id} (${l.source} → ${l.target}) · removed from modified network`;
+                $('ask-selected-link').disabled = true;
+            });
+            svg.appendChild(line);
+        }
         for (const l of links) {
             const a = positions.get(l.source), b = positions.get(l.target);
             if (!a || !b) continue;
@@ -1202,7 +1547,7 @@
                 `Edge ${l.edge_id}: ${l.source} → ${l.target}`,
                 `Current utilization: ${Number(l.utilization).toFixed(3)}`,
                 l.baseline_utilization != null
-                    ? `Without upgrade: ${Number(l.baseline_utilization).toFixed(3)}`
+                    ? `Baseline utilization: ${Number(l.baseline_utilization).toFixed(3)}`
                     : '',
                 l.utilization_change != null
                     ? `Change: ${l.utilization_change >= 0 ? '+' : ''}${l.utilization_change.toFixed(3)}`
@@ -1215,7 +1560,28 @@
                 svg.querySelectorAll('line.selected-edge').forEach(el => el.classList.remove('selected-edge'));
                 line.classList.add('selected-edge');
                 $('edge').value = l.edge_id;
-                $('selected').textContent = `Selected edge ${l.edge_id} (${l.source} → ${l.target}) · utilization ratio ${Number.isFinite(util) ? util.toFixed(3) : 'unknown'} (${Number.isFinite(util) ? (util * 100).toFixed(1) + '%' : 'unknown'}) · capacity ${l.capacity}`;
+                $('failed-edge').value = l.edge_id;
+
+                const base = l.baseline_utilization;
+                const delta = l.utilization_change;
+
+                const trafficDetails =
+                    $('analysis-type').value === 'traffic_growth' &&
+                    base != null &&
+                    delta != null
+                        ? ` · baseline load ${Number(l.baseline_load).toFixed(2)}` +
+                        ` → modified load ${Number(l.load).toFixed(2)}` +
+                        ` · utilization ${Number(base).toFixed(3)}` +
+                        ` → ${Number(l.utilization).toFixed(3)}` +
+                        ` · change ${delta >= 0 ? '+' : ''}${delta.toFixed(3)}`
+                        : '';
+
+                $('selected').textContent =
+                    `Selected edge ${l.edge_id} (${l.source} → ${l.target})` +
+                    ` · capacity ${l.capacity}` +
+                    ` · current utilization ${Number(l.utilization).toFixed(3)}` +
+                    trafficDetails;
+
                 $('ask-selected-link').disabled = !activeScenarioId;
                 if (activeScenarioId) $('jeylan-status').textContent = `Edge ${l.edge_id} selected · Ready to ask Jeylan`;
             });
@@ -1267,6 +1633,7 @@
                 } else {
                     selectedLinkId = link.edge_id;
                     $('edge').value = link.edge_id;
+                    $('failed-edge').value = link.edge_id;
                     $('selected').textContent =
                         `Selected edge ${link.edge_id} ` +
                         `(${link.source} → ${link.target})`;
@@ -1280,7 +1647,666 @@
     }
 
 
+
+    async function executeN1UI() {
+        clearError();
+
+        const networkId = $('network').value;
+        const executionMode = $('execution-mode').value;
+        if (!networkId || $('network').disabled) {
+            showError('Select a registered network.');
+            return;
+        }
+
+
+        const generation = networkGeneration;
+
+        const stillCurrent = () =>
+            generation === networkGeneration &&
+            $('network').value === networkId &&
+            $('analysis-type').value === 'n1_resilience';
+
+        const analysisId = 'n1-' +
+            (globalThis.crypto?.randomUUID?.() ||
+                String(Date.now()) +
+                Math.random().toString(36).slice(2))
+                .replace(/[^A-Za-z0-9_-]/g, '');
+
+        const button = $('run');
+        button.disabled = true;
+        button.textContent = 'Evaluating all links…';
+
+        $('status').textContent = 'Running';
+        $('evidence').textContent = 'Running N−1 resilience analysis…';
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
+
+        $('graph').replaceChildren();
+        $('empty').hidden = false;
+        $('empty').textContent = 'Analyzing independent link failures…';
+        $('large-network-analysis').hidden = true;
+        $('failure-legend').hidden = true;
+
+        // N-1 reports are not normal ScenarioRepository/Jeylan scenarios.
+        activeScenarioId = null;
+        selectedLinkId = null;
+        lastLinks = [];
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+        $('jeylan-status').textContent =
+            'N−1 interpretation is not connected to Jeylan yet.';
+
+        for (const id of [
+            'congestion', 'overloaded', 'count',
+            'baseline-congestion', 'scenario-congestion',
+            'congestion-delta', 'reference-congestion',
+            'upgraded-congestion', 'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        try {
+            const base =
+                `/api/v1/networks/${encodeURIComponent(networkId)}` +
+                `/analyses/n1`;
+
+            const response = await fetch(base, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    analysis_id: analysisId,
+                    demand_model: 'uniform',
+                    seed: 42,
+                    execution_mode: $('execution-mode').value
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.detail ||
+                    `N−1 execution failed (HTTP ${response.status})`);
+            }
+
+            if (result.status !== 'completed' ||
+                result.analysis_id !== analysisId) {
+                throw new Error('Incomplete N−1 execution response');
+            }
+
+            if (!stillCurrent()) return;
+
+            const detailResponse = await fetch(
+                `${base}/${encodeURIComponent(analysisId)}`
+            );
+
+            if (!detailResponse.ok) {
+                throw new Error(
+                    `N−1 report unavailable (HTTP ${detailResponse.status})`
+                );
+            }
+
+            const report = await detailResponse.json();
+
+            if (!stillCurrent()) return;
+
+            if (report.analysis_kind !== 'n1_resilience' ||
+                !Array.isArray(report.outcomes) ||
+                !Array.isArray(report.baseline?.links)) {
+                throw new Error('Invalid N−1 analysis report');
+            }
+
+            const baseline = report.baseline;
+            const before = baseline.max_congestion;
+
+            $('baseline-congestion').textContent = fmt(before, 3);
+            $('status').textContent = 'Completed';
+
+            $('evidence').textContent =
+                `Network: ${networkId} · N−1: ${analysisId} · ` +
+                `Mode: ${executionMode.toUpperCase()} · ` +
+                `Solver: ${report.solver} · ` +
+                `Fingerprint: ${report.graph_fingerprint}`;
+
+            $('interpretation').textContent =
+                `${report.summary.tested_links} independent physical-link ` +
+                `failures evaluated. Select a failure to inspect its ` +
+                `network-level consequences.`;
+
+
+            function selectFailure(outcome) {
+                // Do not reuse a previous scenario's Jeylan context.
+                selectedLinkId = null;
+                $('ask-selected-link').disabled = true;
+
+                const disconnected = outcome.status === 'disconnected';
+                const successful = outcome.status === 'success';
+                const modified = successful ? outcome.reoptimized : null;
+
+                // If disconnected, show baseline links only as topology
+                // context—not as a fictional post-failure routing result.
+                const links = successful
+                    ? modified.links.map(link => {
+                        const previous = baseline.links.find(
+                            item => item.edge_id === link.edge_id
+                        );
+                        return {
+                            ...link,
+                            baseline_utilization: previous?.utilization ?? null,
+                            utilization_change: previous
+                                ? link.utilization - previous.utilization
+                                : null
+                        };
+                    })
+                    : baseline.links.filter(
+                        link => link.edge_id !== outcome.edge_id
+                    );
+
+                lastLinks = links;
+
+                drawGraph(links, {
+                    baselineLinks: baseline.links,
+                    failedIds: [outcome.edge_id]
+                });
+
+                $('failure-legend').hidden = false;
+                renderBottleneckRanking(links);
+
+                $('topology').textContent =
+                    `Network topology · Edge ${outcome.edge_id} failed`;
+
+                $('selected').textContent = disconnected
+                    ? `Edge ${outcome.edge_id} disconnects demanded endpoints. ` +
+                    `Surviving links show baseline reference values only.`
+                    : successful
+                        ? `Edge ${outcome.edge_id} removed. ` +
+                        `Surviving links show recomputed utilization.`
+                        : `Edge ${outcome.edge_id}: recomputation failed. ` +
+                        `No post-failure metrics available.`;
+
+                const after = modified?.max_congestion ?? null;
+                const change = successful && before > 0
+                    ? 100 * (after - before) / before
+                    : null;
+
+                $('scenario-congestion').textContent = fmt(after, 3);
+                $('congestion').textContent = fmt(after, 3);
+                $('congestion-delta').textContent = change === null
+                    ? 'N/A'
+                    : `${change >= 0 ? '+' : ''}${fmt(change)}%`;
+
+                $('congestion-delta').style.color =
+                    change === null ? '#94a3b8' :
+                        change < 0 ? '#22c55e' :
+                            change > 0 ? '#ef4444' : '#94a3b8';
+
+                $('count').textContent = String(links.length);
+                $('overloaded').textContent = successful
+                    ? String(links.filter(l => l.utilization > 1).length)
+                    : 'N/A';
+
+                $('reference-congestion').textContent =
+                    `Edge ${outcome.edge_id}`;
+                $('upgraded-congestion').textContent =
+                    successful ? fmt(after, 3) : 'N/A';
+                $('capacity-improvement').textContent =
+                    disconnected ? 'Disconnected' :
+                        successful ? (change === null ? 'N/A'
+                                : `${change >= 0 ? '+' : ''}${fmt(change)}%`)
+                            : 'Execution failed';
+
+                $('third-help-1').textContent =
+                    `${outcome.source} → ${outcome.target} · removed link`;
+                $('third-help-2').textContent =
+                    'Maximum post-failure congestion';
+                $('third-help-3').textContent =
+                    'Relative congestion change or failure status';
+            }
+
+            renderN1Analysis(report, selectFailure);
+
+        } catch (error) {
+            if (stillCurrent()) {
+                $('status').textContent = 'Error';
+                $('evidence').textContent =
+                    'N−1 analysis did not complete.';
+                showError(error.message || String(error));
+            }
+        } finally {
+            if (stillCurrent()) {
+                button.disabled = false;
+                button.textContent = 'Run N−1 analysis';
+            }
+        }
+    }
+
+    async function executeLinkFailureUI() {
+        clearError();
+
+        const networkId = $('network').value;
+        const rawEdge = $('failed-edge').value.trim();
+        const edgeId = Number(rawEdge);
+        const demandScale = Number($('scale').value);
+
+        if (!networkId || $('network').disabled) {
+            showError('Select a registered network.');
+            return;
+        }
+
+        if (
+            rawEdge === '' ||
+            !Number.isSafeInteger(edgeId) ||
+            edgeId < 0
+        ) {
+            showError('Select a valid physical link ID.');
+            return;
+        }
+
+        if (
+            !Number.isFinite(demandScale) ||
+            demandScale <= 0 ||
+            demandScale > 100
+        ) {
+            showError('Demand scale must be between 0 and 100.');
+            return;
+        }
+
+        const scenarioId = 'failure-' +
+            (globalThis.crypto?.randomUUID?.() ||
+                String(Date.now()) + Math.random().toString(36).slice(2))
+                .replace(/[^A-Za-z0-9_-]/g, '');
+
+        const generation = networkGeneration;
+
+        const stillCurrent = () =>
+            generation === networkGeneration &&
+            $('network').value === networkId &&
+            $('analysis-type').value === 'link_failure';
+
+        const request = {
+            scenario_id: scenarioId,
+            scenario_kind: 'link_failure',
+            demand_model: $('demand').value,
+            demand_scale: demandScale,
+            link_failures: [edgeId]
+        };
+
+        const button = $('run');
+        button.disabled = true;
+        button.textContent = 'Analyzing failure…';
+
+        $('status').textContent = 'Running';
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
+
+        // The prior scenario must not remain active.
+        activeScenarioId = null;
+        selectedLinkId = null;
+        lastLinks = [];
+
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+        $('jeylan-status').textContent =
+            'Detailed failure analysis is not connected to Jeylan yet.';
+
+        $('graph').replaceChildren();
+        $('empty').hidden = false;
+        $('empty').textContent =
+            'Running link failure analysis…';
+
+        $('large-network-analysis').hidden = true;
+        $('bottleneck-list').replaceChildren();
+
+        for (const id of [
+            'congestion', 'overloaded', 'count',
+            'baseline-congestion', 'scenario-congestion',
+            'congestion-delta', 'reference-congestion',
+            'upgraded-congestion', 'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        $('evidence').textContent = 'Executing failure scenario…';
+        $('interpretation').textContent =
+            'Recomputing routing on the modified network.';
+
+        try {
+            const url =
+                `/api/v1/networks/${encodeURIComponent(networkId)}` +
+                `/scenarios/detailed-analysis`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(request)
+            });
+
+            const body = await response.json();
+
+            if (!stillCurrent()) return;
+
+            if (response.ok && body.status === 'disconnected') {
+                $('status').textContent = 'Disconnected';
+
+                $('interpretation').textContent =
+                    `Physical link ${body.failed_edge_id} is critical: ` +
+                    'its removal disconnects endpoints with positive traffic demand. ' +
+                    'Post-failure congestion is not defined.';
+
+                $('evidence').textContent =
+                    `Scenario: ${body.scenario_id} · ` +
+                    `Network: ${networkId} · Disconnected topology`;
+
+                $('scenario-analysis').hidden = false;
+                $('scenario-analysis').textContent =
+                    body.reason ||
+                    'The failed link disconnects demanded endpoints.';
+
+                return;
+            }
+
+            if (!response.ok) {
+                const detail = body.detail;
+                throw new Error(
+                    typeof detail === 'string'
+                        ? detail
+                        : JSON.stringify(detail || body)
+                );
+            }
+
+            if (!stillCurrent()) return;
+
+            if (
+                body.status !== 'completed' ||
+                !body.report_available ||
+                body.analysis?.scenario_kind !== 'link_failure'
+            ) {
+                throw new Error('Incomplete link failure response');
+            }
+
+            const report = body.analysis;
+            const solver = report.solver_results?.[0];
+
+            if (!solver) {
+                throw new Error('Missing solver analysis results');
+            }
+
+            const baseline = solver.baseline;
+            const modified = solver.reoptimized;
+
+            const before = baseline.max_congestion;
+            const after = modified.max_congestion;
+            const change = before > 0
+                ? 100 * (after - before) / before
+                : null;
+
+            const format = value =>
+                Number.isFinite(value) ? value.toFixed(3) : '—';
+
+            $('baseline-congestion').textContent = format(before);
+            $('scenario-congestion').textContent = format(after);
+            $('congestion').textContent = format(after);
+
+            $('congestion-delta').textContent =
+                change === null
+                    ? 'N/A'
+                    : `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+
+            $('congestion-delta').style.color =
+                change === null ? '#94a3b8' :
+                    change < 0 ? '#22c55e' :
+                        change > 0 ? '#ef4444' : '#94a3b8';
+
+            const baselineByEdge = new Map(
+                baseline.links.map(link => [link.edge_id, link])
+            );
+            lastLinks = modified.links.map(link => {
+                const previous = baselineByEdge.get(link.edge_id);
+                return {
+                    ...link,
+                    baseline_utilization: previous?.utilization ?? null,
+                    utilization_change: previous
+                        ? link.utilization - previous.utilization : null
+                };
+            });
+            const links = lastLinks;
+            $('failure-legend').hidden = false;
+            drawGraph(links, {
+                baselineLinks: baseline.links,
+                failedIds: report.link_failures
+            });
+            renderBottleneckRanking(links);
+            $('topology').textContent = `Network topology · Link ${edgeId} failed`;
+            $('selected').textContent =
+                `Dashed amber: failed edge ${edgeId}. Click an edge to inspect it.`;
+
+            $('count').textContent = String(links.length);
+            $('overloaded').textContent = String(
+                links.filter(link => link.utilization > 1).length
+            );
+
+            // The third metric row is analysis-type-specific.
+            const failedLink = baselineByEdge.get(edgeId);
+            const bottleneck = [...links].sort(
+                (a, b) => b.utilization - a.utilization
+            )[0];
+            const largestShift = [...(solver.link_deltas || [])].sort(
+                (a, b) => Math.abs(b.delta_from_baseline) -
+                    Math.abs(a.delta_from_baseline)
+            )[0];
+            $('reference-congestion').textContent = failedLink
+                ? `Edge ${edgeId}` : 'N/A';
+            $('upgraded-congestion').textContent = bottleneck
+                ? `Edge ${bottleneck.edge_id}` : 'N/A';
+            $('capacity-improvement').textContent = largestShift
+                ? `${largestShift.delta_from_baseline >= 0 ? '+' : ''}` +
+                `${format(largestShift.delta_from_baseline)}` : 'N/A';
+            $('capacity-improvement').style.color = '';
+            $('third-help-1').textContent = failedLink
+                ? `${failedLink.source} → ${failedLink.target} · out of service`
+                : 'Failed link unavailable in baseline';
+            $('third-help-2').textContent = bottleneck
+                ? `${bottleneck.source} → ${bottleneck.target} · ${format(bottleneck.utilization)}× capacity`
+                : 'No surviving links';
+            $('third-help-3').textContent = largestShift
+                ? `Edge ${largestShift.edge_id} · absolute load change`
+                : 'No surviving link deltas';
+
+            $('status').textContent = 'Completed';
+
+            $('evidence').textContent =
+                `Scenario: ${scenarioId} · ` +
+                `Network: ${networkId} · ` +
+                `Solver: ${solver.solver_algorithms.join(', ')} · ` +
+                `Mode: ${report.execution_mode}`;
+
+            $('interpretation').textContent =
+                `Physical link ${edgeId} was removed. ` +
+                `Maximum congestion changed from ${format(before)} ` +
+                `to ${format(after)}. ` +
+                `This is a modeled rerouting result.`;
+
+            $('scenario-analysis').hidden = false;
+
+            await renderScenarioAnalysis(networkId, scenarioId);
+
+            if (!stillCurrent()) {
+                $('scenario-analysis').hidden = true;
+                $('scenario-analysis').replaceChildren();
+            }
+        } catch (error) {
+            if (stillCurrent()) {
+                $('status').textContent = 'Error';
+                $('evidence').textContent =
+                    'Failure analysis did not complete.';
+                showError(error.message || String(error));
+            }
+        } finally {
+            if (stillCurrent()) {
+                button.disabled = false;
+                button.textContent = 'Run failure analysis';
+            }
+        }
+    }
+
+
+    async function executeTrafficGrowthUI() {
+        clearError();
+
+        const networkId = $('network').value;
+
+        if (!networkId || $('network').disabled) {
+            showError('Select a registered network.');
+            return;
+        }
+
+        if ($('demand').value !== 'uniform') {
+            showError('Traffic Growth currently supports uniform demands only.');
+            return;
+        }
+
+
+        const scale = Number($('traffic-scale').value);
+
+        if (
+            $('traffic-scale').value.trim() === '' ||
+            !Number.isFinite(scale) ||
+            scale <= 0 ||
+            scale > 100
+        ) {
+            showError(
+                'Enter a global multiplier greater than zero and at most 100.'
+            );
+            return;
+        }
+
+        const executionGeneration = networkGeneration;
+
+        const stillCurrent = () =>
+            executionGeneration === networkGeneration &&
+            $('network').value === networkId &&
+            $('analysis-type').value === 'traffic_growth';
+
+
+        const button = $('run');
+
+        button.disabled = true;
+        button.textContent = 'Analyzing traffic…';
+        $('status').textContent = 'Running';
+
+        selectedLinkId = null;
+        lastLinks = [];
+
+        $('graph').replaceChildren();
+        $('empty').hidden = false;
+        $('empty').textContent = 'Evaluating modified traffic demands…';
+
+        $('selected').textContent = 'No link selected.';
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
+
+        $('large-network-analysis').hidden = true;
+        $('bottleneck-list').replaceChildren();
+
+        // Traffic reports are not ordinary ScenarioRepository reports.
+        activeScenarioId = null;
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+
+        const analysisId =
+            'traffic-' + crypto.randomUUID().replaceAll('-', '');
+
+        const overrides = [...trafficOverrides].map(([key, factor]) => {
+            const [source, target] = key.split(':').map(Number);
+
+            return {source, target, factor};
+        });
+
+        try {
+            const base =
+                `/api/v1/networks/${encodeURIComponent(networkId)}` +
+                `/analyses/traffic`;
+
+            const response = await fetch(base, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    analysis_id: analysisId,
+                    demand_model: 'uniform',
+                    seed: 42,
+                    global_scale: scale,
+                    commodity_overrides: overrides
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(
+                    typeof error.detail === 'string'
+                        ? error.detail
+                        : `Traffic analysis failed (HTTP ${response.status})`
+                );
+            }
+
+            const created = await response.json();
+
+            if (created.status !== 'completed') {
+                throw new Error('Traffic analysis did not complete.');
+            }
+
+            const reportResponse = await fetch(
+                `${base}/${encodeURIComponent(analysisId)}`
+            );
+
+            if (!reportResponse.ok) {
+                throw new Error('Unable to retrieve Traffic Growth report.');
+            }
+
+            const report = await reportResponse.json();
+
+            if (!stillCurrent()) return;
+
+            renderTrafficReport(report);
+
+            $('evidence').textContent =
+                `Traffic analysis: ${analysisId} · ` +
+                `Network: ${networkId} · Mode: fixed_routing`;
+
+            $('jeylan-status').textContent =
+                'Traffic analysis available; Jeylan integration pending.';
+
+        } catch (error) {
+            if (stillCurrent()) {
+                $('status').textContent = 'Error';
+                showError(error.message || String(error));
+            }
+        } finally {
+            if (stillCurrent()) {
+                button.disabled = false;
+                button.textContent = 'Run traffic analysis';
+            }
+        }
+    }
+
+
     $('run').addEventListener('click', async () => {
+        if ($('analysis-type').value === 'n1_resilience') {
+            await executeN1UI();
+            return;
+        }
+
+        if ($('analysis-type').value === 'link_failure') {
+            await executeLinkFailureUI();
+            return;
+        }
+
+        if ($('analysis-type').value === 'traffic_growth') {
+            await executeTrafficGrowthUI();
+            return;
+        }
+
         clearError();
         const demandScale = Number($('scale').value);
         if (!Number.isFinite(demandScale) || demandScale <= 0 || demandScale > 100) {
@@ -1521,7 +2547,10 @@
         } finally {
             if (stillCurrent()) {
                 $('run').disabled = false;
-                $('run').textContent = 'Run simulation';
+                $('run').textContent =
+                    $('analysis-type').value === 'link_failure'
+                        ? 'Run failure analysis'
+                        : 'Run simulation';
             }
         }
 
@@ -1531,6 +2560,141 @@
     // initial load
     $('run').disabled = true;
     loadNetworks();
+
+
+    function updateAnalysisMode() {
+        networkGeneration++;
+
+
+        const type = $('analysis-type').value;
+
+        const capacity = type === 'capacity_upgrade';
+        const failure = type === 'link_failure';
+        const n1 = type === 'n1_resilience';
+        const traffic = type === 'traffic_growth';
+
+// Show only configuration relevant to the selected mode.
+        $('capacity-config').hidden = !capacity;
+        $('failure-config').hidden = !failure;
+        $('traffic-config').hidden = !traffic;
+        $('execution-mode-config').hidden = !n1;
+
+// N-1 currently uses its fixed demand configuration.
+        $('demand').disabled = n1;
+        $('scale').disabled = n1;
+        $('demand').closest('.field').hidden = n1 || traffic;
+        $('scale').closest('.field').hidden = n1 || traffic;
+
+// Failure-specific visualization.
+        $('failure-legend').hidden = !failure;
+
+
+
+
+// Invalidate results from the previous analysis mode.
+        activeScenarioId = null;
+        selectedLinkId = null;
+
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
+
+        $('reference-congestion').textContent = '—';
+        $('upgraded-congestion').textContent = '—';
+        $('capacity-improvement').textContent = '—';
+        $('capacity-improvement').style.color = '';
+
+        $('evidence').textContent = 'No analysis executed for this mode.';
+        $('interpretation').textContent =
+            'Configure and execute an analysis to view results.';
+
+        $('selected').textContent =
+            'Select a link after running an analysis.';
+
+        $('ask-selected-link').disabled = true;
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('jeylan-status').textContent =
+            'Waiting for scenario execution…';
+
+        $('status').textContent = 'Ready';
+        clearError();
+
+        const labels = n1
+            ? ['Failed physical link', 'Post-failure congestion', 'Network impact']
+            : failure
+                ? ['Failed physical link', 'Critical surviving link', 'Largest load change']
+                : traffic
+                    ? ['Baseline demand', 'Modified demand', 'Demand change']
+                    : ['Same-demand reference', 'With upgrades', 'Congestion vs. reference'];
+
+        const descriptions = n1
+            ? ['Removed physical link', 'Recomputed routing', 'Failure impact']
+            : failure
+                ? [
+                    'Out-of-service edge',
+                    'Worst post-failure utilization',
+                    'Largest surviving-link load delta'
+                ]
+                : traffic
+                    ? [
+                        'Original demand volume',
+                        'Transformed demand volume',
+                        'Relative change in total demand'
+                    ]
+                    : [
+                        'Current demand · No capacity upgrades',
+                        'Current demand · Selected upgrades',
+                        'Negative = lower congestion · Positive = higher congestion'
+                    ];
+
+
+        for (let i = 1; i <= 3; ++i) {
+            $('third-label-' + i).textContent = labels[i - 1];
+            $('third-help-' + i).textContent = descriptions[i - 1];
+        }
+
+        for (const id of [
+            'reference-congestion',
+            'upgraded-congestion',
+            'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        $('capacity-improvement').style.color = '';
+
+        $('analysis-type-help').textContent = traffic
+            ? 'Reevaluate fixed routing under modified traffic demands.'
+            : n1
+                ? 'Evaluate independent physical-link failures.'
+                : failure
+                    ? 'Recompute routing after a physical-link failure.'
+                    : 'Evaluate demand and capacity modifications.';
+
+        $('run-help').textContent = traffic
+            ? 'Existing routing scheme · No optimization or topology modification.'
+            : n1
+                ? 'Uniform demand, seed 42. Recomputes routing for each link failure.'
+                : failure
+                    ? 'Recomputes modeled routing after a link failure.'
+                    : 'Uses the registered persisted routing scheme.';
+
+        $('run').textContent = traffic
+            ? 'Run traffic analysis'
+            : n1
+                ? 'Run N−1 analysis'
+                : failure
+                    ? 'Run failure analysis'
+                    : 'Run simulation';
+    }
+
+
+    $('analysis-type').addEventListener(
+        'change',
+        updateAnalysisMode
+    );
+
+    updateAnalysisMode();
 </script>
 </body>
 </html>

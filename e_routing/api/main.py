@@ -17,8 +17,9 @@ from pydantic import BaseModel, Field
 from e_routing.api.config import load_trusted_config, load_network_registry, trusted_run_for_network
 from e_routing.assistant.scenario_chat import answer_scenario_question
 from e_routing.scenarios.repository import ScenarioRepository
-from e_routing.scenarios.runtime import ScenarioRequest, execute
 from e_routing.scenarios.runtime import ScenarioRequest, execute, execute_comparison
+from e_routing.api.n1_routes import create_n1_router
+from e_routing.api.traffic_routes import create_traffic_router
 from e_routing.api.scenario_report_api import (
     create_scenario_analysis_router,
 )
@@ -37,6 +38,11 @@ app.include_router(
     create_detailed_analysis_router("results/scenarios")
 )
 
+app.include_router(
+    create_traffic_router(
+        reports_root=REPORTS_ROOT / "traffic"
+    )
+)
 
 import json
 from pathlib import Path
@@ -79,6 +85,11 @@ app.include_router(
     )
 )
 
+app.include_router(
+    create_n1_router(
+        reports_root=REPORTS_ROOT / "n1",
+    )
+)
 
 class ScenarioQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=2000)

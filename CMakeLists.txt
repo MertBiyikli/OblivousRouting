@@ -143,18 +143,13 @@ add_library(oblivious_routing_core STATIC
         # include/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.h
         # source/algorithms/oblivious/flow_sparsifier/boundary_linked_exp_decomp/validation.cpp
         source/algorithms/oblivious/mwu/flow_sparsifier_mwu.cpp
-        include/visualization/visualization_result.h
-        source/visualization/visualization_result.cpp
-        include/visualization/json_exporter.h
-        source/visualization/json_exporter.cpp
-        include/visualization/failure_analysis.h
-        source/visualization/failure_analysis.cpp
+
         include/data_structures/graph/graph.h
         include/io/cli.h
-        include/visualization/failure_recover_analysis.h
-        source/visualization/failure_recover_analysis.cpp
+
+
         include/analysis/analysis_result.h
-        include/visualization/failure_recovery_types.h
+
         include/routing/storage/routing_table_serializer.h
         source/routing/storage/routing_table_serializer.cpp
         include/routing/storage/routing_table_adapter.h
@@ -180,6 +175,12 @@ add_library(oblivious_routing_core STATIC
         source/analysis/traffic_change/traffic_growth.cpp
         include/analysis/graph_rollback_guard.h
         include/analysis/failures/network_connectivity.h
+        include/analysis/prepared_analysis.h
+        include/analysis/resilience/resilience_analyzer.h
+        include/analysis/traffic_change/demand_vector.h
+        source/analysis/traffic_change/demand_vector.cpp
+        include/analysis/traffic_change/traffic_growth_result.h
+        include/analysis/visualization_result.h
 )
 
 target_include_directories(oblivious_routing_core

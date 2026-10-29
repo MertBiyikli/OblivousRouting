@@ -7,7 +7,6 @@
 
 void demands::addDemand(int s, int t, double demand) {
     assert(demand_values.size() == source.size() && demand_values.size() == target.size());
-    assert(demand_map.size() == demand_map.size());
     source.push_back(s);
     target.push_back(t);
     demand_values.push_back(demand);

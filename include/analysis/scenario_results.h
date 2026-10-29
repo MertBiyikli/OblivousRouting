@@ -20,6 +20,10 @@ struct LinkData {
     double capacity = 0.0;
     double load = 0.0;
     double utilization = 0.0;
+
+
+    int source = -1;
+    int target = -1;
 };
 
 struct NetworkData {

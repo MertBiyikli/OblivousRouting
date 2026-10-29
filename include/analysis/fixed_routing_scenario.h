@@ -6,9 +6,9 @@
 #define E_ROUTING_FIXED_ROUTING_SCENARIO_H
 
 #include <unordered_map>
-
+#include "visualization_result.h"
 #include "core/errors.h"
-#include "visualization/visualization_result.h"
+
 
 Result<RoutingVisualizationResult> transformScenario(const RoutingVisualizationResult& baseline, double demandScale, const std::unordered_map<int, double>& capacityFactors);
 

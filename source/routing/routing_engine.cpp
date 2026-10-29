@@ -6,7 +6,7 @@
 #include "routing/routing_engine.h"
 #include "routing/routing_runner.h"
 #include "routing/routing_validation.h"
-#include "visualization/json_exporter.h"
+
 
 std::string safeFileComponent(std::string value) {
     for (char &character: value) {
@@ -53,7 +53,7 @@ Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
             exp_result.edges = result->edges;
         }
 
-
+/*
         if (!cfg.visualization_output_directory.empty()) {
             for (const auto &visualization: result->visualization_results) {
                 const std::string filename = safeFileComponent(visualization.solver_name) + "__" + safeFileComponent(visualization.demand_model) + ".json";
@@ -66,7 +66,7 @@ Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
                     return getError(visualization_output);
                 }
             }
-        }
+        }*/
 
         exp_result.solver_results.push_back(std::move(result.value()));
     }

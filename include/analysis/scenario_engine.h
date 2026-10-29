@@ -5,6 +5,10 @@
 #ifndef E_ROUTING_ANALYSIS_ENGINE_H
 #define E_ROUTING_ANALYSIS_ENGINE_H
 
+#include "analysis/prepared_analysis.h"
+#include "analysis/traffic_change/traffic_growth_result.h"
+#include "traffic_change/traffic_growth.h"
+
 #include <analysis/analysis_result.h>
 #include <analysis/scenario_analysis.h>
 
@@ -14,10 +18,15 @@
 
 class ScenarioEngine {
   public:
+    static Result<PreparedAnalysis> prepare(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode);
+
+    static Result<ScenarioResult> execute(optimized::Graph<EdgeData>& graph, const Scenario& scenario, const PreparedAnalysis& prepared);
     static Result<ScenarioResult> runScenario(optimized::Graph<EdgeData>& graph, const Scenario& scenario, const Config& cfg, ExecutionMode mode, double demand_scale = 1.0);
 
     static Result<std::pair<demands, double>> computeTotalDemandVolume(const optimized::Graph<EdgeData>& graph, const Config& cfg);
+    static Result<TrafficGrowthResult> evaluateTrafficGrowth(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& baseline_demands, const TrafficGrowth& scenario);
 };
+
 
 static Result<NetworkData> evaluateRouting(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& fixed_demands, double total_demand_volume) {
     if (!routing.scheme) {
@@ -82,7 +91,9 @@ static Result<NetworkData> evaluateRouting(const optimized::Graph<EdgeData>& gra
 
         const double utilization = std::max(forward_utilization, reverse_utilization);
 
-        result.links.push_back({e, capacity, load, utilization});
+        const auto [source, target] = graph.getEdgeEndpoints(e);
+
+        result.links.push_back({e, capacity, load, utilization, source, target});
 
         result.max_congestion = std::max(result.max_congestion, utilization);
 

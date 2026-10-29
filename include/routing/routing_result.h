@@ -9,8 +9,7 @@
 #include "io/demand_io.h"
 #include "routing_table.h"
 #include "utils/my_math.h"
-#include "visualization/failure_analysis.h"
-#include "visualization/failure_recovery_types.h"
+#include "analysis/visualization_result.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>

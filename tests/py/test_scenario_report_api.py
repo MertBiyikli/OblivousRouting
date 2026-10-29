@@ -2,9 +2,17 @@ import json
 from pathlib import Path
 
 import pytest
-from scenario_report_api import build_analysis_payload, create_scenario_analysis_router
+from e_routing.api.scenario_report_api import (
+    build_analysis_payload,
+    create_scenario_analysis_router,
+)
 
-SAMPLE = Path(__file__).with_name('example_scenario_report.json')
+SAMPLE = (
+        Path(__file__).resolve().parents[2]
+        / "results"
+        / "scenarios"
+        / "example_scenario_report.json"
+)
 
 
 def test_example_report():

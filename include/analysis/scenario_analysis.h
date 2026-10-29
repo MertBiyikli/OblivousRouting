@@ -34,8 +34,6 @@ class Scenario {
     virtual Result<void> apply(optimized::Graph<EdgeData>& graph) const = 0;
 };
 
-
-
 inline std::vector<SolverType> getSolverBasedOnExecutionMode(ExecutionMode mode) {
     switch (mode) {
     case ExecutionMode::FAST:
@@ -52,19 +50,19 @@ inline std::vector<SolverType> getSolverBasedOnExecutionMode(ExecutionMode mode)
 inline std::vector<SolverType> getSolverFromConfigAndMode(const Config& cfg, ExecutionMode mode) {
 
     switch (mode) {
-        case ExecutionMode::FAST:
-            if (cfg.solvers.empty()) {
-                return getSolverBasedOnExecutionMode(mode);
-            }else {
-                return {cfg.solvers.front()};
-            }
-        case ExecutionMode::STANDARD:
-            if (!cfg.solvers.empty()) {
-                return cfg.solvers;
-            }
+    case ExecutionMode::FAST:
+        if (cfg.solvers.empty()) {
             return getSolverBasedOnExecutionMode(mode);
-        case ExecutionMode::RESEARCH:
-            return getSolverBasedOnExecutionMode(mode);
+        } else {
+            return {cfg.solvers.front()};
+        }
+    case ExecutionMode::STANDARD:
+        if (!cfg.solvers.empty()) {
+            return cfg.solvers;
+        }
+        return getSolverBasedOnExecutionMode(mode);
+    case ExecutionMode::RESEARCH:
+        return getSolverBasedOnExecutionMode(mode);
     }
 }
 inline Result<void> solveInto(SolverType type, optimized::Graph<EdgeData>& working_graph, std::optional<IRoutingResult>& destination, double& seconds) {
@@ -126,7 +124,9 @@ inline Result<NetworkData> evaluateFixedRoutingUpgrade(const NetworkData& baseli
             return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid upgraded link utilization.");
         }
 
-        result.links.push_back({e, forward_capacity, load, utilization});
+        const auto [source, target] = upgraded_graph.getEdgeEndpoints(e);
+
+        result.links.push_back({e,forward_capacity , load, utilization, source, target});
 
         result.max_congestion = std::max(result.max_congestion, utilization);
 

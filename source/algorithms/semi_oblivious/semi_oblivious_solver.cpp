@@ -5,7 +5,7 @@
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
 
 #include "utils/time_tracking.h"
-#include "visualization/visualization_result.h"
+#include "analysis/visualization_result.h"
 
 
 Result<std::unique_ptr<RoutingScheme>> SemiObliviousRoutingSolver::solve() {
@@ -82,6 +82,7 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
     }
     res.scheme = std::move(optResult.value().scheme);
 
+    // TODO: As long you dont ensure proper update of the semi oblivious routing solver, you shall not pass!
     /*
      * Analyze the exact demand-specific routing solution.
      *
@@ -94,6 +95,8 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
      * - overloaded-edge count
      * - visualization nodes and edges
      */
+
+    /*
     auto vis_result =
         RoutingAnalyzer::analyze(
             graph,
@@ -112,6 +115,6 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
         res.visualization
             .summary
             .maximum_congestion;
-
+*/
     return res;
 }

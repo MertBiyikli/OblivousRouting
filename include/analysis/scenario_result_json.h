@@ -29,7 +29,7 @@
 #include <system_error>
 
 // Dedicated scenario analysis JSON; intentionally does NOT change RoutingResultWriter.
-namespace scenario_json_detail {
+
 
 inline void quoted(std::ostream& os, const std::string& value) {
     constexpr char hex[] = "0123456789abcdef";
@@ -93,7 +93,10 @@ inline void network(std::ostream& os, const std::optional<NetworkData>& data) {
         if (i)
             os << ',';
         const auto& l = data->links[i];
-        os << "{\"edge_id\":" << l.edge_id << ",\"capacity\":";
+        os << "{\"edge_id\":" << l.edge_id
+       << ",\"source\":" << l.source
+       << ",\"target\":" << l.target
+       << ",\"capacity\":";
         number(os, l.capacity);
         os << ",\"load\":";
         number(os, l.load);
@@ -180,7 +183,6 @@ inline void comparison(
 
     os << '}';
 }
-} // namespace scenario_json_detail
 
 
 
@@ -188,7 +190,7 @@ class ScenarioResultJsonWriter {
   public:
     // May throw for an invalid/non-finite scalar; use write() to get Result<void>.
     static void writeTo(std::ostream& os, const ScenarioResult& result) {
-        using namespace scenario_json_detail;
+
         const auto old_flags = os.flags();
         const auto old_precision = os.precision();
         const auto old_locale = os.getloc();

@@ -53,6 +53,11 @@ add_executable(integration_tests
     integration/tree/test_tree_mwu.cpp
     integration/lp/test_lp.cpp
     integration/test_routing_engine.cpp
+        integration/n1_analysis_test.cpp
+        integration/demand_vector_test.cpp
+        integration/traffic_growth_test.cpp
+        integration/traffic_growth_engine_test.cpp
+        integration/traffic_growth_invariants_test.cpp
 )
 
 target_include_directories(integration_tests PRIVATE

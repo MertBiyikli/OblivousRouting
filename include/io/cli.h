@@ -5,23 +5,34 @@
 #ifndef E_ROUTING_CLI_H
 #define E_ROUTING_CLI_H
 
-
+#include "analysis/scenario_results.h"
 #include "parse_argument_io.h"
-#include <boost/program_options.hpp>
-#include "core/config.h"
-#include <unordered_set>
 
+#include "core/config.h"
+#include <boost/program_options.hpp>
+#include <unordered_set>
 
 enum class Action {
     Run,
+    AnalyzeN1,
+    AnalyzeTraffic,
     Help,
     ListSolvers
+};
+
+struct CommodityScale {
+    int source;
+    int target;
+    double factor;
 };
 
 struct Command {
     Action action = Action::Run;
     Config config{};
+    ExecutionMode execution_mode = ExecutionMode::FAST;
+    std::vector<CommodityScale> commodity_scales;
 };
+
 
 inline Result<std::vector<SolverType>> parseSolvers(const std::string& value) {
     auto parsed = parse_solver_list(value);
@@ -111,6 +122,10 @@ boost::program_options::options_description solveOptions() {
          boost::program_options::value<int>()->default_value(42),
          "Non-negative random seed")
 
+        ("execution-mode",
+        boost::program_options::value<std::string>(),
+        "N-1 execution mode: fast, standard, research")
+
 
         ("failure-analysis",
          boost::program_options::bool_switch()->default_value(false),
@@ -128,6 +143,7 @@ boost::program_options::options_description solveOptions() {
 
 
         ("demand-scale", boost::program_options::value<double>()->default_value(1.0), "Demand multiplier for persisted routing analysis")
+        ("commodity-scale",boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(),"Directed commodity multiplier: source:target:factor")
         ("capacity-upgrade", boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(), "Physical link capacity multiplier as edge_id:factor")
         ("link-failure",boost::program_options::value<std::vector<std::string>>()->multitoken()->composing(),"Simulate physical link failures using edge IDs, ""e.g. --link-failure 14 20 24")
 
@@ -201,6 +217,10 @@ std::string help(std::string_view executable) {
 
         << "  "
         << executable
+        << " analyze-n1 --solver <name> --graph <file> --demand <model> --output <report.json> [options]\n"
+
+        << "  "
+        << executable
         << " --list-solvers\n"
 
         << "  "
@@ -253,8 +273,14 @@ inline Result<Command> parse(int argc, char** argv)
         return Command{.action = Action::ListSolvers};
     }
 
-    if (first != "solve") {
-        return makeErrorMessage(ErrorCode::InvalidArgument,"Unknown command: " + first +". Use 'solve', '--help', ""or '--list-solvers'.");
+    const bool isN1 = first == "analyze-n1";
+    const bool isTraffic = first == "analyze-traffic";
+
+    if (first != "solve" && !isN1 && !isTraffic) {
+        return makeErrorMessage(
+            ErrorCode::InvalidArgument,
+            "Unknown command: " + first
+        );
     }
 
 
@@ -266,7 +292,7 @@ inline Result<Command> parse(int argc, char** argv)
         /*
          * Boost.Program_options treats argv[0] as the program name.
          *
-         * We pass the "solve" subcommand as that program name,
+         * We pass the selected subcommand as that program name,
          * which causes Boost to start parsing at the first actual
          * option (--solver, --graph, ...).
          */
@@ -317,6 +343,36 @@ inline Result<Command> parse(int argc, char** argv)
 
         if (seed < 0) {
             return makeErrorMessage(ErrorCode::InvalidArgument,"--seed must be a non-negative integer.");
+        }
+
+        ExecutionMode executionMode = ExecutionMode::FAST;
+
+        if (variables.count("execution-mode")) {
+            if (!isN1) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "--execution-mode is currently supported only by analyze-n1"
+                );
+            }
+
+            const auto mode = variables["execution-mode"].as<std::string>();
+
+            if (mode == "fast") {
+                executionMode = ExecutionMode::FAST;
+            } else if (mode == "standard") {
+                executionMode = ExecutionMode::STANDARD;
+            } else if (mode == "research") {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "N-1 RESEARCH mode requires multi-solver support "
+                    "and is not implemented yet"
+                );
+            } else {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "Unknown execution mode: " + mode
+                );
+            }
         }
 
 
@@ -457,7 +513,7 @@ inline Result<Command> parse(int argc, char** argv)
 
                     const int edgeId = std::stoi(token, &used);
 
-                    if (used != token.size() || edgeId < 0) {
+                    if (edgeId < 0) {
                         return makeErrorMessage(ErrorCode::InvalidArgument,"Invalid link failure edge ID: " + token);
                     }
 
@@ -543,6 +599,146 @@ inline Result<Command> parse(int argc, char** argv)
         }
 
 
+        // N-1 is a separate analysis operation. Reject irrelevant solve-only flags
+        // rather than silently ignoring user input.
+        if (isN1) {
+            if (solvers.value().size() != 1) {
+                return makeErrorMessage(ErrorCode::InvalidArgument,"analyze-n1 requires exactly one --solver.");
+            }
+            if (demands.size() != 1) {
+                return makeErrorMessage(ErrorCode::InvalidArgument,"analyze-n1 requires exactly one --demand model.");
+            }
+            if (outputFilename.empty() || outputFormat != OutputFormat::JSON ||
+                inferOutputFormat(outputFilename) != OutputFormat::JSON) {
+                return makeErrorMessage(ErrorCode::InvalidArgument,"analyze-n1 requires --output <filename.json>.");
+            }
+            if (variables.count("load-routing-table") ||
+                variables.count("save-routing-table") ||
+                variables.count("capacity-upgrade") ||
+                variables.count("link-failure") ||
+                variables.count("visualization") || failure_analysis || failure_recovery) {
+                return makeErrorMessage(ErrorCode::InvalidArgument,
+                    "analyze-n1 does not accept routing-table, scenario-modification, visualization, or legacy failure-analysis flags.");
+            }
+        }
+
+        if (isTraffic) {
+            if (solvers.value().size() != 1 || demands.size() != 1) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "analyze-traffic requires exactly one solver and demand model."
+                );
+            }
+
+            if (routingTableInput.empty()) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "analyze-traffic requires --load-routing-table."
+                );
+            }
+
+            if (outputFilename.empty() ||
+                inferOutputFormat(outputFilename) != OutputFormat::JSON ||
+                outputFormat != OutputFormat::JSON) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "analyze-traffic requires --output <filename.json>."
+                );
+                }
+
+            if (!upgrades.empty() || !failedLinks.empty() ||
+                failure_analysis || failure_recovery ||
+                variables.count("save-routing-table") ||
+                variables.count("visualization") ||
+                variables.count("execution-mode")) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "analyze-traffic does not accept topology, failure, "
+                    "routing-export, visualization, or execution-mode options."
+                );
+                }
+        }
+
+
+        std::vector<CommodityScale> commodityScales;
+
+        if (variables.count("commodity-scale")) {
+            if (!isTraffic) {
+                return makeErrorMessage(
+                    ErrorCode::InvalidArgument,
+                    "--commodity-scale requires analyze-traffic"
+                );
+            }
+
+            std::set<std::pair<int, int>> seen;
+
+            for (const auto& token :
+                 variables["commodity-scale"].as<std::vector<std::string>>()) {
+
+                const auto first = token.find(':');
+                const auto second = token.find(
+                    ':',
+                    first == std::string::npos ? first : first + 1
+                );
+
+                if (first == std::string::npos ||
+                    second == std::string::npos ||
+                    token.find(':', second + 1) != std::string::npos) {
+                    return makeErrorMessage(
+                        ErrorCode::InvalidArgument,
+                        "Expected --commodity-scale source:target:factor: " + token
+                    );
+                }
+
+                try {
+                    const auto sourceText = token.substr(0, first);
+                    const auto targetText =
+                        token.substr(first + 1, second - first - 1);
+                    const auto factorText = token.substr(second + 1);
+
+                    std::size_t sourceUsed = 0;
+                    std::size_t targetUsed = 0;
+                    std::size_t factorUsed = 0;
+
+                    const int source = std::stoi(sourceText, &sourceUsed);
+                    const int target = std::stoi(targetText, &targetUsed);
+                    const double factor = std::stod(factorText, &factorUsed);
+
+                    if (sourceUsed != sourceText.size() ||
+                        targetUsed != targetText.size() ||
+                        factorUsed != factorText.size() ||
+                        source < 0 ||
+                        target < 0 ||
+                        source == target ||
+                        !std::isfinite(factor) ||
+                        factor <= 0.0) {
+                        return makeErrorMessage(
+                            ErrorCode::InvalidArgument,
+                            "Invalid commodity scale: " + token
+                        );
+                    }
+
+                    if (!seen.insert({source, target}).second) {
+                        return makeErrorMessage(
+                            ErrorCode::InvalidArgument,
+                            "Duplicate commodity override: " + token
+                        );
+                    }
+
+                    commodityScales.push_back({
+                        source, target, factor
+                    });
+
+                } catch (const std::exception&) {
+                    return makeErrorMessage(
+                        ErrorCode::InvalidArgument,
+                        "Invalid commodity scale: " + token
+                    );
+                }
+            }
+        }
+
+
         /*
          * The CLI's job ends here.
          *
@@ -570,7 +766,13 @@ inline Result<Command> parse(int argc, char** argv)
             .capacity_upgrades = std::move(upgrades),
             .failed_links = std::move(failedLinks)
         };
-        return Command{ .action = Action::Run,.config = std::move(config)};
+        return Command{
+        .action = isN1 ? Action::AnalyzeN1
+                   : (isTraffic ? Action::AnalyzeTraffic : Action::Run),
+            .config = std::move(config),
+            .execution_mode = executionMode,
+            .commodity_scales = std::move(commodityScales)
+        };
     } catch (const boost::program_options::error& error) {
         return makeErrorMessage(ErrorCode::InvalidArgument, error.what());
     } catch (const std::exception& error) {
@@ -582,3 +784,5 @@ inline Result<Command> parse(int argc, char** argv)
 
 
 #endif //E_ROUTING_CLI_H
+
+
