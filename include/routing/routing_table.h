@@ -15,15 +15,15 @@
 constexpr static int INVALID_COMMODITY_ID = -1;
 
 inline int getCommodityID(const int& n, const int& s, const int& t) {
-    if (s >= t) return INVALID_COMMODITY_ID;
-    return (s*n+t);
+    if (s >= t)
+        return INVALID_COMMODITY_ID;
+    return (s * n + t);
 }
-
 
 // Base classes for storing the routing tables
 class RoutingTable {
-public:
-    int n=0, m = 0;
+  public:
+    int n = 0, m = 0;
 
     virtual ~RoutingTable() = default;
     virtual void init(const optimized::Graph<EdgeData>& g) = 0;
@@ -35,14 +35,12 @@ public:
     virtual const int getSize() const = 0;
 };
 
-
-class RoutingScheme{
-protected:
+class RoutingScheme {
+  protected:
     const optimized::Graph<EdgeData>& g;
 
-public:
-    explicit RoutingScheme(const optimized::Graph<EdgeData>& _g):g(_g) {
-    }
+  public:
+    explicit RoutingScheme(const optimized::Graph<EdgeData>& _g) : g(_g) {}
     virtual ~RoutingScheme() = default;
 
     // avoid copying
@@ -50,6 +48,7 @@ public:
     RoutingScheme& operator=(const RoutingScheme&) = delete;
 
     virtual void routeDemands(std::vector<double>& congestion, const demands& demands) const = 0;
+    virtual double getPhysicalLinkFlow(int canonical_edge, int source, int target) const = 0;
     virtual double getFlow(int e, int s, int t) const = 0;
     virtual void printRoutingTable() const = 0;
     virtual void printFlowForSource(const int& s) const = 0;
@@ -66,4 +65,4 @@ public:
         return max_cong;
     }
 };
-#endif //OBLIVIOUSROUTING_ROUTING_TABLE_H
+#endif // OBLIVIOUSROUTING_ROUTING_TABLE_H

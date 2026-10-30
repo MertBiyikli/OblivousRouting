@@ -180,7 +180,15 @@ add_library(oblivious_routing_core STATIC
         include/analysis/traffic_change/demand_vector.h
         source/analysis/traffic_change/demand_vector.cpp
         include/analysis/traffic_change/traffic_growth_result.h
-        include/analysis/visualization_result.h
+        include/routing/demand_preparation.h
+        include/analysis/network_data.h
+        include/analysis/failures/link_failure_recovery_result.h
+        include/analysis/failures/link_exposure_analyzer.h
+        include/analysis/failures/link_exposure_result_adapter.h
+        include/analysis/workspace/workspace_configuration.h
+        include/analysis/workspace/workspace_preparer.h
+        source/analysis/workspace/workspace_preparer.cpp
+        include/analysis/workspace/workspace_executer.h
 )
 
 target_include_directories(oblivious_routing_core

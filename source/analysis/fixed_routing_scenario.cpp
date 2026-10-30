@@ -6,82 +6,71 @@
 #include <cmath>
 #include <unordered_set>
 
-Result<RoutingVisualizationResult> transformScenario(const RoutingVisualizationResult& baseline, double demandScale, const std::unordered_map<int, double>& capacityFactors) {
-    if (demandScale <= 0 || !std::isfinite(demandScale)) {
-        return makeErrorMessage(ErrorCode::InvalidArgument, "Demand scale must be finite and non-negative.");
+#include "analysis/fixed_routing_scenario.h"
+
+#include <algorithm>
+#include <cmath>
+#include <unordered_set>
+
+Result<NetworkData> transformScenario(const NetworkData& baseline, double demandScale, const std::unordered_map<int, double>& capacityFactors) {
+    if (!std::isfinite(demandScale) || demandScale <= 0.0) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "Demand scale must be finite and positive.");
     }
 
-    if (baseline.edges.empty()) {
-        return makeErrorMessage(ErrorCode::InvalidArgument, "Baseline edges must not be empty.");
+    if (baseline.links.empty()) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "Baseline links must not be empty.");
     }
 
     for (const auto& [edgeId, factor] : capacityFactors) {
-        if (edgeId < 0 || factor < 1 || !std::isfinite(factor)) {
-            return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid edge upgrade for edge " + std::to_string(edgeId) + " with factor " + std::to_string(factor) + ".");
+        if (edgeId < 0 || !std::isfinite(factor) || factor < 1.0) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid capacity upgrade.");
         }
     }
 
-    RoutingVisualizationResult result = baseline;
-
-    // A transformed result has no newly computed failure evidence.
-    result.link_failures.clear();
-    result.failure_summary = {};
-    result.failure_analysis_runtime_microseconds = 0.0;
-    result.demand_evaluation_runtime_microseconds = 0.0;
-
-    result.summary.maximum_congestion = 0.0;
-    result.summary.average_utilization = 0.0;
-    result.summary.overloaded_edges = 0;
+    NetworkData result = baseline;
+    result.max_congestion = 0.0;
+    result.average_congestion = 0.0;
 
     double utilizationSum = 0.0;
-    std::unordered_set<int> observedEdges;
+    std::unordered_set<int> observed;
 
-    for (auto& edge : result.edges) {
-        if (!observedEdges.insert(edge.id).second) {
-            return makeErrorMessage(ErrorCode::InvalidArgument, "Duplicate baseline edge ID");
+    for (auto& link : result.links) {
+        if (!observed.insert(link.edge_id).second) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Duplicate physical edge ID.");
         }
 
-        if (!std::isfinite(edge.load) || !std::isfinite(edge.capacity) || edge.load < 0.0 || edge.capacity <= 0.0) {
-            return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid baseline link metrics");
+        if (!std::isfinite(link.load) || !std::isfinite(link.capacity) || link.load < 0.0 || link.capacity <= 0.0) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Invalid baseline link metrics.");
         }
 
-        const auto it = capacityFactors.find(edge.id);
+        const auto it = capacityFactors.find(link.edge_id);
+        const double factor = it == capacityFactors.end() ? 1.0 : it->second;
 
-        const double capacityFactor = it == capacityFactors.end() ? 1.0 : it->second;
+        link.load *= demandScale;
+        link.capacity *= factor;
+        link.utilization = link.load / link.capacity;
 
-        const double newLoad = edge.load * demandScale;
-        const double newCapacity = edge.capacity * capacityFactor;
-        const double newUtilization = newLoad / newCapacity;
-
-        if (!std::isfinite(newLoad) || !std::isfinite(newCapacity) || !std::isfinite(newUtilization) || newCapacity <= 0.0) {
-            return makeErrorMessage(ErrorCode::InvalidArgument, "Scenario transformation overflow");
+        if (!std::isfinite(link.load) || !std::isfinite(link.capacity) || !std::isfinite(link.utilization) || link.capacity <= 0.0) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Scenario transformation overflow.");
         }
 
-        edge.load = newLoad;
-        edge.capacity = newCapacity;
-        edge.utilization = newUtilization;
+        result.max_congestion = std::max(result.max_congestion, link.utilization);
 
-        result.summary.maximum_congestion = std::max(result.summary.maximum_congestion, newUtilization);
-
-        utilizationSum += newUtilization;
-
-        if (newUtilization > 1.0) {
-            ++result.summary.overloaded_edges;
-        }
+        utilizationSum += link.utilization;
     }
 
     for (const auto& [edgeId, factor] : capacityFactors) {
-        if (!observedEdges.contains(edgeId)) {
-            return makeErrorMessage(ErrorCode::InvalidArgument, "Capacity upgrade references unknown edge");
+        if (!observed.contains(edgeId)) {
+            return makeErrorMessage(ErrorCode::InvalidArgument, "Capacity upgrade references unknown edge.");
         }
     }
 
-    result.summary.average_utilization = utilizationSum / static_cast<double>(result.edges.size());
+    result.average_congestion = utilizationSum / static_cast<double>(result.links.size());
 
-    result.summary.total_routed_demand = baseline.summary.total_routed_demand * demandScale;
+    result.total_demand_volume = baseline.total_demand_volume * demandScale;
 
-    if (!std::isfinite(result.summary.average_utilization) || !std::isfinite(result.summary.total_routed_demand)) {
-        return makeErrorMessage(ErrorCode::InvalidArgument, "Scenario aggregate overflow");
+    if (!std::isfinite(result.average_congestion) || !std::isfinite(result.total_demand_volume)) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "Scenario aggregate overflow.");
     }
 
     return result;

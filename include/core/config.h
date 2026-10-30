@@ -4,6 +4,7 @@
 
 #include "types.h"
 #include "utils/demands.h"
+#include <map>
 
 
 struct _CapacityUpgrade {

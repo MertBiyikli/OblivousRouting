@@ -14,7 +14,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
-
+from e_routing.api.workspace_models import WorkspaceSnapshot
 from e_routing.api.config import (
     load_network_registry,
     trusted_run_for_network,
@@ -40,6 +40,9 @@ class N1Request(BaseModel):
     execution_mode: Literal[
         "fast", "standard", "research"
     ] = "fast"
+    workspace: WorkspaceSnapshot = Field(
+        default_factory=WorkspaceSnapshot
+    )
 
 
 def create_n1_router(
@@ -111,6 +114,10 @@ def create_n1_router(
             resolve_network, network_id
         )
 
+        normalized_workspace = request.workspace.normalized()
+
+
+
         directory = analysis_path(network_id, request.analysis_id)
         report_path = directory / "n1.json"
         pending_path = directory / "n1.pending.json"
@@ -130,7 +137,10 @@ def create_n1_router(
                     "network_id": network_id,
                     "analysis_id": request.analysis_id,
                     "status": "running",
-                    "request": request.model_dump(),
+                    "request": {
+                        **request.model_dump(exclude={"workspace"}),
+                        "workspace": normalized_workspace.model_dump(),
+                    },
                 }, stream)
 
         except FileExistsError as exc:
@@ -143,6 +153,7 @@ def create_n1_router(
                 503, "Analysis storage unavailable"
             ) from exc
 
+
         command = [
             str(executable),
             "analyze-n1",
@@ -151,8 +162,26 @@ def create_n1_router(
             "--demand", request.demand_model,
             "--seed", str(request.seed),
             "--execution-mode", request.execution_mode,
-            "--output", str(pending_path),
+            "--demand-scale", str(normalized_workspace.demand_scale),
         ]
+
+        for upgrade in normalized_workspace.capacity_upgrades:
+            command.extend([
+                "--capacity-upgrade",
+                f"{upgrade.edge_id}:{upgrade.factor}",
+            ])
+
+        if normalized_workspace.commodity_overrides:
+            command.append("--commodity-scale")
+            command.extend(
+                f"{item.source}:{item.target}:{item.factor}"
+                for item in normalized_workspace.commodity_overrides
+            )
+
+        command.extend([
+            "--output", str(pending_path),
+        ])
+
 
         try:
             process = await asyncio.create_subprocess_exec(

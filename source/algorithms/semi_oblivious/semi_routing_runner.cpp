@@ -4,6 +4,7 @@
 
 #include "algorithms/semi_oblivious/semi_routing_runner.h"
 #include "algorithms/oblivious/oblivious_routing_runner.h"
+#include "analysis/failures/link_exposure_result_adapter.h"
 #include "core/errors.h"
 
 static Result<std::shared_ptr<SemiSolverRoutingEngine>> makeSemiRoutingEngine(SolverType type, optimized::Graph<EdgeData>& graph) {
@@ -66,23 +67,6 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>
             return getError(dmap);
         }
 
-        /*
-         * ------------------------------------------------------------
-         * Demand-specific semi-oblivious solve
-         * ------------------------------------------------------------
-         *
-         * SemiObliviousRoutingSolver::route() already measures the
-         * actual load-optimization runtime separately and stores it in
-         *
-         *     result.total_runtime_microseconds
-         *
-         * RoutingAnalyzer then separately records:
-         *
-         *     demand_evaluation_runtime_microseconds
-         *     failure_analysis_runtime_microseconds
-         *
-         * Therefore we do NOT time the complete route() call here.
-         */
 
         SemiObliviousRoutingResult result;
 
@@ -111,170 +95,54 @@ Result<IRoutingResult> SemiObliviousSolverRunner::run(optimized::Graph<EdgeData>
          * ------------------------------------------------------------
          */
 
-        const auto& analysis = result.visualization;
+        // Evaluate the exact demand-specific scheme.
+        // Demand evaluation does not perform optimization or N-1.
+        const auto evaluation_start = std::chrono::steady_clock::now();
 
-        const auto& failure_summary = analysis.failure_summary;
+        auto evaluated = DemandEvaluator::evaluate(graph, result, dmap.value());
 
-        FailureRecoveryAnalysis recovery_analysis;
-
-        bool recovery_available = false;
-/*
-        if (cfg.failure_recovery) {
-            auto recovery = FailureRecoveryAnalyzer::analyze(graph, type, dmap.value(), demandType, analysis.summary.maximum_congestion);
-
-            if (!recovery) {
-                return getError(recovery);
-            }
-
-            recovery_analysis = std::move(recovery.value());
-
-            recovery_available = true;
-        }
-        */
-        semiResult.demand_evaluations.emplace_back(DemandEvaluationResult{
-            .demand_type = demandType,
-
-            .congestion = analysis.summary.maximum_congestion,
-
-            /*
-             * Baseline demand evaluation only.
-             *
-             * Does not include semi-oblivious optimization.
-             * Does not include failure analysis.
-             */
-            .runtime_microseconds = analysis.demand_evaluation_runtime_microseconds,
-
-            /*
-             * ------------------------------------------------------------
-             * Layer 1: static single-link exposure analysis
-             * ------------------------------------------------------------
-             */
-            .failure_analysis_runtime_microseconds = analysis.failure_analysis_runtime_microseconds,
-
-            .failure_tested_links = failure_summary.tested_links,
-
-            .failure_most_critical_edge_id = failure_summary.most_critical_edge_id,
-
-            .failure_most_critical_source = failure_summary.most_critical_source,
-
-            .failure_most_critical_target = failure_summary.most_critical_target,
-
-            .failure_maximum_lost_traffic_fraction = failure_summary.maximum_lost_traffic_fraction,
-
-            .failure_average_lost_traffic_fraction = failure_summary.average_lost_traffic_fraction,
-
-            .failure_median_lost_traffic_fraction = failure_summary.median_lost_traffic_fraction,
-
-            .failure_maximum_affected_demand_fraction = failure_summary.maximum_affected_demand_fraction,
-
-            .failure_traffic_carrying_links = failure_summary.traffic_carrying_links,
-
-            .failure_critical_links_10_percent = failure_summary.critical_links_10_percent,
-
-            .failure_critical_links_25_percent = failure_summary.critical_links_25_percent,
-
-            .failure_critical_links_50_percent = failure_summary.critical_links_50_percent,
-
-            /*
-             * ------------------------------------------------------------
-             * Layer 2: actual N-1 recovery analysis
-             * ------------------------------------------------------------
-             */
-            .failure_recovery_available = recovery_available,
-
-            .recovery_tested_links = recovery_available ? recovery_analysis.summary.tested_links : 0,
-
-            .recovery_disconnected_failures = recovery_available ? recovery_analysis.summary.disconnected_failures : 0,
-
-            .recovery_successful_recomputations = recovery_available ? recovery_analysis.summary.successful_recomputations : 0,
-
-            .recovery_failed_recomputations = recovery_available ? recovery_analysis.summary.failed_recomputations : 0,
-
-            .recovery_maximum_unroutable_demand_fraction = recovery_available ? recovery_analysis.summary.maximum_unroutable_demand_fraction : -1.0,
-
-            .recovery_average_unroutable_demand_fraction = recovery_available ? recovery_analysis.summary.average_unroutable_demand_fraction : -1.0,
-
-            .recovery_maximum_post_failure_congestion = recovery_available ? recovery_analysis.summary.maximum_post_failure_congestion : -1.0,
-
-            .recovery_average_post_failure_congestion = recovery_available ? recovery_analysis.summary.average_post_failure_congestion : -1.0,
-
-            .recovery_maximum_congestion_increase_factor = recovery_available ? recovery_analysis.summary.maximum_congestion_increase_factor : -1.0,
-
-            .recovery_average_congestion_increase_factor = recovery_available ? recovery_analysis.summary.average_congestion_increase_factor : -1.0,
-
-            .recovery_average_recomputation_runtime_microseconds = recovery_available ? recovery_analysis.summary.average_recomputation_runtime_microseconds : -1.0,
-
-            .recovery_maximum_recomputation_runtime_microseconds = recovery_available ? recovery_analysis.summary.maximum_recomputation_runtime_microseconds : -1.0,
-
-            /*
-             * Overall worst failure.
-             */
-            .recovery_worst_failed_edge_id = recovery_available ? recovery_analysis.summary.worst_failed_edge_id : -1,
-
-            .recovery_worst_failed_source = recovery_available ? recovery_analysis.summary.worst_failed_source : -1,
-
-            .recovery_worst_failed_target = recovery_available ? recovery_analysis.summary.worst_failed_target : -1,
-
-            /*
-             * Worst disconnecting failure.
-             */
-            .recovery_worst_disconnect_edge_id = recovery_available ? recovery_analysis.summary.worst_disconnect_edge_id : -1,
-
-            .recovery_worst_disconnect_source = recovery_available ? recovery_analysis.summary.worst_disconnect_source : -1,
-
-            .recovery_worst_disconnect_target = recovery_available ? recovery_analysis.summary.worst_disconnect_target : -1,
-
-            .recovery_worst_disconnect_unroutable_demand_fraction = recovery_available ? recovery_analysis.summary.worst_disconnect_unroutable_demand_fraction : -1.0,
-
-            /*
-             * Worst survivable congestion failure.
-             */
-            .recovery_worst_congestion_edge_id = recovery_available ? recovery_analysis.summary.worst_congestion_edge_id : -1,
-
-            .recovery_worst_congestion_source = recovery_available ? recovery_analysis.summary.worst_congestion_source : -1,
-
-            .recovery_worst_congestion_target = recovery_available ? recovery_analysis.summary.worst_congestion_target : -1,
-
-            .recovery_worst_congestion_baseline = recovery_available ? recovery_analysis.summary.worst_congestion_baseline : -1.0,
-
-            .recovery_worst_congestion_post_failure = recovery_available ? recovery_analysis.summary.worst_congestion_post_failure : -1.0,
-
-            .recovery_worst_congestion_increase_factor = recovery_available ? recovery_analysis.summary.worst_congestion_increase_factor : -1.0,
-
-            /*
-             * Slowest successful recovery.
-             */
-            .recovery_slowest_recovery_edge_id = recovery_available ? recovery_analysis.summary.slowest_recovery_edge_id : -1,
-
-            .recovery_slowest_recovery_source = recovery_available ? recovery_analysis.summary.slowest_recovery_source : -1,
-
-            .recovery_slowest_recovery_target = recovery_available ? recovery_analysis.summary.slowest_recovery_target : -1,
-
-            .recovery_slowest_recovery_runtime_microseconds = recovery_available ? recovery_analysis.summary.slowest_recovery_runtime_microseconds : -1.0,
-        });
-
-
-
-        if (recovery_available) {
-            semiResult.demand_evaluations.back().recovery_events = std::move(recovery_analysis.failures);
+        if (!evaluated) {
+            return getError(evaluated);
         }
 
+        const auto evaluation_end = std::chrono::steady_clock::now();
 
-        /*
-         * Preserve the exact demand-specific routing scheme.
-         */
+        // Preserve normal routing-evaluation metrics.
+        DemandEvaluationResult evaluation{};
+        evaluation.demand_type = demandType;
+        evaluation.congestion = evaluated->max_congestion;
+        evaluation.runtime_microseconds = std::chrono::duration<double, std::micro>(evaluation_end - evaluation_start).count();
+        evaluation.network_data = std::move(evaluated.value());
+        if (cfg.failure_analysis) {
+            const auto failure_start = std::chrono::steady_clock::now();
+
+            auto exposure = LinkExposureAnalyzer::analyze(
+                graph,
+                *result.scheme,
+                dmap.value()
+            );
+
+            if (!exposure)
+                return getError(exposure);
+
+            const auto failure_end = std::chrono::steady_clock::now();
+
+            const double runtime =
+                std::chrono::duration<double, std::micro>(
+                    failure_end - failure_start
+                ).count();
+
+            populateLinkExposureMetrics(
+                evaluation,
+                exposure.value(),
+                runtime
+            );
+        }
+        semiResult.demand_evaluations.push_back(std::move(evaluation));
+
+        // Preserve the exact demand-specific routing scheme.
         semiResult.demand_schemes[demandModelName(demandType)] = std::move(result.scheme);
 
-        /*
-         * Preserve visualization / analysis result.
-         */
-        RoutingVisualizationResult visualization = std::move(result.visualization);
-
-        visualization.graph_name = cfg.filename;
-
-        visualization.solver_name = getSolverName(type);
-
-        semiResult.visualization_results.push_back(std::move(visualization));
     }
 
     semiResult.total_runtime_microseconds = semiResult.preprocessing_runtime_microseconds + semiResult.solve_runtime_microseconds;

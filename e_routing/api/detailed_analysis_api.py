@@ -29,54 +29,54 @@ class Upgrade(BaseModel):
     )
 
 
+
+from typing import Literal
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from e_routing.api.workspace_models import WorkspaceSnapshot
+
+
 class DetailedRequest(BaseModel):
-    scenario_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    scenario_id: str = Field(
+        pattern=r"^[A-Za-z0-9_-]{1,64}$"
+    )
+
     scenario_kind: Literal[
         "capacity_upgrade", "link_failure"
     ] = "capacity_upgrade"
 
-    demand_model: str = "uniform"
-    demand_scale: float = Field(
-        default=1.0,
-        gt=0.0,
-        le=100.0,
-        allow_inf_nan=False,
+    demand_model: Literal["uniform"] = "uniform"
+
+    workspace: WorkspaceSnapshot = Field(
+        default_factory=WorkspaceSnapshot
     )
 
-    capacity_upgrades: list[Upgrade] = Field(
-        default_factory=list
-    )
     link_failures: list[int] = Field(
-        default_factory=list
+        default_factory=list,
+        max_length=1
     )
 
     @model_validator(mode="after")
     def validate_modification(self):
-        if self.scenario_kind == "capacity_upgrade":
-            if not self.capacity_upgrades:
-                raise ValueError(
-                    "Capacity analysis requires an upgrade"
-                )
-            if self.link_failures:
-                raise ValueError(
-                    "Capacity analysis cannot include link failures"
-                )
-
-        elif self.scenario_kind == "link_failure":
+        if self.scenario_kind == "link_failure":
             if len(self.link_failures) != 1:
                 raise ValueError(
-                    "Select exactly one failed link"
-                )
-            if self.capacity_upgrades:
-                raise ValueError(
-                    "Link failure cannot include capacity upgrades"
+                    "Select exactly one failed physical link"
                 )
             if self.link_failures[0] < 0:
                 raise ValueError(
                     "Failed edge ID must be nonnegative"
                 )
 
+        if self.scenario_kind == "capacity_upgrade":
+            if self.link_failures:
+                raise ValueError(
+                    "Capacity analysis cannot fail links"
+                )
+
         return self
+
 
 
 
@@ -135,7 +135,6 @@ def create_detailed_analysis_router(reports_root: Path | str = "results/scenario
             raise HTTPException(409, "Scenario ID already exists")
 
         command = [
-            str(engine),
             "solve",
             "--solver", network.solver_label,
             "--graph", str(network.graph),

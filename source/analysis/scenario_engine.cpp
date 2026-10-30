@@ -12,39 +12,77 @@
 #include "core/errors.h"
 
 Result<PreparedAnalysis> ScenarioEngine::prepare(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode) {
+    // Legacy behavior: generate demands from the supplied graph.
     auto generated = computeTotalDemandVolume(graph, cfg);
-    if (!generated)
+
+    if (!generated) {
         return getError(generated);
+    }
+
+    // Delegate all routing preparation to the common path.
+    return prepare(graph, cfg, mode, generated.value().first);
+}
+
+Result<PreparedAnalysis> ScenarioEngine::prepare(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode, const demands& fixed_demands) {
+    // Validate and normalize externally supplied demands.
+    auto normalized = DemandVector::fromDemands(fixed_demands, graph.getNumNodes());
+
+    if (!normalized) {
+        return getError(normalized);
+    }
+
+    auto engine_demands = normalized->toDemands();
+
+    if (!engine_demands) {
+        return getError(engine_demands);
+    }
 
     PreparedAnalysis prepared;
+
     prepared.graph_fingerprint = optimized::GraphFingerprint::compute(graph);
-    prepared.fixed_demands = std::move(generated.value().first);
-    prepared.total_demand_volume = generated.value().second;
+
+    prepared.fixed_demands = std::move(engine_demands.value());
+
+    prepared.total_demand_volume = normalized->totalVolume();
+
     prepared.mode = mode;
 
     const auto solver_types = getSolverFromConfigAndMode(cfg, mode);
-    if (solver_types.empty())
+
+    if (solver_types.empty()) {
         return makeErrorMessage(ErrorCode::InvalidSolver, "No solvers selected for scenario analysis.");
+    }
 
     for (const auto type : solver_types) {
         std::optional<IRoutingResult> routing;
+
         double seconds = 0.0;
+
         auto solved = solveInto(type, graph, routing, seconds);
-        if (!solved)
+
+        if (!solved) {
             return getError(solved);
-        if (!routing || !routing->scheme || !routing->scheme->isValid())
+        }
+
+        if (!routing || !routing->scheme || !routing->scheme->isValid()) {
             return makeErrorMessage(ErrorCode::InvalidRouting, "Invalid baseline routing scheme.");
+        }
 
         auto evaluated = evaluateRouting(graph, *routing, prepared.fixed_demands, prepared.total_demand_volume);
-        if (!evaluated)
+
+        if (!evaluated) {
             return getError(evaluated);
+        }
 
         PreparedSolver item;
+
         item.type = type;
         item.baseline = std::move(evaluated.value());
         item.baseline_solver_seconds = seconds;
+
         prepared.solvers.push_back(std::move(item));
     }
+
     return prepared;
 }
 
@@ -156,7 +194,7 @@ Result<std::pair<demands, double>> ScenarioEngine::computeTotalDemandVolume(cons
     if (cfg.demand_models.empty()) {
         return makeErrorMessage(ErrorCode::InvalidDemand, "Demand models are empty.");
     }
-    double total_demand_volume = 0.0; // {total demand volume, max congestion
+    double total_demand_volume = 0.0; // {total demand volume, max congestionc
     // Generate demands once using the ORIGINAL graph.
     auto generated = generateScenarioDemands(graph, cfg.demand_models.front(), cfg.demand_scale);
     if (!generated) {

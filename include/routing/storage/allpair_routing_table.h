@@ -40,7 +40,7 @@ public:
     }
 
     double getFlow(int e, int s, int t) const override;
-
+    double getPhysicalLinkFlow(int e, int s, int t) const override;
     void addFlow(int e, int s, int t, double flow_sx);
 
     virtual void routeDemands(std::vector<double>& congestion, const demands& demands) const override;

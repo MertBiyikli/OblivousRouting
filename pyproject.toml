@@ -29,6 +29,10 @@ include = ["e_routing*"]
 testpaths = ["tests/py"]
 python_files = ["test_*.py"]
 
+markers = [
+    "integration: runs Scenario Studio against the live API and C++ engine"
+]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 200

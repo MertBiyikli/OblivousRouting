@@ -299,3 +299,9 @@ bool AllPairRoutingScheme::isValid() {
     }
     return routing_table.isValid(g);
 }
+
+double AllPairRoutingScheme::getPhysicalLinkFlow(int e, int s, int t) const {
+    const int reverse = g.reverse(e).id;
+
+    return std::abs(getFlow(e, s, t)) + std::abs(getFlow(reverse, s, t));
+}

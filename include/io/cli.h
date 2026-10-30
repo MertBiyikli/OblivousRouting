@@ -614,12 +614,16 @@ inline Result<Command> parse(int argc, char** argv)
             }
             if (variables.count("load-routing-table") ||
                 variables.count("save-routing-table") ||
-                variables.count("capacity-upgrade") ||
                 variables.count("link-failure") ||
-                variables.count("visualization") || failure_analysis || failure_recovery) {
-                return makeErrorMessage(ErrorCode::InvalidArgument,
-                    "analyze-n1 does not accept routing-table, scenario-modification, visualization, or legacy failure-analysis flags.");
-            }
+                variables.count("visualization") ||
+                failure_analysis || failure_recovery) {
+                            return makeErrorMessage(
+                                ErrorCode::InvalidArgument,
+                                "analyze-n1 does not accept routing-table, "
+                                "link-failure, visualization, "
+                                "or legacy failure-analysis flags."
+                            );
+                }
         }
 
         if (isTraffic) {
@@ -663,10 +667,11 @@ inline Result<Command> parse(int argc, char** argv)
         std::vector<CommodityScale> commodityScales;
 
         if (variables.count("commodity-scale")) {
-            if (!isTraffic) {
+            // The solve command also supports workspace demand modifications.
+            if (!isTraffic && !isN1 && first != "solve") {
                 return makeErrorMessage(
                     ErrorCode::InvalidArgument,
-                    "--commodity-scale requires analyze-traffic"
+                    "--commodity-scale requires solve, analyze-traffic or analyze-n1"
                 );
             }
 

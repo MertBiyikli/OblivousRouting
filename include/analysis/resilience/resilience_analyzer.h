@@ -33,61 +33,67 @@ struct N1Result {
     std::vector<FailureOutcome> outcomes; // All active physical edges, even unsuccessful ones
 };
 
-// Sequential first version. Never share one mutable graph across threads.
-// Restrict to one solver so a failure can be attributed unambiguously.
-inline Result<N1Result> analyzeN1(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode = ExecutionMode::FAST) {
+inline Result<N1Result> analyzeN1(optimized::Graph<EdgeData>& graph, const PreparedAnalysis& prepared) {
     const auto initial_fingerprint = optimized::GraphFingerprint::compute(graph);
-    auto prepared_result = ScenarioEngine::prepare(graph, cfg, mode);
 
-    if (!prepared_result)
-        return getError(prepared_result);
-    const PreparedAnalysis& prepared = prepared_result.value();
+    // The prepared analysis must correspond to the
+    // effective workspace graph.
+    if (prepared.graph_fingerprint != initial_fingerprint) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "Prepared N-1 analysis does not match workspace graph.");
+    }
 
-    if (prepared.solvers.size() != 1)
-        return makeErrorMessage(ErrorCode::InvalidArgument, "N-1 v1 supports exactly one solver per analysis.");
-
-    if (optimized::GraphFingerprint::compute(graph) != initial_fingerprint)
-        return makeErrorMessage(ErrorCode::LogicError, "Graph changed during N-1 preparation.");
+    if (prepared.solvers.size() != 1) {
+        return makeErrorMessage(ErrorCode::InvalidArgument, "N-1 supports exactly one solver per analysis.");
+    }
 
     N1Result result;
     result.graph_fingerprint = initial_fingerprint;
     result.solver = prepared.solvers.front().type;
     result.baseline = prepared.solvers.front().baseline;
 
-    // Canonical directed IDs are even in this graph representation and remain stable.
-    // Collect IDs and endpoints *before* applying any failure.
+    // Enumerate active physical links before executing failures.
     const int edge_bound = graph.globalEdgeCount() * 2;
+
     for (int e = 0; e < edge_bound; e += 2) {
         if (!graph.edgeAlive(e))
             continue;
+
         const auto [source, target] = graph.getEdgeEndpoints(e);
+
         FailureOutcome outcome;
         outcome.edge_id = e;
         outcome.source = source;
         outcome.target = target;
+
         result.outcomes.push_back(std::move(outcome));
     }
 
+    // Each failure is independent and must restore
+    // the effective workspace graph.
     for (auto& outcome : result.outcomes) {
         LinkFailure failure;
+
         auto registered = failure.linkFailure(outcome.edge_id);
         if (!registered)
             return getError(registered);
 
-        // Classify demand disconnection separately, using the same predicate as
-        // ScenarioEngine, while ensuring even early errors restore the graph.
         bool disconnected = false;
+
         {
             GraphRollbackGuard guard(graph);
+
             auto applied = failure.apply(graph);
             if (!applied)
                 return getError(applied);
+
             auto connected = verifyDemandConnectivity(graph, prepared.fixed_demands);
+
             disconnected = !connected;
         }
 
-        if (optimized::GraphFingerprint::compute(graph) != initial_fingerprint)
+        if (optimized::GraphFingerprint::compute(graph) != initial_fingerprint) {
             return makeErrorMessage(ErrorCode::LogicError, "Graph not restored after connectivity check.");
+        }
 
         if (disconnected) {
             outcome.status = FailureStatus::DISCONNECTED;
@@ -95,21 +101,41 @@ inline Result<N1Result> analyzeN1(optimized::Graph<EdgeData>& graph, const Confi
         }
 
         auto executed = ScenarioEngine::execute(graph, failure, prepared);
-        if (optimized::GraphFingerprint::compute(graph) != initial_fingerprint)
-            return makeErrorMessage(ErrorCode::LogicError, "Graph not restored after scenario execution.");
+
+        if (optimized::GraphFingerprint::compute(graph) != initial_fingerprint) {
+            return makeErrorMessage(ErrorCode::LogicError, "Graph not restored after N-1 execution.");
+        }
+
         if (!executed) {
             outcome.status = FailureStatus::EXECUTION_FAILED;
-            continue; // Preserve the event and finish evaluating the other links.
+            continue;
         }
-        const auto& solver_results = executed.value().solver_results;
-        if (solver_results.size() != 1 || !solver_results.front().modified_Data || !solver_results.front().comparison)
-            return makeErrorMessage(ErrorCode::LogicError, "Incomplete successful N-1 scenario result.");
+
+        const auto& solvers = executed.value().solver_results;
+
+        if (solvers.size() != 1 || !solvers.front().modified_Data || !solvers.front().comparison) {
+            return makeErrorMessage(ErrorCode::LogicError, "Incomplete successful N-1 result.");
+        }
 
         outcome.status = FailureStatus::SUCCESS;
-        outcome.reoptimized = *solver_results.front().modified_Data;
-        outcome.comparison = *solver_results.front().comparison;
+
+        outcome.reoptimized = *solvers.front().modified_Data;
+
+        outcome.comparison = *solvers.front().comparison;
     }
+
     return result;
+}
+
+// Sequential first version. Never share one mutable graph across threads.
+// Restrict to one solver so a failure can be attributed unambiguously.
+inline Result<N1Result> analyzeN1(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode) {
+    auto prepared = ScenarioEngine::prepare(graph, cfg, mode);
+
+    if (!prepared)
+        return getError(prepared);
+
+    return analyzeN1(graph, prepared.value());
 }
 
 #endif // E_ROUTING_RESILIENCE_ANALYZER_H

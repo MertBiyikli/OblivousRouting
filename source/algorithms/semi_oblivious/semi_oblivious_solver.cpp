@@ -5,7 +5,7 @@
 #include "algorithms/semi_oblivious/semi_oblivious_solver.h"
 
 #include "utils/time_tracking.h"
-#include "analysis/visualization_result.h"
+
 
 
 Result<std::unique_ptr<RoutingScheme>> SemiObliviousRoutingSolver::solve() {
@@ -96,25 +96,5 @@ Result<SemiObliviousRoutingResult> SemiObliviousRoutingSolver::route(const deman
      * - visualization nodes and edges
      */
 
-    /*
-    auto vis_result =
-        RoutingAnalyzer::analyze(
-            graph,
-            *res.scheme,
-            demand,
-            res,
-            demandModelName(demandType));
-
-    if (!vis_result) {
-        return getError(vis_result);
-    }
-
-    res.visualization =  vis_result.value();
-
-    res.congestion =
-        res.visualization
-            .summary
-            .maximum_congestion;
-*/
     return res;
 }

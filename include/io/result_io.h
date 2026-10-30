@@ -559,21 +559,31 @@ class RoutingResultWriter {
                 // Per-physical-link congestion metrics for capacity planning.
                 // Visualization results are indexed by the corresponding demand model.
                 out << "          \"link_utilizations\": [\n";
-                if (i < result.visualization_results.size()) {
-                    const auto& links = result.visualization_results[i].edges;
-                    for (std::size_t link_index = 0; link_index < links.size(); ++link_index) {
-                        const auto& edge = links[link_index];
-                        out << "            {\"edge_id\": " << edge.id
-                            << ", \"source\": " << edge.source
-                            << ", \"target\": " << edge.target
-                            << ", \"capacity\": " << edge.capacity
-                            << ", \"load\": " << edge.load
-                            << ", \"utilization\": " << edge.utilization
-                            << ", \"overloaded\": " << (edge.utilization > 1.0 ? "true" : "false") << "}";
-                        if (link_index + 1 < links.size()) out << ",";
+
+                if (eval.network_data.has_value()) {
+                    const auto& links = eval.network_data->links;
+
+                    for (std::size_t j = 0; j < links.size(); ++j) {
+                        const auto& link = links[j];
+
+                        out << "            {\"edge_id\": " << link.edge_id
+                            << ", \"source\": " << link.source
+                            << ", \"target\": " << link.target
+                            << ", \"capacity\": " << link.capacity
+                            << ", \"load\": " << link.load
+                            << ", \"utilization\": " << link.utilization
+                            << ", \"overloaded\": "
+                            << (link.utilization > 1.0 ? "true" : "false")
+                            << "}";
+
+                        if (j + 1 < links.size()) {
+                            out << ",";
+                        }
+
                         out << "\n";
                     }
                 }
+
                 out << "          ]";
 
                 /*

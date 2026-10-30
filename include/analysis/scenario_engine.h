@@ -19,6 +19,7 @@
 class ScenarioEngine {
   public:
     static Result<PreparedAnalysis> prepare(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode);
+    static Result<PreparedAnalysis> prepare(optimized::Graph<EdgeData>& graph, const Config& cfg, ExecutionMode mode, const demands& fixed_demands);
 
     static Result<ScenarioResult> execute(optimized::Graph<EdgeData>& graph, const Scenario& scenario, const PreparedAnalysis& prepared);
     static Result<ScenarioResult> runScenario(optimized::Graph<EdgeData>& graph, const Scenario& scenario, const Config& cfg, ExecutionMode mode, double demand_scale = 1.0);

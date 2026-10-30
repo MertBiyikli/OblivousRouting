@@ -5,11 +5,12 @@
 #ifndef OBLIVIOUSROUTING_ROUTING_RESULT_H
 #define OBLIVIOUSROUTING_ROUTING_RESULT_H
 
+#include "analysis/network_data.h"
+#include "analysis/failures/link_failure_recovery_result.h"
 #include "core/types.h"
 #include "io/demand_io.h"
 #include "routing_table.h"
 #include "utils/my_math.h"
-#include "analysis/visualization_result.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -197,6 +198,9 @@ struct DemandEvaluationResult {
      * backward compatibility.
      */
     std::vector<LinkFailureRecoveryResult> recovery_events;
+
+    std::optional<NetworkData> network_data;
+
 };
 
 class MWUMetrics{
@@ -314,10 +318,6 @@ struct IRoutingResult {
     // Semi-oblivious: one demand-specific scheme per demand model
     std::unordered_map<std::string, std::unique_ptr<RoutingScheme>> demand_schemes;
 
-    /*
-     * One visualization result per evaluated demand model.
-     */
-    std::vector<RoutingVisualizationResult> visualization_results;
 
 };
 
@@ -339,10 +339,7 @@ struct SemiObliviousRoutingResult :public IRoutingResult{
     double congestion = -1.0;
     std::string path_selection_strategy;
 
-    /*
-    * Visualization for the exact demand-specific routing solution.
-    */
-    RoutingVisualizationResult visualization;
+
 };
 
 

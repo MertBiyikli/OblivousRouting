@@ -7,7 +7,10 @@
 #include "analysis/resilience/resilience_result_json.h"
 #include "analysis/scenario_engine.h"
 #include "analysis/scenario_result_json.h"
+#include "analysis/workspace/workspace_configuration.h"
+#include "analysis/workspace/workspace_preparer.h"
 #include "io/result_io.h"
+#include "routing/demand_preparation.h"
 #include "routing/routing_runner.h"
 #include "routing/storage/routing_scheme_verifier.h"
 #include "routing/storage/routing_table_adapter.h"
@@ -58,12 +61,49 @@ int main(int argc, char** argv) {
 
         optimized::Graph<EdgeData> graph = *loadedGraph.value();
 
-        // Execute one prepared baseline and independent link failures.
-        // Serialize the result into the requested JSON file.
-        auto analysis = analyzeN1(graph, cfg, cmd->execution_mode);
-        if (!analysis) {
-            std::cerr << getError(analysis).error().message << '\n';
+        // Construct the complete workspace from the ORIGINAL graph.
+        WorkspaceConfiguration modifications;
+
+        modifications.capacity_upgrades = cfg.capacity_upgrades;
+        modifications.demand_scale = cfg.demand_scale;
+
+        for (const auto& item : cmd->commodity_scales) {
+            modifications.commodity_overrides.push_back({item.source, item.target, item.factor});
         }
+
+        // Generate original demands first, then apply traffic
+        // transformations and capacity upgrades.
+        auto workspace = WorkspacePreparer::prepare(graph, cfg, modifications);
+
+        if (!workspace) {
+            std::cerr << "Workspace preparation failed: " << getError(workspace).error().message << '\n';
+            return 1;
+        }
+
+        // Compute the N-1 baseline against the effective graph
+        // and the externally prepared demand matrix.
+        auto prepared = ScenarioEngine::prepare(graph, cfg, cmd->execution_mode, workspace->effective_demands);
+
+        if (!prepared) {
+            std::cerr << "N-1 preparation failed: " << getError(prepared).error().message << '\n';
+            return 1;
+        }
+
+        // Reuse the tested N-1 overload.
+        // Every failure is restored to the effective workspace.
+        auto analysis = analyzeN1(graph, prepared.value());
+
+        if (!analysis) {
+            std::cerr << "N-1 execution failed: " << getError(analysis).error().message << '\n';
+            return 1;
+        }
+
+        // Verify that analysis did not modify the effective graph.
+        if (optimized::GraphFingerprint::compute(graph) != workspace->effective_fingerprint) {
+            std::cerr << "N-1 failed to restore workspace graph\n";
+            return 1;
+        }
+
         auto written = ResilienceResultJsonWriter::write(analysis.value(), cfg.output_filename);
 
         if (!written) {
@@ -140,19 +180,10 @@ int main(int argc, char** argv) {
 
             // Apply directed source-target demand multipliers.
             for (const auto& override : cmd->commodity_scales) {
-                auto added = scenario.growPerCommodity(
-                    override.source,
-                    override.target,
-                    override.factor
-                );
+                auto added = scenario.growPerCommodity(override.source, override.target, override.factor);
 
                 if (!added) {
-                    std::cerr
-                        << "Invalid commodity override ("
-                        << override.source << ", "
-                        << override.target << "): "
-                        << getError(added).error().message
-                        << '\n';
+                    std::cerr << "Invalid commodity override (" << override.source << ", " << override.target << "): " << getError(added).error().message << '\n';
 
                     return 1;
                 }
@@ -165,34 +196,20 @@ int main(int argc, char** argv) {
                 return 1;
             }
 
-
             // Record the transformation the user actually requested.
             // These fields describe inputs, not derived congestion metrics.
             analysis->requested_global_scale = cfg.demand_scale;
 
             analysis->commodity_overrides.clear();
-            analysis->commodity_overrides.reserve(
-                cmd->commodity_scales.size()
-            );
+            analysis->commodity_overrides.reserve(cmd->commodity_scales.size());
 
             for (const auto& item : cmd->commodity_scales) {
-                analysis->commodity_overrides.push_back({
-                    item.source,
-                    item.target,
-                    item.factor
-                });
+                analysis->commodity_overrides.push_back({item.source, item.target, item.factor});
             }
 
             // Canonicalize output order for reproducible reports.
-            std::sort(
-                analysis->commodity_overrides.begin(),
-                analysis->commodity_overrides.end(),
-                [](const auto& a, const auto& b) {
-                    return std::tie(a.source, a.target) <
-                           std::tie(b.source, b.target);
-                }
-            );
-
+            std::sort(analysis->commodity_overrides.begin(), analysis->commodity_overrides.end(),
+                      [](const auto& a, const auto& b) { return std::tie(a.source, a.target) < std::tie(b.source, b.target); });
 
             auto written = TrafficGrowthResultJsonWriter::write(analysis.value(), cfg.output_filename);
 
@@ -211,12 +228,31 @@ int main(int argc, char** argv) {
         }
 
         if (cfg.evaluate_demand_models) {
+            for (const auto demandType : cfg.demand_models) {
+                auto prepared = prepareDemands(graph, demandType, cfg.demand_scale);
 
-            auto evaluation = DemandEvaluator::evaluate(graph, result.scheme, cfg, result, cfg.failure_analysis, cfg.demand_scale);
+                if (!prepared) {
+                    std::cerr << "Demand preparation error: " << prepared.error().message << '\n';
+                    return 1;
+                }
 
-            if (!evaluation) {
-                std::cerr << "Error evaluating imported scheme: " << evaluation.error().message << '\n';
-                return 1;
+                const auto start = std::chrono::steady_clock::now();
+
+                auto evaluated = DemandEvaluator::evaluate(graph, result, prepared.value());
+
+                if (!evaluated) {
+                    std::cerr << "Demand evaluation error: " << evaluated.error().message << '\n';
+                    return 1;
+                }
+
+                const auto end = std::chrono::steady_clock::now();
+
+                DemandEvaluationResult summary{};
+                summary.demand_type = demandType;
+                summary.congestion = evaluated->max_congestion;
+                summary.runtime_microseconds = std::chrono::duration<double, std::micro>(end - start).count();
+
+                result.demand_evaluations.push_back(std::move(summary));
             }
         }
 
@@ -238,15 +274,11 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-
     RoutingEngine engine;
     auto res = engine.entry(cfg);
 
     if (!res) {
-        std::cerr
-            << "Error: "
-            << getError(res).error().message
-            << '\n';
+        std::cerr << "Error: " << getError(res).error().message << '\n';
         return 1;
     }
 
@@ -261,26 +293,15 @@ int main(int argc, char** argv) {
     // Persist newly computed routing schemes when requested.
     // ------------------------------------------------------------
     if (!cfg.routing_table_output_directory.empty()) {
-        auto exported = RoutingTableExporter::save(
-            res.value(),
-            graph,
-            cfg.routing_table_output_directory
-        );
+        auto exported = RoutingTableExporter::save(res.value(), graph, cfg.routing_table_output_directory);
 
         if (!exported) {
-            std::cerr
-                << "Routing table export error: "
-                << getError(exported).error().message
-                << '\n';
+            std::cerr << "Routing table export error: " << getError(exported).error().message << '\n';
             return 1;
         }
 
-        std::cout
-            << "Routing tables exported to: "
-            << cfg.routing_table_output_directory
-            << '\n';
+        std::cout << "Routing tables exported to: " << cfg.routing_table_output_directory << '\n';
     }
-
 
     // Obtain the graph when exporting routing tables
     // or executing a scenario.

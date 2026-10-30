@@ -732,6 +732,23 @@
             </div>
         </div>
 
+
+        <div class="field" id="workspace-panel">
+            <div class="small">Active network workspace</div>
+            <div class="result-info" id="workspace-summary"
+                 aria-live="polite">
+                Original network · No modifications
+            </div>
+            <div class="help">
+                Workspace modifications remain selected when
+                switching analysis types. Analysis results do
+                not permanently modify the registered network.
+            </div>
+            <button id="reset-network" type="button" class="secondary">
+                Reset Network
+            </button>
+        </div>
+
         <button id="run" type="button" class="primary">Run simulation</button>
         <div id="run-help" class="help">This uses your real persisted routing scheme. No live network changes.</div>
         <div id="alert" role="alert" hidden class="alert"></div>
@@ -930,8 +947,13 @@
         }
 
         clearError();
+
         trafficOverrides.set(`${source}:${target}`, factor);
+
         renderTrafficOverrides();
+        refreshWorkspaceSummary();
+
+
     });
 
     function trafficPercent(value) {
@@ -1336,6 +1358,12 @@
         $('run').disabled = !$('network').value || $('network').disabled;
         // Invalidate results and topology from the previous network.
         upgrades.clear();
+        trafficOverrides.clear();
+        $('traffic-scale').value = '1.0';
+        $('scale').value = '1.0';
+
+        renderTrafficOverrides();
+        refreshWorkspaceSummary();
         lastLinks = [];
         activeScenarioId = null;
         selectedLinkId = null;
@@ -1716,9 +1744,10 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     analysis_id: analysisId,
+                    execution_mode: $('execution-mode').value,
                     demand_model: 'uniform',
                     seed: 42,
-                    execution_mode: $('execution-mode').value
+                    workspace: currentWorkspaceSnapshot()
                 })
             });
 
@@ -2292,6 +2321,25 @@
 
 
     $('run').addEventListener('click', async () => {
+        let workspace;
+
+        if ($('run').disabled) {
+            return;
+        }
+        try {
+            workspace = currentWorkspaceSnapshot();
+            validateAnalysisCompatibility(
+                $('analysis-type').value,
+                workspace
+            );
+        } catch (error) {
+            showError(error.message);
+            return;
+        }
+
+        // Keep legacy scenario endpoints synchronized with
+        // the shared workspace traffic multiplier.
+        $('scale').value = String(workspace.demand_scale);
         if ($('analysis-type').value === 'n1_resilience') {
             await executeN1UI();
             return;
@@ -2574,16 +2622,23 @@
         const traffic = type === 'traffic_growth';
 
 // Show only configuration relevant to the selected mode.
-        $('capacity-config').hidden = !capacity;
+        // Workspace configuration is independent of analysis selection.
+        $('capacity-config').hidden = false;
         $('failure-config').hidden = !failure;
-        $('traffic-config').hidden = !traffic;
+        $('traffic-config').hidden = false;
         $('execution-mode-config').hidden = !n1;
 
 // N-1 currently uses its fixed demand configuration.
+        // N-1 currently supports uniform demand through its API.
+// Keep the demand model visible, but constrain it accordingly.
         $('demand').disabled = n1;
-        $('scale').disabled = n1;
-        $('demand').closest('.field').hidden = n1 || traffic;
-        $('scale').closest('.field').hidden = n1 || traffic;
+
+        $('demand').closest('.field').hidden = false;
+
+// The shared demand multiplier is edited in traffic-config.
+// Keep the legacy scale input hidden to avoid two
+// conflicting controls for the same setting.
+        $('scale').closest('.field').hidden = true;
 
 // Failure-specific visualization.
         $('failure-legend').hidden = !failure;
@@ -2688,6 +2743,177 @@
                     : 'Run simulation';
     }
 
+
+    function currentWorkspaceSnapshot() {
+        const demandScale = Number($('traffic-scale').value);
+
+        if (
+            !Number.isFinite(demandScale) ||
+            demandScale <= 0 ||
+            demandScale > 100
+        ) {
+            throw new Error(
+                'Demand multiplier must be greater than 0 and at most 100.'
+            );
+        }
+
+        const capacity_upgrades = [...upgrades]
+            .map(([edge_id, factor]) => ({
+                edge_id: Number(edge_id),
+                factor: Number(factor)
+            }))
+            .sort((a, b) => a.edge_id - b.edge_id);
+
+        const commodity_overrides = [...trafficOverrides]
+            .map(([key, factor]) => {
+                const [source, target] = key.split(':').map(Number);
+                return {source, target, factor: Number(factor)};
+            })
+            .sort((a, b) =>
+                a.source - b.source || a.target - b.target
+            );
+
+        return {
+            capacity_upgrades,
+            demand_scale: demandScale,
+            commodity_overrides
+        };
+    }
+
+    function workspaceIsModified(workspace) {
+        return (
+            workspace.capacity_upgrades.length > 0 ||
+            workspace.demand_scale !== 1 ||
+            workspace.commodity_overrides.length > 0
+        );
+    }
+
+    function refreshWorkspaceSummary() {
+        const summary = $('workspace-summary');
+
+        try {
+            const workspace = currentWorkspaceSnapshot();
+
+            if (!workspaceIsModified(workspace)) {
+                summary.textContent = 'Original network · No modifications';
+                return;
+            }
+
+            summary.textContent = [
+                `${workspace.capacity_upgrades.length} capacity upgrades`,
+                `Traffic ×${workspace.demand_scale}`,
+                `${workspace.commodity_overrides.length} commodity overrides`
+            ].join(' · ');
+        } catch (error) {
+            summary.textContent = error.message;
+        }
+    }
+
+
+    function resetWorkspace() {
+        // Invalidate results belonging to an earlier workspace.
+        networkGeneration++;
+
+        upgrades.clear();
+        trafficOverrides.clear();
+
+        $('traffic-scale').value = '1.0';
+        $('scale').value = '1.0';
+
+        $('traffic-source').value = '';
+        $('traffic-target').value = '';
+        $('traffic-factor').value = '2.0';
+
+        $('edge').value = '';
+        $('factor').value = '1.5';
+        $('failed-edge').value = '';
+
+        selectedLinkId = null;
+        activeScenarioId = null;
+        lastLinks = [];
+
+        $('graph').replaceChildren();
+        $('scenario-analysis').replaceChildren();
+        $('scenario-analysis').hidden = true;
+        $('failure-legend').hidden = true;
+        $('large-network-analysis').hidden = true;
+        $('bottleneck-list').replaceChildren();
+
+        $('selected').textContent =
+            'Workspace reset. Run an analysis to inspect the original network.';
+
+        $('topology').textContent = 'Network topology';
+        $('status').textContent = 'Ready';
+
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+
+        renderTrafficOverrides();
+
+        // Use the existing capacity-list renderer here if available.
+        $('upgrades').textContent = 'Applied upgrades: none';
+
+        clearError();
+        refreshWorkspaceSummary();
+
+        $('run').disabled = !$('network').value;
+    }
+
+    function validateAnalysisCompatibility(type, workspace) {
+        if (type === 'n1_resilience') {
+            if ($('execution-mode').value === 'research') {
+                throw new Error(
+                    'N−1 RESEARCH mode is not supported by the API yet.'
+                );
+            }
+            return;
+        }
+
+        if (
+            type === 'traffic_growth' &&
+            workspace.capacity_upgrades.length > 0
+        ) {
+            throw new Error(
+                'Traffic Growth with capacity upgrades requires ' +
+                'the unified backend execution path.'
+            );
+        }
+
+        if (
+            type === 'link_failure' &&
+            (workspace.capacity_upgrades.length > 0 ||
+                workspace.commodity_overrides.length > 0)
+        ) {
+            throw new Error(
+                'Combined link-failure analysis is not exposed ' +
+                'through the API yet. The modifications are preserved.'
+            );
+        }
+
+        if (
+            type === 'capacity_upgrade' &&
+            workspace.commodity_overrides.length > 0
+        ) {
+            throw new Error(
+                'Capacity planning with commodity overrides is not ' +
+                'exposed through the API yet.'
+            );
+        }
+    }
+
+    $('reset-network').addEventListener(
+        'click', resetWorkspace
+    );
+
+
+    $('traffic-scale').addEventListener(
+        'input', refreshWorkspaceSummary
+    );
+
+    $('analysis-type').addEventListener(
+        'change', refreshWorkspaceSummary
+    );
 
     $('analysis-type').addEventListener(
         'change',

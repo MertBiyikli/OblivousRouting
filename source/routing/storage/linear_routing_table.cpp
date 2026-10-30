@@ -269,16 +269,16 @@ double LinearRoutingScheme::getFlow(int e, int s, int t) const {
     return (std::abs(total_flow) < EPS ? 0.0 : total_flow);
 }
 
+double LinearRoutingScheme::getPhysicalLinkFlow(int e, int s, int t) const {
+    return std::abs(getFlow(e, s, t));
+}
+
 void LinearRoutingScheme::addFlow(int e, int s, int t, double flow_sx) {
     routing_table.addFlow(e, s, flow_sx);
     routing_table.addFlow(e, t, -flow_sx);
 }
 
-
-void LinearRoutingScheme::routeDemands(
-    std::vector<double>& congestion,
-    const demands& demand_map
-) const {
+void LinearRoutingScheme::routeDemands(std::vector<double>& congestion, const demands& demand_map) const {
     // Allocate according to the complete stable edge-ID space.
     const int m = g.globalEdgeCount() * 2;
     const int n = g.getNumNodes();
@@ -287,8 +287,7 @@ void LinearRoutingScheme::routeDemands(
 
     std::vector<double> basis(n);
 
-    const auto combinedDemands =
-        combineDemandPairs(demand_map, n);
+    const auto combinedDemands = combineDemandPairs(demand_map, n);
 
     // Physical links have directed IDs (2k, 2k+1).
     for (int e = 0; e < m; e += 2) {
@@ -304,11 +303,7 @@ void LinearRoutingScheme::routeDemands(
         double load = 0.0;
 
         for (const auto& demand : combinedDemands) {
-            const double magnitude =
-                std::abs(
-                    basis[demand.source] -
-                    basis[demand.target]
-                );
+            const double magnitude = std::abs(basis[demand.source] - basis[demand.target]);
 
             if (magnitude < EPS)
                 continue;
@@ -316,17 +311,14 @@ void LinearRoutingScheme::routeDemands(
             load += demand.value * magnitude;
         }
 
-        const double forwardCapacity =
-            g.edgeData(e).capacity;
+        const double forwardCapacity = g.edgeData(e).capacity;
 
-        const double reverseCapacity =
-            g.edgeData(reverse).capacity;
+        const double reverseCapacity = g.edgeData(reverse).capacity;
 
         congestion[e] = load / forwardCapacity;
         congestion[reverse] = load / reverseCapacity;
     }
 }
-
 
 bool LinearRoutingScheme::isValid() {
     return routing_table.isValid(g);
