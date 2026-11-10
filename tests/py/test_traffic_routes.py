@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from e_routing.api import traffic_routes
+from e_routing.api import traffic_service, traffic_routes
 
 
 NETWORK = "backbone-1221"
@@ -71,19 +71,21 @@ def api(tmp_path, monkeypatch):
         solver_label="electrical",
     )
 
+
     monkeypatch.setattr(
-        traffic_routes,
+        traffic_service,
         "load_network_registry",
         lambda: {NETWORK: object()},
     )
 
     monkeypatch.setattr(
-        traffic_routes,
+        traffic_service,
         "trusted_run_for_network",
         lambda network: trusted,
     )
 
     root = tmp_path / "reports"
+
 
     app = FastAPI()
     app.include_router(
@@ -153,7 +155,7 @@ def mock_execution(monkeypatch, behavior):
             command, 0, stdout="OK", stderr=""
         )
 
-    monkeypatch.setattr(traffic_routes.subprocess, "run", run)
+    monkeypatch.setattr(traffic_service.subprocess, "run", run)
 
 
 def test_successful_analysis(api, monkeypatch):

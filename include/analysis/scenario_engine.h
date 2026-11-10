@@ -26,8 +26,8 @@ class ScenarioEngine {
 
     static Result<std::pair<demands, double>> computeTotalDemandVolume(const optimized::Graph<EdgeData>& graph, const Config& cfg);
     static Result<TrafficGrowthResult> evaluateTrafficGrowth(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& baseline_demands, const TrafficGrowth& scenario);
+    static Result<TrafficGrowthResult> evaluateTrafficGrowth(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& baseline_demands, const demands& modified_demands);
 };
-
 
 static Result<NetworkData> evaluateRouting(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& fixed_demands, double total_demand_volume) {
     if (!routing.scheme) {

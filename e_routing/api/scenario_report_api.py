@@ -32,9 +32,19 @@ def build_analysis_payload(report: dict) -> dict:
     if not isinstance(report, dict):
         raise ValueError("Scenario report must be an object")
 
+
     version = report.get("schema_version")
-    if version not in {"1.0", "1.1"}:
-        raise ValueError("Unsupported scenario report schema version")
+
+    if version not in {"1.0", "1.1", "1.2", "1.3"}:
+        raise ValueError("Unsupported detailed-report schema")
+
+    # Schema 1.2 introduces effective-workspace provenance.
+    workspace = report.get("workspace")
+
+    if version == "1.2":
+        if not isinstance(workspace, dict):
+            raise ValueError("Missing workspace provenance")
+
 
     kind = report.get("scenario_kind")
     if kind not in {"capacity_upgrade", "link_failure"}:
@@ -62,6 +72,11 @@ def build_analysis_payload(report: dict) -> dict:
         ),
         "solver_results": [],
     }
+
+
+    if version == "1.2":
+        result["workspace"] = workspace
+
 
     if (
             not isinstance(result["capacity_upgrades"], list)

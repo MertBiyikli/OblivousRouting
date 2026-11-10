@@ -1,23 +1,17 @@
 //
 // Created by Mert Biyikli on 23.06.26.
 //
+#include "routing/routing_engine.h"
 #include "core/errors.h"
 #include "io/result_io.h"
-#include "routing/routing_engine.h"
 #include "routing/routing_runner.h"
 #include "routing/routing_validation.h"
 
-
 std::string safeFileComponent(std::string value) {
-    for (char &character: value) {
-        const auto byte =
-                static_cast<unsigned char>(character);
+    for (char& character : value) {
+        const auto byte = static_cast<unsigned char>(character);
 
-        if (
-            !std::isalnum(byte) &&
-            character != '-' &&
-            character != '_'
-        ) {
+        if (!std::isalnum(byte) && character != '-' && character != '_') {
             character = '_';
         }
     }
@@ -25,10 +19,7 @@ std::string safeFileComponent(std::string value) {
     return value;
 }
 
-
-
-
-Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
+Result<RoutingExperimentResult> RoutingEngine::entry(Config& cfg) {
 
     auto graph = load_graph_optimized(cfg);
     if (!graph) {
@@ -40,7 +31,7 @@ Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
     RoutingExperimentResult exp_result;
     exp_result.graph_path = cfg.filename;
 
-    for (SolverType type: cfg.solvers) {
+    for (SolverType type : cfg.solvers) {
         auto result = engine.solve(*graph.value(), cfg, type);
 
         if (!result) {
@@ -53,10 +44,8 @@ Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
             exp_result.edges = result->edges;
         }
 
-
         exp_result.solver_results.push_back(std::move(result.value()));
     }
-
 
     auto output = RoutingResultWriter::write(exp_result, cfg);
     if (!output) {
@@ -68,8 +57,7 @@ Result<RoutingExperimentResult> RoutingEngine::entry(Config &cfg) {
     return exp_result;
 }
 
-
-Result<IRoutingResult> RoutingEngine::solve(optimized::Graph<EdgeData> &graph, const Config &cfg, SolverType type) {
+Result<IRoutingResult> RoutingEngine::solve(optimized::Graph<EdgeData>& graph, const Config& cfg, SolverType type) {
     RoutingValidation validator;
 
     auto input = validator.input(graph, cfg);

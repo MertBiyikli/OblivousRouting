@@ -13,7 +13,7 @@ public:
 
 private:
 
-    static std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>>toXCutEdges(const optimized::Graph<EdgeData>& graph);
+    static std::pair<std::vector<std::pair<unsigned int,unsigned int>>, std::vector<double>> toXCutEdges(const optimized::Graph<EdgeData>& graph);
 
     static std::vector<int> computeInducedEdges(const optimized::Graph<EdgeData>& graph,const std::vector<int>& vertices);
 

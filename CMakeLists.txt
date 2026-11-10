@@ -189,6 +189,26 @@ add_library(oblivious_routing_core STATIC
         include/analysis/workspace/workspace_preparer.h
         source/analysis/workspace/workspace_preparer.cpp
         include/analysis/workspace/workspace_executer.h
+        include/io/cli/help.h
+        include/io/cli/options.h
+        include/io/cli/parser.h
+        include/io/cli/command.h
+        include/application/dispatcher.h
+        include/application/routing_application.h
+        include/application/analysis_application.h
+        source/io/cli/options.cpp
+        source/io/cli/help.cpp
+        source/io/cli/parser.cpp
+        include/io/cli/validator.h
+        source/io/cli/validator.cpp
+        include/analysis/analysis_request.h
+        include/application/scenario_application.h
+        source/application/scenario_application.cpp
+        include/application/resilience_application.h
+        source/application/resilience_application.cpp
+        source/application/traffic_application.cpp
+        include/application/traffic_application.h
+        source/application/routing_application.cpp
 )
 
 target_include_directories(oblivious_routing_core

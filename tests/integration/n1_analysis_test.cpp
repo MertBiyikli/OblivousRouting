@@ -359,3 +359,111 @@ TEST_CASE("Different analyses preserve the shared workspace", "[workspace][compo
 
     CHECK(graph.edgeData(4).capacity == Catch::Approx(15.0));
 }
+
+TEST_CASE("Cross-functional analyses are independent of execution order", "[workspace][composition][cross-functional]") {
+    Graph graph = makeN1TestGraph();
+
+    Config cfg{};
+    cfg.solvers = {SolverType::ELECTRICAL_SKETCHING};
+    cfg.demand_models = {DemandModelType::UNIFORM};
+    cfg.demand_scale = 1.0;
+
+    WorkspaceConfiguration modifications;
+    modifications.capacity_upgrades = {{4, 1.5}, {10, 1.5}};
+    modifications.demand_scale = 1.2;
+    modifications.commodity_overrides = {{0, 5, 2.0}};
+
+    auto workspace = WorkspacePreparer::prepare(graph, cfg, modifications);
+
+    REQUIRE(workspace);
+
+    const auto fingerprint = workspace->effective_fingerprint;
+
+    auto prepared = ScenarioEngine::prepare(graph, cfg, ExecutionMode::FAST, workspace->effective_demands);
+
+    REQUIRE(prepared);
+
+    // Sequence A: failure -> capacity -> N-1.
+    auto failure_a = WorkspaceExecutor::linkFailure(graph, prepared.value(), 14);
+
+    REQUIRE(failure_a);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    auto capacity_a = WorkspaceExecutor::capacityUpgrade(graph, prepared.value(), 4, 2.0);
+
+    REQUIRE(capacity_a);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    auto n1_a = analyzeN1(graph, prepared.value());
+
+    REQUIRE(n1_a);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    // Sequence B: N-1 -> capacity -> failure.
+    auto n1_b = analyzeN1(graph, prepared.value());
+
+    REQUIRE(n1_b);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    auto capacity_b = WorkspaceExecutor::capacityUpgrade(graph, prepared.value(), 4, 2.0);
+
+    REQUIRE(capacity_b);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    auto failure_b = WorkspaceExecutor::linkFailure(graph, prepared.value(), 14);
+
+    REQUIRE(failure_b);
+    REQUIRE(optimized::GraphFingerprint::compute(graph) == fingerprint);
+
+    // Compare link-failure numerical results.
+    REQUIRE(failure_a->solver_results.size() == 1);
+    REQUIRE(failure_b->solver_results.size() == 1);
+
+    const auto& fa = failure_a->solver_results.front();
+    const auto& fb = failure_b->solver_results.front();
+
+    REQUIRE(fa.modified_Data.has_value());
+    REQUIRE(fb.modified_Data.has_value());
+
+    CHECK(fa.modified_Data->max_congestion == Catch::Approx(fb.modified_Data->max_congestion).epsilon(1e-8));
+
+    // Compare capacity-planning numerical results.
+    REQUIRE(capacity_a->solver_results.size() == 1);
+    REQUIRE(capacity_b->solver_results.size() == 1);
+
+    const auto& ca = capacity_a->solver_results.front();
+    const auto& cb = capacity_b->solver_results.front();
+
+    REQUIRE(ca.modified_Data.has_value());
+    REQUIRE(cb.modified_Data.has_value());
+
+    CHECK(ca.modified_Data->max_congestion == Catch::Approx(cb.modified_Data->max_congestion).epsilon(1e-8));
+
+    // Compare N-1 outcomes.
+    REQUIRE(n1_a->outcomes.size() == n1_b->outcomes.size());
+
+    CHECK(n1_a->baseline.max_congestion == Catch::Approx(n1_b->baseline.max_congestion).epsilon(1e-8));
+
+    for (std::size_t i = 0; i < n1_a->outcomes.size(); ++i) {
+        const auto& a = n1_a->outcomes[i];
+        const auto& b = n1_b->outcomes[i];
+
+        CHECK(a.edge_id == b.edge_id);
+        CHECK(a.status == b.status);
+
+        if (a.status == FailureStatus::SUCCESS && b.status == FailureStatus::SUCCESS) {
+
+            REQUIRE(a.reoptimized.has_value());
+            REQUIRE(b.reoptimized.has_value());
+
+            CHECK(a.reoptimized->max_congestion == Catch::Approx(b.reoptimized->max_congestion).epsilon(1e-8));
+        }
+    }
+
+    // Final effective workspace must remain intact.
+    CHECK(graph.edgeData(4).capacity == Catch::Approx(15.0));
+
+    CHECK(graph.edgeData(10).capacity == Catch::Approx(15.0));
+
+    CHECK(optimized::GraphFingerprint::compute(graph) == fingerprint);
+}

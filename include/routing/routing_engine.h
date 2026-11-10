@@ -2,7 +2,6 @@
 // Created by Mert Biyikli on 09.06.26.
 //
 
-
 #pragma once
 
 #include "../core/errors.h"
@@ -14,32 +13,28 @@
 #include <optional>
 
 class RoutingEngine {
-public:
-
+  public:
     Result<RoutingExperimentResult> entry(Config& cfg);
 
-
-    Result<IRoutingResult> solve(optimized::Graph<EdgeData>& graph,const Config& cfg,SolverType type);
+    Result<IRoutingResult> solve(optimized::Graph<EdgeData>& graph, const Config& cfg, SolverType type);
 
     Config cfg;
     std::unique_ptr<optimized::Graph<EdgeData>> m_graph;
     Result<optimized::Graph<EdgeData>*> getGraph() {
         if (!m_graph) {
             return makeErrorMessage(ErrorCode::RuntimeError, "RoutingEngine::getGraph: graph not set");
-        }else {
+        } else {
             return m_graph.get();
         }
     }
 
+    Result<TrafficGrowthResult> evaluateTrafficGrowth(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& baseline_demands, const demands& modified_demands);
 
-    Config getConfig() {return cfg;}
+    Config getConfig() { return cfg; }
 };
 
-
 inline bool isSemiObliviousSolver(SolverType type) {
-    return type == SolverType::SEMI_ELECTRICAL ||
-           type == SolverType::SEMI_TREE ||
-           type == SolverType::SEMI_EXPANDER_HIERARCHY;
+    return type == SolverType::SEMI_ELECTRICAL || type == SolverType::SEMI_TREE || type == SolverType::SEMI_EXPANDER_HIERARCHY;
 }
 
 inline std::unique_ptr<IRoutingExperimentRunner> makeRunner(SolverType type) {

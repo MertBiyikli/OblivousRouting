@@ -6,6 +6,7 @@
 #define E_ROUTING_SCENARIO_RESULT_JSON_H
 
 #include "analysis/scenario_results.h"
+#include "core/errors.h"
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -16,10 +17,6 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
-#include "analysis/scenario_results.h"
-#include "core/errors.h"
-
-
 
 #include <boost/multiprecision/number.hpp>
 #include <filesystem>
@@ -29,7 +26,6 @@
 #include <system_error>
 
 // Dedicated scenario analysis JSON; intentionally does NOT change RoutingResultWriter.
-
 
 inline void quoted(std::ostream& os, const std::string& value) {
     constexpr char hex[] = "0123456789abcdef";
@@ -93,10 +89,7 @@ inline void network(std::ostream& os, const std::optional<NetworkData>& data) {
         if (i)
             os << ',';
         const auto& l = data->links[i];
-        os << "{\"edge_id\":" << l.edge_id
-       << ",\"source\":" << l.source
-       << ",\"target\":" << l.target
-       << ",\"capacity\":";
+        os << "{\"edge_id\":" << l.edge_id << ",\"source\":" << l.source << ",\"target\":" << l.target << ",\"capacity\":";
         number(os, l.capacity);
         os << ",\"load\":";
         number(os, l.load);
@@ -160,10 +153,20 @@ inline const char* mode(ExecutionMode m) {
     return "unknown";
 }
 
-inline void comparison(
-    std::ostream& os,
-    const std::optional<ComparisonData>& data
-) {
+inline std::string execution_mode_name(ExecutionMode m) {
+    switch (m) {
+        case ExecutionMode::FAST:
+        return "fast";
+        case ExecutionMode::STANDARD:
+        return "standard";
+        case ExecutionMode::RESEARCH:
+        return "research";
+        default:
+        return "unknown";
+    }
+}
+
+inline void comparison(std::ostream& os, const std::optional<ComparisonData>& data) {
     if (!data) {
         os << "null";
         return;
@@ -184,7 +187,56 @@ inline void comparison(
     os << '}';
 }
 
+inline void writeWorkspaceProvenance(std::ostream& os, const WorkspaceProvenance& provenance) {
+    os << "{\"original_graph_fingerprint\":";
+    quoted(os, std::to_string(provenance.original_graph_fingerprint));
 
+    os << ",\"effective_graph_fingerprint\":";
+    quoted(os, std::to_string(provenance.effective_graph_fingerprint));
+
+    os << ",\"original_demand_volume\":";
+    number(os, provenance.original_demand_volume);
+
+    os << ",\"effective_demand_volume\":";
+    number(os, provenance.effective_demand_volume);
+
+    const auto& modifications = provenance.modifications;
+
+    os << ",\"demand_scale\":";
+    number(os, modifications.demand_scale);
+
+    os << ",\"capacity_upgrades\":[";
+
+    for (std::size_t i = 0; i < modifications.capacity_upgrades.size(); ++i) {
+        if (i)
+            os << ',';
+
+        const auto& upgrade = modifications.capacity_upgrades[i];
+
+        os << "{\"edge_id\":" << upgrade.edge_id << ",\"factor\":";
+
+        number(os, upgrade.factor);
+
+        os << '}';
+    }
+
+    os << "],\"commodity_overrides\":[";
+
+    for (std::size_t i = 0; i < modifications.commodity_overrides.size(); ++i) {
+        if (i)
+            os << ',';
+
+        const auto& item = modifications.commodity_overrides[i];
+
+        os << "{\"source\":" << item.source << ",\"target\":" << item.target << ",\"factor\":";
+
+        number(os, item.factor);
+
+        os << '}';
+    }
+
+    os << "]}";
+}
 
 class ScenarioResultJsonWriter {
   public:
@@ -196,16 +248,44 @@ class ScenarioResultJsonWriter {
         const auto old_locale = os.getloc();
         os.imbue(std::locale::classic());
         os << std::setprecision(std::numeric_limits<double>::max_digits10);
-        os << "{\"schema_version\":\"1.1\",\"scenario_kind\":";
-        quoted(os, kind(result.kind));
+
+        const bool disconnected =
+            result.status == ScenarioExecutionStatus::Disconnected;
+
+        const char* schema_version =
+            disconnected ? "1.3"
+            : result.workspace_provenance ? "1.2"
+            : "1.1";
+
+        // Start the JSON object.
+        os << "{\"schema_version\":";
+        quoted(os, schema_version);
+
+        os << ",\"scenario_kind\":";
+        quoted(
+            os,
+            result.kind == ScenarioKind::LINK_FAILURE
+                ? "link_failure"
+                : "capacity_upgrade"
+        );
+
         os << ",\"execution_mode\":";
-        quoted(os, mode(result.execution_mode));
+        quoted(os, execution_mode_name(result.execution_mode));
+
         os << ",\"original_fingerprint\":";
         quoted(os, std::to_string(result.original_fingerprint));
 
         os << ",\"modified_fingerprint\":";
         quoted(os, std::to_string(result.modified_fingerprint));
+
+        if (result.workspace_provenance) {
+            os << ",\"workspace\":";
+
+            writeWorkspaceProvenance(os, *result.workspace_provenance);
+        }
+
         os << ",\"capacity_upgrades\":[";
+
         for (std::size_t i = 0; i < result.capacity_upgrades.size(); ++i) {
             if (i)
                 os << ',';
@@ -219,17 +299,15 @@ class ScenarioResultJsonWriter {
             os << '}';
         }
 
-
         os << "],\"link_failures\":[";
 
-        for (std::size_t i = 0;
-             i < result.link_failures.size(); ++i) {
+        for (std::size_t i = 0; i < result.link_failures.size(); ++i) {
 
             if (i)
                 os << ',';
 
             os << result.link_failures[i];
-             }
+        }
 
         os << "],\"solver_results\":[";
         for (std::size_t i = 0; i < result.solver_results.size(); ++i) {
@@ -295,7 +373,5 @@ class ScenarioResultJsonWriter {
         }
     }
 };
-
-
 
 #endif // E_ROUTING_SCENARIO_RESULT_JSON_H

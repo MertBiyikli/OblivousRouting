@@ -39,12 +39,22 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
         auto start = timeNow();
         XCutHierarchyPreprocessor preprocessor;
         if (edge_weights.empty()) {
-            for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
+            for (int e = 0; e < graph.globalEdgeCount() * 2; ++e) {
+                if (!graph.edgeAlive(e)) {
+                    continue;
+                }
+
                 graph.edgeData(e).weight = graph.edgeData(e).capacity;
             }
         }else {
-            for (int e = 0; e<graph.getNumDirectedEdges(); e++) {
-                graph.edgeData(e).weight = edge_weights[e];
+            if (edge_weights.size() <  graph.globalEdgeCount() * 2) {
+                return makeErrorMessage(ErrorCode::LogicError, "Passed weight vector doesnt match graph size.");
+            }
+            for (int e = 0; e < graph.globalEdgeCount() * 2; ++e) {
+                if (!graph.edgeAlive(e)) {
+                    continue;
+                }
+                graph.edgeData(e).weight =  edge_weights[e];
             }
         }
 
@@ -123,7 +133,11 @@ class ElectrifiedExpanderHierarchySolver : public ILinearObliviousSolverBase {
             metrics_.max_basis_embedding_congestion = std::max(metrics_.max_basis_embedding_congestion,embedding.max_congestion);
             metrics_.max_conservation_error = std::max(metrics_.max_conservation_error,embedding.max_conservation_error);
 
-            for (int e = 0; e < graph.getNumDirectedEdges();++e) {
+            for (int e = 0; e < graph.globalEdgeCount() * 2; ++e) {
+                if (!graph.edgeAlive(e)) {
+                    continue;
+                }
+
                 const double flow = embedding.signed_edge_flow[e];
 
                 if (std::abs(flow) <= 1e-10) {

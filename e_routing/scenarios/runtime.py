@@ -136,6 +136,18 @@ def execute(request: ScenarioRequest, trusted: TrustedRun, timeout_seconds: int 
     if not isinstance(request, ScenarioRequest):
         raise TypeError('Expected validated ScenarioRequest')
 
+
+    # Direct persisted-routing execution cannot apply capacity
+    # modifications. Capacity comparisons must use the
+    # Python fixed-routing transformation workflow.
+    if request.capacity_upgrades:
+        raise ValueError(
+            "Capacity upgrades require execute_comparison(); "
+            "direct persisted-routing execution does not "
+            "apply capacity modifications."
+        )
+
+
     # TODO: put the solver labels in a config file or environment variable instead of hardcoding them here.
     if trusted.solver_label not in {'electrical', 'electrical_naive', 'raecke_frt', 'raecke_ckr', 'raecke_mst', 'cohen', 'expander', 'expander_mwu', 'semi_electrical', 'semi_tree', 'semi_expander'}:
         raise ValueError('Invalid trusted solver label')
@@ -157,11 +169,16 @@ def execute(request: ScenarioRequest, trusted: TrustedRun, timeout_seconds: int 
                '--seed', str(trusted.seed),
                '--output', str(result_path)]
 
-    command.extend(['--demand-scale', str(request.demand_scale)])
 
-    # Add capacity upgrades and Layer-1 analysis flags if requested.
-    for edge, factor in request.capacity_upgrades:
-        command.extend(['--capacity-upgrade', f'{edge}:{factor}'])
+
+    # Persisted routing evaluation always uses the original graph
+    # and routing scheme. Hypothetical capacity modifications
+    # are applied to the returned metrics, not the C++ graph.
+    command.extend([
+        '--demand-scale',
+        str(request.demand_scale),
+    ])
+
     if request.include_layer1:
         command.append('--failure-analysis')
 

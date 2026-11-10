@@ -94,6 +94,10 @@ template <typename Data> class Graph {
     mutable std::uint64_t parentGraphVersion = 0;
     std::uint64_t graphVersion = 0;
 
+    // Directed lookup: (head, tail) -> directed edge id (2*i forward, 2*i+1 reverse).
+    // Built once in the constructor. Edges are never added, and removal only flips `alive`, so it never goes stale.
+    std::unordered_map<std::uint64_t, int> edgeLookup;
+
   public:
     Graph(int n, const std::vector<InputEdge>& input) : edges(n), edgeBound(n), nodes(n), nodeIndex(n), nodeBound(n) {
         std::iota(nodes.begin(), nodes.end(), 0);
@@ -115,6 +119,13 @@ template <typename Data> class Graph {
 
             storedEdges.push_back({edge.head, edge.tail, edge.data, headIndex, tailIndex});
         }
+
+        edgeLookup.reserve(2 * storedEdges.size());
+        // Two passes keep the old semantics: a forward match beats a reverse match, and the lowest index wins among parallel edges.
+        for (int i = 0; i < static_cast<int>(storedEdges.size()); ++i)
+            edgeLookup.try_emplace(edgeKey(storedEdges[i].head, storedEdges[i].tail), 2 * i);
+        for (int i = 0; i < static_cast<int>(storedEdges.size()); ++i)
+            edgeLookup.try_emplace(edgeKey(storedEdges[i].tail, storedEdges[i].head), 2 * i + 1);
 
         for (std::size_t u = 0; u < n; ++u) {
             edgeBound[u] = edges[u].size();
@@ -471,17 +482,8 @@ template <typename Data> class Graph {
 
     int edgeId(int head, int tail) const {
         assert(head <= nodeBound && tail <= nodeBound && "node is outside of the graph.");
-        auto it = std::find_if(storedEdges.begin(), storedEdges.end(), [&](const StoredEdge& edge) { return (edge.head == head && edge.tail == tail); });
-        if (it != storedEdges.end()) {
-            const int undirected = static_cast<int>(std::distance(storedEdges.begin(), it));
-            return 2 * undirected;
-        }
-        it = std::find_if(storedEdges.begin(), storedEdges.end(), [&](const StoredEdge& edge) { return (edge.head == tail && edge.tail == head); });
-        if (it == storedEdges.end()) {
-            return -1;
-        }
-        const int undirected = static_cast<int>(std::distance(storedEdges.begin(), it));
-        return 2 * undirected + 1;
+        const auto it = edgeLookup.find(edgeKey(head, tail));
+        return it == edgeLookup.end() ? -1 : it->second;
     }
 
     /**
@@ -883,6 +885,11 @@ template <typename Data> class Graph {
     StoredEdge& getStoredEdge(int id) { return getStoredEdgeByUndirected(toUndirectedEdgeId(id)); }
 
     const StoredEdge& getStoredEdge(int id) const { return getStoredEdgeByUndirected(toUndirectedEdgeId(id)); }
+
+    static std::uint64_t edgeKey(int head, int tail) noexcept {
+        return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(head)) << 32) |
+               static_cast<std::uint32_t>(tail);
+    }
 
     void updateIndex(int owner, int index) noexcept {
         const Edge& adjacencyEdge = edges[owner][index];

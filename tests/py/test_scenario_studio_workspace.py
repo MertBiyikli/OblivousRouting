@@ -212,7 +212,7 @@ def test_n1_receives_complete_workspace(page):
 
 
 
-def test_unsupported_combination_preserves_state(page):
+def test_traffic_growth_preserves_and_submits_shared_workspace(page):
     configure_workspace(page)
 
     page.locator("#analysis-type").select_option("traffic_growth")
@@ -231,9 +231,27 @@ def test_unsupported_combination_preserves_state(page):
     page.locator("#run").click()
 
     assert snapshot(page) == EXPECTED
-    assert submitted == []
+    assert len(submitted) == 1
 
-    assert "capacity upgrades" in (
+    request = submitted[0]
+
+    assert request["global_scale"] == EXPECTED["demand_scale"]
+
+    assert request["commodity_overrides"] == (
+        EXPECTED["commodity_overrides"]
+    )
+
+    assert request["capacity_upgrades"] == [
+        {
+            "edge_id": upgrade["edge_id"],
+            "capacity_factor": upgrade["factor"],
+        }
+        for upgrade in EXPECTED["capacity_upgrades"]
+    ]
+
+    # Combining capacity upgrades and traffic growth is supported.
+    # No unsupported-combination warning should be displayed.
+    assert "capacity upgrades" not in (
         page.locator("#alert").inner_text().lower()
     )
 
@@ -276,3 +294,26 @@ def test_switching_registered_network_resets_workspace(page):
         "demand_scale": 1.0,
         "commodity_overrides": [],
     }
+
+
+def test_n1_uses_selected_demand_model(page):
+    page.locator("#demand").select_option("gravity")
+    page.locator("#analysis-type").select_option("n1_resilience")
+
+    submitted = []
+
+    def capture_request(route):
+        submitted.append(route.request.post_data_json)
+        route.abort()
+
+    page.route(
+        "**/api/v1/networks/*/analyses/n1",
+        capture_request,
+    )
+
+    page.locator("#run").click()
+
+    page.wait_for_timeout(100)
+
+    assert len(submitted) == 1
+    assert submitted[0]["demand_model"] == "gravity"

@@ -10,6 +10,7 @@
 #include "analysis/graph_rollback_guard.h"
 #include "analysis/scenario_engine.h"
 #include <algorithm>
+#include <boost/graph/adjacency_list.hpp>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -108,7 +109,8 @@ inline Result<N1Result> analyzeN1(optimized::Graph<EdgeData>& graph, const Prepa
 
         if (!executed) {
             outcome.status = FailureStatus::EXECUTION_FAILED;
-            continue;
+            return makeErrorMessage(ErrorCode::RuntimeError,
+                                    "N-1 analysis failed for edge " + std::to_string(outcome.source) + "." + std::to_string(outcome.target) + ". " + getError(executed).error().message);
         }
 
         const auto& solvers = executed.value().solver_results;

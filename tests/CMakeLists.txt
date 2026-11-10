@@ -59,6 +59,7 @@ add_executable(integration_tests
         integration/traffic_growth_engine_test.cpp
         integration/traffic_growth_invariants_test.cpp
         integration/workspace_preparer_test.cpp
+        integration/test_cli.cpp
 )
 
 target_include_directories(integration_tests PRIVATE

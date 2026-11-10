@@ -10,6 +10,7 @@
 #include "hash.h"
 
 #include <optional>
+#include <random>
 #include <unordered_map>
 #include <vector>
 

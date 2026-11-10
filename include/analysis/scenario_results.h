@@ -20,7 +20,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-
+#include "analysis/workspace/workspace_configuration.h"
 // Keep this shared between the analysis entry point and result model.
 enum class ExecutionMode { FAST, STANDARD, RESEARCH };
 enum class ScenarioKind { GENERIC, CAPACITY_UPGRADE, LINK_FAILURE, TRAFFIC_GROWTH };
@@ -79,6 +79,24 @@ struct SolverAnalysisResult {
     std::optional<ScenarioPerformanceMetrics> performance_metrics;
 };
 
+struct WorkspaceProvenance {
+    std::uint64_t original_graph_fingerprint = 0;
+    std::uint64_t effective_graph_fingerprint = 0;
+
+    double original_demand_volume = 0.0;
+    double effective_demand_volume = 0.0;
+
+    WorkspaceConfiguration modifications;
+};
+
+
+
+enum class ScenarioExecutionStatus {
+    Completed,
+    Disconnected
+};
+
+
 struct ScenarioResult {
     ScenarioResult() = default;
 
@@ -95,7 +113,28 @@ struct ScenarioResult {
     std::vector<CapacityUpgradeDetail> capacity_upgrades;
     std::vector<int> link_failures;
     std::vector<SolverAnalysisResult> solver_results;
+
+
+    // Optional to preserve existing scenario workflows.
+    std::optional<WorkspaceProvenance> workspace_provenance;
+
+    ScenarioExecutionStatus status =
+    ScenarioExecutionStatus::Completed;
+
+    std::optional<std::string> diagnostic;
 };
 
+struct ScenarioAnalysisOutcome {
+    ScenarioExecutionStatus status =
+        ScenarioExecutionStatus::Completed;
+
+    std::optional<ScenarioResult> result;
+
+    std::optional<WorkspaceProvenance> workspace_provenance;
+
+    std::vector<int> failed_links;
+
+    std::string diagnostic;
+};
 
 #endif // E_ROUTING_SCENARIO_RESULTS_H

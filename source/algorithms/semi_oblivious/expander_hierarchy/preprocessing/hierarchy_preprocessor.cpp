@@ -132,7 +132,12 @@ std::pair<std::vector<std::pair<unsigned int, unsigned int>>, std::vector<double
     edges.reserve(graph.getNumUndirectedEdges());
     weight.reserve(graph.getNumUndirectedEdges());
 
-    for (int edge_id = 0; edge_id < graph.getNumDirectedEdges(); ++edge_id) {
+    for (int edge_id = 0; edge_id < graph.globalEdgeCount() * 2; ++edge_id) {
+
+        if (!graph.edgeAlive(edge_id)) {
+            continue;
+        }
+
         auto [u, v] = graph.getEdgeEndpoints(edge_id);
 
         if (u >= v) {
@@ -163,7 +168,11 @@ std::vector<int> XCutHierarchyPreprocessor::computeInducedEdges(const optimized:
      * Iterate over actual directed edge IDs and retain one canonical
      * orientation for every physical undirected edge.
      */
-    for (int e = 0; e < graph.getNumDirectedEdges(); ++e) {
+    for (int e = 0; e < graph.globalEdgeCount() * 2; ++e) {
+        if (!graph.edgeAlive(e)) {
+            continue;
+        }
+
         const auto [u, v] = graph.getEdgeEndpoints(e);
 
         if (u >= v) {
@@ -301,7 +310,7 @@ Result<HierarchyResult> XCutHierarchyPreprocessor::build(const optimized::Graph<
     for (const double weight : xcut_edges.second) {
         const double rounded = std::round(weight);
 
-        if (!std::isfinite(weight) || weight <= 0.0 ||  rounded > static_cast<double>(std::numeric_limits<EdgeWeight>::max())) {
+        if (!std::isfinite(weight) || weight <= 0.0 || rounded > static_cast<double>(std::numeric_limits<EdgeWeight>::max())) {
             return makeErrorMessage(ErrorCode::InvalidGraph, "XCut requires positive integral edge weights.");
         }
 

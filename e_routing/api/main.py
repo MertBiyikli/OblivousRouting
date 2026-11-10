@@ -23,12 +23,17 @@ from e_routing.api.traffic_routes import create_traffic_router
 from e_routing.api.scenario_report_api import (
     create_scenario_analysis_router,
 )
+from e_routing.api.network_import import router as network_import_router
+from e_routing.api.analysis_chat_routes import (router as analysis_chat_router,)
 
 REPORTS_ROOT = Path("results/scenarios").resolve()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="E-Routing API", version="0.1.0")
 
+
+app.include_router(network_import_router)
+app.include_router(analysis_chat_router)
 
 from e_routing.api.detailed_analysis_api import (
     create_detailed_analysis_router,
@@ -43,6 +48,7 @@ app.include_router(
         reports_root=REPORTS_ROOT / "traffic"
     )
 )
+
 
 import json
 from pathlib import Path

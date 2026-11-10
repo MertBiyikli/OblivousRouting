@@ -75,6 +75,8 @@ class RoutingResultWriter {
             return makeErrorMessage(ErrorCode::FileNotFound, "Failed to open output file: " + output_path.string());
         }
 
+        Result<void> res;
+
         switch (cfg.output_format) {
         case OutputFormat::TEXT:
             for (const auto& result : exp.solver_results) {
@@ -84,11 +86,14 @@ class RoutingResultWriter {
             break;
 
         case OutputFormat::JSON:
-            writeJson(exp, cfg, file);
+            res = writeJson(exp, cfg, file);
             break;
 
         default:
             return makeErrorMessage(ErrorCode::FormatNotFound, "Unsupported output format.");
+        }
+        if (!res) {
+            return getError(res);
         }
 
         file.flush();
@@ -373,7 +378,11 @@ class RoutingResultWriter {
         return escaped;
     }
 
-    static void writeJson(const RoutingExperimentResult& experiment, const Config& cfg, std::ostream& out) {
+    static Result<void> writeJson(const RoutingExperimentResult& experiment, const Config& cfg, std::ostream& out) {
+        auto check = checkExperiments(experiment);
+        if (!check) {
+            return getError(check);
+        }
         out << std::setprecision(17);
         out << "{\n";
 
@@ -834,6 +843,8 @@ class RoutingResultWriter {
 
         out << "  ]\n";
         out << "}\n";
+
+        return {};
     }
 
     static void writeExpanderMetricsJson(const ExpanderMetrics& metrics, std::ostream& out) {
@@ -910,6 +921,16 @@ class RoutingResultWriter {
         default:
             return "error";
         }
+    }
+
+    static Result<void> checkExperiments(const RoutingExperimentResult& experiment) {
+        if (experiment.graph_name.empty()) {
+            return makeErrorMessage(ErrorCode::InvalidGraph, "Graph name is missing: " + experiment.graph_name);
+        }
+        if (experiment.solver_results.empty()) {
+            return makeErrorMessage(ErrorCode::SolverFailed, "Solver results are emptpy.");
+        }
+        return {};
     }
 };
 

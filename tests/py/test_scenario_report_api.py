@@ -49,3 +49,24 @@ def test_route_integration(tmp_path):
     assert response.status_code == 200
     assert len(response.json()['solver_results']) == 3
     assert client.get('/api/v1/networks/backbone-1221/scenarios/unknown/analysis').status_code == 404
+
+
+
+def test_accepts_schema_12_with_workspace():
+    raw = json.loads(SAMPLE.read_text())
+
+    raw["schema_version"] = "1.2"
+    raw["workspace"] = {
+        "original_graph_fingerprint": "123",
+        "effective_graph_fingerprint": "123",
+        "original_demand_volume": 100.0,
+        "effective_demand_volume": 130.0,
+        "demand_scale": 1.3,
+        "capacity_upgrades": [],
+        "commodity_overrides": [],
+    }
+
+    payload = build_analysis_payload(raw)
+
+    assert payload["schema_version"] == "1.2"
+    assert payload["workspace"] == raw["workspace"]

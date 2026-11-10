@@ -130,41 +130,88 @@ void LinearRoutingTable::eraseFlow(int e, int s) {
 // TODO: isValid returns true only for valid oblivious routing table, e.g. all linear flows must be stored
 //   Hence, if the table should also return true for tables that only satisfy the flow conservation constraints.
 bool LinearRoutingTable::isValid(const optimized::Graph<EdgeData>& g) const {
-    const int m = src_ids.size();
-    for (int e = 0; e < m; ++e) {
+    const int num_nodes = g.getNumNodes();
+    const int num_edges = g.globalEdgeCount() * 2;
+
+    if (n != num_nodes || src_ids.size() != static_cast<size_t>(num_edges) || src_flows.size() != src_ids.size()) {
+        return false;
+    }
+
+    // 1. Verify the sparse routing-table structure.
+    for (int e = 0; e < num_edges; ++e) {
         const auto& ids = src_ids[e];
-        for (size_t i = 1; i < ids.size(); ++i) {
-            if (ids[i] <= ids[i - 1]) {
+        const auto& flows = src_flows[e];
+
+        if (ids.size() != flows.size()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < ids.size(); ++i) {
+            if (ids[i] < 0 || ids[i] >= n) {
+                return false;
+            }
+
+            if (i > 0 && ids[i] <= ids[i - 1]) {
+                return false;
+            }
+
+            if (!std::isfinite(flows[i])) {
                 return false;
             }
         }
     }
 
-    // check flow conservation constraint
-    std::vector<double> net_flow(n, 0.0);
-    for (int e = 0; e < m; ++e) {
-        // get the orientation of the flow
-        const auto& [u, v] = g.getEdgeEndpoints(e);
-        // int sign = (u < v) ? 1 : -1;
-        for (int s = 1; s < n; ++s) { // By default the root node is 0
-            if (s == 9) {
-                bool stop = true;
+    // 2. Verify the divergence of every source-to-root basis flow.
+    // Root node is 0.
+    for (int s = 1; s < n; ++s) {
+        std::vector<double> divergence(n, 0.0);
+
+        // Physical edge IDs are (2k, 2k+1).
+        for (int e = 0; e < num_edges; e += 2) {
+            if (!g.edgeAlive(e)) {
+                continue;
             }
-            if (u == s) {
-                double flow = getFlow(e, s);
-                net_flow[s] += flow;
+
+            const int reverse = g.reverse(e).id;
+            const auto [u, v] = g.getEdgeEndpoints(e);
+
+            // Signed flow in orientation u -> v.
+            const double flow = getFlow(e, s) - getFlow(reverse, s);
+
+            if (!std::isfinite(flow)) {
+                return false;
             }
+
+            divergence[u] += flow;
+            divergence[v] -= flow;
+        }
+
+        std::vector<std::string> errors;
+
+        // 3. Every vertex must satisfy the conservation constraint.
+        for (int v = 0; v < n; ++v) {
+            double expected = 0.0;
+
+            if (v == s) {
+                expected = 1.0;
+            } else if (v == 0) {
+                expected = -1.0;
+            }
+
+            if (std::abs(divergence[v] - expected) > VERY_SOFT_EPS) {
+                errors.push_back("Invalid basis flow source=" + std::to_string(s) + " vertex=" + std::to_string(v) + " divergence=" + std::to_string(divergence[v]) + " expected=" + std::to_string(expected));
+            }
+        }
+        if (errors.size()) {
+            for (const auto& error : errors) {
+                //std::cout << error << "\n";
+            }
+            return false;
         }
     }
 
-    bool all_unit_flow = true;
-    for (int s = 1; s < n; ++s) {
-        if (std::abs(net_flow[s] - 1.0) > VERY_SOFT_EPS) {
-            all_unit_flow &= false;
-            std::cout << "Node " << s << " has net flow " << net_flow[s] << " (expected 1.0)\n";
-        }
-    }
-    return all_unit_flow;
+
+    return true;
 }
 
 void LinearRoutingTable::printFlows(const optimized::Graph<EdgeData>& g) const {

@@ -64,7 +64,11 @@ Result<PreparedAnalysis> ScenarioEngine::prepare(optimized::Graph<EdgeData>& gra
             return getError(solved);
         }
 
-        if (!routing || !routing->scheme || !routing->scheme->isValid()) {
+        if (!routing) {
+            return makeErrorMessage(ErrorCode::InvalidRouting, "Routing result is empty.");
+        }
+
+        if (!routing->scheme || !routing->scheme->isValid()) {
             return makeErrorMessage(ErrorCode::InvalidRouting, "Invalid baseline routing scheme.");
         }
 
@@ -125,6 +129,8 @@ Result<ScenarioResult> ScenarioEngine::execute(optimized::Graph<EdgeData>& graph
     if (!applied)
         return getError(applied);
 
+
+
     if (scenario.kind() == ScenarioKind::LINK_FAILURE) {
         auto connected = verifyDemandConnectivity(graph, prepared.fixed_demands);
         if (!connected)
@@ -150,8 +156,9 @@ Result<ScenarioResult> ScenarioEngine::execute(optimized::Graph<EdgeData>& graph
         auto solved = solveInto(prepared_solver.type, graph, modified_routing, item.modified_solver_seconds);
         if (!solved)
             return getError(solved);
-        if (!modified_routing || !modified_routing->scheme || !modified_routing->scheme->isValid())
+        if (!modified_routing || !modified_routing->scheme || !modified_routing->scheme->isValid()) {
             return makeErrorMessage(ErrorCode::InvalidRouting, "Invalid or missing modified routing scheme.");
+        }
 
         auto evaluated = evaluateRouting(graph, *modified_routing, prepared.fixed_demands, prepared.total_demand_volume);
         if (!evaluated)
@@ -289,6 +296,76 @@ Result<TrafficGrowthResult> ScenarioEngine::evaluateTrafficGrowth(const optimize
         result.demand_scale = modified_volume / original_volume;
 
         result.relative_demand_change = result.absolute_demand_change / original_volume;
+    }
+
+    result.absolute_congestion_change = result.modified.max_congestion - result.baseline.max_congestion;
+
+    if (result.baseline.max_congestion > 0.0) {
+        result.relative_congestion_change = result.absolute_congestion_change / result.baseline.max_congestion;
+    }
+
+    return result;
+}
+
+Result<TrafficGrowthResult> ScenarioEngine::evaluateTrafficGrowth(const optimized::Graph<EdgeData>& graph, const IRoutingResult& routing, const demands& baseline_demands, const demands& modified_demands) {
+    if (!routing.scheme || !routing.scheme->isValid()) {
+        return makeErrorMessage(ErrorCode::InvalidRouting, "Traffic analysis requires a valid routing scheme.");
+    }
+
+    const auto fingerprint = optimized::GraphFingerprint::compute(graph);
+
+    auto original = DemandVector::fromDemands(baseline_demands, graph.getNumNodes());
+
+    if (!original) {
+        return getError(original);
+    }
+
+    auto modified = DemandVector::fromDemands(modified_demands, graph.getNumNodes());
+
+    if (!modified) {
+        return getError(modified);
+    }
+
+    auto original_demands = original->toDemands();
+
+    if (!original_demands) {
+        return getError(original_demands);
+    }
+
+    auto effective_demands = modified->toDemands();
+
+    if (!effective_demands) {
+        return getError(effective_demands);
+    }
+
+    auto baseline_result = evaluateRouting(graph, routing, original_demands.value(), original->totalVolume());
+
+    if (!baseline_result) {
+        return getError(baseline_result);
+    }
+
+    auto modified_result = evaluateRouting(graph, routing, effective_demands.value(), modified->totalVolume());
+
+    if (!modified_result) {
+        return getError(modified_result);
+    }
+
+    if (optimized::GraphFingerprint::compute(graph) != fingerprint) {
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Graph changed during traffic evaluation.");
+    }
+
+    TrafficGrowthResult result;
+
+    result.graph_fingerprint = fingerprint;
+    result.baseline = std::move(baseline_result.value());
+    result.modified = std::move(modified_result.value());
+
+    result.absolute_demand_change = result.modified.total_demand_volume - result.baseline.total_demand_volume;
+
+    if (result.baseline.total_demand_volume > 0.0) {
+        result.demand_scale = result.modified.total_demand_volume / result.baseline.total_demand_volume;
+
+        result.relative_demand_change = result.absolute_demand_change / result.baseline.total_demand_volume;
     }
 
     result.absolute_congestion_change = result.modified.max_congestion - result.baseline.max_congestion;

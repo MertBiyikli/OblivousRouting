@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 from dataclasses import dataclass
 from e_routing.scenarios.runtime import TrustedRun
-
+from e_routing.api.network_import import imported_networks_root
 
 def load_trusted_config() -> TrustedRun:
     required = ("ER_ENGINE", "ER_GRAPH", "ER_ROUTING_TABLE", "ER_SOLVER")
@@ -90,6 +90,68 @@ def load_network_registry() -> dict[str, NetworkRegistration]:
             graph_sha256=item["graph_sha256"],
             routing_table_sha256=item["routing_table_sha256"],
         )
+
+
+
+    root = imported_networks_root()
+
+    if root.is_dir():
+        for directory in sorted(root.iterdir()):
+            if not directory.is_dir() or directory.is_symlink():
+                continue
+
+            if not directory.name.startswith("uploaded_"):
+                continue
+
+            manifest_path = directory / "metadata.json"
+            if not manifest_path.is_file() or manifest_path.is_symlink():
+                continue
+
+            item = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            network_id = item["id"]
+
+            if (
+                    network_id != directory.name
+                    or not _ID.fullmatch(network_id)
+                    or network_id in registry
+            ):
+                raise ValueError("Invalid imported network ID")
+
+            graph = (directory / item["graph"]).resolve(strict=True)
+            routing_table = (
+                    directory / item["routing_table"]
+            ).resolve(strict=True)
+
+            # Uploaded manifests may reference only their own artifacts.
+            if not graph.is_relative_to(directory.resolve()):
+                raise ValueError("Imported graph escapes network directory")
+
+            if not routing_table.is_relative_to(directory.resolve()):
+                raise ValueError("Imported routing table escapes network directory")
+
+            if (
+                    graph != (directory / "graph.lgf").resolve()
+                    or routing_table.parent != (directory / "routing").resolve()
+                    or routing_table.suffix != ".bin"
+            ):
+                raise ValueError("Invalid imported artifact paths")
+
+            if (
+                    not _SHA.fullmatch(item["graph_sha256"])
+                    or not _SHA.fullmatch(item["routing_table_sha256"])
+            ):
+                raise ValueError("Invalid imported artifact checksum")
+
+            registry[network_id] = NetworkRegistration(
+                network_id=network_id,
+                display_name=item["name"],
+                graph=graph,
+                routing_table=routing_table,
+                solver_label=item["solver"],
+                graph_sha256=item["graph_sha256"],
+                routing_table_sha256=item["routing_table_sha256"],
+            )
     return registry
 
 

@@ -6,16 +6,15 @@
 #define OBLIVIOUSROUTING_GRAPH_IO_H
 
 #include "../data_structures/graph/Igraph.h"
-#include "../data_structures/graph/graph_csr.h"
 #include "../data_structures/graph/graph_adj.h"
+#include "../data_structures/graph/graph_csr.h"
+#include "core/config.h"
 #include "core/errors.h"
 #include "core/types.h"
-#include "core/config.h"
 #include <memory>
 
-
 class GraphIO {
-public:
+  public:
     static Result<void> readLGFFile(IGraph& g, const std::string& filename) {
         std::ifstream infile(filename);
         if (!infile) {
@@ -28,7 +27,7 @@ public:
 
         int maxNodeIdSeen = -1;
         int costColIdx = -1;
-        int capColIdx  = -1;
+        int capColIdx = -1;
 
         // Phase 1: Read lines until we finish @nodes and find @arcs header.
         std::vector<std::string> allLines;
@@ -45,11 +44,10 @@ public:
         try {
             // 1) First pass: scan for "@nodes" → read node lines → track maxNodeIdSeen.
             for (size_t i = 0; i < allLines.size(); ++i) {
-                const std::string &raw = allLines[i];
+                const std::string& raw = allLines[i];
                 std::string lower = raw;
                 // normalize to lowercase to match "@nodes" or "@arcs"
-                std::transform(lower.begin(), lower.end(), lower.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
+                std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
 
                 if (!inNodesSection) {
                     if (lower.rfind("@nodes", 0) == 0) {
@@ -58,13 +56,12 @@ public:
                     }
                 } else {
                     // We are inside the @nodes block. Stop if we see "@arcs".
-                    if (lower.rfind("@edges", 0) == 0 ||
-                        lower.rfind("@arcs", 0) == 0) {
+                    if (lower.rfind("@edges", 0) == 0 || lower.rfind("@arcs", 0) == 0) {
                         inNodesSection = false;
                         inArcsSection = true;
                         // The next line after this is expected to be the arcs‐header.
                         continue;
-                        }
+                    }
                     // Otherwise, we expect this line to have: "<label><TAB><node_id>"
                     // We split on tabs:
                     std::istringstream iss(raw);
@@ -89,17 +86,15 @@ public:
                     } catch (const std::exception& /*e*/) {
                         // malformed line: skip (e.what() available if logging)
                     }
-
                 }
             }
 
             if (maxNodeIdSeen < 0) {
-                return makeErrorMessage(ErrorCode::InvalidGraph,"LGF file had no valid @nodes section or no node IDs found");
+                return makeErrorMessage(ErrorCode::InvalidGraph, "LGF file had no valid @nodes section or no node IDs found");
             }
 
             // 2) Initialize our graph with (maxNodeIdSeen+1) nodes
             g.initializeMemberByParser(maxNodeIdSeen);
-
 
             // 3) Second pass: scan for "@arcs", find header, then parse each arc line:
             inArcsSection = false;
@@ -108,17 +103,15 @@ public:
             bool capacityInHeader = false;
             bool costInHeader = false;
             for (size_t i = 0; i < allLines.size(); ++i) {
-                const std::string &raw = allLines[i];
+                const std::string& raw = allLines[i];
                 std::string lower = raw;
-                std::transform(lower.begin(), lower.end(), lower.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
+                std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
 
                 if (!inArcsSection) {
                     // Look for “@arcs”
-                    if (lower.rfind("@edges", 0) == 0
-                        || lower.rfind("@arcs", 0) == 0) {
+                    if (lower.rfind("@edges", 0) == 0 || lower.rfind("@arcs", 0) == 0) {
                         inArcsSection = true;
-                        }
+                    }
                     continue;
                 }
 
@@ -129,7 +122,7 @@ public:
                     std::vector<std::string> headerTokens;
                     std::string tok;
                     while (iss >> tok) {
-                        if(!tok.empty()) {
+                        if (!tok.empty()) {
                             headerTokens.push_back(tok);
                         }
                     }
@@ -137,8 +130,7 @@ public:
                     bool labelInHeader = false;
                     for (int col = 0; col < (int)headerTokens.size(); ++col) {
                         std::string h = headerTokens[col];
-                        std::transform(h.begin(), h.end(), h.begin(),
-                                       [](unsigned char c) { return std::tolower(c); });
+                        std::transform(h.begin(), h.end(), h.begin(), [](unsigned char c) { return std::tolower(c); });
                         if (h == "cost") {
                             costColIdx = col;
                             costInHeader = true;
@@ -155,7 +147,7 @@ public:
                     }
 
                     costColIdx += (costInHeader ? 2 : 0);
-                    capColIdx +=  (capacityInHeader ? 2 : 0);
+                    capColIdx += (capacityInHeader ? 2 : 0);
                     /*
                     if (labelInHeader) {
                         // label is header, we need to shift further by 1
@@ -169,8 +161,7 @@ public:
                 // Now each subsequent line (after header) is “u<TAB>v<TAB>…”
 
                 // skip blank or comment lines
-                if (raw.empty()
-                    || raw[0] == '#') {
+                if (raw.empty() || raw[0] == '#') {
                     continue;
                 }
 
@@ -180,7 +171,7 @@ public:
                 std::string field;
 
                 while (iss >> field) {
-                    if(!field.empty()) {
+                    if (!field.empty()) {
                         parts.push_back(field);
                     }
                 }
@@ -193,7 +184,7 @@ public:
                 // Parse u, v (1‐based IDs in LGF)
                 int u, v;
                 try {
-                    u = std::stoi(parts[0]);  // convert to 0‐based
+                    u = std::stoi(parts[0]); // convert to 0‐based
                     v = std::stoi(parts[1]);
                 } catch (const std::exception& /*e*/) {
                     continue; // malformed
@@ -211,25 +202,23 @@ public:
                 if (existingEdges.contains({u, v})) {
                     // edge already exists ⇒ skip
                     continue;
-                }else {
-                    existingEdges.insert({u,v});
+                } else {
+                    existingEdges.insert({u, v});
                 }
 
                 /* Note the following:
-                *   in many dataset, such as BackBone, the 'cost' is only provided,
-                *   and 'capacity' is missing. In such cases, we choose to
-                *   use the inverse of cost as capacity.
-                *
-                *   if both 'cost' and 'capacity' are provided, we use 'capacity' directly.
-                *
-                *   if none is provided, we set capacity = 1.0 by default.
+                 *   in many dataset, such as BackBone, the 'cost' is only provided,
+                 *   and 'capacity' is missing. In such cases, we choose to
+                 *   use the inverse of cost as capacity.
+                 *
+                 *   if both 'cost' and 'capacity' are provided, we use 'capacity' directly.
+                 *
+                 *   if none is provided, we set capacity = 1.0 by default.
                  */
 
                 bool capacityParsed = false;
                 double capacityValue = 1.0;
-                if (capacityInHeader
-                    && capColIdx >= 0
-                    && capColIdx < (int)parts.size()) {
+                if (capacityInHeader && capColIdx >= 0 && capColIdx < (int)parts.size()) {
                     // attempt to parse capacity
                     try {
                         capacityValue = std::stod(parts[capColIdx]);
@@ -239,12 +228,9 @@ public:
                     }
                 }
 
-
                 bool costParsed = false;
                 double costValue = 1.0;
-                if (costInHeader
-                    && costColIdx >= 0
-                    && costColIdx < (int)parts.size()) {
+                if (costInHeader && costColIdx >= 0 && costColIdx < (int)parts.size()) {
                     // attempt to parse capacity
                     try {
                         costValue = std::stod(parts[costColIdx]);
@@ -255,7 +241,7 @@ public:
 
                 if (!capacityParsed && costParsed && costValue != 0.0) {
                     // use inverse of cost as capacity
-                    capacityValue =  costValue;
+                    capacityValue = costValue;
                 }
 
                 if (!capacityParsed && !costParsed) {
@@ -276,22 +262,21 @@ public:
 
 inline Result<std::unique_ptr<IGraph>> makegraph(GraphFormat type) {
     switch (type) {
-        case GraphFormat::CSR:
-            return std::make_unique<GraphCSR>();
+    case GraphFormat::CSR:
+        return std::make_unique<GraphCSR>();
 
-        case GraphFormat::ADJLIST:
-            return std::make_unique<GraphADJList>();
+    case GraphFormat::ADJLIST:
+        return std::make_unique<GraphADJList>();
 
-        default:
-            return std::unexpected(Error{ErrorCode::InvalidGraph, "Unknown graph format."});
+    default:
+        return std::unexpected(Error{ErrorCode::InvalidGraph, "Unknown graph format."});
     }
 }
-
 
 inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg) {
     // Load or create graph
     auto graph = makegraph(cfg.graph_format);
-    if ( !graph ){
+    if (!graph) {
         return std::unexpected(graph.error());
     }
 
@@ -300,28 +285,28 @@ inline Result<std::unique_ptr<IGraph>> load_graph(Config& cfg) {
         if (!lgf) {
             return std::unexpected(lgf.error());
         }
-    }else {
-        return std::unexpected(Error{
-                ErrorCode::FileNotFound,
-                "Parsed filename is empty."
-            });
+    } else {
+        return std::unexpected(Error{ErrorCode::FileNotFound, "Parsed filename is empty."});
     }
 
     graph.value()->finalize();
     return std::move(graph.value());
 }
 
+// TODO: :) you know bro, i like the way you think. You lazy piece of shit.
+// But this definitely needs a refactoring, you can not confidently present your product and claim efficient code
+// and have this garbage, if someone ever reads this before I, Mert, didn't refactor it. Well... 42
 inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(Config& cfg) {
     // Load using IGraph first
     auto igraph = load_graph(cfg);
     if (!igraph) {
-        return std::unexpected(igraph.error());
+        return getError(igraph);
     }
-    
+
     // Convert to optimized::Graph
     int n = igraph.value()->getNumNodes();
     std::vector<optimized::Graph<EdgeData>::InputEdge> input_edges;
-    
+
     // Add edges from IGraph
     for (int u = 0; u < n; ++u) {
         for (int v : igraph.value()->neighbors(u)) {
@@ -332,8 +317,11 @@ inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(
             }
         }
     }
-    
+
     auto opt_graph = std::make_unique<optimized::Graph<EdgeData>>(n, input_edges);
+    if (!opt_graph) {
+        return makeErrorMessage(ErrorCode::InvalidGraph, "Failed to create optimized graph.");
+    }
     return opt_graph;
 }
-#endif //OBLIVIOUSROUTING_GRAPH_IO_H
+#endif // OBLIVIOUSROUTING_GRAPH_IO_H

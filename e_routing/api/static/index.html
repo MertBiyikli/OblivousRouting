@@ -140,7 +140,7 @@
 
         .layout {
             display: grid;
-            grid-template-columns: 252px minmax(0, 1fr) 330px;
+            grid-template-columns: 300px minmax(0, 1fr) 330px;
             gap: 16px;
             max-width: 1600px;
             margin: 0 auto;
@@ -447,8 +447,13 @@
             outline: none;
         }
 
-        .chat textarea:focus { border-color: var(--blue); }
-        .chat textarea:disabled { opacity: .55; }
+        .chat textarea:focus {
+            border-color: var(--blue);
+        }
+
+        .chat textarea:disabled {
+            opacity: .55;
+        }
 
         #jeylan-ask {
             width: 100%;
@@ -461,32 +466,75 @@
             font-weight: 700;
         }
 
-        #jeylan-ask:disabled { opacity: .45; cursor: not-allowed; }
-        #jeylan-status { margin-top: 10px; overflow-wrap: anywhere; }
+        #jeylan-ask:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        #jeylan-status {
+            margin-top: 10px;
+            overflow-wrap: anywhere;
+        }
 
         #interpretation {
             overflow-wrap: anywhere;
             max-height: 390px;
             overflow-y: auto;
         }
-        #interpretation p { margin: 0 0 11px; }
-        #interpretation p:last-child { margin-bottom: 0; }
+
+        #interpretation p {
+            margin: 0 0 11px;
+        }
+
+        #interpretation p:last-child {
+            margin-bottom: 0;
+        }
+
         #interpretation h3, #interpretation h4 {
             font-size: 13px;
             line-height: 1.4;
             color: #f4f7ff;
             margin: 15px 0 7px;
         }
-        #interpretation ul, #interpretation ol { padding-left: 19px; margin: 5px 0 12px; }
-        #interpretation li { margin-bottom: 5px; }
-        #interpretation strong { color: #fff; }
-        #interpretation code { color: #9fd0ff; background: #10243a; padding: 1px 4px; border-radius: 3px; }
-        .selected-edge { stroke: #fff !important; stroke-width: 8 !important; stroke-opacity: 1 !important; filter: drop-shadow(0 0 5px #67c4ff); }
-        .unit-note { color: #91a4c2; font-size: 11px; margin-top: 10px; line-height: 1.5; }
+
+        #interpretation ul, #interpretation ol {
+            padding-left: 19px;
+            margin: 5px 0 12px;
+        }
+
+        #interpretation li {
+            margin-bottom: 5px;
+        }
+
+        #interpretation strong {
+            color: #fff;
+        }
+
+        #interpretation code {
+            color: #9fd0ff;
+            background: #10243a;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .selected-edge {
+            stroke: #fff !important;
+            stroke-width: 8 !important;
+            stroke-opacity: 1 !important;
+            filter: drop-shadow(0 0 5px #67c4ff);
+        }
+
+        .unit-note {
+            color: #91a4c2;
+            font-size: 11px;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
 
 
         .prompts {
-            margin-top: auto
+            margin-top: 16px;
+            flex-shrink: 0;
         }
 
         .prompt {
@@ -500,6 +548,16 @@
             margin-top: 9px;
             padding: 10px;
             font-size: 12px
+        }
+
+        .assistant .chat {
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        .assistant .jeylan-mode-panel {
+            flex-shrink: 0;
         }
 
         .alert {
@@ -572,6 +630,226 @@
                 min-height: 400px
             }
         }
+
+        #import-file {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        #import-file::file-selector-button {
+            background: #203554;
+            color: #e8edf8;
+            border: 1px solid #355071;
+            border-radius: 5px;
+            padding: 7px 9px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        #import-status {
+            overflow-wrap: anywhere;
+        }
+
+        #import-network:disabled {
+            opacity: 0.55;
+            cursor: wait;
+        }
+
+
+        /* Jeylan interaction switch */
+
+        .jeylan-mode-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            padding: 4px;
+            background: #0c1728;
+            border: 1px solid #2a3c59;
+            border-radius: 9px;
+            flex-shrink: 0;
+        }
+
+        .jeylan-mode {
+            border: 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: transparent;
+            color: #91a4c2;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .jeylan-mode.active {
+            background: #29466d;
+            color: #f4f8ff;
+        }
+
+        .jeylan-mode-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+            flex-shrink: 0;
+        }
+
+        .jeylan-mode-panel[hidden] {
+            display: none !important;
+        }
+
+        .jeylan-mode-panel textarea {
+            min-height: 78px;
+            max-height: 120px;
+            margin-top: 0;
+        }
+
+        #jeylan-run-experiment {
+            width: 100%;
+            padding: 11px;
+            border: 0;
+            border-radius: 8px;
+            background: #327dff;
+            color: white;
+            font-weight: 700;
+        }
+
+        #jeylan-run-experiment:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        #jeylan-experiment-status {
+            overflow-wrap: anywhere;
+        }
+
+        /* Let the explanation occupy available panel space. */
+        #interpretation {
+            max-height: none;
+            min-height: 80px;
+            overflow-y: auto;
+        }
+
+        /* Preserve accessibility on smaller viewports. */
+        .jeylan-mode-panel .unit-note {
+            margin-top: 0;
+        }
+
+
+        /* F3-D: Composite analysis results */
+
+        #jeylan-composite-results {
+            display: grid;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        #jeylan-composite-results[hidden] {
+            display: none !important;
+        }
+
+        #jeylan-composite-results h2,
+        #jeylan-composite-results h3 {
+            margin: 0;
+        }
+
+        .composite-steps {
+            display: grid;
+            gap: 8px;
+        }
+
+        .composite-step {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #28415f;
+            border-radius: 8px;
+            background: #142741;
+            color: #e8edf8;
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+
+        .composite-step.active {
+            border-color: #488fff;
+            background: #203f66;
+        }
+
+        .composite-step:focus-visible {
+            outline: 2px solid #73c9ff;
+            outline-offset: 2px;
+        }
+
+        .composite-step-title {
+            font-weight: 600;
+        }
+
+        .composite-step-meta {
+            display: block;
+            margin-top: 5px;
+            color: #9bb1cc;
+            font-size: 11px;
+            overflow-wrap: anywhere;
+        }
+
+        .composite-comparison {
+            padding: 14px;
+            border: 1px solid #28415f;
+            border-radius: 8px;
+            background: #10243a;
+        }
+
+        .composite-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .composite-metric {
+            padding: 10px;
+            border: 1px solid #28415f;
+            border-radius: 7px;
+            min-width: 0;
+        }
+
+        .composite-metric span {
+            display: block;
+            font-size: 11px;
+            color: #91a4c2;
+        }
+
+        .composite-metric strong {
+            display: block;
+            font-size: 17px;
+            margin-top: 5px;
+            overflow-wrap: anywhere;
+        }
+
+        .composite-good {
+            color: #64dfae;
+        }
+
+        .composite-bad {
+            color: #f26873;
+        }
+
+        #composite-step-detail {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 700px) {
+            .composite-metric-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
     </style>
 </head>
 <body>
@@ -592,6 +870,39 @@
             </select>
             <div class="help" id="network-info">
                 Select a registered graph and its persisted routing scheme.
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="small">Import a network</div>
+
+            <label for="import-name">Network name</label>
+            <input
+                    id="import-name"
+                    type="text"
+                    maxlength="160"
+                    placeholder="e.g. Production Backbone"
+            >
+
+            <label for="import-file" style="margin-top:12px">
+                LGF graph file
+            </label>
+            <input
+                    id="import-file"
+                    type="file"
+                    accept=".lgf"
+            >
+
+            <button
+                    id="import-network"
+                    type="button"
+                    class="secondary"
+            >
+                Import network
+            </button>
+
+            <div class="help" id="import-status" aria-live="polite">
+                Upload an LGF topology to generate its persisted routing scheme.
             </div>
         </div>
 
@@ -782,7 +1093,8 @@
                                                                                          style="background:#f26873"></i>High overload</span>
             </div>
             <div id="failure-legend" class="unit-note" hidden>
-                <span style="color:#ffb454">━━ ━━</span> Dashed amber = failed physical link; solid lines = surviving links.
+                <span style="color:#ffb454">━━ ━━</span> Dashed amber = failed physical link; solid lines = surviving
+                links.
             </div>
             <div id="selected">Select a link after running a scenario.</div>
         </div>
@@ -802,7 +1114,9 @@
             <div class="metric">
                 <div class="small">Baseline congestion</div>
                 <strong id="baseline-congestion">—</strong>
-                <span>Original network · Same demand model</span>
+                <span id="baseline-congestion-description">
+                    Reference configuration before scenario changes
+                </span>
             </div>
             <div class="metric">
                 <div class="small">Scenario congestion</div>
@@ -840,7 +1154,43 @@
                 hidden
                 aria-live="polite">
         </section>
-        <div class="result-info" id="evidence">No scenario executed yet.</div>
+        <div
+                id="displayed-result-provenance"
+                class="result-info"
+                aria-live="polite"
+                hidden>
+        </div>
+
+
+        <section
+                id="jeylan-composite-results"
+                class="panel"
+                hidden
+                aria-label="Jeylan composite analysis results"
+        >
+            <div class="heading">
+                <h2>Composite Investigation</h2>
+                <span id="composite-status" class="pill"></span>
+            </div>
+
+            <p id="composite-summary" class="sub"></p>
+
+            <div id="composite-comparisons"></div>
+
+            <h3>Execution timeline</h3>
+            <div id="composite-steps" class="composite-steps"></div>
+
+            <div
+                    id="composite-step-detail"
+                    class="result-info"
+                    aria-live="polite"
+            ></div>
+        </section>
+
+        <div class="result-info" id="evidence">
+            No scenario executed yet.
+        </div>
+
     </section>
     <aside class="panel assistant">
         <div class="assistant-head">
@@ -854,20 +1204,78 @@
                 Execute a scenario, then ask Jeylan a question about its results.
             </div>
 
-            <textarea
-                    id="jeylan-question"
-                    rows="3"
-                    maxlength="2000"
-                    placeholder="Which links are most overloaded, and what should I investigate?"
-                    disabled
-            ></textarea>
 
-            <button id="jeylan-ask" disabled>
-                Ask Jeylan
-            </button>
+            <div class="jeylan-mode-switch"
+                 role="group"
+                 aria-label="Jeylan interaction mode">
 
-            <small id="jeylan-status"></small>
-            <div class="unit-note">Utilization values are load/capacity ratios (1.0 = 100%). Scenario interpretations are not live telemetry.</div>
+                <button id="jeylan-mode-ask"
+                        type="button"
+                        class="jeylan-mode active"
+                        aria-pressed="true">
+                    Ask
+                </button>
+
+                <button id="jeylan-mode-experiment"
+                        type="button"
+                        class="jeylan-mode"
+                        aria-pressed="false">
+                    Experiment
+                </button>
+            </div>
+
+            <div id="jeylan-read-panel"
+                 class="jeylan-mode-panel">
+
+    <textarea
+            id="jeylan-question"
+            rows="3"
+            maxlength="2000"
+            placeholder="Ask about the displayed analysis..."
+            disabled
+    ></textarea>
+
+                <button id="jeylan-ask"
+                        type="button"
+                        disabled>
+                    Ask Jeylan
+                </button>
+
+                <small id="jeylan-status"></small>
+            </div>
+
+            <div id="jeylan-experiment-panel"
+                 class="jeylan-mode-panel"
+                 hidden>
+
+                <div class="unit-note">
+                    <strong>Run a network analysis</strong>
+                    <p>
+                        Ask Jeylan to simulate a capacity upgrade, link failure,
+                        N−1 resilience, or traffic growth. Each execution creates
+                        a persisted report without changing the active workspace.
+                    </p>
+                </div>
+
+                <textarea
+                        id="jeylan-experiment-question"
+                        rows="3"
+                        maxlength="2000"
+                        placeholder="Simulate 30% more traffic, or run N−1 resilience."
+                ></textarea>
+
+                <button id="jeylan-run-experiment"
+                        type="button">
+                    Run Experiment
+                </button>
+
+                <small id="jeylan-experiment-status"></small>
+            </div>
+
+
+            <div class="unit-note">Utilization values are load/capacity ratios (1.0 = 100%). Scenario interpretations
+                are not live telemetry.
+            </div>
         </div>
 
         <div class="prompts">
@@ -883,14 +1291,147 @@
 
 <script>
     const $ = id => document.getElementById(id);
+
+    function setJeylanMode(mode) {
+        if (mode !== 'ask' && mode !== 'experiment') {
+            throw new Error('Unknown Jeylan interaction mode');
+        }
+
+        const ask = mode === 'ask';
+
+        $('jeylan-read-panel').hidden = !ask;
+        $('jeylan-experiment-panel').hidden = ask;
+
+        $('jeylan-mode-ask').classList.toggle(
+            'active', ask
+        );
+
+        $('jeylan-mode-experiment').classList.toggle(
+            'active', !ask
+        );
+
+        $('jeylan-mode-ask').setAttribute(
+            'aria-pressed', String(ask)
+        );
+
+        $('jeylan-mode-experiment').setAttribute(
+            'aria-pressed', String(!ask)
+        );
+    }
+
+    $('jeylan-mode-ask').addEventListener('click', () => {
+        setJeylanMode('ask');
+    });
+
+    $('jeylan-mode-experiment').addEventListener(
+        'click',
+        () => setJeylanMode('experiment')
+    );
+
     const upgrades = new Map();
     let lastLinks = [];
 
 
     let activeScenarioId = null;
+    let activeAnalysisContext = null;
     let selectedLinkId = null;
     let jeylanBusy = false;
     let networkGeneration = 0;
+
+    function setDisplayedResultProvenance({
+                                              origin,
+                                              scenarioId,
+                                              edgeId = null,
+                                              capacityFactor = null
+                                          }) {
+        const element = $('displayed-result-provenance');
+
+        if (!scenarioId) {
+            clearDisplayedResultProvenance();
+            return;
+        }
+
+        if (origin === 'jeylan') {
+            element.textContent =
+                `Viewing Jeylan experiment · ` +
+                `Edge ${edgeId} ×${capacityFactor} · ` +
+                `Workspace unchanged · ` +
+                `Analysis ${scenarioId}`;
+
+        } else {
+            element.textContent =
+                `Viewing Scenario Studio analysis · ` +
+                `${scenarioId}`;
+        }
+
+        element.hidden = false;
+    }
+
+    function clearDisplayedResultProvenance() {
+        const element = $('displayed-result-provenance');
+        element.hidden = true;
+        element.textContent = '';
+    }
+
+    function activateJeylanContext(networkId, analysisId, analysisType) {
+        activeAnalysisContext = {
+            networkId,
+            analysisId,
+            analysisType
+        };
+
+        $('jeylan-question').disabled = false;
+        $('jeylan-ask').disabled = false;
+        $('ask-selected-link').disabled = lastLinks.length === 0;
+
+        $('jeylan-status').textContent =
+            'Analysis ready. Ask Jeylan about the results.';
+    }
+
+    function invalidateJeylanContext() {
+        activeAnalysisContext = null;
+
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+
+        $('jeylan-status').textContent =
+            'Run an analysis before asking Jeylan.';
+    }
+
+    async function askAnalysisJeylan(context, question, selectedEdgeId) {
+        const {networkId, analysisId, analysisType} = context;
+
+        const url =
+            `/api/v1/networks/${encodeURIComponent(networkId)}` +
+            `/analyses/${encodeURIComponent(analysisType)}` +
+            `/${encodeURIComponent(analysisId)}/ask`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                question,
+                selected_edge_id: selectedEdgeId
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof result.detail === 'string'
+                    ? result.detail
+                    : `Jeylan request failed (HTTP ${response.status})`
+            );
+        }
+
+        if (result.analysis_id !== analysisId) {
+            throw new Error('Jeylan analysis evidence mismatch');
+        }
+
+        return result;
+    }
 
 
     const trafficOverrides = new Map();
@@ -918,6 +1459,7 @@
             remove.addEventListener('click', () => {
                 trafficOverrides.delete(key);
                 renderTrafficOverrides();
+                refreshWorkspaceSummary();
             });
 
             row.append(label, remove);
@@ -963,6 +1505,7 @@
     }
 
     function renderTrafficReport(report) {
+        setAnalysisMetricLabels('traffic_growth');
         const baseline = report.baseline;
         const modified = report.modified;
 
@@ -1124,13 +1667,23 @@
     }
 
     function renderJeylanAnswer(answer) {
+        // Only round long decimal literals in the assistant's prose.
+        // Persisted numerical measurements and IDs are not modified.
+        const displayAnswer = String(answer).replace(
+            /\b\d+\.\d{7,}\b/g,
+            value => Number(value).toFixed(2)
+        );
         const root = $('interpretation');
         root.replaceChildren();
         let currentList = null;
         let currentListType = null;
-        for (const line of String(answer).split(/\r?\n/)) {
+        for (const line of displayAnswer.split(/\r?\n/)) {
             const trimmed = line.trim();
-            if (!trimmed) { currentList = null; currentListType = null; continue; }
+            if (!trimmed) {
+                currentList = null;
+                currentListType = null;
+                continue;
+            }
             const heading = trimmed.match(/^#{1,4}\s+(.+)$/);
             const bullet = trimmed.match(/^[-*]\s+(.+)$/);
             const numbered = trimmed.match(/^\d+[.)]\s+(.+)$/);
@@ -1170,8 +1723,8 @@
             `/api/v1/scenarios/${encodeURIComponent(requestedId)}/ask`,
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question }),
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({question}),
             }
         );
 
@@ -1189,50 +1742,35 @@
     }
 
 
+    $('jeylan-ask').addEventListener('click', async () => {
+        if (jeylanBusy || !activeAnalysisContext) return;
 
-    document.getElementById("jeylan-ask").addEventListener("click", async () => {
-        if (jeylanBusy || !activeScenarioId) return;
-
-        const questionInput = document.getElementById("jeylan-question");
-        const answerArea = document.getElementById("interpretation");
-        const status = document.getElementById("jeylan-status");
-        const button = document.getElementById("jeylan-ask");
-
-        const question = questionInput.value.trim();
+        const question = $('jeylan-question').value.trim();
         if (!question) return;
 
-        // Capture the scenario context before the asynchronous request.
-        const requestedGeneration = networkGeneration;
-        const requestedScenarioId = activeScenarioId;
+        const context = activeAnalysisContext;
+        const generation = networkGeneration;
+        const selectedEdgeId = selectedLinkId;
+
+        const stillCurrent = () =>
+            generation === networkGeneration &&
+            activeAnalysisContext === context &&
+            $('network').value === context.networkId &&
+            $('analysis-type').value === context.analysisType;
 
         jeylanBusy = true;
-        button.disabled = true;
-        status.textContent = "Jeylan is examining the scenario evidence…";
+        $('jeylan-ask').disabled = true;
+        $('jeylan-status').textContent =
+            'Jeylan is examining the analysis evidence…';
 
         try {
-            const link = lastLinks.find(
-                item => item.edge_id === selectedLinkId
+            const result = await askAnalysisJeylan(
+                context,
+                question,
+                selectedEdgeId
             );
 
-            const context = link
-                ? `For edge ${link.edge_id} (${link.source} to ${link.target}) in the selected persisted scenario: `
-                : '';
-
-            const result = await askJeylan(
-                (context + question).slice(0, 2000)
-            );
-
-            // Discard responses from a previous network or scenario.
-            if (
-                requestedGeneration !== networkGeneration ||
-                requestedScenarioId !== activeScenarioId
-            ) {
-                return;
-            }
-
-            if (result.scenario_id !== requestedScenarioId) {
-                throw new Error('Scenario evidence mismatch');
-            }
+            if (!stillCurrent()) return;
 
             renderJeylanAnswer(result.answer);
 
@@ -1240,29 +1778,23 @@
                 ? result.evidence.map(item => item.id).join(', ')
                 : 'Unavailable';
 
-            status.textContent =
-                `Evidence: ${ids} · Scenario: ${result.scenario_id}`;
+            $('jeylan-status').textContent =
+                `Evidence: ${ids} · Analysis: ${context.analysisId}`;
 
         } catch (error) {
-            // Old requests must not overwrite the current network's status.
-            if (
-                requestedGeneration === networkGeneration &&
-                requestedScenarioId === activeScenarioId
-            ) {
-                status.textContent =
-                    error.message || "Jeylan is unavailable.";
+            if (stillCurrent()) {
+                $('jeylan-status').textContent =
+                    error.message || 'Jeylan is unavailable.';
             }
 
         } finally {
             jeylanBusy = false;
 
-            // Do not modify controls belonging to another network.
-            if (requestedGeneration === networkGeneration) {
-                button.disabled = !activeScenarioId;
+            if (stillCurrent()) {
+                $('jeylan-ask').disabled = false;
             }
         }
     });
-
 
 
     $('jeylan-question').addEventListener('keydown', event => {
@@ -1274,7 +1806,7 @@
 
     $('ask-selected-link').addEventListener('click', () => {
         const link = lastLinks.find(item => item.edge_id === selectedLinkId);
-        if (!link || !activeScenarioId) return;
+        if (!link || !activeAnalysisContext) return;
         $('jeylan-question').value =
             `Explain this link's recorded load/capacity ratio, whether it is overloaded, ` +
             `what the scenario does and does not establish, and what to investigate next.`;
@@ -1292,7 +1824,7 @@
     }
 
 
-    async function loadNetworks() {
+    async function loadNetworks(selectedNetworkId = null) {
         const selector = $('network');
         selector.disabled = true;
         selector.replaceChildren(new Option('Loading networks...', ''));
@@ -1330,6 +1862,22 @@
             }
 
             selector.disabled = false;
+
+            if (selectedNetworkId) {
+                const exists = data.networks.some(
+                    network => network.id === selectedNetworkId
+                );
+
+                if (!exists) {
+                    throw new Error(
+                        'Imported network was not found in the registry.'
+                    );
+                }
+
+                selector.value = selectedNetworkId;
+                resetNetworkState();
+            }
+
             $('run').disabled = false;
 
             $('network-info').textContent =
@@ -1349,9 +1897,9 @@
     }
 
 
-
     function resetNetworkState() {
-
+        clearDisplayedResultProvenance();
+        clearJeylanCompositeResults();
         $('scenario-analysis').hidden = true;
         $('scenario-analysis').replaceChildren();
         $('run').textContent = 'Run simulation';
@@ -1387,7 +1935,6 @@
         $('topology-summary').textContent = '';
 
 
-
         const metricIds = [
             'congestion',
             'overloaded',
@@ -1421,6 +1968,31 @@
             'Run a scenario before asking Jeylan.';
 
         $('status').textContent = 'Ready';
+        for (const id of [
+            'congestion',
+            'overloaded',
+            'count',
+            'baseline-congestion',
+            'scenario-congestion',
+            'congestion-delta',
+            'reference-congestion',
+            'upgraded-congestion',
+            'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        $('congestion-delta').style.color = '';
+        $('capacity-improvement').style.color = '';
+
+        $('evidence').textContent =
+            'Workspace reset · No analysis executed.';
+
+        $('interpretation').textContent =
+            'The original network workspace has been restored. ' +
+            'Run an analysis to display new results.';
+
+        invalidateJeylanContext();
         clearError();
     }
 
@@ -1428,8 +2000,81 @@
     $('network').addEventListener('change', resetNetworkState);
 
 
+    // Invalidate previously computed results when the demand model changes.
+    // Preserve the selected network and all workspace modifications.
+    $('demand').addEventListener('change', () => {
+        // Invalidate in-flight requests for the previous demand model.
+        networkGeneration++;
+        clearDisplayedResultProvenance();
+        clearJeylanCompositeResults();
+        // Remove previous analysis results.
+        $('scenario-analysis').hidden = true;
+        $('scenario-analysis').replaceChildren();
+
+        activeScenarioId = null;
+        selectedLinkId = null;
+        lastLinks = [];
+
+        // Clear the previous topology visualization.
+        $('graph').replaceChildren();
+        $('empty').hidden = false;
+        $('empty').textContent =
+            'Demand model changed. Run an analysis to update the topology.';
+
+        $('large-network-analysis').hidden = true;
+        $('bottleneck-list').replaceChildren();
+        $('failure-legend').hidden = true;
+
+        $('topology').textContent = 'Network topology';
+        $('selected').textContent = 'No link selected.';
+
+        // Clear numerical results from the previous demand model.
+        for (const id of [
+            'congestion',
+            'overloaded',
+            'count',
+            'baseline-congestion',
+            'scenario-congestion',
+            'congestion-delta',
+            'reference-congestion',
+            'upgraded-congestion',
+            'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        $('congestion-delta').style.color = '';
+        $('capacity-improvement').style.color = '';
+
+        // Previous scenario evidence is no longer current.
+        $('evidence').textContent =
+            `Demand model changed to ${$('demand').value}. ` +
+            'Run an analysis to generate new results.';
+
+        $('interpretation').textContent =
+            'The previous results were computed using a different ' +
+            'demand model. Run the analysis again.';
+
+        $('status').textContent = 'Ready';
+
+        // Disable Jeylan until new scenario evidence is available.
+        $('jeylan-question').value = '';
+        $('jeylan-question').disabled = true;
+        $('jeylan-ask').disabled = true;
+        $('ask-selected-link').disabled = true;
+        $('jeylan-status').textContent =
+            'Run an analysis before asking Jeylan.';
+
+        clearError();
+    });
+
+
     $('add').addEventListener('click', () => {
-        const id = Number($('edge').value), factor = Number($('factor').value);
+        const id = Number($('edge').value);
+
+        const factor = Number(
+            $('factor').value.trim().replace(',', '.')
+        );
         if ($('edge').value === '' || !Number.isInteger(id) || id < 0 || !Number.isFinite(factor) || factor < 1 || factor > 100) {
             showError('Enter a nonnegative integer edge ID and a capacity factor between 1 and 100.');
             return
@@ -1438,8 +2083,11 @@
         upgrades.set(id, factor);
         $('upgrades').textContent = upgrades.size
             ? 'Applied upgrades: ' +
-            [...upgrades].map(([edge, factor]) => `Edge ${edge} ×${factor}`).join(' · ')
+            [...upgrades].map(([edge, factor]) =>
+                `Edge ${edge} ×${factor}`).join(' · ')
             : 'Applied upgrades: none';
+
+        refreshWorkspaceSummary();
     });
 
     function svgEl(name, attrs) {
@@ -1447,7 +2095,6 @@
         for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
         return el
     }
-
 
 
     async function executeScenario(request, networkId, comparison = false) {
@@ -1472,7 +2119,6 @@
 
         return data;
     }
-
 
 
     const LARGE_NETWORK_THRESHOLD = 150;
@@ -1501,7 +2147,6 @@
     }
 
 
-
     function drawGraph(links, options = {}) {
         const svg = $('graph');
         svg.replaceChildren();
@@ -1526,7 +2171,8 @@
 
         // Use baseline vertices for both states: a failed edge must not move nodes.
         const topologyLinks = options.baselineLinks || links;
-        const vertices = [...new Set(topologyLinks.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b), centerX = 360,
+        const vertices = [...new Set(topologyLinks.flatMap(l => [l.source, l.target]))].sort((a, b) => a - b),
+            centerX = 360,
             centerY = 167, rx = 270, ry = 125, positions = new Map(vertices.map((v, i) => {
                 const a = -Math.PI / 2 + 2 * Math.PI * i / vertices.length;
                 return [v, {x: centerX + rx * Math.cos(a), y: centerY + ry * Math.sin(a)}]
@@ -1610,8 +2256,11 @@
                     ` · current utilization ${Number(l.utilization).toFixed(3)}` +
                     trafficDetails;
 
-                $('ask-selected-link').disabled = !activeScenarioId;
-                if (activeScenarioId) $('jeylan-status').textContent = `Edge ${l.edge_id} selected · Ready to ask Jeylan`;
+                $('ask-selected-link').disabled = !activeAnalysisContext;
+                if (activeAnalysisContext) {
+                    $('jeylan-status').textContent =
+                        `Edge ${l.edge_id} selected · Ready to ask Jeylan`;
+                }
             });
             svg.appendChild(line)
         }
@@ -1666,7 +2315,7 @@
                         `Selected edge ${link.edge_id} ` +
                         `(${link.source} → ${link.target})`;
 
-                    $('ask-selected-link').disabled = !activeScenarioId;
+                    $('ask-selected-link').disabled = !activeAnalysisContext;
                 }
             });
 
@@ -1675,8 +2324,8 @@
     }
 
 
-
     async function executeN1UI() {
+        clearDisplayedResultProvenance();
         clearError();
 
         const networkId = $('network').value;
@@ -1744,8 +2393,8 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     analysis_id: analysisId,
-                    execution_mode: $('execution-mode').value,
-                    demand_model: 'uniform',
+                    execution_mode: executionMode,
+                    demand_model: $('demand').value,
                     seed: 42,
                     workspace: currentWorkspaceSnapshot()
                 })
@@ -1785,6 +2434,8 @@
                 throw new Error('Invalid N−1 analysis report');
             }
 
+
+            setAnalysisMetricLabels('n1_resilience');
             const baseline = report.baseline;
             const before = baseline.max_congestion;
 
@@ -1805,8 +2456,8 @@
 
             function selectFailure(outcome) {
                 // Do not reuse a previous scenario's Jeylan context.
-                selectedLinkId = null;
-                $('ask-selected-link').disabled = true;
+                selectedLinkId = outcome.edge_id;
+                $('ask-selected-link').disabled = !activeAnalysisContext;
 
                 const disconnected = outcome.status === 'disconnected';
                 const successful = outcome.status === 'success';
@@ -1869,7 +2520,7 @@
                         change < 0 ? '#22c55e' :
                             change > 0 ? '#ef4444' : '#94a3b8';
 
-                $('count').textContent = String(links.length);
+                $('count').textContent = successful ? String(links.length) : 'N/A';
                 $('overloaded').textContent = successful
                     ? String(links.filter(l => l.utilization > 1).length)
                     : 'N/A';
@@ -1893,6 +2544,11 @@
             }
 
             renderN1Analysis(report, selectFailure);
+            activateJeylanContext(
+                networkId,
+                analysisId,
+                'n1_resilience'
+            );
 
         } catch (error) {
             if (stillCurrent()) {
@@ -1910,12 +2566,12 @@
     }
 
     async function executeLinkFailureUI() {
+        clearDisplayedResultProvenance();
         clearError();
 
         const networkId = $('network').value;
         const rawEdge = $('failed-edge').value.trim();
         const edgeId = Number(rawEdge);
-        const demandScale = Number($('scale').value);
 
         if (!networkId || $('network').disabled) {
             showError('Select a registered network.');
@@ -1928,15 +2584,6 @@
             edgeId < 0
         ) {
             showError('Select a valid physical link ID.');
-            return;
-        }
-
-        if (
-            !Number.isFinite(demandScale) ||
-            demandScale <= 0 ||
-            demandScale > 100
-        ) {
-            showError('Demand scale must be between 0 and 100.');
             return;
         }
 
@@ -1956,7 +2603,7 @@
             scenario_id: scenarioId,
             scenario_kind: 'link_failure',
             demand_model: $('demand').value,
-            demand_scale: demandScale,
+            workspace: currentWorkspaceSnapshot(),
             link_failures: [edgeId]
         };
 
@@ -2054,6 +2701,7 @@
                 throw new Error('Incomplete link failure response');
             }
 
+            setAnalysisMetricLabels('link_failure');
             const report = body.analysis;
             const solver = report.solver_results?.[0];
 
@@ -2158,7 +2806,16 @@
 
             $('scenario-analysis').hidden = false;
 
-            await renderScenarioAnalysis(networkId, scenarioId);
+            await renderScenarioAnalysis(networkId, body.scenario_id);
+
+            if (!stillCurrent()) return;
+
+            activateJeylanContext(
+                networkId,
+                scenarioId,
+                'link_failure'
+            );
+
 
             if (!stillCurrent()) {
                 $('scenario-analysis').hidden = true;
@@ -2181,6 +2838,7 @@
 
 
     async function executeTrafficGrowthUI() {
+        clearDisplayedResultProvenance();
         clearError();
 
         const networkId = $('network').value;
@@ -2189,12 +2847,6 @@
             showError('Select a registered network.');
             return;
         }
-
-        if ($('demand').value !== 'uniform') {
-            showError('Traffic Growth currently supports uniform demands only.');
-            return;
-        }
-
 
         const scale = Number($('traffic-scale').value);
 
@@ -2258,15 +2910,21 @@
                 `/api/v1/networks/${encodeURIComponent(networkId)}` +
                 `/analyses/traffic`;
 
+            const workspace = currentWorkspaceSnapshot();
+
             const response = await fetch(base, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     analysis_id: analysisId,
-                    demand_model: 'uniform',
+                    demand_model: $('demand').value,
                     seed: 42,
-                    global_scale: scale,
-                    commodity_overrides: overrides
+                    global_scale: workspace.demand_scale,
+                    commodity_overrides: workspace.commodity_overrides,
+                    capacity_upgrades: workspace.capacity_upgrades.map(upgrade => ({
+                        edge_id: upgrade.edge_id,
+                        capacity_factor: upgrade.factor
+                    }))
                 })
             });
 
@@ -2298,13 +2956,15 @@
             if (!stillCurrent()) return;
 
             renderTrafficReport(report);
+            activateJeylanContext(
+                networkId,
+                analysisId,
+                'traffic_growth'
+            );
 
             $('evidence').textContent =
                 `Traffic analysis: ${analysisId} · ` +
                 `Network: ${networkId} · Mode: fixed_routing`;
-
-            $('jeylan-status').textContent =
-                'Traffic analysis available; Jeylan integration pending.';
 
         } catch (error) {
             if (stillCurrent()) {
@@ -2318,6 +2978,163 @@
             }
         }
     }
+
+
+    async function displayCapacityAnalysisResult({
+                                                     networkId,
+                                                     scenarioId,
+                                                     report,
+                                                     updateInterpretation = true,
+                                                     stillCurrent = () => true
+                                                 }) {
+        if (
+            report?.scenario_kind !== 'capacity_upgrade' ||
+            !Array.isArray(report.solver_results) ||
+            report.solver_results.length !== 1
+        ) {
+            throw new Error('Invalid capacity analysis report');
+        }
+
+        setAnalysisMetricLabels('capacity_upgrade');
+        const solver = report.solver_results[0];
+
+        if (
+            !solver?.baseline ||
+            !solver?.fixed_routing ||
+            !solver?.reoptimized ||
+            !Array.isArray(solver.baseline.links) ||
+            !Array.isArray(solver.reoptimized.links)
+        ) {
+            throw new Error('Missing three-way capacity comparison');
+        }
+
+        if (!stillCurrent()) return;
+
+        const baseline = solver.baseline;
+        const fixed = solver.fixed_routing;
+        const optimized = solver.reoptimized;
+
+        const before = baseline.max_congestion;
+        const fixedCongestion = fixed.max_congestion;
+        const after = optimized.max_congestion;
+
+        const format = value =>
+            Number.isFinite(value) ? value.toFixed(3) : '—';
+
+        const change = before > 0
+            ? 100 * (after - before) / before
+            : null;
+
+        // First metric rows.
+        $('baseline-congestion').textContent = format(before);
+        $('scenario-congestion').textContent = format(after);
+        $('congestion').textContent = format(after);
+
+        $('baseline-congestion-description').textContent =
+            'Reference capacities · Current demand configuration';
+
+        $('congestion-delta').textContent = change === null
+            ? 'N/A'
+            : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+
+        $('congestion-delta').style.color =
+            change === null ? '#94a3b8' :
+                change < 0 ? '#22c55e' :
+                    change > 0 ? '#ef4444' : '#94a3b8';
+
+        // Three-way capacity comparison.
+        $('reference-congestion').textContent = format(before);
+        $('upgraded-congestion').textContent = format(fixedCongestion);
+        $('capacity-improvement').textContent = format(after);
+        $('capacity-improvement').style.color = '';
+
+        $('third-label-1').textContent = 'Baseline routing';
+        $('third-label-2').textContent = 'Capacity-only';
+        $('third-label-3').textContent = 'Reoptimized routing';
+
+        $('third-help-1').textContent = 'Original capacities';
+        $('third-help-2').textContent =
+            'Fixed routing · Upgraded capacities';
+        $('third-help-3').textContent =
+            'Routing recomputed after capacity upgrade';
+
+        // Build link-level differences for topology visualization.
+        const baselineByEdge = new Map(
+            baseline.links.map(link => [link.edge_id, link])
+        );
+
+        lastLinks = optimized.links.map(link => {
+            const previous = baselineByEdge.get(link.edge_id);
+
+            return {
+                ...link,
+                baseline_utilization:
+                    previous?.utilization ?? null,
+                utilization_change: previous
+                    ? link.utilization - previous.utilization
+                    : null
+            };
+        });
+
+        selectedLinkId = null;
+        $('selected').textContent =
+            'Select a link to inspect its utilization.';
+
+        drawGraph(lastLinks);
+        renderBottleneckRanking(lastLinks);
+
+        $('topology').textContent =
+            'Network topology · Reoptimized Capacity Planning';
+
+        $('failure-legend').hidden = true;
+        $('count').textContent = String(lastLinks.length);
+
+        $('overloaded').textContent = String(
+            lastLinks.filter(link => link.utilization > 1).length
+        );
+
+        $('status').textContent = 'Completed';
+
+        $('evidence').textContent =
+            `Scenario: ${scenarioId} · ` +
+            `Network: ${networkId} · ` +
+            `Solver: ${solver.solver_algorithms.join(', ')} · ` +
+            `Mode: ${report.execution_mode}`;
+
+        if (updateInterpretation) {
+            $('interpretation').textContent =
+                `Capacity planning completed. Maximum congestion ` +
+                `changed from ${format(before)} to ${format(after)} ` +
+                `after routing reoptimization ` +
+                `(${change === null ? 'N/A' : change.toFixed(2) + '%'}). ` +
+                `The capacity-only result was ${format(fixedCongestion)}.`;
+        }
+
+        // Reuse the existing detailed-report visualization.
+        const panel = $('scenario-analysis');
+        panel.hidden = false;
+
+        await renderScenarioAnalysis(networkId, scenarioId);
+
+        if (!stillCurrent()) {
+            panel.hidden = true;
+            panel.replaceChildren();
+            return;
+        }
+
+        // Enable read-only Jeylan questions for the displayed experiment.
+        activateJeylanContext(
+            networkId,
+            scenarioId,
+            'capacity_upgrade'
+        );
+
+        setDisplayedResultProvenance({
+            origin: 'studio',
+            scenarioId
+        });
+    }
+
 
 
     $('run').addEventListener('click', async () => {
@@ -2356,18 +3173,35 @@
         }
 
         clearError();
-        const demandScale = Number($('scale').value);
-        if (!Number.isFinite(demandScale) || demandScale <= 0 || demandScale > 100) {
-            showError('Demand scale must be greater than zero and at most 100.');
-            return
-        }
-        const request = {
-            scenario_id: 'web-' + (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, ''),
-            scenario_type: 'capacity_planning',
+        clearDisplayedResultProvenance();
+
+// Capture the validated workspace exactly once.
+        const workspaceSnapshot = workspace;
+
+        const scenarioId = 'capacity-' +
+            (globalThis.crypto?.randomUUID?.() ||
+                String(Date.now()) + Math.random().toString(36).slice(2))
+                .replace(/[^A-Za-z0-9_-]/g, '');
+
+// Workspace modifications define the demand baseline.
+// Selected capacity upgrades are separate analysis events.
+        const payload = {
+            scenario_id: scenarioId,
+            scenario_kind: 'capacity_upgrade',
             demand_model: $('demand').value,
-            include_layer1: $('layer1').checked,
-            demand_scale: demandScale,
-            capacity_upgrades: [...upgrades].map(([edge_id, capacity_factor]) => ({edge_id, capacity_factor}))
+
+            workspace: {
+                demand_scale: workspaceSnapshot.demand_scale,
+                commodity_overrides: workspaceSnapshot.commodity_overrides,
+                capacity_upgrades: []
+            },
+
+            capacity_upgrades: workspaceSnapshot.capacity_upgrades.map(
+                upgrade => ({
+                    edge_id: upgrade.edge_id,
+                    capacity_factor: upgrade.factor
+                })
+            )
         };
         $('run').disabled = true;
 
@@ -2405,187 +3239,43 @@
                 throw new Error("Select a network before running a scenario.");
             }
 
-            const fastEligible =
-                ["uniform", "bimodal", "gaussian"].includes(request.demand_model)
-                && !request.include_layer1;
-
-            let baseline;
-            let reference;
-            let data;
-
-            if (fastEligible) {
-                data = await executeScenario(request, networkId, true);
-
-                if (
-                    data.execution_mode !== "fixed_routing_transformation" ||
-                    !data.comparison?.baseline ||
-                    !data.comparison?.reference
-                ) {
-                    throw new Error("Incomplete fast comparison response");
+            const response = await fetch(
+                `/api/v1/networks/${encodeURIComponent(networkId)}/scenarios/detailed-analysis`,
+                {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
                 }
-
-                baseline = data.comparison.baseline;
-                reference = data.comparison.reference;
-            } else {
-                const baselineRequest = {
-                    ...request,
-                    scenario_id: request.scenario_id + "-baseline",
-                    scenario_type: "baseline",
-                    demand_scale: 1.0,
-                    capacity_upgrades: []
-                };
-
-                baseline = await executeScenario(baselineRequest, networkId);
-
-                const referenceRequest = {
-                    ...request,
-                    scenario_id: request.scenario_id + "-reference",
-                    demand_scale: request.demand_scale,
-                    capacity_upgrades: []
-                };
-
-                reference = request.demand_scale === 1.0
-                    ? baseline
-                    : await executeScenario(referenceRequest, networkId);
-
-                data = request.capacity_upgrades.length === 0
-                    ? reference
-                    : await executeScenario(request, networkId);
-            }
-
-            if (executionGeneration !== networkGeneration) {
-                return;
-            }
-
-            const referenceCongestion = reference.metrics?.congestion;
-            const upgradedCongestion = data.metrics?.congestion;
-
-            $('reference-congestion').textContent =
-                typeof referenceCongestion === 'number'
-                    ? referenceCongestion.toFixed(3) : '—';
-
-            $('upgraded-congestion').textContent =
-                typeof upgradedCongestion === 'number'
-                    ? upgradedCongestion.toFixed(3) : '—';
-
-            if (
-                Number.isFinite(referenceCongestion) &&
-                Number.isFinite(upgradedCongestion) &&
-                referenceCongestion > 0
-            ) {
-                const change =
-                    100 * (upgradedCongestion - referenceCongestion) / referenceCongestion;
-
-                $('capacity-improvement').textContent =
-                    `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
-
-                $('capacity-improvement').style.color =
-                    change < 0 ? '#22c55e' :
-                        change > 0 ? '#ef4444' : '#94a3b8';
-            } else {
-                $('capacity-improvement').textContent = 'N/A';
-            }
-
-            const baselineCongestion = Number(baseline.metrics?.congestion);
-            const scenarioCongestion = Number(data.metrics?.congestion);
-
-            $('baseline-congestion').textContent =
-                Number.isFinite(baselineCongestion) ? baselineCongestion.toFixed(3) : '—';
-
-            $('scenario-congestion').textContent =
-                Number.isFinite(scenarioCongestion) ? scenarioCongestion.toFixed(3) : '—';
-
-            if (Number.isFinite(baselineCongestion) &&
-                Number.isFinite(scenarioCongestion) &&
-                baselineCongestion > 0) {
-
-                const delta = 100 * (scenarioCongestion - baselineCongestion) / baselineCongestion;
-
-                $('congestion-delta').textContent =
-                    `${delta > 0 ? '+' : ''}${delta.toFixed(2)}%`;
-
-                $('congestion-delta').style.color =
-                    delta < 0 ? '#22c55e' : delta > 0 ? '#ef4444' : '#94a3b8';
-            } else {
-                $('congestion-delta').textContent = 'N/A';
-            }
-            const metrics = data.metrics || {};
-            lastLinks = metrics.links || [];
-
-            const referenceLinks = new Map(
-                (reference.metrics?.links || []).map(
-                    link => [link.edge_id, link]
-                )
             );
 
-            lastLinks = lastLinks.map(link => {
-                const previous = referenceLinks.get(link.edge_id);
+            const body = await response.json();
 
-                return {
-                    ...link,
-                    baseline_utilization: previous?.utilization ?? null,
-                    utilization_change: previous
-                        ? Number(link.utilization) - Number(previous.utilization)
-                        : null
-                };
-            });
-
-            drawGraph(lastLinks);
-            renderBottleneckRanking(lastLinks);
-            $('congestion').textContent = typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : '—';
-            $('overloaded').textContent = String(metrics.overloaded_count ?? '—');
-            $('count').textContent = String(lastLinks.length);
-            $('status').textContent = 'Completed';
-            $('evidence').textContent = `Scenario: ${data.scenario_id} · Demand: ${data.demand_model} × ${data.demand_scale} · Mode: ${data.execution_mode} · ${data.evidence?.result_path || 'No result path'}`;
-            const ranked = [...lastLinks].sort((a, b) => Number(b.utilization) - Number(a.utilization));
-            $('interpretation').textContent = `Deterministic results: ${metrics.overloaded_count ?? 0} of ${lastLinks.length} returned links are flagged overloaded. Maximum modeled utilization ratio: ${typeof metrics.congestion === 'number' ? metrics.congestion.toFixed(3) : 'unknown'}. ${ranked.length ? `Highest-utilization edge: ${ranked[0].edge_id} (ratio ${Number(ranked[0].utilization).toFixed(3)}).` : ''} This is a computed summary, not an AI assessment.`;
-            activeScenarioId = data.scenario_id;
-            $('jeylan-question').disabled = false;
-            $('jeylan-ask').disabled = jeylanBusy;
-            $('jeylan-status').textContent = `Jeylan ready · Scenario ${data.scenario_id}`;
-
-            if (stillCurrent()) {
-                const panel = $('scenario-analysis');
-                panel.hidden = false;
-
-                try {
-                    const response = await fetch(
-                        `/api/v1/networks/${encodeURIComponent(networkId)}/scenarios/detailed-analysis`,
-                        {
-                            method: "POST",
-                            headers: {"Content-Type": "application/json"},
-                            body: JSON.stringify(request)
-                        }
-                    );
-
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.detail || "Detailed analysis failed");
-                    }
-
-                    const result = await response.json();
-
-                    if (result.status !== "completed" || !result.report_available) {
-                        throw new Error("Detailed analysis report unavailable");
-                    }
-
-                    await renderScenarioAnalysis(
-                        networkId,
-                        result.scenario_id
-                    );
-                } catch (error) {
-                    if (stillCurrent()) {
-                        panel.textContent =
-                            `Detailed scenario analysis unavailable: ${error.message}`;
-                    }
-                }
-
-                if (!stillCurrent()) {
-                    panel.hidden = true;
-                    panel.replaceChildren();
-                }
+            if (!response.ok) {
+                throw new Error(
+                    typeof body.detail === 'string'
+                        ? body.detail
+                        : JSON.stringify(body.detail || body)
+                );
             }
 
+            if (!stillCurrent()) return;
+
+
+
+            if (
+                body.status !== 'completed' ||
+                !body.report_available ||
+                body.analysis?.scenario_kind !== 'capacity_upgrade'
+            ) {
+                throw new Error('Incomplete capacity analysis response');
+            }
+
+            await displayCapacityAnalysisResult({
+                networkId,
+                scenarioId: body.scenario_id,
+                report: body.analysis,
+                stillCurrent
+            });
 
         } catch (e) {
             if (stillCurrent()) {
@@ -2611,6 +3301,7 @@
 
 
     function updateAnalysisMode() {
+        clearDisplayedResultProvenance();
         networkGeneration++;
 
 
@@ -2621,6 +3312,20 @@
         const n1 = type === 'n1_resilience';
         const traffic = type === 'traffic_growth';
 
+        const baselineDescriptions = {
+            capacity_upgrade:
+                'Reference capacities · Current demand configuration',
+            link_failure:
+                'Effective workspace · Before link failure',
+            n1_resilience:
+                'Effective workspace · Before independent failures',
+            traffic_growth:
+                'Effective capacities · Reference demand'
+        };
+
+        $('baseline-congestion-description').textContent =
+            baselineDescriptions[type];
+
 // Show only configuration relevant to the selected mode.
         // Workspace configuration is independent of analysis selection.
         $('capacity-config').hidden = false;
@@ -2628,11 +3333,8 @@
         $('traffic-config').hidden = false;
         $('execution-mode-config').hidden = !n1;
 
-// N-1 currently uses its fixed demand configuration.
-        // N-1 currently supports uniform demand through its API.
-// Keep the demand model visible, but constrain it accordingly.
-        $('demand').disabled = n1;
-
+        // Demand model selection is available for all analysis types.
+        $('demand').disabled = false;
         $('demand').closest('.field').hidden = false;
 
 // The shared demand multiplier is edited in traffic-config.
@@ -2642,8 +3344,6 @@
 
 // Failure-specific visualization.
         $('failure-legend').hidden = !failure;
-
-
 
 
 // Invalidate results from the previous analysis mode.
@@ -2674,49 +3374,8 @@
         $('status').textContent = 'Ready';
         clearError();
 
-        const labels = n1
-            ? ['Failed physical link', 'Post-failure congestion', 'Network impact']
-            : failure
-                ? ['Failed physical link', 'Critical surviving link', 'Largest load change']
-                : traffic
-                    ? ['Baseline demand', 'Modified demand', 'Demand change']
-                    : ['Same-demand reference', 'With upgrades', 'Congestion vs. reference'];
-
-        const descriptions = n1
-            ? ['Removed physical link', 'Recomputed routing', 'Failure impact']
-            : failure
-                ? [
-                    'Out-of-service edge',
-                    'Worst post-failure utilization',
-                    'Largest surviving-link load delta'
-                ]
-                : traffic
-                    ? [
-                        'Original demand volume',
-                        'Transformed demand volume',
-                        'Relative change in total demand'
-                    ]
-                    : [
-                        'Current demand · No capacity upgrades',
-                        'Current demand · Selected upgrades',
-                        'Negative = lower congestion · Positive = higher congestion'
-                    ];
-
-
-        for (let i = 1; i <= 3; ++i) {
-            $('third-label-' + i).textContent = labels[i - 1];
-            $('third-help-' + i).textContent = descriptions[i - 1];
-        }
-
-        for (const id of [
-            'reference-congestion',
-            'upgraded-congestion',
-            'capacity-improvement'
-        ]) {
-            $(id).textContent = '—';
-        }
-
-        $('capacity-improvement').style.color = '';
+        setAnalysisMetricLabels(type);
+        clearAnalysisSpecificMetrics();
 
         $('analysis-type-help').textContent = traffic
             ? 'Reevaluate fixed routing under modified traffic demands.'
@@ -2729,7 +3388,7 @@
         $('run-help').textContent = traffic
             ? 'Existing routing scheme · No optimization or topology modification.'
             : n1
-                ? 'Uniform demand, seed 42. Recomputes routing for each link failure.'
+                ? 'Selected demand model, seed 42. Recomputes routing for each link failure.'
                 : failure
                     ? 'Recomputes modeled routing after a link failure.'
                     : 'Uses the registered persisted routing scheme.';
@@ -2741,6 +3400,8 @@
                 : failure
                     ? 'Run failure analysis'
                     : 'Run simulation';
+
+        invalidateJeylanContext();
     }
 
 
@@ -2811,6 +3472,8 @@
 
 
     function resetWorkspace() {
+        clearDisplayedResultProvenance();
+        clearJeylanCompositeResults();
         // Invalidate results belonging to an earlier workspace.
         networkGeneration++;
 
@@ -2845,6 +3508,38 @@
         $('topology').textContent = 'Network topology';
         $('status').textContent = 'Ready';
 
+        for (const id of [
+            'congestion',
+            'overloaded',
+            'count',
+            'baseline-congestion',
+            'scenario-congestion',
+            'congestion-delta',
+            'reference-congestion',
+            'upgraded-congestion',
+            'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+
+        $('congestion-delta').style.color = '';
+        $('capacity-improvement').style.color = '';
+
+        $('empty').hidden = false;
+        $('empty').textContent =
+            'Workspace reset. Run an analysis to load the original network.';
+
+        $('evidence').textContent =
+            'Workspace reset · No analysis executed.';
+
+        $('interpretation').textContent =
+            'The original workspace has been restored. ' +
+            'Run an analysis to display new results.';
+
+        $('jeylan-question').value = '';
+        $('jeylan-status').textContent =
+            'Run an analysis before asking Jeylan.';
+
         $('jeylan-question').disabled = true;
         $('jeylan-ask').disabled = true;
         $('ask-selected-link').disabled = true;
@@ -2856,6 +3551,7 @@
 
         clearError();
         refreshWorkspaceSummary();
+        invalidateJeylanContext();
 
         $('run').disabled = !$('network').value;
     }
@@ -2870,34 +3566,14 @@
             return;
         }
 
-        if (
-            type === 'traffic_growth' &&
-            workspace.capacity_upgrades.length > 0
-        ) {
-            throw new Error(
-                'Traffic Growth with capacity upgrades requires ' +
-                'the unified backend execution path.'
-            );
-        }
-
-        if (
-            type === 'link_failure' &&
-            (workspace.capacity_upgrades.length > 0 ||
-                workspace.commodity_overrides.length > 0)
-        ) {
-            throw new Error(
-                'Combined link-failure analysis is not exposed ' +
-                'through the API yet. The modifications are preserved.'
-            );
-        }
 
         if (
             type === 'capacity_upgrade' &&
-            workspace.commodity_overrides.length > 0
+            workspace.capacity_upgrades.length < 1
         ) {
             throw new Error(
-                'Capacity planning with commodity overrides is not ' +
-                'exposed through the API yet.'
+                'Capacity Planning requires at least one capacity upgrade. ' +
+                'Enter an edge ID and capacity factor, then click Add capacity upgrade.'
             );
         }
     }
@@ -2919,6 +3595,981 @@
         'change',
         updateAnalysisMode
     );
+
+    $('import-network').addEventListener('click', async () => {
+        const name = $('import-name').value.trim();
+        const file = $('import-file').files[0];
+
+        if (!name || !file) {
+            showError('Enter a network name and select an LGF file.');
+            return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.lgf')) {
+            showError('Only LGF graph files are supported.');
+            return;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            showError('Graph file exceeds the 8 MiB upload limit.');
+            return;
+        }
+
+        const button = $('import-network');
+        const status = $('import-status');
+
+        button.disabled = true;
+        button.textContent = 'Importing network…';
+        status.textContent = 'Uploading graph and generating routing scheme…';
+
+        clearError();
+
+        try {
+            const data = new FormData();
+            data.append('name', name);
+            data.append('file', file);
+
+            const response = await fetch('/api/v1/networks/import', {
+                method: 'POST',
+                body: data
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    typeof result.detail === 'string'
+                        ? result.detail
+                        : `Import failed (HTTP ${response.status})`
+                );
+            }
+
+            if (result.status !== 'ready' || !result.network_id) {
+                throw new Error('Invalid network import response.');
+            }
+
+            await loadNetworks(result.network_id);
+
+            if ($('network').value !== result.network_id) {
+                throw new Error(
+                    'Imported network could not be activated.'
+                );
+            }
+
+            $('network').dispatchEvent(new Event('change'));
+
+            $('network-info').textContent =
+                `Active network: ${result.name} · ` +
+                `${result.nodes} nodes · ${result.edges} edges`;
+
+            $('status').textContent = 'Ready';
+            $('evidence').textContent =
+                `Network ${result.name} imported and selected. ` +
+                'Run an analysis to generate results.';
+
+            $('interpretation').textContent =
+                `The active network is now ${result.name}. ` +
+                'Configure and execute an analysis.';
+
+            status.textContent =
+                `Imported ${result.name}: ` +
+                `${result.nodes} nodes, ${result.edges} edges.`;
+
+            $('import-file').value = '';
+
+        } catch (error) {
+            status.textContent = 'Network import failed.';
+            showError(error.message || String(error));
+
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Import network';
+        }
+    });
+
+
+    const JEYLAN_ANALYSIS_ID_PATTERN = /^jeylan-[a-f0-9]{32}$/;
+
+    const COMPOSITE_OPERATION_LABELS = {
+        traffic_growth: 'Traffic Growth',
+        capacity_upgrade: 'Capacity Upgrade',
+        n1_resilience: 'N−1 Resilience',
+        link_failure: 'Link Failure'
+    };
+
+    function compositeNumber(value, digits = 2) {
+        return typeof value === 'number' && Number.isFinite(value)
+            ? value.toFixed(digits)
+            : 'N/A';
+    }
+
+    function compositePercent(value) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 'N/A';
+        }
+
+        const percent = value * 100;
+        return `${percent > 0 ? '+' : ''}${percent.toFixed(2)}%`;
+    }
+
+    function compositeElement(tag, text, className = '') {
+        const element = document.createElement(tag);
+        element.textContent = String(text);
+
+        if (className) {
+            element.className = className;
+        }
+
+        return element;
+    }
+
+    function clearJeylanCompositeResults() {
+        $('jeylan-composite-results').hidden = true;
+        $('composite-status').textContent = '';
+        $('composite-summary').textContent = '';
+        $('composite-comparisons').replaceChildren();
+        $('composite-steps').replaceChildren();
+        $('composite-step-detail').replaceChildren();
+    }
+
+    function validateJeylanCompositeResponse(result, networkId) {
+        if (
+            result?.network_id !== networkId ||
+            result.analysis_type !== 'composite' ||
+            result.plan?.kind !== 'composite' ||
+            !['completed', 'partial'].includes(result.status) ||
+            !Array.isArray(result.completed_steps) ||
+            !Array.isArray(result.comparisons) ||
+            result.completed_steps.length > 6 ||
+            !Array.isArray(result.plan.steps) ||
+            result.plan.steps.length < 2 ||
+            result.plan.steps.length > 6 ||
+            result.workspace_modified !== false
+        ) {
+            throw new Error('Invalid Jeylan composite response');
+        }
+
+        const seenIds = new Set();
+
+        for (const [index, step] of result.completed_steps.entries()) {
+            if (
+                step.step_index !== index ||
+                step.status !== 'completed' ||
+                !COMPOSITE_OPERATION_LABELS[step.operation] ||
+                !JEYLAN_ANALYSIS_ID_PATTERN.test(step.analysis_id) ||
+                step.operation !== result.plan.steps[index]?.operation ||
+                seenIds.has(step.analysis_id) ||
+                !step.summary ||
+                typeof step.summary !== 'object' ||
+                !step.input_workspace ||
+                !step.output_workspace
+            ) {
+                throw new Error('Invalid composite step identity');
+            }
+
+            seenIds.add(step.analysis_id);
+        }
+
+        if (
+            result.status === 'completed' &&
+            result.completed_steps.length !== result.plan.steps.length
+        ) {
+            throw new Error('Incomplete composite execution');
+        }
+
+        for (const comparison of result.comparisons) {
+            if (
+                comparison.comparison_type !== 'capacity_n1' ||
+                !seenIds.has(comparison.before_analysis_id) ||
+                !seenIds.has(comparison.after_analysis_id) ||
+                !comparison.counts ||
+                typeof comparison.counts !== 'object'
+            ) {
+                throw new Error('Invalid composite comparison identity');
+            }
+        }
+    }
+
+
+    function renderCompositeComparisons(result) {
+        const root = $('composite-comparisons');
+        root.replaceChildren();
+
+        if (result.comparison_status !== 'completed') {
+            root.appendChild(compositeElement(
+                'p',
+                'Cross-analysis comparison is not verified or unavailable.'
+            ));
+            return;
+        }
+
+        if (!result.comparisons.length) {
+            root.appendChild(compositeElement(
+                'p',
+                'No matching before/after resilience comparison was generated.'
+            ));
+            return;
+        }
+
+        for (const comparison of result.comparisons) {
+            const card = compositeElement(
+                'div', '', 'composite-comparison'
+            );
+
+            card.appendChild(compositeElement(
+                'h3', 'Verified N−1 capacity comparison'
+            ));
+
+            const metrics = compositeElement(
+                'div', '', 'composite-metric-grid'
+            );
+
+            const values = [
+                [
+                    'Before upgrade',
+                    compositeNumber(
+                        comparison.before_baseline_max_congestion
+                    )
+                ],
+                [
+                    'After upgrade',
+                    compositeNumber(
+                        comparison.after_baseline_max_congestion
+                    )
+                ],
+                [
+                    'Relative change',
+                    compositePercent(
+                        comparison.relative_baseline_congestion_change
+                    )
+                ]
+            ];
+
+            for (const [label, value] of values) {
+                const metric = compositeElement(
+                    'div', '', 'composite-metric'
+                );
+
+                metric.appendChild(compositeElement('span', label));
+                metric.appendChild(compositeElement('strong', value));
+                metrics.appendChild(metric);
+            }
+
+            card.appendChild(metrics);
+
+            const counts = comparison.counts;
+
+            card.appendChild(compositeElement(
+                'p',
+                `${counts.improved} congestion improvements · ` +
+                `${counts.regressed} regressions · ` +
+                `${counts.unchanged} unchanged`
+            ));
+
+            card.appendChild(compositeElement(
+                'p',
+                `${counts.became_connected} became connected · ` +
+                `${counts.became_disconnected} became disconnected · ` +
+                `${counts.disconnected_both} disconnected in both`
+            ));
+
+            card.appendChild(compositeElement(
+                'small',
+                `Before: ${comparison.before_analysis_id}\n` +
+                `After: ${comparison.after_analysis_id}`
+            ));
+
+            root.appendChild(card);
+        }
+    }
+
+
+    function renderJeylanCompositeResult(result) {
+        const root = $('jeylan-composite-results');
+        const timeline = $('composite-steps');
+        const detail = $('composite-step-detail');
+
+        clearJeylanCompositeResults();
+
+        $('composite-status').textContent =
+            result.status === 'completed' ? 'Completed' : 'Partial';
+
+        $('composite-summary').textContent =
+            `${result.completed_steps.length} of ` +
+            `${result.plan.steps.length} steps completed · ` +
+            `${result.plan.demand_model} demand · ` +
+            'Simulated workspace only';
+
+        renderCompositeComparisons(result);
+
+        const buttons = [];
+
+        function selectStep(index) {
+            const step = result.completed_steps[index];
+            if (!step) return;
+
+            for (const [i, button] of buttons.entries()) {
+                const active = i === index;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            }
+
+            const details = [
+                `${COMPOSITE_OPERATION_LABELS[step.operation]}`,
+                `Analysis ID: ${step.analysis_id}`,
+                '',
+                'Measured summary:',
+                ...Object.entries(step.summary).map(
+                    ([key, value]) =>
+                        `${key}: ${
+                            typeof value === 'number'
+                                ? compositeNumber(value)
+                                : JSON.stringify(value)
+                        }`
+                ),
+                '',
+                'Input workspace:',
+                JSON.stringify(step.input_workspace, null, 2),
+                '',
+                'Output workspace:',
+                JSON.stringify(step.output_workspace, null, 2)
+            ];
+
+            detail.textContent = details.join('\n');
+        }
+
+        for (const [index, step] of result.completed_steps.entries()) {
+            const button = compositeElement(
+                'button', '', 'composite-step'
+            );
+
+            button.type = 'button';
+
+            const content = document.createElement('div');
+            content.appendChild(compositeElement(
+                'span',
+                `${index + 1}. ` +
+                COMPOSITE_OPERATION_LABELS[step.operation],
+                'composite-step-title'
+            ));
+
+            content.appendChild(compositeElement(
+                'span',
+                step.analysis_id,
+                'composite-step-meta'
+            ));
+
+            button.appendChild(content);
+            button.appendChild(compositeElement('span', '✓'));
+
+            button.addEventListener('click', () => selectStep(index));
+
+            buttons.push(button);
+            timeline.appendChild(button);
+        }
+
+        if (result.status === 'partial') {
+            const failedIndex = result.failed_step_index;
+
+            timeline.appendChild(compositeElement(
+                'p',
+                `Execution stopped at step ${
+                    Number.isInteger(failedIndex)
+                        ? failedIndex + 1
+                        : 'unknown'
+                }. ${result.error || 'Step failed.'}`,
+                'composite-bad'
+            ));
+        }
+
+        if (buttons.length) {
+            selectStep(buttons.length - 1);
+        } else {
+            detail.textContent =
+                'No analyses were completed before execution stopped.';
+        }
+
+        root.hidden = false;
+    }
+
+
+
+
+    const JEYLAN_ANALYSIS_TYPES = new Set([
+        'capacity_upgrade',
+        'link_failure',
+        'n1_resilience',
+        'traffic_growth'
+    ]);
+
+    async function fetchJeylanAnalysisReport(
+        networkId,
+        analysisType,
+        analysisId
+    ) {
+        const base =
+            `/api/v1/networks/${encodeURIComponent(networkId)}`;
+
+        let url;
+
+        if (
+            analysisType === 'capacity_upgrade' ||
+            analysisType === 'link_failure'
+        ) {
+            url =
+                `${base}/scenarios/` +
+                `${encodeURIComponent(analysisId)}/analysis`;
+        } else if (analysisType === 'n1_resilience') {
+            url =
+                `${base}/analyses/n1/` +
+                encodeURIComponent(analysisId);
+        } else if (analysisType === 'traffic_growth') {
+            url =
+                `${base}/analyses/traffic/` +
+                encodeURIComponent(analysisId);
+        } else {
+            throw new Error('Unsupported Jeylan analysis type');
+        }
+
+        const response = await fetch(url);
+        const body = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof body.detail === 'string'
+                    ? body.detail
+                    : `Report unavailable (HTTP ${response.status})`
+            );
+        }
+
+        if (body.status === 'running' || body.status === 'failed') {
+            throw new Error(
+                'The persisted analysis is not completed.'
+            );
+        }
+
+        // Detailed reports may be enclosed in the API response.
+        const report = body.analysis ?? body;
+
+        const valid =
+            analysisType === 'n1_resilience'
+                ? report.analysis_kind === 'n1_resilience'
+                : report.scenario_kind === analysisType;
+
+        if (!valid) {
+            throw new Error('Persisted analysis type mismatch');
+        }
+
+        return report;
+    }
+
+
+    async function displayJeylanAnalysisResult({
+                                                   networkId,
+                                                   analysisId,
+                                                   analysisType,
+                                                   report,
+                                                   stillCurrent
+                                               }) {
+        if (!stillCurrent()) return;
+
+        selectedLinkId = null;
+        activeScenarioId = null;
+        setAnalysisMetricLabels(analysisType);
+        clearAnalysisSpecificMetrics();
+        $('baseline-congestion-description').textContent = ({
+            capacity_upgrade: 'Reference capacities · Current demand configuration',
+            link_failure: 'Effective workspace · Before link failure',
+            n1_resilience: 'Effective workspace · Before independent failures',
+            traffic_growth: 'Effective capacities · Reference demand'
+        })[analysisType];
+        $('congestion-delta').style.color = '';
+
+        if (analysisType === 'capacity_upgrade') {
+            await displayCapacityAnalysisResult({
+                networkId,
+                scenarioId: analysisId,
+                report,
+                updateInterpretation: false,
+                stillCurrent
+            });
+
+        } else if (analysisType === 'traffic_growth') {
+            if (
+                !Array.isArray(report.baseline?.links) ||
+                !Array.isArray(report.modified?.links)
+            ) {
+                throw new Error('Traffic report has no link measurements');
+            }
+
+            renderTrafficReport(report);
+
+        } else if (analysisType === 'n1_resilience') {
+            if (
+                !Array.isArray(report.baseline?.links) ||
+                !Array.isArray(report.outcomes)
+            ) {
+                throw new Error('N−1 report is incomplete');
+            }
+
+            const baseline = report.baseline;
+            lastLinks = baseline.links;
+
+            $('baseline-congestion').textContent =
+                Number(baseline.max_congestion).toFixed(3);
+
+            $('scenario-congestion').textContent = 'N/A';
+            $('congestion-delta').textContent = 'N/A';
+            $('congestion').textContent =
+                Number(baseline.max_congestion).toFixed(3);
+
+            $('count').textContent = String(lastLinks.length);
+            $('overloaded').textContent = String(
+                lastLinks.filter(link => link.utilization > 1).length
+            );
+
+            $('failure-legend').hidden = true;
+            $('topology').textContent =
+                'Network topology · N−1 baseline';
+
+            drawGraph(lastLinks);
+            renderBottleneckRanking(lastLinks);
+
+            renderN1Analysis(report, outcome => {
+                if (!stillCurrent()) return;
+
+                selectedLinkId = outcome.edge_id;
+
+                const successful =
+                    outcome.status === 'success' &&
+                    Array.isArray(outcome.reoptimized?.links);
+
+                const links = successful
+                    ? outcome.reoptimized.links
+                    : baseline.links.filter(
+                        link => link.edge_id !== outcome.edge_id
+                    );
+
+                lastLinks = links;
+
+                drawGraph(links, {
+                    baselineLinks: baseline.links,
+                    failedIds: [outcome.edge_id]
+                });
+
+                renderBottleneckRanking(links);
+                $('failure-legend').hidden = false;
+
+                $('topology').textContent =
+                    `Network topology · Edge ${outcome.edge_id} failed`;
+
+                // For disconnects and execution failures these are
+                // baseline link colors only, not post-failure measurements.
+                $('count').textContent = successful ? String(links.length) : 'N/A';
+                $('overloaded').textContent = successful
+                    ? String(links.filter(link => Number(link.utilization) > 1).length)
+                    : 'N/A';
+                $('reference-congestion').textContent = `Edge ${outcome.edge_id}`;
+                $('upgraded-congestion').textContent = successful
+                    ? Number(outcome.reoptimized.max_congestion).toFixed(3)
+                    : 'N/A';
+                $('capacity-improvement').textContent =
+                    outcome.status === 'disconnected' ? 'Disconnected' :
+                        successful && Number(baseline.max_congestion) > 0
+                            ? `${((outcome.reoptimized.max_congestion /
+                                baseline.max_congestion - 1) * 100).toFixed(2)}%`
+                            : 'Execution failed';
+                $('third-help-1').textContent =
+                    `${outcome.source} → ${outcome.target} · removed link`;
+                $('third-help-2').textContent = successful
+                    ? 'Recomputed maximum congestion'
+                    : 'No post-failure congestion is defined';
+                $('third-help-3').textContent =
+                    'Relative congestion change or failure status';
+
+                if (successful) {
+                    const after = outcome.reoptimized.max_congestion;
+                    const before = baseline.max_congestion;
+
+                    $('scenario-congestion').textContent =
+                        Number(after).toFixed(3);
+                    $('congestion').textContent =
+                        Number(after).toFixed(3);
+
+                    $('congestion-delta').textContent =
+                        before > 0
+                            ? `${((after / before - 1) * 100).toFixed(2)}%`
+                            : 'N/A';
+
+                    $('selected').textContent =
+                        `Edge ${outcome.edge_id}: routing recomputed.`;
+                } else {
+                    $('scenario-congestion').textContent = 'N/A';
+                    $('congestion').textContent = 'N/A';
+                    $('congestion-delta').textContent = 'N/A';
+
+                    $('selected').textContent =
+                        outcome.status === 'disconnected'
+                            ? `Edge ${outcome.edge_id}: network disconnected. ` +
+                            'Surviving links show baseline reference values.'
+                            : `Edge ${outcome.edge_id}: execution failed. ` +
+                            'No post-failure measurements available.';
+                }
+            });
+
+        } else if (analysisType === 'link_failure') {
+            const solver = report.solver_results?.[0];
+
+            if (!solver?.baseline) {
+                throw new Error('Missing link-failure baseline');
+            }
+
+            const baseline = solver.baseline;
+            const modified = solver.reoptimized;
+            const failedId = report.link_failures?.[0];
+
+            if (!Number.isInteger(failedId)) {
+                throw new Error('Missing failed-link identity');
+            }
+
+            const successful = Array.isArray(modified?.links);
+
+            lastLinks = successful
+                ? modified.links
+                : baseline.links.filter(
+                    link => link.edge_id !== failedId
+                );
+
+            selectedLinkId = failedId;
+
+            drawGraph(lastLinks, {
+                baselineLinks: baseline.links,
+                failedIds: [failedId]
+            });
+
+            renderBottleneckRanking(lastLinks);
+            $('failure-legend').hidden = false;
+
+            $('topology').textContent =
+                `Network topology · Edge ${failedId} failed`;
+
+            $('baseline-congestion').textContent =
+                Number(baseline.max_congestion).toFixed(3);
+
+            $('scenario-congestion').textContent = successful
+                ? Number(modified.max_congestion).toFixed(3)
+                : 'N/A';
+
+            $('congestion').textContent = successful
+                ? Number(modified.max_congestion).toFixed(3)
+                : 'N/A';
+
+            $('congestion-delta').textContent =
+                successful && baseline.max_congestion > 0
+                    ? (
+                    (modified.max_congestion /
+                        baseline.max_congestion - 1) * 100
+                ).toFixed(2) + '%'
+                    : 'N/A';
+
+            $('count').textContent = String(lastLinks.length);
+            $('overloaded').textContent = successful
+                ? String(
+                    lastLinks.filter(link => link.utilization > 1).length
+                )
+                : 'N/A';
+
+            $('selected').textContent = successful
+                ? `Link ${failedId} removed. Routing recomputed.`
+                : `Link ${failedId} disconnects the network. ` +
+                'No post-failure congestion is defined.';
+
+            const failedLink = baseline.links.find(link => link.edge_id === failedId);
+            const criticalLink = successful
+                ? [...lastLinks].sort((a, b) => b.utilization - a.utilization)[0]
+                : null;
+            const largestShift = successful
+                ? [...(solver.link_deltas || [])].sort((a, b) =>
+                    Math.abs(b.delta_from_baseline) -
+                    Math.abs(a.delta_from_baseline))[0]
+                : null;
+
+            $('reference-congestion').textContent = `Edge ${failedId}`;
+            $('upgraded-congestion').textContent = criticalLink
+                ? `Edge ${criticalLink.edge_id}` : 'N/A';
+            $('capacity-improvement').textContent = largestShift
+                ? `${largestShift.delta_from_baseline >= 0 ? '+' : ''}` +
+                `${Number(largestShift.delta_from_baseline).toFixed(3)}`
+                : 'N/A';
+            $('third-help-1').textContent = failedLink
+                ? `${failedLink.source} → ${failedLink.target} · out of service`
+                : 'Removed physical link';
+            $('third-help-2').textContent = criticalLink
+                ? `${criticalLink.source} → ${criticalLink.target} · ` +
+                `${Number(criticalLink.utilization).toFixed(3)}× capacity`
+                : 'No recomputed routing metrics';
+            $('third-help-3').textContent = largestShift
+                ? `Edge ${largestShift.edge_id} · absolute load change`
+                : 'No post-failure load deltas';
+
+            await renderScenarioAnalysis(networkId, analysisId);
+        }
+
+        if (!stillCurrent()) return;
+
+        $('status').textContent = 'Completed';
+        $('evidence').textContent =
+            `Jeylan simulated analysis · ${analysisType} · ` +
+            `Network: ${networkId} · Report: ${analysisId}`;
+
+        activateJeylanContext(
+            networkId,
+            analysisId,
+            analysisType
+        );
+    }
+
+
+    $('jeylan-run-experiment').addEventListener('click', async () => {
+        if (jeylanBusy) return;
+
+        const networkId = $('network').value;
+        const question =
+            $('jeylan-experiment-question').value.trim();
+
+        if (!networkId || $('network').disabled) {
+            $('jeylan-experiment-status').textContent =
+                'Select a registered network first.';
+            return;
+        }
+
+        if (!question) {
+            $('jeylan-experiment-status').textContent =
+                'Describe the analysis to execute.';
+            return;
+        }
+
+        let workspace;
+        try {
+            workspace = currentWorkspaceSnapshot();
+        } catch (error) {
+            $('jeylan-experiment-status').textContent =
+                error.message;
+            return;
+        }
+
+        const generation = networkGeneration;
+        const selectedMode = $('analysis-type').value;
+        const originalWorkspace = JSON.stringify(workspace);
+
+        const stillCurrent = () =>
+            generation === networkGeneration &&
+            $('network').value === networkId &&
+            $('analysis-type').value === selectedMode;
+
+        jeylanBusy = true;
+        $('jeylan-run-experiment').disabled = true;
+        $('jeylan-experiment-status').textContent =
+            'Jeylan is executing a simulated network analysis…';
+
+        try {
+            const response = await fetch(
+                `/api/v1/networks/${encodeURIComponent(networkId)}` +
+                '/assistant/analyses/ask',
+                {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question, workspace})
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    typeof result.detail === 'string'
+                        ? result.detail
+                        : JSON.stringify(
+                            result.detail ||
+                            `Analysis failed (HTTP ${response.status})`
+                        )
+                );
+            }
+
+
+            if (!stillCurrent()) return;
+
+            if (result.analysis_type === 'composite') {
+                validateJeylanCompositeResponse(result, networkId);
+
+                if (
+                    JSON.stringify(currentWorkspaceSnapshot()) !==
+                    originalWorkspace
+                ) {
+                    throw new Error(
+                        'Workspace changed during Jeylan composite execution'
+                    );
+                }
+
+                renderJeylanCompositeResult(result);
+                renderJeylanAnswer(result.answer);
+
+                $('jeylan-experiment-status').textContent =
+                    `${result.status === 'completed'
+                        ? 'Completed'
+                        : 'Partially completed'} · ` +
+                    `${result.completed_steps.length} steps`;
+
+                $('evidence').textContent =
+                    `Jeylan composite investigation · ` +
+                    `${result.completed_steps.length} persisted analyses · ` +
+                    `Workspace unchanged`;
+
+                return;
+            }
+
+// Preserve the existing single-analysis path.
+            if (
+                result.network_id !== networkId ||
+                result.status !== 'completed' ||
+                !JEYLAN_ANALYSIS_TYPES.has(result.analysis_type) ||
+                !JEYLAN_ANALYSIS_ID_PATTERN.test(result.analysis_id) ||
+                result.plan?.kind !== result.analysis_type
+            ) {
+                throw new Error('Invalid Jeylan analysis identity');
+            }
+
+            clearJeylanCompositeResults();
+
+
+            const report = await fetchJeylanAnalysisReport(
+                networkId,
+                result.analysis_type,
+                result.analysis_id
+            );
+
+            if (!stillCurrent()) return;
+
+            // Analysis type is a display selection, not a new
+            // workspace modification. Do not dispatch a change
+            // event that would reset the displayed analysis.
+            $('analysis-type').value = result.analysis_type;
+
+            const resultStillCurrent = () =>
+                generation === networkGeneration &&
+                $('network').value === networkId &&
+                $('analysis-type').value === result.analysis_type;
+
+            await displayJeylanAnalysisResult({
+                networkId,
+                analysisId: result.analysis_id,
+                analysisType: result.analysis_type,
+                report,
+                stillCurrent: resultStillCurrent
+            });
+
+            if (!resultStillCurrent()) return;
+
+            // The backend remains the source of truth.
+            // The explanation is displayed alongside the report.
+            renderJeylanAnswer(result.answer);
+
+            $('jeylan-experiment-status').textContent =
+                `Completed · ${result.analysis_type} · ` +
+                result.analysis_id;
+
+            // The editor must not silently acquire the experiment
+            // changes. Only the displayed analysis changes.
+            if (
+                JSON.stringify(currentWorkspaceSnapshot()) !==
+                originalWorkspace
+            ) {
+                throw new Error(
+                    'Workspace changed during Jeylan analysis'
+                );
+            }
+
+        } catch (error) {
+            if (
+                generation === networkGeneration &&
+                $('network').value === networkId
+            ) {
+                $('jeylan-experiment-status').textContent =
+                    error.message || 'Jeylan analysis unavailable.';
+            }
+        } finally {
+            jeylanBusy = false;
+            $('jeylan-run-experiment').disabled = false;
+        }
+    });
+
+
+    // Third-row labels match the measurements in each report, not
+    // the previously selected analysis type.
+    function setAnalysisMetricLabels(type) {
+        const configurations = {
+            capacity_upgrade: {
+                labels: ['Baseline routing', 'Capacity-only', 'Reoptimized routing'],
+                descriptions: [
+                    'Original capacities',
+                    'Fixed routing · Upgraded capacities',
+                    'Routing recomputed after capacity upgrade'
+                ]
+            },
+            link_failure: {
+                labels: [
+                    'Failed physical link',
+                    'Critical surviving link',
+                    'Largest load change'
+                ],
+                descriptions: [
+                    'Out-of-service edge',
+                    'Worst post-failure utilization',
+                    'Largest surviving-link load delta'
+                ]
+            },
+            n1_resilience: {
+                labels: [
+                    'Failed physical link',
+                    'Post-failure congestion',
+                    'Network impact'
+                ],
+                descriptions: [
+                    'Removed physical link',
+                    'N/A for disconnected or failed outcomes',
+                    'Disconnection or congestion change'
+                ]
+            },
+            traffic_growth: {
+                labels: ['Baseline demand', 'Modified demand', 'Demand change'],
+                descriptions: [
+                    'Original demand volume',
+                    'Effective demand volume',
+                    'Relative change in total demand'
+                ]
+            }
+        };
+
+        const config = configurations[type];
+        if (!config) throw new Error('Unsupported analysis type');
+
+        for (let i = 1; i <= 3; i++) {
+            $('third-label-' + i).textContent = config.labels[i - 1];
+            $('third-help-' + i).textContent = config.descriptions[i - 1];
+        }
+    }
+
+    function clearAnalysisSpecificMetrics() {
+        for (const id of [
+            'reference-congestion',
+            'upgraded-congestion',
+            'capacity-improvement'
+        ]) {
+            $(id).textContent = '—';
+        }
+        $('capacity-improvement').style.color = '';
+    }
+
 
     updateAnalysisMode();
 </script>
