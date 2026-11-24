@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <limits>
 #include <numeric>
 #include <string>
@@ -412,20 +414,29 @@ Result<ElectricalEmbeddingResult> TreeFlowElectricalEmbedder::embed(const TreeFl
             return makeErrorMessage(ErrorCode::SolverFailed, "Final embedded flow is non-finite.");
         }
 
-        if (std::abs(signed_flow) <= kEmbeddingEpsilon && usage <= kEmbeddingEpsilon) {
-            continue;
-        }
 
         const auto [u, v] = graph_.getEdgeEndpoints(e);
+
+        // Conservation must account for every finite signed flow,
+        // including contributions below the embedding epsilon.
+        actual_divergence[u] += signed_flow;
+        actual_divergence[v] -= signed_flow;
+
+        // Retain the existing small-flow treatment for congestion
+        // and capacity validation. It must not affect conservation.
+        if (std::abs(signed_flow) <= kEmbeddingEpsilon &&
+            usage <= kEmbeddingEpsilon) {
+            continue;
+            }
 
         const double capacity = graph_.edgeData(e).capacity;
 
         if (!std::isfinite(capacity) || capacity <= 0.0) {
-            return makeErrorMessage(ErrorCode::InvalidGraph, "Used original edge has invalid capacity.");
+            return makeErrorMessage(
+                ErrorCode::InvalidGraph,
+                "Used original edge has invalid capacity."
+            );
         }
-
-        actual_divergence[u] += signed_flow;
-        actual_divergence[v] -= signed_flow;
 
         const double usage_congestion = usage / capacity;
         const double net_congestion = std::abs(signed_flow) / capacity;
@@ -435,8 +446,15 @@ Result<ElectricalEmbeddingResult> TreeFlowElectricalEmbedder::embed(const TreeFl
             result.bottleneck_edge = e;
         }
 
-        result.max_net_congestion = std::max(result.max_net_congestion, net_congestion);
+        result.max_net_congestion =
+            std::max(result.max_net_congestion, net_congestion);
+
     }
+
+
+    int worst_vertex = -1;
+    double worst_actual = 0.0;
+    double worst_expected = 0.0;
 
     for (int vertex = 0; vertex < graph_.getNumNodes(); ++vertex) {
         auto expected_result = vertexTreeFlow(vertex, tree_flow);
@@ -445,14 +463,102 @@ Result<ElectricalEmbeddingResult> TreeFlowElectricalEmbedder::embed(const TreeFl
             return getError(expected_result);
         }
 
-        const double error = std::abs(actual_divergence[vertex] - *expected_result);
+        const double actual = actual_divergence[vertex];
+        const double expected = *expected_result;
+        const double error = std::abs(actual - expected);
 
-        result.max_conservation_error = std::max(result.max_conservation_error, error);
+        if (!std::isfinite(error)) {
+            return makeErrorMessage(
+                ErrorCode::SolverFailed,
+                "Final graph embedding has non-finite divergence "
+                "at vertex " + std::to_string(vertex)
+            );
+        }
+
+        if (error > result.max_conservation_error) {
+            result.max_conservation_error = error;
+            worst_vertex = vertex;
+            worst_actual = actual;
+            worst_expected = expected;
+        }
     }
 
     if (result.max_conservation_error > kEmbeddingEpsilon) {
-        return makeErrorMessage(ErrorCode::SolverFailed, "Final graph embedding violates conservation. Error=" + std::to_string(result.max_conservation_error));
+        // Diagnostic only: recompute divergence without the
+        // small-flow filter used above. Do not modify the
+        // actual embedding or its acceptance criterion.
+        std::vector<double> unfiltered_divergence(
+            graph_.getNumNodes(), 0.0
+        );
+
+        for (int e = 0; e < graph_.globalEdgeCount() * 2; ++e) {
+            if (!graph_.edgeAlive(e)) {
+                continue;
+            }
+
+            const double flow = result.signed_edge_flow[e];
+
+            if (!std::isfinite(flow)) {
+                return makeErrorMessage(
+                    ErrorCode::SolverFailed,
+                    "Non-finite signed flow in final embedding "
+                    "at directed edge " + std::to_string(e)
+                );
+            }
+
+            const auto [u, v] = graph_.getEdgeEndpoints(e);
+            unfiltered_divergence[u] += flow;
+            unfiltered_divergence[v] -= flow;
+        }
+
+        double unfiltered_max_error = 0.0;
+
+        for (int vertex = 0; vertex < graph_.getNumNodes(); ++vertex) {
+            auto expected_result = vertexTreeFlow(
+                vertex, tree_flow
+            );
+
+            if (!expected_result) {
+                return getError(expected_result);
+            }
+
+            const double error = std::abs(
+                unfiltered_divergence[vertex] -
+                *expected_result
+            );
+
+            if (!std::isfinite(error)) {
+                return makeErrorMessage(
+                    ErrorCode::SolverFailed,
+                    "Non-finite unfiltered conservation residual"
+                );
+            }
+
+            unfiltered_max_error = std::max(
+                unfiltered_max_error, error
+            );
+        }
+
+        std::ostringstream message;
+        message << std::scientific << std::setprecision(17)
+                << "Final graph embedding violates conservation."
+                << " vertex=" << worst_vertex
+                << " observed=" << worst_actual
+                << " expected=" << worst_expected
+                << " filtered_residual="
+                << result.max_conservation_error
+                << " unfiltered_residual="
+                << unfiltered_max_error
+                << " tolerance=" << kEmbeddingEpsilon;
+
+        return makeErrorMessage(
+            ErrorCode::SolverFailed,
+            message.str()
+        );
     }
+
+    return result;
+
 
     return result;
 }

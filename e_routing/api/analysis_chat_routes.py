@@ -65,13 +65,130 @@ class AnalysisQuestion(BaseModel):
 
     question: str = Field(min_length=1, max_length=2000)
     selected_edge_id: int | None = Field(default=None, ge=0)
+    selected_edge_ids: list[int] = Field(default_factory=list, max_length=25)
+    selected_failure_edge_id: int | None = Field(default=None, ge=0)
 
+
+
+
+def _selected_physical_edge_evidence(
+        report: dict,
+        analysis_type: str,
+        selected_ids: list[int],
+        failed_edge_id: int | None,
+) -> dict:
+    """Extract only persisted, validated measurements. Never trust UI values."""
+    if not selected_ids:
+        return {}
+    if len(selected_ids) > 25 or any(
+            type(edge_id) is not int or edge_id < 0 for edge_id in selected_ids
+    ):
+        raise HTTPException(422, "Invalid selected physical edge IDs")
+
+    if analysis_type == "traffic_growth":
+        baseline = report.get("baseline")
+        modified = report.get("modified")
+        failure = None
+        stage = "modified_traffic"
+    elif analysis_type == "n1_resilience":
+        baseline = report.get("baseline")
+        failure = None
+        stage = "n1_baseline"
+        if failed_edge_id is not None:
+            failure = next(
+                (item for item in report.get("outcomes", [])
+                 if item.get("edge_id") == failed_edge_id),
+                None,
+            )
+            if failure is None:
+                raise HTTPException(422, "Selected N-1 failure not found in report")
+            stage = "n1_failure_" + str(failure.get("status", "unknown"))
+        modified = failure.get("reoptimized") if failure and failure.get("status") == "success" else None
+    else:
+        solver_results = report.get("solver_results", [])
+        solver = solver_results[0] if solver_results else {}
+        baseline = solver.get("baseline")
+        modified = solver.get("reoptimized")
+        failure = None
+        stage = "reoptimized" if modified is not None else "baseline_only"
+
+    if not isinstance(baseline, dict) or not isinstance(baseline.get("links"), list):
+        raise HTTPException(422, "Persisted analysis has no verified per-edge baseline measurements")
+
+    baseline_by_id = {item["edge_id"]: item for item in baseline["links"]}
+    unknown_ids = sorted(set(selected_ids) - baseline_by_id.keys())
+    if unknown_ids:
+        raise HTTPException(422, f"Edges not found in persisted analysis: {unknown_ids}")
+
+    # Only the measured, successfully recomputed graph supports post-change
+    # capacity/load/utilization. Disconnected scenarios must not reuse baseline
+    # measurements as if they were post-failure measurements.
+    if analysis_type == "n1_resilience" and failure is None:
+        measured = baseline
+    elif analysis_type == "n1_resilience" and failure is not None:
+        measured = modified
+    elif analysis_type == "link_failure" and modified is None:
+        measured = None
+    else:
+        measured = modified
+
+    measured_by_id = {
+        item["edge_id"]: item
+        for item in (measured.get("links", []) if isinstance(measured, dict) else [])
+    }
+    records = []
+    for edge_id in dict.fromkeys(selected_ids):
+        reference = baseline_by_id[edge_id]
+        current = measured_by_id.get(edge_id)
+        item = {
+            "edge_id": edge_id,
+            "source": reference.get("source"),
+            "target": reference.get("target"),
+            "measurement_stage": stage,
+            "baseline": {
+                field: reference.get(field)
+                for field in ("capacity", "load", "utilization")
+            },
+            "current": (
+                {field: current.get(field)
+                 for field in ("capacity", "load", "utilization")}
+                if current is not None else None
+            ),
+        }
+        if failure is not None:
+            item["displayed_n1_failure_edge_id"] = failed_edge_id
+            item["displayed_n1_failure_status"] = failure.get("status")
+        if analysis_type == "n1_resilience":
+            own_failure = next(
+                (entry for entry in report.get("outcomes", [])
+                 if entry.get("edge_id") == edge_id), None
+            )
+            if own_failure:
+                item["own_n1_failure_status"] = own_failure.get("status")
+                if own_failure.get("status") == "success":
+                    item["own_n1_failure_max_congestion"] = (
+                            own_failure.get("reoptimized") or {}
+                    ).get("max_congestion")
+        records.append(item)
+    return {
+        "selected_physical_edges": records,
+        "edge_evidence_provenance": "validated_persisted_analysis_report",
+        "selected_edge_measurement_stage": stage,
+        "edge_evidence_notes": (
+            "A missing current measurement is not zero; no post-failure "
+            "load/utilization is available for removed links or uncomputed "
+            "disconnected/failed scenarios. N-1 failure impacts are distinct "
+            "from ordinary per-link load/utilization."
+        ),
+    }
 
 def load_analysis_evidence(
         network_id: str,
         analysis_type: str,
         analysis_id: str,
         selected_edge_id: int | None,
+        selected_edge_ids: list[int] | None = None,
+        selected_failure_edge_id: int | None = None,
 ) -> dict:
     if not _ID.fullmatch(network_id):
         raise HTTPException(422, "Invalid network ID")
@@ -171,13 +288,24 @@ def load_analysis_evidence(
         else:
             report = validate_traffic_report(report)
 
-        return summarize_analysis(
+        evidence = summarize_analysis(
             network_id=network_id,
             analysis_id=analysis_id,
             analysis_type=analysis_type,
             report=report,
             selected_edge_id=selected_edge_id,
         )
+        selected_ids = list(dict.fromkeys(
+            selected_edge_ids or (
+                [selected_edge_id] if selected_edge_id is not None else []
+            )
+        ))
+        if selected_ids:
+            evidence.update(_selected_physical_edge_evidence(
+                report, analysis_type, selected_ids,
+                selected_failure_edge_id,
+            ))
+        return evidence
 
     except (ValueError, TypeError, KeyError, IndexError, OSError) as exc:
         logger.exception("Stored analysis evidence validation failed")
@@ -202,6 +330,8 @@ async def ask_analysis(
         analysis_type,
         analysis_id,
         payload.selected_edge_id,
+        payload.selected_edge_ids,
+        payload.selected_failure_edge_id,
     )
 
     if not os.environ.get("OPENAI_API_KEY"):

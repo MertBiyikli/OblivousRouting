@@ -202,3 +202,37 @@ def summarize_analysis(
                 "absolute_congestion_change": absolute_change,
                 "relative_congestion_change": relative_change,
             }
+        evidence["summary"] = {
+            **report["summary"],
+            "baseline_max_congestion": baseline["max_congestion"],
+            "ranking_scope": (
+                "Successful failures ranked by "
+                "post-failure maximum congestion"
+            ),
+        }
+
+        evidence["worst_successful_failures"] = [
+            failure_summary(item)
+            for item in ranked[:12]
+        ]
+
+        evidence["disconnected_failures"] = [
+            failure_summary(item)
+            for item in outcomes
+            if item["status"] == "disconnected"
+        ][:30]
+
+        evidence["selected_failure"] = (
+            failure_summary(selected_failure)
+            if selected_failure else None
+        )
+
+        evidence["links"] = top_links(
+            baseline["links"],
+            selected_edge_id,
+        )
+
+    else:
+        raise ValueError("Unsupported analysis type")
+
+    return evidence

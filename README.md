@@ -84,7 +84,7 @@ Now this info for developing only, for running the E-Routing studio, paste the f
 source .venv/bin/activate
 
 export ER_NETWORK_REGISTRY="$PWD/e_routing/api/networks.json"
-export ER_ENGINE="$PWD/build/mac-debug-tests-no-openmp/oblivious_routing"
+export ER_ENGINE="$PWD/build/mac-release-no-openmp/oblivious_routing"
 export ER_IMPORTED_NETWORKS_DIR="$PWD/data/imported_networks"
 
 python3 -m uvicorn e_routing.api.main:app \
