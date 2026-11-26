@@ -1,0 +1,73 @@
+<section aria-label="Scenario history repository" id="stitch-history-page">
+    <div class="sh-header">
+        <div class="sh-title"><strong>Audit &amp; Scenario Repository</strong><span
+                id="sh-count">0 SCENARIOS RECORDED</span></div>
+        <div class="sh-actions">
+            <button id="sh-export-all">Bulk Export JSON</button>
+            <button id="sh-new">+ New Scenario</button>
+        </div>
+    </div>
+    <div class="sh-filters"><input id="sh-search" placeholder="Filter by scenario name, ID or network..."
+                                   type="search"/>
+        <div id="sh-types">
+            <button class="selected" data-type="ALL">ALL</button>
+            <button data-type="CAPACITY">CAPACITY</button>
+            <button data-type="FAILURE">FAILURE</button>
+            <button data-type="N1">N-1</button>
+            <button data-type="TRAFFIC">GROWTH</button>
+        </div>
+        <select id="sh-state">
+            <option value="ALL">ALL STATES</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+        </select>
+        <button id="sh-sort">TIMESTAMP ↓</button>
+    </div>
+    <div class="sh-main">
+        <div class="sh-table-wrap">
+            <table class="sh-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>SCENARIO DESCRIPTION</th>
+                    <th>CLASSIFICATION</th>
+                    <th>NETWORK / TARGETS</th>
+                    <th>EXECUTED (LOCAL)</th>
+                    <th>ENGINE RESULT</th>
+                    <th>AUDIT STATUS</th>
+                    <th>OPERATIONS</th>
+                </tr>
+                </thead>
+                <tbody id="sh-rows"></tbody>
+            </table>
+            <div id="sh-empty">No scenario runs recorded in this session. Execute an analysis to populate the
+                repository.
+            </div>
+            <div class="sh-pagination" id="sh-pagination">SHOWING 0 OF 0 SCENARIOS</div>
+        </div>
+        <aside class="sh-inspector" id="sh-inspector">
+            <div class="sh-inspector-head">CELL // SCENARIO_INSPECTOR
+                <button id="sh-close">×</button>
+            </div>
+            <div class="sh-inspector-body">
+                <div class="sh-meta"><span id="sh-inspector-type">SCENARIO</span><span id="sh-inspector-status">—</span>
+                </div>
+                <h3 id="sh-inspector-name">Select a scenario</h3>
+                <p id="sh-inspector-time">—</p>
+                <div class="sh-inspector-subtitle">TOPOLOGICAL DELTA GRAPH</div>
+                <div class="sh-mini-graph" id="sh-mini-graph">Select a recorded scenario to inspect its topology.</div>
+                <div class="sh-inspector-subtitle">TELEMETRIC PERFORMANCE COMPARISON</div>
+                <div class="sh-metrics">
+                    <div><small>BASELINE CONGESTION</small><strong id="sh-baseline">—</strong></div>
+                    <div><small>SCENARIO CONGESTION</small><strong id="sh-scenario">—</strong></div>
+                    <div><small>RELATIVE CHANGE</small><strong id="sh-delta">—</strong></div>
+                    <div><small>NETWORK</small><strong id="sh-network">—</strong></div>
+                </div>
+                <div class="sh-inspector-subtitle">METADATA &amp; EXECUTION LOG</div>
+                <pre id="sh-log">No record selected.</pre>
+                <button class="sh-primary" id="sh-open-topology">OPEN FULL TOPOLOGY</button>
+                <button id="sh-export-one">EXPORT RECORD JSON</button>
+            </div>
+        </aside>
+    </div>
+</section>

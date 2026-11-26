@@ -59,6 +59,7 @@ public:
 
     void finalize() override;
     void initializeMemberByParser(int maxNodeIdSeen) override;
+    void initializeLabelNamesByParser(const std::vector<std::string>& labels) override;
     IGraph::NeighborRange neighbors(int u) const override;
     void addEdge(int u, int v, double capacity, double distance = 1.0) override;
     const int getEdgeId(int u, int v) const override;

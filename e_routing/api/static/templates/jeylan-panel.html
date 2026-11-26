@@ -1,0 +1,45 @@
+    <aside class="panel assistant" id="jeylan-panel">
+        <button aria-controls="jeylan-panel" aria-expanded="true" aria-label="Close Jeylan assistant"
+                class="jeylan-drawer-close" id="topology-jeylan-toggle" type="button">
+            <span aria-hidden="true">×</span>
+        </button>
+        <div class="assistant-head">
+            <div><span class="orb"></span> <strong>Jeylan</strong></div>
+            <span class="pill">Preview</span></div>
+        <div class="chat">
+            <small>Scenario interpretation</small>
+            <div aria-live="polite" id="interpretation">
+                Execute a scenario, then ask Jeylan a question about its results.
+            </div>
+            <div aria-label="Jeylan interaction mode" class="jeylan-mode-switch" role="group">
+                <button aria-pressed="true" class="jeylan-mode active" id="jeylan-mode-ask" type="button">
+                    Ask
+                </button>
+                <button aria-pressed="false" class="jeylan-mode" id="jeylan-mode-experiment" type="button">
+                    Experiment
+                </button>
+            </div>
+            <div class="jeylan-mode-panel" id="jeylan-read-panel">
+                <textarea disabled="" id="jeylan-question" maxlength="2000"
+                          placeholder="Ask about the displayed analysis..." rows="3"></textarea>
+                <button disabled="" id="jeylan-ask" type="button">
+                    Ask Jeylan
+                </button>
+                <small id="jeylan-status"></small>
+            </div>
+            <div class="jeylan-mode-panel" hidden="" id="jeylan-experiment-panel">
+                <textarea id="jeylan-experiment-question" maxlength="2000"
+                          placeholder="Simulate 30% more traffic, or run N−1 resilience." rows="3"></textarea>
+                <button id="jeylan-run-experiment" type="button">
+                    Run Experiment
+                </button>
+                <small id="jeylan-experiment-status"></small>
+            </div>
+        </div>
+        <div class="prompts">
+            <div class="small">Next integrations</div>
+            <button class="prompt" disabled="" id="ask-selected-link">Analyze selected link</button>
+            <button class="prompt" disabled="">What if edge 14 fails? · Coming soon</button>
+            <button class="prompt" disabled="">Compare scenarios · Coming soon</button>
+        </div>
+    </aside>

@@ -1,0 +1,30 @@
+/* The comparison panes belong exclusively to the Topology workspace. */
+body:not(.topology-view) #stitch-compare-canvas {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+body:not(.topology-view) #stitch-baseline-pane {
+    display: none !important;
+}
+
+body:not(.topology-view) #stitch-current-pane {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+body:not(.topology-view) .stitch-compare-pane-label {
+    display: none !important;
+}
+
+body:not(.topology-view) #stitch-current-pane #graph {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+}

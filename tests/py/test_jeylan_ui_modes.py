@@ -25,6 +25,12 @@ def test_jeylan_mode_switching():
                 wait_until="domcontentloaded",
             )
 
+            # Verify the default closed state.
+            assert not page.locator("#jeylan-panel").is_visible()
+
+            # Open Jeylan through the actual user interface.
+            page.locator("#jeylan-launcher").click()
+
             ask_panel = page.locator("#jeylan-read-panel")
             experiment_panel = page.locator(
                 "#jeylan-experiment-panel"
@@ -85,6 +91,11 @@ def test_jeylan_provenance_and_workspace_reset():
                 }
             """)
 
+            # Open the detailed analysis results.
+            page.locator(
+                ".stitch-right-details > summary"
+            ).click()
+
             provenance = page.locator(
                 "#displayed-result-provenance"
             )
@@ -104,6 +115,22 @@ def test_jeylan_provenance_and_workspace_reset():
             assert "Edge 78 ×1.5" in provenance.inner_text()
             assert "Workspace unchanged" in provenance.inner_text()
 
+            # Open the parameter configuration.
+            page.locator(
+                "#stitch-parameter-disclosure > summary"
+            ).click()
+
+            # Open the workspace summary.
+            page.locator(
+                ".stitch-workspace-disclosure > summary"
+            ).click()
+
+            # Open the advanced network configuration.
+            page.locator(
+                ".stitch-native-advanced > summary"
+            ).click()
+
+            # Reset the workspace through the actual UI.
             page.locator("#reset-network").click()
 
             assert not provenance.is_visible()

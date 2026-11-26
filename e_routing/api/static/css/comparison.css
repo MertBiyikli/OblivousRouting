@@ -1,0 +1,149 @@
+body.topology-view #stitch-compare-canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    min-height: 0
+}
+
+body.topology-view #stitch-current-pane {
+    position: relative;
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+body.topology-view #stitch-baseline-pane {
+    display: none;
+    position: relative;
+    min-width: 0;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    background-image: radial-gradient(#d9d8dc .65px, transparent .7px);
+    background-size: 16px 16px
+}
+
+body.topology-view #stitch-compare-canvas svg {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    background: transparent !important
+}
+
+body.topology-view #stitch-compare-canvas .stitch-compare-pane-label {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 9px;
+    z-index: 3;
+    padding: 4px 6px;
+    background: #fff;
+    border: 1px solid #e4e1e6;
+    color: #2a2a2c;
+    font: 700 9px "JetBrains Mono", monospace
+}
+
+body.topology-view.stitch-mode-compare #stitch-baseline-pane {
+    display: flex;
+    flex: 0 0 50%;
+    border-right: 1px solid #dedde2
+}
+
+body.topology-view.stitch-mode-compare #stitch-current-pane {
+    flex: 0 0 50%
+}
+
+body.topology-view.stitch-mode-compare .stitch-compare-pane-label {
+    display: block
+}
+
+body.topology-view.stitch-mode-compare #stitch-compare-canvas {
+    background: #f7f4f8
+}
+
+body.topology-view.stitch-mode-difference #stitch-compare-canvas {
+    background-image: radial-gradient(#d9d8dc .65px, transparent .7px);
+    background-size: 16px 16px
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-strong-improvement {
+    stroke: #087345 !important;
+    stroke-width: 4 !important;
+    stroke-opacity: 1 !important;
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-improvement {
+    stroke: #4cba7c !important;
+    stroke-width: 3.5 !important;
+    stroke-opacity: 1 !important;
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-neutral {
+    stroke: #a3a3a3 !important;
+    stroke-width: 2 !important;
+    stroke-opacity: .7 !important;
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-slight-worsening {
+    stroke: #e3b23f !important;
+    stroke-width: 3.5 !important;
+    stroke-opacity: 1 !important;
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-strong-worsening {
+    stroke: #d64545 !important;
+    stroke-width: 4 !important;
+    stroke-opacity: 1 !important;
+}
+
+body.topology-view.stitch-mode-difference #graph line.stitch-delta-failed {
+    stroke: #555 !important;
+    stroke-width: 3 !important;
+    stroke-dasharray: 7 4 !important;
+    stroke-opacity: 1 !important;
+}
+
+body.topology-view #stitch-baseline-graph line {
+    stroke: #a4a2a8;
+    stroke-width: 2;
+    stroke-opacity: .85
+}
+
+body.topology-view #stitch-baseline-graph circle {
+    fill: #fff;
+    stroke: #171719;
+    stroke-width: 1.5
+}
+
+body.topology-view #stitch-baseline-graph text {
+    fill: #34333a;
+    font: 10px "JetBrains Mono", monospace
+}
+
+body.topology-view .stitch-delta-label {
+    font: 700 10px "JetBrains Mono", monospace;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    pointer-events: none
+}
+
+body.topology-view #stitch-topology-canvas-legend {
+    max-width: 68vw;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+@media (max-width: 700px) {
+    body.topology-view .stitch-compare-pane-label {
+        font-size: 7px !important
+    }
+}

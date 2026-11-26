@@ -451,6 +451,10 @@ void GraphADJList::initializeMemberByParser(int maxNodeIdSeen) {
     std::iota(IGraph::vertices.begin(), IGraph::vertices.end(), 0);
 }
 
+void GraphADJList::initializeLabelNamesByParser(const std::vector<std::string>& labels) {
+    this->labels = labels;
+}
+
 std::vector<int>
         GraphADJList::getShortestPath(int s, int t, const std::vector<double>& dist_e) const {
 

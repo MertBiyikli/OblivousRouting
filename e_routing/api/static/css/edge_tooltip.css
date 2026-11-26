@@ -1,0 +1,25 @@
+
+/* EI-1: floating edge tooltip, independent of SVG native title delays. */
+
+#stitch-edge-hover {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+    min-width: 190px;
+    max-width: 270px;
+    padding: 10px 12px;
+    background: #181a20;
+    color: #f6f7fb;
+    border: 1px solid #484b55;
+    box-shadow: 0 8px 24px #0003;
+    font: 11px/1.55 "JetBrains Mono", monospace;
+    white-space: pre-line;
+    border-radius: 5px;
+}
+
+#stitch-edge-hover strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #fff;
+}

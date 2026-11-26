@@ -1,0 +1,340 @@
+/* Exact Stitch sidebar component structure — JupITer connected controls */
+body:not(.topology-view) .layout > .stitch-native-side {
+    padding: 0 !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column;
+    overflow-y: auto !important;
+    gap: 0 !important;
+    border-right: 1px solid #e4e1e6 !important;
+    font-family: "JetBrains Mono", monospace !important;
+}
+
+body:not(.topology-view) .stitch-native-side .stitch-analysis-title {
+    position: relative !important;
+    top: auto !important;
+    margin: 0 !important;
+    padding: 7px 10px !important;
+    min-height: 26px !important;
+    background: #fff !important;
+    flex-shrink: 0;
+}
+
+body:not(.topology-view) .stitch-native-section {
+    padding: 9px 10px !important;
+    border-bottom: 1px solid #e4e1e6;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+body:not(.topology-view) .stitch-native-first {
+    background: #f6f2f7 !important;
+}
+
+body:not(.topology-view) .stitch-native-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 9px;
+    letter-spacing: .075em;
+    color: #606068;
+    font-weight: 650;
+}
+
+body:not(.topology-view) .stitch-native-heading span:last-child {
+    font-size: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+body:not(.topology-view) .stitch-native-label, body:not(.topology-view) .stitch-native-side .field > label {
+    display: block !important;
+    font: 500 9px/1.3 "JetBrains Mono", monospace !important;
+    letter-spacing: .025em;
+    color: #5d5e66;
+    text-transform: uppercase;
+    margin: 0 0 4px !important;
+}
+
+body:not(.topology-view) .stitch-native-side select, body:not(.topology-view) .stitch-native-side input:not([type=file]) {
+    min-height: 25px !important;
+    height: 25px !important;
+    padding: 3px 6px !important;
+    font: 500 10px/1.3 "JetBrains Mono", monospace !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    border: 1px solid #d8d5da !important;
+    box-shadow: none !important;
+    max-width: 100%;
+}
+
+body:not(.topology-view) .stitch-native-side #analysis-type {
+    width: 100%;
+    border-color: #202024 !important;
+    margin-bottom: 6px !important;
+}
+
+body:not(.topology-view) .stitch-native-side #analysis-type-help {
+    display: none !important;
+}
+
+body:not(.topology-view) .stitch-native-parambox {
+    background: #fff;
+    border: 1px solid #e4e1e6;
+    padding: 6px !important;
+}
+
+body:not(.topology-view) .stitch-native-paramhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e4e1e6;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: .035em;
+}
+
+body:not(.topology-view) .stitch-native-paramhead span:last-child {
+    padding: 3px 5px;
+    background: #f6f2f7;
+    border: 1px solid #e4e1e6;
+    color: #0b8b5b;
+    white-space: nowrap;
+}
+
+body:not(.topology-view) .stitch-native-side .field {
+    margin: 0 !important;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-two {
+    display: grid;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+    gap: 7px;
+    margin-top: 6px;
+}
+
+body:not(.topology-view) .stitch-native-side #capacity-config {
+    display: block;
+}
+
+body:not(.topology-view) .stitch-native-side #capacity-config[hidden], body:not(.topology-view) .stitch-native-side #failure-config[hidden], body:not(.topology-view) .stitch-native-side #traffic-config[hidden] {
+    display: none !important;
+}
+
+body:not(.topology-view) .stitch-native-side #capacity-config .stitch-native-two {
+    margin-top: 6px;
+}
+
+body:not(.topology-view) .stitch-native-side #capacity-config #factor {
+    width: 100%;
+}
+
+body:not(.topology-view) .stitch-native-upgrade-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 7px;
+    padding-top: 5px;
+    border-top: 1px solid #e4e1e6;
+}
+
+body:not(.topology-view) .stitch-native-upgrade-row #upgrades {
+    flex: 1;
+    min-width: 0;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 9px !important;
+    background: transparent !important;
+}
+
+body:not(.topology-view) .stitch-native-upgrade-row #add {
+    flex: 0 0 auto;
+    min-height: 25px !important;
+    padding: 3px 9px !important;
+    margin: 0 !important;
+    border: 1px solid #dedbe0 !important;
+    border-radius: 0 !important;
+    background: #f6f2f7 !important;
+    color: #111 !important;
+    font-size: 9px !important;
+    max-width: 45%;
+}
+
+body:not(.topology-view) .stitch-native-help {
+    font-size: 8px !important;
+    margin: 4px 0 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side #failure-config, body:not(.topology-view) .stitch-native-side #traffic-config {
+    padding: 7px 0 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config .field {
+    margin-bottom: 7px !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config {
+    border-top: 1px solid #e4e1e6;
+    margin-top: 6px;
+    padding-top: 6px !important;
+}
+
+body:not(.topology-view) .stitch-native-side:not([data-any]) #traffic-config .small {
+    font-size: 9px !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config .help {
+    font-size: 8px !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config .field:has(#traffic-scale) {
+    display: grid;
+    grid-template-columns:1fr 1fr;
+    gap: 6px;
+    align-items: center;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config .field:has(#traffic-scale) label {
+    margin: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config .field:has(#traffic-scale) .help {
+    grid-column: 1/-1;
+}
+
+body:not(.topology-view):not([data-stitch-scenario=traffic_growth]) .stitch-native-side #traffic-config .field:not(:has(#traffic-scale)), body:not(.topology-view):not([data-stitch-scenario=traffic_growth]) .stitch-native-side #traffic-config .small, body:not(.topology-view):not([data-stitch-scenario=traffic_growth]) .stitch-native-side #traffic-overrides {
+    display: none !important;
+}
+
+body:not(.topology-view) .stitch-native-side #traffic-config button {
+    font-size: 9px !important;
+}
+
+body:not(.topology-view) .stitch-native-subhead {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 9px;
+    font-weight: 600;
+    margin: 9px 0 4px;
+    color: #25252a;
+}
+
+body:not(.topology-view) .stitch-native-subhead span {
+    font-size: 8px;
+    color: #666;
+    font-weight: 400;
+}
+
+body:not(.topology-view) .stitch-native-side #workspace-summary {
+    font-size: 9px !important;
+    padding: 5px !important;
+    margin: 0 0 10px !important;
+    min-height: 25px !important;
+    background: #fff !important;
+    border: 1px solid #e4e1e6 !important;
+}
+
+body:not(.topology-view) .stitch-native-side #execution-mode-config {
+    margin: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side #execution-mode {
+    width: 100%;
+}
+
+body:not(.topology-view) .stitch-native-advanced {
+    margin-top: 11px;
+    border: 1px solid #e4e1e6;
+    background: #fff;
+}
+
+body:not(.topology-view) .stitch-native-advanced > summary {
+    cursor: pointer;
+    font: 600 9px "JetBrains Mono", monospace;
+    padding: 8px;
+    color: #555;
+}
+
+body:not(.topology-view) .stitch-native-advanced-content {
+    padding: 8px;
+    display: grid;
+    gap: 9px;
+}
+
+body:not(.topology-view) .stitch-native-side .analysis-run-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    margin: auto 0 0 !important;
+    flex-shrink: 0;
+    padding: 10px !important;
+    z-index: 9;
+    background: #fff !important;
+    grid-template-columns:1fr 1.25fr !important;
+}
+
+body:not(.topology-view) .stitch-native-side .analysis-run-footer #run {
+    font: 600 10px "JetBrains Mono", monospace !important;
+    background: #000 !important;
+    color: #fff !important;
+    border-radius: 0 !important;
+    min-height: 35px !important;
+}
+
+body:not(.topology-view) .stitch-native-side .analysis-run-footer #run-help {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    body:not(.topology-view) .stitch-native-side .analysis-run-footer {
+        position: static !important;
+    }
+}
+
+/* Traffic Growth: compact horizontal configuration */
+body:not(.topology-view) #traffic-config {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+body:not(.topology-view) #traffic-config > .field:first-child,
+body:not(.topology-view) #traffic-config > .small,
+body:not(.topology-view) #traffic-overrides {
+    grid-column: 1 / -1;
+}
+
+body:not(.topology-view) #traffic-config > .field {
+    min-width: 0;
+    margin: 0;
+}
+
+body:not(.topology-view) #traffic-config input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+body:not(.topology-view) #traffic-add {
+    width: 100%;
+    margin-top: 8px;
+}
+
+@media (max-width: 650px) {
+    body:not(.topology-view) #traffic-config {
+        grid-template-columns: 1fr;
+    }
+
+    body:not(.topology-view) #traffic-config > * {
+        grid-column: 1 / -1;
+    }
+}

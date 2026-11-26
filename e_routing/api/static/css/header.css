@@ -1,0 +1,102 @@
+/* =====================================================
+          STITCH INTEGRATION — SHARED APPLICATION SHELL
+          ===================================================== */
+
+.studio-header {
+    height: 66px;
+    min-height: 66px;
+    padding: 0 24px;
+    gap: 36px;
+
+    background: #fafafa;
+    border-bottom: 1px solid #e5e5e5;
+    color: #171717;
+}
+
+.studio-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #171717;
+    white-space: nowrap;
+}
+
+.studio-brand b {
+    color: #171717;
+}
+
+.studio-brand-label {
+    padding-left: 8px;
+    border-left: 1px solid #d4d4d4;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #737373;
+}
+
+.studio-navigation {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    height: 100%;
+}
+
+.studio-navigation .nav-view {
+    padding: 0 18px;
+    color: #737373;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.studio-navigation .nav-view:hover {
+    color: #171717;
+}
+
+.studio-navigation .nav-view.active {
+    color: #171717;
+    border-bottom-color: #171717;
+    font-weight: 700;
+}
+
+.studio-navigation .nav-view:focus-visible {
+    outline: 2px solid #525252;
+    outline-offset: -4px;
+}
+
+.studio-header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #737373;
+    white-space: nowrap;
+}
+
+.studio-status-dot {
+    width: 7px;
+    height: 7px;
+    background: #525252;
+    border-radius: 50%;
+}
+
+@media (max-width: 640px) {
+    .studio-header {
+        padding: 0 12px;
+        gap: 12px;
+    }
+
+    .studio-brand-label,
+    .studio-header-status {
+        display: none;
+    }
+
+    .studio-navigation .nav-view {
+        padding: 0 10px;
+    }
+}

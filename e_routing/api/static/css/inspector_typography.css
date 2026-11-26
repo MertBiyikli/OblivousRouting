@@ -1,0 +1,146 @@
+/* Stitch typography harmonization: real Jeylan and Network Inspector controls */
+#jeylan-panel, #topology-inspector {
+    font-family: "JetBrains Mono", ui-monospace, monospace !important;
+    font-size: 10px !important;
+    line-height: 1.55 !important;
+    letter-spacing: 0 !important;
+    color: #1b1b1e !important;
+    background: #fff !important;
+    border: 1px solid #e4e1e6 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+#jeylan-panel .assistant-head, #topology-inspector .topology-inspector-heading {
+    background: #f6f2f7 !important;
+    border-bottom: 1px solid #e4e1e6 !important;
+    color: #1b1b1e !important;
+    padding: 9px 11px !important;
+}
+
+#jeylan-panel .assistant-head strong {
+    font: 700 11px/1.35 "JetBrains Mono", monospace !important;
+    text-transform: uppercase !important;
+    letter-spacing: .045em !important;
+}
+
+#topology-inspector .topology-inspector-title strong {
+    font: 400 9px/1.35 "JetBrains Mono", monospace !important;
+    text-transform: uppercase !important;
+    letter-spacing: normal !important;
+}
+
+#jeylan-panel .assistant-head .pill, #topology-inspector .topology-inspector-eyebrow,
+#jeylan-panel .chat > small, #jeylan-panel .prompts .small {
+    font: 600 9px/1.4 "JetBrains Mono", monospace !important;
+    text-transform: uppercase !important;
+    letter-spacing: .045em !important;
+    color: #66656d !important;
+}
+
+#jeylan-panel .chat, #jeylan-panel .prompts, #topology-inspector #topology-inspector-body {
+    font: 10px/1.6 "JetBrains Mono", monospace !important;
+    color: #38383e !important;
+}
+
+#jeylan-panel #interpretation, #jeylan-panel .unit-note, #topology-inspector .topology-inspector-summary,
+#topology-inspector .topology-edge-details, #topology-inspector .topology-hint {
+    font: 10px/1.6 "JetBrains Mono", monospace !important;
+    background: #fff !important;
+    border-color: #e4e1e6 !important;
+    color: #47464a !important;
+    border-radius: 0 !important;
+}
+
+#jeylan-panel .unit-note p {
+    font: inherit !important;
+    margin: 5px 0 0 !important;
+}
+
+#jeylan-panel .unit-note strong {
+    font-weight: 700 !important;
+    color: #171719 !important;
+}
+
+#jeylan-panel textarea, #topology-inspector input {
+    font: 10px/1.55 "JetBrains Mono", monospace !important;
+    color: #1b1b1e !important;
+    background: #fff !important;
+    border: 1px solid #d8d6db !important;
+    border-radius: 0 !important;
+    padding: 8px !important;
+    box-shadow: none !important;
+}
+
+#jeylan-panel textarea::placeholder, #topology-inspector input::placeholder {
+    color: #85838a !important;
+    opacity: 1;
+}
+
+#jeylan-panel button, #topology-inspector button {
+    font: 600 9px/1.35 "JetBrains Mono", monospace !important;
+    letter-spacing: .015em !important;
+    border-radius: 0 !important;
+}
+
+#jeylan-panel .jeylan-mode-switch {
+    background: #f6f2f7 !important;
+    border: 1px solid #e4e1e6 !important;
+}
+
+#jeylan-panel .jeylan-mode {
+    background: transparent !important;
+    color: #68666c !important;
+}
+
+#jeylan-panel .jeylan-mode.active {
+    background: #fff !important;
+    color: #111 !important;
+    font-weight: 700 !important;
+}
+
+#jeylan-panel #jeylan-ask, #jeylan-panel #jeylan-run-experiment,
+#topology-inspector #topology-edge-find {
+    background: #161618 !important;
+    color: #fff !important;
+    border: 1px solid #161618 !important;
+}
+
+#jeylan-panel button:disabled {
+    opacity: .48 !important;
+    cursor: not-allowed !important;
+}
+
+#jeylan-panel .prompt, #topology-inspector .topology-text-button {
+    background: #fff !important;
+    color: #333238 !important;
+    border: 1px solid #e4e1e6 !important;
+    text-align: left !important;
+    padding: 7px 9px !important;
+}
+
+#jeylan-panel .prompt:hover:not(:disabled), #topology-inspector .topology-text-button:hover {
+    background: #f6f2f7 !important;
+    border-color: #bcbac0 !important;
+}
+
+#topology-inspector label {
+    display: block;
+    margin: 8px 0 5px;
+    font: 600 9px/1.4 "JetBrains Mono", monospace !important;
+    text-transform: uppercase;
+    letter-spacing: .035em;
+    color: #65646a !important;
+}
+
+#topology-inspector #topology-inspector-toggle, #jeylan-panel #topology-jeylan-toggle {
+    color: #1b1b1e !important;
+    background: #fff !important;
+    border: 1px solid #e4e1e6 !important;
+    border-radius: 0 !important;
+}
+
+#jeylan-panel #jeylan-status, #jeylan-panel #jeylan-experiment-status,
+#topology-inspector #topology-search-feedback {
+    font: 9px/1.5 "JetBrains Mono", monospace !important;
+}

@@ -1,0 +1,86 @@
+body.topology-view #stitch-topology-filter {
+    width: 116px !important;
+    max-width: 116px !important;
+}
+
+body.topology-view #stitch-topology-ribbon {
+    gap: 6px !important;
+}
+
+body.topology-view #graph line.stitch-filtered-out,
+body.topology-view #stitch-baseline-graph line.stitch-filtered-out {
+    opacity: .07 !important;
+    pointer-events: none !important;
+}
+
+body.topology-view .stitch-right-graph .topology-toolbar {
+    z-index: 30 !important;
+}
+
+#jeylan-launcher {
+    z-index: 100 !important;
+}
+
+body:not(.topology-view) .stitch-native-side {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side .analysis-run-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 30 !important;
+    background: white !important;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure {
+    border: 1px solid #e4e1e6;
+    background: #fff;
+    margin-top: 10px;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure > summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px;
+    font: 700 10px "JetBrains Mono", monospace;
+    list-style: none;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure > summary span {
+    color: #737079;
+    font-weight: 500;
+    font-size: 9px;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure[open] > summary span {
+    font-size: 0;
+}
+
+body:not(.topology-view) .stitch-parameter-disclosure[open] > summary span::after {
+    content: "COLLAPSE CONFIGURATION";
+    font-size: 9px;
+}
+
+body:not(.topology-view) .stitch-parameter-content {
+    padding: 0 10px 10px;
+}
+
+body:not(.topology-view) #traffic-config:not([hidden]) {
+    display: grid !important;
+    grid-template-columns:repeat(3, minmax(0, 1fr)) !important;
+    align-items: end;
+}
+
+@media (max-width: 650px) {
+    body:not(.topology-view) #traffic-config:not([hidden]) {
+        grid-template-columns:1fr !important;
+    }
+}

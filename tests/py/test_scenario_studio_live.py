@@ -5,7 +5,7 @@ import json
 import os
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 from test_scenario_studio_workspace import (
     BASE_URL,
@@ -42,6 +42,14 @@ def test_real_n1_workspace_execution():
                 }""",
                 timeout=10000,
             )
+
+            page.locator(
+                "#stitch-parameter-disclosure > summary"
+            ).click()
+
+            page.locator(
+                ".stitch-native-advanced > summary"
+            ).click()
 
             page.locator("#network").select_option("backbone-1221")
 
@@ -185,27 +193,54 @@ def test_real_shared_workspace_cross_analysis_and_reset():
                 timeout=15000,
             )
 
+            page.locator(
+                "#stitch-parameter-disclosure > summary"
+            ).click()
+
+            page.locator(
+                ".stitch-workspace-disclosure > summary"
+            ).click()
+
+            page.locator(
+                ".stitch-native-advanced > summary"
+            ).click()
+
             page.locator("#network").select_option(network_id)
 
             # --------------------------------------------------
             # 1. Configure the complete shared workspace
             # --------------------------------------------------
 
-            page.locator("#traffic-scale").fill("1.2")
 
-            for edge_id in (4, 10):
-                page.locator("#edge").fill(str(edge_id))
-                page.locator("#factor").fill("1.5")
-                page.locator("#add").click()
+            # --------------------------------------------------
+            # 1. Configure the complete shared workspace
+            # --------------------------------------------------
+
+            # Configure all traffic-related parameters first.
+            page.locator("#analysis-type").select_option("traffic_growth")
+
+            page.locator("#traffic-scale").wait_for(state="visible")
+            page.locator("#traffic-scale").fill("1.2")
 
             page.locator("#traffic-source").fill("0")
             page.locator("#traffic-target").fill("5")
             page.locator("#traffic-factor").fill("2.0")
             page.locator("#traffic-add").click()
 
+            # Switch to Capacity Planning only after traffic configuration.
+            page.locator("#analysis-type").select_option("capacity_upgrade")
+
+            page.locator("#edge").wait_for(state="visible")
+
+            for edge_id in (4, 10):
+                page.locator("#edge").fill(str(edge_id))
+                page.locator("#factor").fill("1.5")
+                page.locator("#add").click()
+
             assert snapshot(page) == expected_workspace
 
-            # --------------------------------------------------
+
+# --------------------------------------------------
             # 2. Link Failure with full workspace
             # --------------------------------------------------
 
@@ -266,9 +301,9 @@ def test_real_shared_workspace_cross_analysis_and_reset():
             assert 14 not in modified_capacities
             assert len(modified["links"]) == 8
 
-            page.locator("#status").get_by_text(
-                "Completed", exact=True
-            ).wait_for()
+            expect(
+                page.locator("#status")
+            ).to_have_text("Completed", timeout=10000)
 
             assert snapshot(page) == expected_workspace
 
@@ -391,23 +426,25 @@ def test_real_shared_workspace_cross_analysis_and_reset():
                 1.0
             )
 
-            assert page.locator(
-                "#workspace-summary"
-            ).inner_text() == (
-                       "Original network · No modifications"
-                   )
+            expect(
+                page.locator("#workspace-summary")
+            ).to_be_visible()
 
-            assert page.locator(
-                "#baseline-congestion"
-            ).inner_text() == "—"
+            expect(
+                page.locator("#workspace-summary")
+            ).to_have_text("Original network · No modifications")
 
-            assert page.locator(
-                "#scenario-congestion"
-            ).inner_text() == "—"
+            expect(
+                page.locator("#baseline-congestion")
+            ).to_have_text("—")
 
-            assert page.locator(
-                "#congestion-delta"
-            ).inner_text() == "—"
+            expect(
+                page.locator("#scenario-congestion")
+            ).to_have_text("—")
+
+            expect(
+                page.locator("#congestion-delta")
+            ).to_have_text("—")
 
             assert page.locator(
                 "#scenario-analysis"

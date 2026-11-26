@@ -11,7 +11,10 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+from e_routing.api.ui_templates import render_ui
 from pydantic import BaseModel, Field
 
 from e_routing.api.config import load_trusted_config, load_network_registry, trusted_run_for_network
@@ -30,6 +33,22 @@ REPORTS_ROOT = Path("results/scenarios").resolve()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="E-Routing API", version="0.1.0")
+
+
+# Frontend static assets.
+UI_DIRECTORY = Path(__file__).resolve().parent / "static"
+
+app.mount(
+    "/css",
+    StaticFiles(directory=str(UI_DIRECTORY / "css")),
+    name="ui-css",
+)
+
+app.mount(
+    "/js",
+    StaticFiles(directory=str(UI_DIRECTORY / "js")),
+    name="ui-js",
+)
 
 
 app.include_router(network_import_router)
@@ -116,8 +135,8 @@ def scenario_studio_analysis_js():
     )
 
 @app.get("/ui", include_in_schema=False)
-def web_ui() -> FileResponse:
-    return FileResponse(Path(__file__).parent / "static" / "index.html")
+def web_ui() -> HTMLResponse:
+    return HTMLResponse(content=render_ui())
 
 
 @app.get("/health")

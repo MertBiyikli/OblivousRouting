@@ -28,6 +28,11 @@ void GraphCSR::initializeMemberByParser(int maxNodeIdSeen) {
     std::iota(IGraph::vertices.begin(), IGraph::vertices.end(), 0);
 }
 
+
+void GraphCSR::initializeLabelNamesByParser(const std::vector<std::string>& labels) {
+    this->labels = labels;
+}
+
 /**
  * The finalize method is used to preprocess the edges into index sorted vectors.
  * This method should be called after all edges have been added using addEdge().

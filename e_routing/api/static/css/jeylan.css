@@ -1,0 +1,76 @@
+/* Jeylan interaction switch */
+
+.jeylan-mode-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    background: #0c1728;
+    border: 1px solid #2a3c59;
+    border-radius: 9px;
+    flex-shrink: 0;
+}
+
+.jeylan-mode {
+    border: 0;
+    padding: 10px;
+    border-radius: 6px;
+    background: transparent;
+    color: #91a4c2;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.jeylan-mode.active {
+    background: #29466d;
+    color: #f4f8ff;
+}
+
+.jeylan-mode-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.jeylan-mode-panel[hidden] {
+    display: none !important;
+}
+
+.jeylan-mode-panel textarea {
+    min-height: 78px;
+    max-height: 120px;
+    margin-top: 0;
+}
+
+#jeylan-run-experiment {
+    width: 100%;
+    padding: 11px;
+    border: 0;
+    border-radius: 8px;
+    background: #327dff;
+    color: white;
+    font-weight: 700;
+}
+
+#jeylan-run-experiment:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+#jeylan-experiment-status {
+    overflow-wrap: anywhere;
+}
+
+/* Let the explanation occupy available panel space. */
+#interpretation {
+    max-height: none;
+    min-height: 80px;
+    overflow-y: auto;
+}
+
+/* Preserve accessibility on smaller viewports. */
+.jeylan-mode-panel .unit-note {
+    margin-top: 0;
+}

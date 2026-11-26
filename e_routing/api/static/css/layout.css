@@ -1,0 +1,219 @@
+
+/* =====================================================
+   STITCH INTEGRATION — ANALYSIS WORKSPACE, PHASE 4A
+   Source: Precision Network Analytics / Analysis
+   ===================================================== */
+
+body:not(.topology-view) {
+    --analysis-bg: #fbf8fc;
+    --analysis-surface: #ffffff;
+    --analysis-soft: #f6f2f7;
+    --analysis-border: #c8c5ca;
+    --analysis-text: #1b1b1e;
+    --analysis-muted: #47464a;
+    --analysis-green: #009668;
+
+    background: var(--analysis-bg);
+    color: var(--analysis-text);
+}
+
+/* Full-width, two-column engineering workspace. */
+body:not(.topology-view) .layout {
+    display: grid;
+    grid-template-columns: minmax(360px, 34%) minmax(0, 1fr);
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    min-height: calc(100vh - 66px);
+    align-items: stretch;
+}
+
+/* Scenario matrix — left column. */
+body:not(.topology-view) .layout > .side {
+    min-width: 0;
+    margin: 0;
+    padding: 16px 12px 90px;
+
+    background: var(--analysis-bg);
+    color: var(--analysis-text);
+    border: 0;
+    border-right: 1px solid var(--analysis-border);
+    border-radius: 0;
+}
+
+body:not(.topology-view) .side h2 {
+    margin: 5px 0 20px;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+}
+
+/* Network visualization and results — right column. */
+body:not(.topology-view) .workspace {
+    min-width: 0;
+    gap: 0;
+    background: var(--analysis-surface);
+}
+
+body:not(.topology-view) .workspace > .panel {
+    border: 0;
+    border-bottom: 1px solid var(--analysis-border);
+    border-radius: 0;
+    background: var(--analysis-surface);
+    color: var(--analysis-text);
+}
+
+body:not(.topology-view) .graph-panel {
+    min-height: 580px;
+    padding: 14px 16px;
+}
+
+body:not(.topology-view) .graph-panel .heading h1 {
+    color: var(--analysis-text);
+    font-size: 14px;
+}
+
+body:not(.topology-view) .graph-panel .sub,
+body:not(.topology-view) .small,
+body:not(.topology-view) .help,
+body:not(.topology-view) .unit-note {
+    color: var(--analysis-muted);
+}
+
+body:not(.topology-view) .small {
+    font-size: 10px;
+    letter-spacing: 0.05em;
+}
+
+/* Form controls — neutral, compact, squared-off. */
+body:not(.topology-view) .side label {
+    color: var(--analysis-muted);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+body:not(.topology-view) .side input,
+body:not(.topology-view) .side select {
+    background: #ffffff;
+    color: var(--analysis-text);
+    border: 1px solid var(--analysis-border);
+    border-radius: 0;
+    padding: 8px;
+    font-size: 12px;
+}
+
+body:not(.topology-view) .side input:focus,
+body:not(.topology-view) .side select:focus {
+    border-color: #1b1b1e;
+}
+
+body:not(.topology-view) .side .field {
+    margin: 13px 0;
+}
+
+body:not(.topology-view) .side .secondary {
+    background: var(--analysis-soft);
+    color: var(--analysis-text);
+    border: 1px solid var(--analysis-border);
+    border-radius: 0;
+    font-size: 12px;
+}
+
+body:not(.topology-view) .side .primary {
+    background: #000000;
+    color: #ffffff;
+    border-radius: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Network schematic — Stitch's light technical canvas. */
+body:not(.topology-view) .graph-wrap {
+    min-height: 460px;
+    background-color: #ffffff;
+    background-image: linear-gradient(#1b1b1e08 1px, transparent 1px),
+    linear-gradient(90deg, #1b1b1e08 1px, transparent 1px);
+    background-size: 32px 32px;
+    border: 1px solid #e4e1e6;
+    border-radius: 0;
+}
+
+body:not(.topology-view) #graph {
+    min-height: 460px;
+}
+
+body:not(.topology-view) .graph-panel .topology-toolbar button {
+    background: #ffffff;
+    color: var(--analysis-text);
+    border: 1px solid var(--analysis-border);
+    border-radius: 0;
+}
+
+/* Compact KPI cards, retaining all live metric IDs. */
+body:not(.topology-view) .metrics {
+    gap: 0;
+    border-bottom: 1px solid var(--analysis-border);
+}
+
+body:not(.topology-view) .metric {
+    background: var(--analysis-soft);
+    color: var(--analysis-text);
+    border: 0;
+    border-right: 1px solid var(--analysis-border);
+    border-radius: 0;
+    padding: 12px;
+}
+
+body:not(.topology-view) .metric:last-child {
+    border-right: 0;
+}
+
+body:not(.topology-view) .metric strong {
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+body:not(.topology-view) .metric span {
+    color: var(--analysis-muted);
+    font-size: 10px;
+}
+
+/* Preserve readability of existing result containers. */
+body:not(.topology-view) .side .result-info,
+body:not(.topology-view) .workspace > .result-info {
+    background: var(--analysis-soft);
+    color: var(--analysis-text);
+    border: 1px solid var(--analysis-border);
+    border-radius: 0;
+}
+
+body:not(.topology-view) .workspace > #evidence {
+    margin: 12px;
+}
+
+/* Responsive behavior. */
+@media (max-width: 900px) {
+    body:not(.topology-view) .layout {
+        grid-template-columns: minmax(280px, 40%) minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    body:not(.topology-view) .layout {
+        display: block;
+    }
+
+    body:not(.topology-view) .layout > .side {
+        border-right: 0;
+        border-bottom: 1px solid var(--analysis-border);
+    }
+
+    body:not(.topology-view) .metrics {
+        grid-template-columns: 1fr;
+    }
+}

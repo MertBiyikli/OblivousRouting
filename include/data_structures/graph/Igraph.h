@@ -38,6 +38,7 @@ public:
     int n, m;
     bool is_processed;
     std::vector<int> vertices;
+    std::vector<std::string> labels;
 
 
     /**
@@ -52,6 +53,7 @@ public:
      * to initialize the members of the graph instance and setting the number of nodes that will be seen.
      */
     virtual void initializeMemberByParser(int maxNodeIdSeen) = 0;
+    virtual void initializeLabelNamesByParser(const std::vector<std::string>& labels) = 0;
 
     /**
      * Adds an edge between nodes u and v with the given capacity and distance.

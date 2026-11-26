@@ -1,7 +1,6 @@
 
 import json
-
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -86,7 +85,21 @@ def test_jeylan_composite_rendering_and_reset():
             )
             page.goto(f"{BASE_URL}/ui")
 
+            page.locator(
+                "#stitch-parameter-disclosure > summary"
+            ).click()
+
+            page.locator(
+                ".stitch-workspace-disclosure > summary"
+            ).click()
+
+            page.locator(
+                ".stitch-native-advanced > summary"
+            ).click()
+
             page.locator("#network").select_option(NETWORK_ID)
+
+            page.locator("#jeylan-launcher").click()
 
             page.route(
                 f"**/api/v1/networks/{NETWORK_ID}/"
@@ -109,9 +122,29 @@ def test_jeylan_composite_rendering_and_reset():
             page.locator("#jeylan-run-experiment").click(
                 timeout=5000
             )
+            
+            # Wait until the complete composite response has been processed.
+            expect(
+                page.locator("#jeylan-experiment-status")
+            ).to_have_text("Completed · 4 steps", timeout=10000)
 
+            # Close the Jeylan drawer to restore workspace interaction.
+            page.locator("#topology-jeylan-toggle").click()
+
+            expect(
+                page.locator("#jeylan-panel")
+            ).to_be_hidden()
+
+            # Open the detailed analysis results if collapsed.
+            details = page.locator(".stitch-right-details")
+
+            if details.get_attribute("open") is None:
+                page.locator(".stitch-right-details > summary").click()
+
+            # Verify that the composite results are visible.
             panel = page.locator("#jeylan-composite-results")
-            panel.wait_for(state="visible")
+
+            expect(panel).to_be_visible(timeout=10000)
 
             assert page.locator(
                 ".composite-step"

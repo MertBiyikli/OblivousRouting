@@ -1,0 +1,108 @@
+
+/* =====================================================
+   STITCH ANALYSIS — PHASE 4C
+   Scrollable configuration and compact overview
+   ===================================================== */
+
+@media (min-width: 701px) {
+    body:not(.topology-view) .layout {
+        grid-template-columns: 340px minmax(0, 1fr);
+        height: calc(100vh - 66px);
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body:not(.topology-view) .layout > .side {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: 0;
+        scrollbar-width: thin;
+    }
+
+    body:not(.topology-view) .workspace {
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+}
+
+/* Persistent simulation controls */
+body:not(.topology-view) .analysis-run-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin: 18px -12px 0;
+    padding: 12px;
+    background: #ffffff;
+    border-top: 1px solid var(--analysis-border);
+    box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.035);
+}
+
+body:not(.topology-view) .analysis-run-footer #run {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+}
+
+body:not(.topology-view) .analysis-run-footer #run-help {
+    margin-top: 8px;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+body:not(.topology-view) .analysis-run-footer #alert:not([hidden]) {
+    margin-top: 10px;
+}
+
+/* More compact topology overview */
+body:not(.topology-view) .graph-panel {
+    min-height: 0;
+    padding: 14px 16px 12px;
+}
+
+body:not(.topology-view) .graph-wrap {
+    min-height: 350px;
+}
+
+body:not(.topology-view) #graph {
+    min-height: 350px;
+}
+
+/* Compact KPI cards */
+body:not(.topology-view) .metrics {
+    gap: 0;
+}
+
+body:not(.topology-view) .metric {
+    padding: 12px 14px;
+}
+
+body:not(.topology-view) .metric strong {
+    font-size: 21px;
+    line-height: 1.2;
+}
+
+/* Improve visual hierarchy in the sidebar */
+body:not(.topology-view) .stitch-section-heading {
+    position: relative;
+    margin-top: 8px;
+}
+
+body:not(.topology-view) .side .field {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Small-screen fallback */
+@media (max-width: 700px) {
+    body:not(.topology-view) .analysis-run-footer {
+        position: static;
+        margin-bottom: 0;
+    }
+}
+

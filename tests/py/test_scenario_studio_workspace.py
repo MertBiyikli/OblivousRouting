@@ -66,9 +66,23 @@ def page():
                 f"Scenario Studio JavaScript errors: {errors}"
             )
 
+            # Expand the parameter specification panel.
+            page.locator(
+                "#stitch-parameter-disclosure > summary"
+            ).click()
+
+            # Expand the advanced network configuration.
+            page.locator(
+                ".stitch-native-advanced > summary"
+            ).click()
+
+            # Select the registered network.
             page.locator("#network").select_option(
                 "backbone-1221"
             )
+            page.locator(
+                ".stitch-workspace-disclosure > summary"
+            ).click()
 
             yield page
 

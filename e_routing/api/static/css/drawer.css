@@ -1,0 +1,185 @@
+/* =====================================================
+STITCH INTEGRATION — GLOBAL JEYLAN DRAWER
+===================================================== */
+
+/* Remove the dedicated assistant column from Analysis. */
+body:not(.topology-view) .layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+}
+
+/* Floating launcher */
+.jeylan-launcher {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 100;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px 18px;
+    background: #171717;
+    color: #ffffff;
+    border: 1px solid #404040;
+    border-radius: 999px;
+
+    box-shadow: 0 10px 30px #0003;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.jeylan-launcher-orb {
+    width: 10px;
+    height: 10px;
+    background: #a3a3a3;
+    border-radius: 50%;
+}
+
+.jeylan-launcher:hover {
+    background: #303030;
+}
+
+body.jeylan-open .jeylan-launcher {
+    display: none;
+}
+
+/* Global assistant panel */
+#jeylan-panel {
+    position: fixed;
+    top: auto;
+    right: 24px;
+    bottom: 24px;
+    left: auto;
+
+    z-index: 101;
+
+    width: min(410px, calc(100vw - 32px));
+    height: min(690px, calc(100dvh - 110px));
+    max-height: calc(100dvh - 110px);
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 22px;
+
+    background: #fafafa;
+    color: #171717;
+    border: 1px solid #d4d4d4;
+    border-radius: 16px;
+
+    box-shadow: 0 20px 70px #0004;
+    overflow: hidden;
+}
+
+body:not(.jeylan-open) #jeylan-panel {
+    display: none !important;
+}
+
+/* Override the old topology-specific panel positioning. */
+body.topology-view #jeylan-panel {
+    position: fixed;
+    top: auto;
+    right: 24px;
+    bottom: 24px;
+
+    width: min(410px, calc(100vw - 32px));
+    height: min(690px, calc(100dvh - 110px));
+    max-height: calc(100dvh - 110px);
+    min-height: 0;
+
+    padding: 22px;
+    border: 1px solid #d4d4d4;
+    background: #fafafa;
+}
+
+body.topology-view.jeylan-minimized #jeylan-panel {
+    display: none !important;
+}
+
+/* Override old assistant-toggle styles */
+#topology-jeylan-toggle.jeylan-drawer-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    position: absolute;
+    top: 14px;
+    right: 14px;
+
+    width: 32px;
+    height: 32px;
+    padding: 0;
+
+    background: #f5f5f5;
+    color: #404040;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+
+    font-size: 22px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+#topology-jeylan-toggle.jeylan-drawer-close:hover {
+    background: #e5e5e5;
+}
+
+/* Drawer contents */
+#jeylan-panel .assistant-head {
+    padding-right: 40px;
+    margin-bottom: 16px;
+    color: #171717;
+}
+
+#jeylan-panel .chat {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#jeylan-panel .prompts {
+    flex-shrink: 0;
+}
+
+#jeylan-panel .orb {
+    background: #525252;
+    box-shadow: none;
+}
+
+/* Ensure keyboard focus remains visible */
+.jeylan-launcher:focus-visible,
+#topology-jeylan-toggle:focus-visible {
+    outline: 2px solid #737373;
+    outline-offset: 3px;
+}
+
+@media (max-width: 1200px) {
+    body:not(.topology-view) .layout {
+        grid-template-columns: 220px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    body:not(.topology-view) .layout {
+        display: block;
+    }
+
+    #jeylan-panel,
+    body.topology-view #jeylan-panel {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+        height: min(690px, calc(100dvh - 90px));
+        max-height: calc(100dvh - 90px);
+        padding: 16px;
+    }
+
+    .jeylan-launcher {
+        right: 16px;
+        bottom: 16px;
+    }
+}
+

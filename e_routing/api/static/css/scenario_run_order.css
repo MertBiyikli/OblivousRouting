@@ -1,0 +1,79 @@
+/* UI-3: Scenario Matrix -> Parameter Specification -> Execute Simulation.
+           The footer belongs to the sidebar scroll flow, not the viewport bottom. */
+body:not(.topology-view) .stitch-native-side > .stitch-sidebar-scroll > .analysis-run-footer {
+    display: grid !important;
+    position: static !important;
+    inset: auto !important;
+    margin: 8px 10px 14px !important;
+    padding: 10px 0 0 !important;
+    width: auto !important;
+    flex: none !important;
+    z-index: auto !important;
+    background: transparent !important;
+    border-top: 1px solid #e4e1e6 !important;
+    box-shadow: none !important;
+    grid-template-columns:minmax(0, 1fr) !important;
+    gap: 8px !important;
+}
+
+body:not(.topology-view) .stitch-native-side > .stitch-sidebar-scroll > .analysis-run-footer #run {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side > .stitch-sidebar-scroll > .analysis-run-footer .stitch-run-queue {
+    width: 100%;
+}
+
+/* Network Inspector — full-width heading like Summary */
+
+#topology-inspector {
+    padding: 0 !important;
+}
+
+#topology-inspector .topology-inspector-heading {
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+#topology-inspector #topology-inspector-body {
+    padding: 14px 16px !important;
+}
+
+body.topology-view .stitch-right-graph #stitch-inspector-stack {
+    position: absolute;
+    top: 45px;
+    right: 10px;
+    width: 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 12;
+    pointer-events: none;
+}
+
+body.topology-view #stitch-inspector-stack > #stitch-topology-telemetry,
+body.topology-view #stitch-inspector-stack > #topology-inspector {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    pointer-events: auto;
+}
+
+body.topology-view #stitch-inspector-stack > #topology-inspector {
+    max-height: 55vh !important;
+    overflow-y: auto !important;
+}

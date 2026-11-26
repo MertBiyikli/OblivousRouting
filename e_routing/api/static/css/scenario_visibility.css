@@ -1,0 +1,23 @@
+/* Only the controls belonging to the selected scenario are visible. */
+body:not(.topology-view) .stitch-native-side
+.stitch-native-archetype[hidden] {
+    display: none !important;
+}
+
+body:not(.topology-view) .stitch-native-side
+#stitch-n1-hint {
+    display: none !important;
+}
+
+body:not(.topology-view) .stitch-native-side
+#capacity-config:not([hidden]),
+body:not(.topology-view) .stitch-native-side
+#failure-config:not([hidden]),
+body:not(.topology-view) .stitch-native-side
+#traffic-config:not([hidden]) {
+    display: grid !important;
+}
+
+body:not(.topology-view) .stitch-native-side .stitch-legacy-demand-fields {
+    display: none !important;
+}

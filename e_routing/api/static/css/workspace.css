@@ -1,0 +1,484 @@
+
+/* =============================================================
+   JupITer — Stitch exact-layout integration (full visual pass)
+   Faithful visual structure; all engine-owned DOM IDs retained.
+   ============================================================= */
+:root {
+    --stitch-bg: #fbf8fc;
+    --stitch-low: #f6f2f7;
+    --stitch-line: #d8d5db;
+    --stitch-ink: #1b1b1e;
+    --stitch-green: #00976c;
+}
+
+body:not(.topology-view) {
+    background: var(--stitch-bg) !important;
+    color: var(--stitch-ink) !important;
+    font-family: Inter, Arial, sans-serif;
+}
+
+.stitch-workspace-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 9px 14px;
+    background: #f5f2f7;
+    border-bottom: 1px solid var(--stitch-line);
+    color: #302e33;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    min-height: 38px;
+}
+
+.stitch-ribbon-label {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: .03em;
+    max-width: 130px;
+}
+
+.stitch-ribbon-name {
+    font-weight: bold;
+    letter-spacing: .02em;
+}
+
+.stitch-ribbon-meta {
+    color: #76727b;
+    font-size: 10px;
+}
+
+.stitch-ribbon-verified {
+    margin-left: auto;
+    color: var(--stitch-green);
+    font-size: 10px;
+    font-weight: bold;
+}
+
+body.topology-view .stitch-workspace-ribbon {
+    display: none;
+}
+
+body:not(.topology-view) .layout {
+    grid-template-columns:minmax(360px, 40%) minmax(0, 60%) !important;
+    height: calc(100dvh - 104px);
+    min-height: 500px !important;
+    overflow: hidden;
+}
+
+body:not(.topology-view) .layout > .side {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 12px !important;
+    background: var(--stitch-bg) !important;
+    scrollbar-width: thin;
+}
+
+body:not(.topology-view) .stitch-analysis-title {
+    margin: 0 -12px !important;
+    padding: 10px 12px !important;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: #fff;
+}
+
+body:not(.topology-view) .stitch-section-heading {
+    margin: 0 -12px 9px !important;
+    padding: 9px 12px !important;
+    font-family: Georgia, serif;
+}
+
+body:not(.topology-view) .stitch-parameter-heading {
+    margin-top: 12px !important;
+}
+
+body:not(.topology-view) .side .field {
+    margin: 6px 0 10px !important;
+}
+
+body:not(.topology-view) .side label, body:not(.topology-view) .side .small {
+    font-size: 10px !important;
+    color: #5d5e66 !important;
+    font-weight: 500;
+    letter-spacing: .015em;
+}
+
+body:not(.topology-view) .side input:not([type=file]), body:not(.topology-view) .side select {
+    border-radius: 0 !important;
+    border: 1px solid var(--stitch-line) !important;
+    background: #fff !important;
+    color: #1b1b1e !important;
+    min-height: 31px !important;
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+}
+
+body:not(.topology-view) .side .secondary {
+    border-radius: 0 !important;
+    min-height: 31px !important;
+    font-size: 11px !important;
+    background: #f6f2f7 !important;
+    color: #1b1b1e !important;
+    border: 1px solid var(--stitch-line) !important;
+}
+
+body:not(.topology-view) .stitch-archetype-field select {
+    font-family: Georgia, serif;
+    font-size: 13px !important;
+}
+
+.stitch-subsection-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 5px;
+    border: 1px solid var(--stitch-line);
+    background: #fff;
+    font-size: 10px;
+    font-family: Georgia, serif;
+    font-weight: bold;
+}
+
+.stitch-subsection-label span {
+    color: var(--stitch-green);
+    font-size: 9px;
+}
+
+.stitch-disclosure {
+    border-top: 1px solid var(--stitch-line);
+    margin: 7px 0;
+    padding: 0 3px 6px;
+}
+
+.stitch-disclosure summary {
+    cursor: pointer;
+    padding: 9px 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .035em;
+    list-style-position: inside;
+}
+
+.stitch-import-disclosure {
+    order: initial;
+}
+
+body:not(.topology-view) .analysis-run-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 7;
+    margin: auto -12px 0;
+    padding: 9px 12px 10px;
+    background: #fff;
+    border-top: 1px solid var(--stitch-line);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 1.1fr);
+    gap: 5px 10px;
+    align-items: center;
+    box-shadow: 0 -6px 16px #00000008;
+}
+
+.stitch-run-queue {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: Georgia, serif;
+    font-size: 10px;
+}
+
+.stitch-run-queue span {
+    color: #7b7780;
+}
+
+.stitch-run-queue strong {
+    font-size: 11px;
+}
+
+body:not(.topology-view) .analysis-run-footer #run {
+    margin: 0 !important;
+    min-height: 41px !important;
+    font-family: Georgia, serif;
+    font-size: 12px !important;
+}
+
+body:not(.topology-view) .analysis-run-footer #run-help, body:not(.topology-view) .analysis-run-footer #alert {
+    grid-column: 1/-1;
+    margin: 0 !important;
+    font-size: 9px !important;
+}
+
+body:not(.topology-view) .workspace {
+    display: flex !important;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    height: 100%;
+    scrollbar-width: thin;
+    background: #fff !important;
+}
+
+body:not(.topology-view) .workspace > .graph-panel + .metrics {
+    order: -2;
+}
+
+body:not(.topology-view) .workspace > .graph-panel {
+    order: -1;
+    flex: 0 0 auto;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    background: #fff !important;
+}
+
+body:not(.topology-view) .workspace > .metrics {
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+
+body:not(.topology-view) .workspace > .graph-panel + .metrics .metric {
+    background: #f6f2f7 !important;
+}
+
+body:not(.topology-view) .workspace > .graph-panel + .metrics .metric:nth-child(2) {
+    background: #f0edf1 !important;
+}
+
+body:not(.topology-view) .metric {
+    padding: 12px !important;
+    min-height: 73px;
+    border-right: 1px solid var(--stitch-line) !important;
+    border-bottom: 1px solid var(--stitch-line) !important;
+    border-radius: 0 !important;
+}
+
+body:not(.topology-view) .metric strong {
+    font-size: 23px !important;
+    color: #141414 !important;
+    line-height: 1.2 !important;
+}
+
+body:not(.topology-view) .metric .small {
+    font-family: Georgia, serif;
+    text-transform: uppercase;
+    letter-spacing: .025em;
+    font-size: 10px !important;
+}
+
+body:not(.topology-view) .metric span {
+    font-size: 10px !important;
+}
+
+body:not(.topology-view) .graph-panel > .heading {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid var(--stitch-line);
+    margin: 0 !important;
+}
+
+body:not(.topology-view) .graph-panel .heading h1 {
+    font-size: 12px !important;
+    text-transform: uppercase;
+    font-family: Georgia, serif;
+    letter-spacing: .025em;
+}
+
+body:not(.topology-view) .graph-panel .heading .sub {
+    font-size: 10px !important;
+}
+
+body:not(.topology-view) .graph-panel .topology-toolbar {
+    position: static !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 !important;
+    padding: 6px 10px !important;
+    background: #fff !important;
+    border: 0 !important;
+}
+
+body:not(.topology-view) .graph-panel .topology-toolbar-caption {
+    margin-right: auto;
+}
+
+.stitch-mesh-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 4px 12px;
+    background: #fff;
+    font-size: 10px;
+    border-top: 1px solid var(--stitch-line);
+}
+
+.stitch-live-dot {
+    color: #4edea3;
+    font-size: 13px;
+}
+
+.stitch-mesh-subtitle {
+    color: #76727b;
+    margin-left: 9px;
+}
+
+.stitch-schematic-tag {
+    margin-left: auto;
+    border: 1px solid var(--stitch-line);
+    padding: 3px 6px;
+    font-family: Georgia, serif;
+}
+
+body:not(.topology-view) .graph-panel .graph-wrap {
+    height: clamp(340px, 52vh, 650px) !important;
+    min-height: 340px !important;
+    background-color: #fff !important;
+    background-image: linear-gradient(#f4f2f5 1px, transparent 1px), linear-gradient(90deg, #f4f2f5 1px, transparent 1px) !important;
+    background-size: 36px 36px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    margin: 0 12px !important;
+}
+
+body:not(.topology-view) #graph {
+    width: 100%;
+    height: 100%;
+    min-height: 340px !important;
+}
+
+body:not(.topology-view) .graph-panel .legend, body:not(.topology-view) .graph-panel #selected, body:not(.topology-view) .graph-panel #failure-legend {
+    padding: 6px 12px !important;
+    margin: 0 !important;
+    background: #f6f2f7 !important;
+    border-top: 1px solid var(--stitch-line);
+    font-size: 10px !important;
+}
+
+body:not(.topology-view) .graph-panel .topology-inspector {
+    display: none !important;
+}
+
+/* Topology view retains the inspector */
+.stitch-trace-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f6f2f7;
+    border-top: 1px solid var(--stitch-line);
+    border-bottom: 1px solid var(--stitch-line);
+    font: 10px Georgia, serif;
+}
+
+.stitch-trace-heading span {
+    color: var(--stitch-green);
+    font-size: 9px;
+}
+
+body:not(.topology-view) .workspace > #evidence {
+    margin: 0 !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    font: 11px/1.7 'JetBrains Mono', ui-monospace, monospace !important;
+    white-space: pre-wrap;
+}
+
+body:not(.topology-view) .workspace > #scenario-analysis, body:not(.topology-view) .workspace > #jeylan-composite-results {
+    padding: 14px !important;
+    border-top: 1px solid var(--stitch-line) !important;
+}
+
+body.topology-view .stitch-mesh-toolbar, body.topology-view .stitch-trace-heading {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    body:not(.topology-view) .layout {
+        grid-template-columns:minmax(300px, 42%) minmax(0, 58%) !important;
+    }
+
+    .stitch-ribbon-meta {
+        display: none;
+    }
+}
+
+@media (max-width: 700px) {
+    body:not(.topology-view) .layout {
+        display: block !important;
+        height: auto;
+        overflow: visible;
+        min-height: 0 !important;
+    }
+
+    body:not(.topology-view) .layout > .side {
+        height: auto;
+        overflow: visible;
+        padding-bottom: 0 !important;
+    }
+
+    body:not(.topology-view) .workspace {
+        height: auto;
+        overflow: visible;
+    }
+
+    body:not(.topology-view) .analysis-run-footer {
+        position: static;
+    }
+
+    .stitch-workspace-ribbon {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    body:not(.topology-view) .graph-panel .graph-wrap {
+        height: 340px !important;
+    }
+}
+
+@media (min-width: 701px) {
+    body:not(.topology-view) .layout {
+        grid-template-columns:minmax(0, 5fr) minmax(0, 7fr) !important;
+        height: calc(100vh - 104px) !important;
+    }
+}
+
+.stitch-workspace-disclosure {
+    border: 1px solid #e4e1e6;
+    background: #fff;
+    margin: 8px 0;
+}
+
+.stitch-workspace-disclosure summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 10px;
+    font: 700 10px "JetBrains Mono", monospace;
+}
+
+.stitch-workspace-disclosure summary::marker {
+    content: "";
+}
+
+.stitch-workspace-disclosure .stitch-workspace-expand {
+    font-size: 9px;
+    color: #777;
+}
+
+.stitch-workspace-disclosure[open] .stitch-workspace-expand {
+    display: none;
+}
+
+.stitch-workspace-disclosure #workspace-summary {
+    margin: 0 10px 10px;
+}

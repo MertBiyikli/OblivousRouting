@@ -1,0 +1,364 @@
+body.topology-view {
+    background: #fff !important;
+    color: #1b1b1e !important
+}
+
+body.topology-view .graph-panel.stitch-right-graph {
+    position: fixed !important;
+    inset: 44px 0 0 !important;
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    z-index: 5 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    font-family: "JetBrains Mono", monospace !important
+}
+
+body.topology-view .stitch-right-graph .stitch-graph-original-heading, body.topology-view .stitch-right-graph .stitch-right-mesh-toolbar {
+    display: none !important
+}
+
+body.topology-view #stitch-topology-ribbon {
+    height: 35px;
+    flex: 0 0 35px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 9px;
+    border-bottom: 1px solid #e4e1e6;
+    background: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    font: 9px "JetBrains Mono", monospace;
+    z-index: 20
+}
+
+body.topology-view .stitch-topology-modes {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e4e1e6;
+    background: #f6f2f7;
+    padding: 2px
+}
+
+body.topology-view .stitch-topology-modes button {
+    border: 0;
+    background: transparent;
+    padding: 3px 7px;
+    color: #65636b;
+    font: 9px "JetBrains Mono", monospace;
+    cursor: pointer
+}
+
+body.topology-view .stitch-topology-modes button.active {
+    background: #fff;
+    color: #000;
+    font-weight: 700
+}
+
+body.topology-view #stitch-topology-filter {
+    width: max-content;
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 0 auto;
+    height: 23px;
+    border: 1px solid #e4e1e6;
+    border-radius: 0;
+    background: #fff;
+    padding: 0 20px 0 6px;
+    font: 9px "JetBrains Mono", monospace;
+}
+
+body.topology-view #stitch-topology-state {
+    color: #007750;
+    font-weight: 700
+}
+
+body.topology-view .stitch-ribbon-spacer {
+    flex: 1
+}
+
+body.topology-view #stitch-topology-rerun {
+    background: #000;
+    color: #fff;
+    border: 0;
+    padding: 6px 10px;
+    font: 700 9px "JetBrains Mono", monospace;
+    cursor: pointer
+}
+
+body.topology-view .stitch-right-graph .graph-wrap {
+    position: relative !important;
+    inset: auto !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background-color: #fff !important;
+    background-image: radial-gradient(#d9d8dc 0.65px, transparent .7px) !important;
+    background-size: 16px 16px !important;
+    overflow: hidden !important
+}
+
+body.topology-view .stitch-right-graph #graph {
+    height: 100% !important;
+    width: 100% !important;
+    display: block !important;
+    background: transparent !important
+}
+
+body.topology-view .stitch-right-graph #graph line {
+    stroke: #a6a4a9;
+    stroke-opacity: .7
+}
+
+body.topology-view .stitch-right-graph #graph circle {
+    fill: #fff;
+    stroke: #171719;
+    stroke-width: 1.5
+}
+
+body.topology-view .stitch-right-graph #graph text {
+    fill: #34333a;
+    font: 10px "JetBrains Mono", monospace
+}
+
+body.topology-view #stitch-topology-canvas-header {
+    display: none !important;
+}
+
+body.topology-view #stitch-topology-canvas-legend {
+    color: #087b55
+}
+
+body.topology-view .stitch-right-graph .topology-toolbar {
+    position: absolute !important;
+    z-index: 12 !important;
+    left: 9px !important;
+    right: auto !important;
+    top: 45px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid #e4e1e6 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important
+}
+
+body.topology-view .stitch-right-graph .topology-toolbar button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px !important;
+    padding: 2px !important;
+    border: 0 !important;
+    border-bottom: 1px solid #e4e1e6 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #111 !important
+}
+
+body.topology-view .stitch-right-graph .topology-toolbar-caption {
+    display: none !important
+}
+
+body.topology-view #stitch-topology-telemetry {
+    position: absolute;
+    right: 10px;
+    top: 45px;
+    width: 270px;
+    z-index: 12;
+    border: 1px solid #e4e1e6;
+    background: #fff;
+    font: 9px "JetBrains Mono", monospace
+}
+
+body.topology-view .stitch-telemetry-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 7px;
+    background: #f6f2f7;
+    border-bottom: 1px solid #e4e1e6
+}
+
+body.topology-view .stitch-telemetry-head button {
+    border: 0;
+    background: transparent;
+    cursor: pointer
+}
+
+body.topology-view #stitch-telemetry-body {
+    padding: 8px;
+    display: grid;
+    gap: 7px
+}
+
+body.topology-view #stitch-telemetry-body > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px
+}
+
+body.topology-view #stitch-telemetry-body span {
+    color: #62626b
+}
+
+body.topology-view #stitch-telemetry-body strong {
+    color: #0b7956
+}
+
+body.topology-view .stitch-right-graph .topology-inspector {
+    position: absolute !important;
+    z-index: 12 !important;
+    top: 175px !important;
+    right: 10px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 270px !important;
+    max-height: 45% !important;
+    overflow: auto !important;
+    border: 1px solid #e4e1e6 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #171719 !important;
+    box-shadow: none !important;
+    font: 10px "JetBrains Mono", monospace !important
+}
+
+body.topology-view .topology-inspector-heading {
+    background: #f6f2f7 !important;
+    color: #1b1b1e !important;
+    border-bottom: 1px solid #e4e1e6 !important
+}
+
+body.topology-view .topology-inspector input {
+    background: #fff !important;
+    color: #111 !important;
+    border: 1px solid #dedde2 !important;
+    border-radius: 0 !important
+}
+
+body.topology-view .topology-inspector button {
+    border-radius: 0 !important
+}
+
+body.topology-view .stitch-right-graph > .legend, body.topology-view .stitch-right-graph > #selected, body.topology-view .stitch-right-graph > #failure-legend {
+    display: none !important
+}
+
+body.topology-view #stitch-topology-audit {
+    flex: 0 0 30px;
+    height: 30px;
+    min-height: 30px;
+    max-height: 34vh;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #e4e1e6;
+    background: #fff;
+    font: 9px "JetBrains Mono", monospace
+}
+
+body.topology-view #stitch-topology-audit.expanded {
+    flex: 0 0 235px;
+    height: 235px
+}
+
+body.topology-view #stitch-topology-audit-header {
+    height: 30px;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 10px;
+    background: #f6f2f7;
+    cursor: pointer
+}
+
+body.topology-view #stitch-topology-audit-header span:first-child {
+    font-weight: 700
+}
+
+body.topology-view #stitch-audit-status {
+    color: #087b55
+}
+
+body.topology-view #stitch-audit-toggle {
+    background: transparent;
+    border: 0;
+    font: 9px "JetBrains Mono", monospace;
+    cursor: pointer
+}
+
+body.topology-view #stitch-audit-body {
+    display: none;
+    overflow: auto;
+    flex: 1
+}
+
+body.topology-view #stitch-topology-audit.expanded #stitch-audit-body {
+    display: block
+}
+
+body.topology-view #stitch-audit-body table {
+    width: 100%;
+    border-collapse: collapse
+}
+
+body.topology-view #stitch-audit-body th {
+    position: sticky;
+    top: 0;
+    text-align: left;
+    background: #f6f2f7
+}
+
+body.topology-view #stitch-audit-body td, body.topology-view #stitch-audit-body th {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e4e1e6
+}
+
+body.topology-view #stitch-audit-body tr {
+    cursor: pointer
+}
+
+body.topology-view #stitch-audit-body tr:hover {
+    background: #f6f2f7
+}
+
+body:not(.topology-view) #stitch-topology-ribbon, body:not(.topology-view) #stitch-topology-canvas-header, body:not(.topology-view) #stitch-topology-telemetry, body:not(.topology-view) #stitch-topology-audit {
+    display: none !important
+}
+
+body.topology-view .topology-inspector-stack {
+    position: absolute;
+    top: 12px;
+    right: 10px;
+    width: 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 12;
+}
+
+body.topology-view #stitch-topology-telemetry,
+body.topology-view .stitch-right-graph #topology-inspector {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+}
+
+body.topology-view .stitch-right-graph #topology-inspector {
+    max-height: 55vh !important;
+    overflow-y: auto !important;
+}

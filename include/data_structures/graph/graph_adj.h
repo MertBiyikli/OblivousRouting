@@ -46,6 +46,7 @@ public:
     Result<void> updateEdgeDistance(int e, double dist) override;
 
     void initializeMemberByParser(int maxNodeIdSeen) override;
+    void initializeLabelNamesByParser(const std::vector<std::string>& labels) override;
 
     // Shortest path computations
     const double getDiameter() const override;

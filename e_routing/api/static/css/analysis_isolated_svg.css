@@ -1,0 +1,19 @@
+body:not(.topology-view) #stitch-compare-canvas,
+body:not(.topology-view) #stitch-baseline-pane,
+body:not(.topology-view) #stitch-current-pane,
+body:not(.topology-view) .stitch-compare-pane-label {
+    display: none !important
+}
+
+body:not(.topology-view) .stitch-right-graph .graph-wrap > #graph {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    min-height: 0 !important;
+}
+
+body:not(.topology-view) #graph .stitch-delta-label {
+    display: none !important
+}

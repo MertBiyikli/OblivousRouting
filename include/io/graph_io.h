@@ -29,6 +29,8 @@ class GraphIO {
         int costColIdx = -1;
         int capColIdx = -1;
 
+        std::vector<std::string> label_names;
+
         // Phase 1: Read lines until we finish @nodes and find @arcs header.
         std::vector<std::string> allLines;
         while (std::getline(infile, line)) {
@@ -70,13 +72,43 @@ class GraphIO {
                     while (iss >> tok) {
                         tokens.push_back(tok);
                     }
-                    if (tokens.size() >= 2) {
+                    if (tokens.size() == 3) {
                         // node_id is the second column
                         try {
                             int nid = std::stoi(tokens[1]);
                             maxNodeIdSeen = std::max(maxNodeIdSeen, nid);
+                            if (tokens.size() >= 3) {
+                                //obain the label name as well
+                                try {
+                                    const std::string name = tokens[2];
+                                    label_names.push_back(name);
+                                }
+                                catch (const std::exception& ) {
+                                    return makeErrorMessage(ErrorCode::InvalidGraph, "The third column of @nodes section found, but malformed");
+                                }
+                            }
+
                         } catch (const std::exception& /*e*/) {
                             // malformed line: skip (e.what() available if logging)
+                        }
+                    }
+
+                    if (tokens.size() == 2) {
+                        // node_id is the second column
+                        try {
+                            int nid = std::stoi(tokens[1]);
+                            maxNodeIdSeen = std::max(maxNodeIdSeen, nid);
+
+                        } catch (const std::exception& /*e*/) {
+                            // malformed line: skip (e.what() available if logging)
+                        }
+
+                        try {
+                            std::stoi(tokens[0]);
+                            std::string name = tokens[1];
+                            label_names.push_back(name);
+                        } catch (const std::exception& ) {
+
                         }
                     }
 
@@ -95,6 +127,7 @@ class GraphIO {
 
             // 2) Initialize our graph with (maxNodeIdSeen+1) nodes
             g.initializeMemberByParser(maxNodeIdSeen);
+            g.initializeLabelNamesByParser(label_names);
 
             // 3) Second pass: scan for "@arcs", find header, then parse each arc line:
             inArcsSection = false;
@@ -318,7 +351,7 @@ inline Result<std::unique_ptr<optimized::Graph<EdgeData>>> load_graph_optimized(
         }
     }
 
-    auto opt_graph = std::make_unique<optimized::Graph<EdgeData>>(n, input_edges);
+    auto opt_graph = std::make_unique<optimized::Graph<EdgeData>>(n, input_edges, igraph.value()->labels);
     if (!opt_graph) {
         return makeErrorMessage(ErrorCode::InvalidGraph, "Failed to create optimized graph.");
     }

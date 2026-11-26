@@ -1,0 +1,53 @@
+
+/* SR-1: execution summary beneath the Analysis run controls. */
+
+.stitch-execution-summary {
+    flex-shrink: 0;
+    border-top: 1px solid #e4e4e8;
+    background: #fff;
+    font: 10px "JetBrains Mono", monospace;
+    color: #34343a;
+}
+
+.stitch-execution-summary > summary {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+#stitch-execution-state {
+    color: #667085;
+    font-weight: 500;
+}
+
+.stitch-execution-content {
+    padding: 2px 12px 12px;
+    display: grid;
+    gap: 7px;
+}
+
+.stitch-execution-content > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.stitch-execution-content > div > span {
+    color: #72727b;
+}
+
+.stitch-execution-content strong {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+#stitch-execution-note {
+    margin: 5px 0 0;
+    color: #74747e;
+    line-height: 1.5;
+}

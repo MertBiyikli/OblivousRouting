@@ -77,6 +77,7 @@ template <typename Data> class Graph {
     std::vector<int> nodes;
     std::vector<int> nodeIndex;
     int nodeBound = 0;
+    std::vector<std::string> node_labels;
 
     // One record per undirected edge. The ID never changes.
     std::vector<StoredEdge> storedEdges;
@@ -99,10 +100,11 @@ template <typename Data> class Graph {
     std::unordered_map<std::uint64_t, int> edgeLookup;
 
   public:
-    Graph(int n, const std::vector<InputEdge>& input) : edges(n), edgeBound(n), nodes(n), nodeIndex(n), nodeBound(n) {
+    Graph(int n, const std::vector<InputEdge>& input, const std::vector<std::string>& labels = {}) : edges(n), edgeBound(n), nodes(n), nodeIndex(n), nodeBound(n) {
         std::iota(nodes.begin(), nodes.end(), 0);
         std::iota(nodeIndex.begin(), nodeIndex.end(), 0);
         storedEdges.reserve(input.size());
+        this->node_labels = labels;
 
         for (const auto& edge : input) {
 
@@ -469,6 +471,9 @@ template <typename Data> class Graph {
 #endif
     }
     void print() {
+        for (const std::string& node_names : node_labels) {
+            std::cout << node_names << '\n';
+        }
         for (const auto node : (*this)) {
             for (const auto& edge : (*this).edgesOf(node)) {
                 const auto neighbour = edge.tail;

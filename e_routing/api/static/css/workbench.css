@@ -1,0 +1,189 @@
+/* =====================================================
+STITCH INTEGRATION — TOPOLOGY WORKBENCH
+===================================================== */
+
+body.topology-view .graph-panel {
+    background: #101820;
+}
+
+/* Preserve the existing SVG renderer and its colors. */
+body.topology-view .graph-wrap {
+    background: radial-gradient(
+            circle at center,
+            #1c2935 0%,
+            #101820 75%
+    );
+}
+
+/* Floating graph controls */
+body.topology-view .topology-toolbar {
+    top: 20px;
+    right: 190px;
+
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 6px;
+    margin: 0;
+
+    background: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+
+    box-shadow: 0 8px 24px #0002;
+}
+
+body.topology-view .topology-toolbar button {
+    min-height: 34px;
+    padding: 7px 12px;
+
+    background: transparent;
+    color: #262626;
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+body.topology-view .topology-toolbar button:hover {
+    background: #f0f0f0;
+    border-color: #e5e5e5;
+}
+
+body.topology-view .topology-toolbar .topology-toolbar-caption {
+    display: none;
+}
+
+/* Network inspector */
+body.topology-view .topology-inspector {
+    top: 20px;
+    left: 20px;
+    width: 310px;
+    max-height: calc(100% - 100px);
+
+    padding: 18px;
+
+    background: #fafafa;
+    color: #171717;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+
+    box-shadow: 0 12px 36px #0003;
+}
+
+.topology-inspector-title {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.topology-inspector-eyebrow {
+    color: #737373;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+body.topology-view .topology-inspector-heading {
+    align-items: flex-start;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+body.topology-view .topology-inspector-heading strong {
+    font-size: 17px;
+    font-weight: 700;
+    color: #171717;
+}
+
+body.topology-view .topology-inspector-heading button {
+    background: #f5f5f5;
+    color: #404040;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    min-width: 30px;
+    min-height: 30px;
+}
+
+body.topology-view .topology-inspector-summary {
+    color: #525252;
+    font-size: 12px;
+    line-height: 1.65;
+    margin-top: 14px;
+}
+
+body.topology-view .topology-inspector label {
+    color: #404040;
+}
+
+body.topology-view .topology-search-row input {
+    background: #ffffff;
+    color: #171717;
+    border: 1px solid #d4d4d4;
+    border-radius: 7px;
+}
+
+body.topology-view .topology-search-row button {
+    background: #171717;
+    color: #ffffff;
+    border: 1px solid #171717;
+    border-radius: 7px;
+}
+
+body.topology-view .topology-hint {
+    color: #737373;
+}
+
+body.topology-view .topology-edge-card {
+    background: #ffffff;
+    color: #262626;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+}
+
+body.topology-view .topology-edge-card .muted {
+    color: #737373;
+}
+
+body.topology-view .topology-text-button {
+    background: #f5f5f5;
+    color: #262626;
+    border: 1px solid #e5e5e5;
+    border-radius: 7px;
+    font-weight: 500;
+}
+
+body.topology-view .topology-text-button:hover {
+    background: #eaeaea;
+}
+
+/* Collapsed inspector */
+body.topology-view.inspector-minimized .topology-inspector {
+    width: 210px;
+}
+
+/* Preserve congestion colors, restyle legend container */
+body.topology-view .graph-panel > .legend,
+body.topology-view .graph-panel > #failure-legend {
+    background: #fafafa;
+    color: #404040;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px #0002;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    body.topology-view .topology-inspector {
+        left: 8px;
+        top: 68px;
+        width: min(290px, calc(100vw - 16px));
+    }
+
+    body.topology-view .topology-toolbar {
+        top: 10px;
+        right: 8px;
+    }
+}

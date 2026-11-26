@@ -1,0 +1,79 @@
+/* The topology toolbar belongs to the graph canvas, not the panel header. */
+body.topology-view .stitch-right-graph .graph-wrap {
+    position: relative !important;
+}
+
+body.topology-view .stitch-right-graph .graph-wrap > .topology-toolbar {
+    position: absolute !important;
+    top: 12px !important;
+    left: 12px !important;
+    right: auto !important;
+    z-index: 35 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    width: max-content !important;
+    max-width: calc(100% - 24px) !important;
+    background: #fff !important;
+    border: 1px solid #dedbe0 !important;
+}
+
+body.topology-view .stitch-right-graph .graph-wrap > .topology-toolbar button {
+    width: auto !important;
+    min-width: 34px !important;
+    height: 32px !important;
+    padding: 4px 9px !important;
+    border: 0 !important;
+    border-right: 1px solid #dedbe0 !important;
+    white-space: nowrap !important;
+}
+
+body.topology-view .stitch-right-graph .graph-wrap > .topology-toolbar button:last-child {
+    border-right: 0 !important;
+}
+
+/* The sidebar has its own scrolling region, while execution stays visible. */
+body:not(.topology-view) .layout > .stitch-native-side {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+body:not(.topology-view) .stitch-native-side > .stitch-sidebar-scroll {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+}
+
+body:not(.topology-view) .stitch-native-side > .analysis-run-footer {
+    display: grid !important;
+    position: relative !important;
+    bottom: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    z-index: 40 !important;
+    background: #fff !important;
+    border-top: 1px solid #e4e1e6 !important;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1.25fr) !important;
+}
+
+body:not(.topology-view) .stitch-native-side > .analysis-run-footer #run {
+    display: block !important;
+    visibility: visible !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 700px) {
+    body:not(.topology-view) .stitch-native-side > .stitch-sidebar-scroll {
+        max-height: 65vh !important;
+    }
+}
+
+#graph title,
+#stitch-baseline-graph title {
+    display: none !important;
+}

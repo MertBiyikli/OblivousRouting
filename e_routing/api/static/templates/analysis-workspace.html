@@ -1,0 +1,231 @@
+    <section class="workspace">
+        <div class="stitch-right-kpis">
+            <div class="metric">
+                <div class="small">MAXIMUM CONGESTION</div>
+                <strong id="congestion">—</strong><span>Peak load / capacity</span></div>
+            <div class="metric">
+                <div class="small">OVERLOADED LINKS</div>
+                <strong id="overloaded">—</strong><span>Above capacity</span></div>
+            <div class="metric">
+                <div class="small">EVALUATED LINKS</div>
+                <strong id="count">—</strong><span>Physical links measured</span></div>
+        </div>
+        <div class="panel graph-panel stitch-right-graph">
+            <div id="stitch-topology-ribbon">
+                <div class="stitch-topology-modes">
+                    <button class="active" data-mode="single">SINGLE</button>
+                    <button data-mode="compare">COMPARE</button>
+                    <button data-mode="difference">DIFFERENCE</button>
+                </div>
+                <span>FILTER:</span><select id="stitch-topology-filter">
+                <option value="all">All edges</option>
+                <option value="congested">Congested (&gt;100%)</option>
+                <option value="modified">Scenario modified</option>
+                <option value="selected">Selected links</option>
+            </select>
+                <strong id="stitch-topology-count">— NODES · — EDGES</strong><span id="stitch-topology-state">STATE: BASELINE / CURRENT</span>
+                <span class="stitch-ribbon-spacer"></span><span id="stitch-topology-scenario">CURRENT NETWORK</span>
+                <button id="stitch-topology-rerun">OPEN ANALYSIS ↗</button>
+            </div>
+            <div class="heading stitch-graph-original-heading">
+                <div><h1 id="topology">Network topology</h1>
+                    <div class="sub">Actual link data from the most recent scenario evaluation</div>
+                </div>
+                <span class="pill" id="status">Ready</span></div>
+            <div id="stitch-inspector-stack">
+                <div id="stitch-topology-telemetry">
+                    <div class="stitch-telemetry-head"><span>Summary</span>
+                        <button id="stitch-telemetry-toggle">⌃</button>
+                    </div>
+                    <div id="stitch-telemetry-body">
+                        <div><span>Max link utilization</span><strong id="stitch-stat-max">—</strong></div>
+                        <div><span>Overloaded physical links</span><strong id="stitch-stat-over">—</strong></div>
+                        <div><span>Selected physical links</span><strong id="stitch-stat-selected">0</strong></div>
+                        <div><span>Baseline vs scenario Δ</span><strong id="stitch-stat-delta">Not available</strong></div>
+                    </div>
+                </div>
+                <section aria-label="Network and selected edge details" class="topology-inspector" id="topology-inspector">
+                    <div class="topology-inspector-heading">
+                        <div class="topology-inspector-title">
+<span class="topology-inspector-eyebrow">
+            TOPOLOGY WORKBENCH
+        </span>
+                            <strong>Network Inspector</strong>
+                        </div>
+                        <button aria-controls="topology-inspector-body" aria-expanded="true"
+                                aria-label="Collapse or expand network inspector" id="topology-inspector-toggle"
+                                title="Collapse or expand inspector" type="button">
+                            −
+                        </button>
+                    </div>
+                    <div id="topology-inspector-body">
+                        <label for="topology-edge-search">Find physical link</label>
+                        <div class="topology-search-row">
+                            <input autocomplete="off" id="topology-edge-search"
+                                   type="search"/>
+                            <button id="topology-edge-find" type="button">Find</button>
+                        </div>
+                        <div aria-live="polite" class="topology-edge-details" id="topology-edge-details">No edges
+                            selected.
+                        </div>
+                        <button class="topology-text-button" id="topology-clear-selection" type="button">Clear selection
+                        </button>
+                        <button class="topology-text-button" id="topology-ask-jeylan" type="button">Ask Jeylan about
+                            selected edges
+                        </button>
+                        <button class="topology-text-button" id="topology-open-analysis" type="button">Open full Analysis
+                            workspace
+                        </button>
+                    </div>
+                </section>
+            </div>
+            <div class="stitch-mesh-toolbar stitch-right-mesh-toolbar"><span class="stitch-live-dot">●</span><strong>ENGINE
+                TOPOLOGY</strong><span class="stitch-mesh-subtitle">PHYSICAL LINKS &amp; UTILIZATION</span></div>
+            <div id="stitch-topology-canvas-header"><span id="stitch-topology-canvas-label">VIEW: SINGLE TOPOLOGY</span><span
+                    id="stitch-topology-canvas-legend">● CORE / AGGREGATION · — STABLE LINKS</span></div>
+
+            <div class="graph-wrap">
+                <div aria-label="Network topology zoom controls" class="topology-toolbar" role="group">
+<span class="topology-toolbar-caption">
+        NETWORK EXPLORER
+    </span>
+                    <button aria-label="Zoom out" id="topology-zoom-out" title="Zoom out" type="button">
+                        −
+                    </button>
+                    <button aria-label="Zoom in" id="topology-zoom-in" title="Zoom in" type="button">
+                        +
+                    </button>
+                    <button id="topology-reset-view" title="Reset graph position and zoom" type="button">
+                        Fit view
+                    </button>
+                </div>
+
+                <div class="empty" id="empty">Run a scenario to load the network topology.<br/>Links and utilization
+                    will
+                    come from the C++ engine.
+                </div>
+                <div id="stitch-compare-canvas">
+                    <div id="stitch-baseline-pane">
+                        <div class="stitch-compare-pane-label">ORIGINAL WORKSPACE · BASELINE</div>
+                        <svg aria-label="Baseline network topology" id="stitch-baseline-graph"
+                             preserveaspectratio="xMidYMid meet" viewbox="0 0 720 340"></svg>
+                    </div>
+                    <div id="stitch-current-pane">
+                        <div class="stitch-compare-pane-label">CURRENT WORKSPACE · SCENARIO</div>
+                        <svg aria-label="Network link utilization graph" id="graph" role="img"
+                             viewbox="0 0 720 340"></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="large-network-analysis" hidden="" id="large-network-analysis">
+                <div class="analysis-heading">
+                    <strong>Network bottlenecks</strong>
+                    <span id="topology-mode"></span>
+                </div>
+                <p id="topology-summary"></p>
+                <div id="bottleneck-list"></div>
+            </div>
+            <div class="legend"><span><i class="dot" style="background:#40b7ef"></i>Within capacity</span><span><i
+                    class="dot" style="background:#f0aa36"></i>Overloaded</span><span><i class="dot"
+                                                                                         style="background:#f26873"></i>High overload</span>
+            </div>
+            <div class="unit-note" hidden="" id="failure-legend">
+                <span style="color:#ffb454">━━ ━━</span> Dashed amber = failed physical link; solid lines = surviving
+                links.
+            </div>
+            <div id="selected">Select a link after running a scenario.</div>
+            <div id="stitch-topology-audit">
+                <div id="stitch-topology-audit-header">
+                    <span>⌃   ROUTING SCENARIO TELEMETRY &amp; DELTA AUDIT</span><span id="stitch-audit-status">LIVE ENGINE TOPOLOGY</span>
+                    <button id="stitch-audit-toggle">EXPAND DETAILS</button>
+                </div>
+                <div id="stitch-audit-body">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>EDGE ID</th>
+                            <th>SOURCE</th>
+                            <th>TARGET</th>
+                            <th>CAPACITY</th>
+                            <th>UTILIZATION</th>
+                            <th>STATUS</th>
+                        </tr>
+                        </thead>
+                        <tbody id="stitch-audit-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <section class="stitch-scenario-history">
+            <div class="stitch-history-heading">02 // EXECUTED SCENARIOS <span id="stitch-history-count">0 RUNS</span>
+            </div>
+            <div aria-live="polite" class="stitch-history-items" id="stitch-history-items">
+                <div class="stitch-history-empty">No completed scenarios in this session.</div>
+            </div>
+        </section>
+        <section class="stitch-right-trace">
+            <div class="stitch-trace-heading"><strong>⌄   ENGINE EXECUTION TRACE &amp; ROUTING EVENTS</strong><span>ANALYSIS EVIDENCE</span>
+            </div>
+            <div class="result-info" id="evidence">
+                No scenario executed yet.
+            </div>
+        </section>
+        <details class="stitch-right-details">
+            <summary>DETAILED ANALYSIS &amp; RESULTS</summary>
+            <details class="stitch-secondary-metrics">
+                <summary>ADDITIONAL SCENARIO METRICS</summary>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="small">Baseline congestion</div>
+                        <strong id="baseline-congestion">—</strong>
+                        <span id="baseline-congestion-description">
+                    Reference configuration before scenario changes
+                </span>
+                    </div>
+                    <div class="metric">
+                        <div class="small">Scenario congestion</div>
+                        <strong id="scenario-congestion">—</strong>
+                        <span>Modified demand and capacity</span>
+                    </div>
+                    <div class="metric">
+                        <div class="small">Congestion change</div>
+                        <strong id="congestion-delta">—</strong>
+                        <span>Relative to baseline</span>
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="small" id="third-label-1">Same-demand reference</div>
+                        <strong id="reference-congestion">—</strong>
+                        <span id="third-help-1">Current demand · No capacity upgrades</span>
+                    </div>
+                    <div class="metric">
+                        <div class="small" id="third-label-2">With upgrades</div>
+                        <strong id="upgraded-congestion">—</strong>
+                        <span id="third-help-2">Current demand · Selected upgrades</span>
+                    </div>
+                    <div class="metric">
+                        <div class="small" id="third-label-3">Congestion vs. reference</div>
+                        <strong id="capacity-improvement">—</strong>
+                        <span id="third-help-3">Negative = lower congestion · Positive = higher congestion</span>
+                    </div>
+                </div>
+            </details>
+            <section aria-label="Jeylan composite analysis results" class="panel" hidden=""
+                     id="jeylan-composite-results">
+                <div class="heading">
+                    <h2>Composite Investigation</h2>
+                    <span class="pill" id="composite-status"></span>
+                </div>
+                <p class="sub" id="composite-summary"></p>
+                <div id="composite-comparisons"></div>
+                <h3>Execution timeline</h3>
+                <div class="composite-steps" id="composite-steps"></div>
+                <div aria-live="polite" class="result-info" id="composite-step-detail"></div>
+            </section>
+            <section aria-live="polite" class="panel" hidden="" id="scenario-analysis">
+            </section>
+            <div aria-live="polite" class="result-info" hidden="" id="displayed-result-provenance">
+            </div>
+        </details>
+    </section>
