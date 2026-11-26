@@ -8,6 +8,7 @@
 #include <optional>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 struct LinkData {
